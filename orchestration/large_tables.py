@@ -1,0 +1,626 @@
+"""Orchestrator for large tables (date-chunked — incremental extraction).
+
+Data flow per table, per day:
+  Source -> Windowed extract (single day) -> Polars DataFrame
+  -> add _row_hash + _extracted_at
+  -> Write BCP CSV
+  -> Ensure stage/bronze tables exist
+  -> Schema evolution: detect new/removed/changed columns (P0-2)
+  -> Column sync: auto-populate UdmTablesColumnsList + discover PKs
+  -> Windowed CDC (compare only within date window, P1-3/P1-4)
+  -> Targeted SCD2 (PK-scoped Bronze read, P1-3)
+  -> Checkpoint date as SUCCESS (P1-5)
+  -> CSV cleanup
+  -> Next day...
+
+Architecture decisions:
+  - Process one day at a time to bound memory (P2-4)
+  - Per-day checkpoint enables resume after failure (P1-6)
+  - Delete detection scoped to extraction window (P1-4)
+  - Bronze read targeted to PKs in current day's data (P1-3)
+"""
+
+from __future__ import annotations
+
+import gc
+import logging
+from datetime import date, timedelta
+from pathlib import Path
+from typing import TYPE_CHECKING
+import utils.configuration as config
+from utils.connections import quote_identifier
+from data_load.schema_utils import clear_column_metadata_cache
+from extract.router import extract_windowed
+from schema.column_sync import sync_columns
+from observability.event_tracker import PipelineEventTracker
+from orchestration.guards import run_daily_extraction_guard
+from orchestration.pipeline_state import get_dates_to_process, save_checkpoint
+from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion
+from schema.evolution import SchemaEvolutionError, SchemaEvolutionResult, evolve_schema, validate_source_schema
+from schema.table_creator import ensure_bronze_table, ensure_bronze_point_in_time_index, ensure_bronze_unique_active_index, ensure_stage_table
+from orchestration.table_lock import acquire_table_lock, keep_lock_alive, release_table_lock
+from orchestration.pk_validation import NoPrimaryKeyError
+from cdc.engine import ConcatCorruptionError
+from utils.safe_concat import stabilize_extraction_dtypes
+
+if TYPE_CHECKING:
+    from orchestration.table_config import TableConfig
+
+logger = logging.getLogger(__name__)
+
+# P2-6: Only disable/rebuild indexes if inserts exceed this fraction of existing rows.
+# For a 3B-row table with 50K daily inserts, index rebuild is counterproductive.
+INDEX_REBUILD_THRESHOLD = 0.10
+
+# P1-13: Absolute ceiling for first runs (no historical baseline).
+MAX_ROWS_PER_DAY = 10_000_000
+
+
+def process_large_table(
+    table_config: TableConfig,
+    event_tracker: PipelineEventTracker,
+    output_dir: str | Path | None = None,
+    force: bool = False,
+    dates_override: list[date] | None = None,
+) -> bool:
+    """Process a single large table through the per-day pipeline.
+
+    Iterates over each date that needs processing (from pipeline_state),
+    running: extract → CDC → SCD2 → checkpoint for each day.
+
+    Args:
+        table_config: Table configuration.
+        event_tracker: Event tracker for PipelineEventLog.
+        output_dir: Directory for temp CSV files.
+        force: If True, reprocess all dates in the lookback window.
+        dates_override: R-13 backfill — explicit list of dates to process,
+            replacing the normal ``get_dates_to_process`` computation. Used
+            by ``tools/backfill.py`` to re-extract a specific date range
+            (e.g. recovering from a January gap discovered in March). The
+            modified-date sweep step is suppressed when this is provided —
+            the explicit reload is the action; sweep would be redundant.
+
+    Returns:
+        True if all dates succeeded, False if any date failed.
+    """
+    if output_dir is None:
+        output_dir = config.CSV_OUTPUT_DIR
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    table_name = table_config.source_object_name
+    source_name = table_config.source_name
+    date_column = table_config.source_aggregate_column_name
+
+    # M-5: Clear INFORMATION_SCHEMA cache at the start of each table's processing.
+    clear_column_metadata_cache()
+
+    if not date_column:
+        logger.error(
+            "No SourceAggregateColumnName for %s.%s — cannot process as large table",
+            source_name, table_name,
+        )
+        return False
+
+    # P1-2: Acquire table lock to prevent concurrent runs
+    lock_conn = acquire_table_lock(source_name, table_name)
+    if lock_conn is None:
+        logger.warning(
+            "Skipping %s.%s — another pipeline run holds the lock",
+            source_name, table_name,
+        )
+        # OBS-3: Write SKIPPED event so lock contention is visible in
+        # PipelineEventLog. Without this, skipped tables are indistinguishable
+        # from tables that were never scheduled.
+        with event_tracker.track("TABLE_TOTAL", table_config) as skip_event:
+            skip_event.status = "SKIPPED"
+            skip_event.event_detail = "Lock held by another run"
+        return False
+
+    try:
+        return _process_large_table_locked(
+            table_config, event_tracker, output_dir, force,
+            table_name, source_name, date_column, lock_conn,
+            dates_override=dates_override,
+        )
+    finally:
+        release_table_lock(lock_conn, source_name, table_name)
+
+def _process_large_table_locked(
+    table_config: TableConfig,
+    event_tracker: PipelineEventTracker,
+    output_dir: Path,
+    force: bool,
+    table_name: str,
+    source_name: str,
+    date_column: str,
+    lock_conn: object | None = None,
+    *,
+    dates_override: list[date] | None = None,
+) -> bool:
+    """Inner processing logic after lock is acquired."""
+    # L-4: Check for NULL date column values in source (once per table, not per day)
+    _check_null_date_column(table_config, source_name, table_name, date_column)
+
+    # Determine dates to process. R-13 backfill supplies its own list;
+    # otherwise compute from LookbackDays / FirstLoadDate / checkpoints.
+    if dates_override is not None:
+        dates = sorted(set(dates_override))
+        logger.info(
+            "R-13 backfill: %s.%s using explicit date list (%d dates)",
+            source_name, table_name, len(dates),
+        )
+    else:
+        dates = get_dates_to_process(table_config, event_tracker.batch_id)
+
+    if not dates:
+        logger.info("No dates to process for %s.%s — up to date", source_name, table_name)
+        return True
+
+    logger.info(
+        "Processing %s.%s: %d dates from %s to %s",
+        source_name, table_name, len(dates), dates[0], dates[-1],
+    )
+
+    all_succeeded = True
+    tables_created = False
+
+    try:
+        with event_tracker.track("TABLE_TOTAL", table_config) as total_event:
+            total_rows = 0
+            days_succeeded = 0
+            days_failed = 0
+
+            for day_idx, target_date in enumerate(dates, 1):
+                # P1-14: Lock heartbeat every 10 days to prevent connection timeout
+                if lock_conn is not None and day_idx % 10 == 0:
+                    if not keep_lock_alive(lock_conn, source_name, table_name):
+                        logger.error(
+                            "P1-14: Lock connection lost for %s.%s after %d days — "
+                            "stopping to prevent concurrent run conflicts",
+                            source_name, table_name, day_idx,
+                        )
+                        all_succeeded = False
+                        break
+
+                # P3-8: Memory pressure check before each day
+                _check_memory_pressure(source_name, table_name, target_date)
+
+                try:
+                    day_rows = _process_single_day(
+                        table_config,
+                        event_tracker,
+                        target_date,
+                        date_column,
+                        output_dir,
+                        force,
+                    )
+                    total_rows += day_rows
+                    days_succeeded += 1
+
+                    # P2-8: Progress logging for backfills
+                    if len(dates) > 5:
+                        logger.info(
+                            "Progress %s.%s: day %d/%d (%s), %d rows this day, %d total rows",
+                            source_name, table_name, day_idx, len(dates),
+                            target_date, day_rows, total_rows,
+                        )
+
+                    # Checkpoint on success
+                    save_checkpoint(
+                        table_name, source_name, target_date,
+                        "SUCCESS", event_tracker.batch_id,
+                    )
+
+                except SchemaEvolutionError:
+                    logger.exception(
+                        "Schema evolution error for %s.%s on %s — stopping table",
+                        source_name, table_name, target_date,
+                    )
+                    save_checkpoint(
+                        table_name, source_name, target_date,
+                        "FAILED", event_tracker.batch_id,
+                        failed_step="SCHEMA_EVOLUTION",
+                    )
+                    all_succeeded = False
+                    break  # Schema errors affect all dates — stop
+
+                except Exception:
+                    logger.exception(
+                        "Failed to process %s.%s for date %s — continuing to next date",
+                        source_name, table_name, target_date,
+                    )
+                    save_checkpoint(
+                        table_name, source_name, target_date,
+                        "FAILED", event_tracker.batch_id,
+                        failed_step="CDC_OR_SCD2",
+                    )
+                    days_failed += 1
+                    all_succeeded = False
+                    # Continue to next date — don't stop on transient failures
+
+            total_event.rows_processed = total_rows
+            if not all_succeeded:
+                total_event.status = "FAILED"
+                total_event.error_message = (
+                    f"{days_failed} of {len(dates)} dates failed"
+                )
+
+            logger.info(
+                "Large table %s.%s complete: days=%d, succeeded=%d, failed=%d, total_rows=%d",
+                source_name, table_name, len(dates), days_succeeded, days_failed, total_rows,
+            )
+
+            # Tier 2 modified-date sweep — only runs when (a) the daily
+            # extraction succeeded, (b) the table has LastModifiedColumn
+            # configured, (c) the table has at least one PK column, and
+            # (d) this is NOT an R-13 backfill (a backfill is itself a
+            # targeted reload — running sweep on top would be redundant).
+            # Detect-only by default to keep the daily pipeline non-destructive
+            # — an operator runs the apply path via tools/sweep_modified.py
+            # after reviewing the drift report.
+            if (
+                all_succeeded
+                and table_config.last_modified_column
+                and dates_override is None
+            ):
+                _run_modified_sweep_step(table_config, event_tracker)
+
+    except Exception:
+        logger.exception("Failed to process large table %s.%s", source_name, table_name)
+        return False
+
+    return all_succeeded
+
+
+def _run_modified_sweep_step(
+    table_config: TableConfig,
+    event_tracker: PipelineEventTracker,
+) -> None:
+    """Run a detect-only modified-date sweep after the daily windowed pass.
+
+    Drift counts are recorded on a ``MODIFIED_SWEEP`` event so the
+    operations dashboard can trend them across runs. Reload (``apply=True``)
+    is operator-driven via ``tools/sweep_modified.py`` — keeps the daily
+    pipeline non-destructive on top of the windowed pass.
+    """
+    from cdc.reconciliation.modified_sweep import run_modified_sweep
+
+    with event_tracker.track("MODIFIED_SWEEP", table_config) as sweep_event:
+        try:
+            result = run_modified_sweep(table_config, apply=False)
+        except Exception:
+            logger.exception(
+                "Modified-date sweep failed for %s.%s — non-blocking, continuing.",
+                table_config.source_name, table_config.source_object_name,
+            )
+            sweep_event.status = "FAILED"
+            return
+
+        sweep_event.rows_processed = result.source_rows_in_window
+        if result.skipped:
+            sweep_event.status = "SKIPPED"
+            sweep_event.event_detail = result.skip_reason
+            return
+
+        sweep_event.event_detail = (
+            f"window={result.sweep_window_days}d "
+            f"drift_pks={result.drift_pks}"
+        )
+        if result.drift_pks > 0:
+            logger.warning(
+                "Modified-date sweep: %d drift PK(s) detected in %s.%s — "
+                "rerun with apply=True (or tools/backfill.py for the affected "
+                "date range) to reload.",
+                result.drift_pks, table_config.source_name, table_config.source_object_name,
+            )
+
+
+def _process_single_day(
+    table_config: TableConfig,
+    event_tracker: PipelineEventTracker,
+    target_date: date,
+    date_column: str,
+    output_dir: Path,
+    force: bool,
+) -> int:
+    """Process a single day through extract → CDC → SCD2.
+
+    Args:
+        table_config: Table configuration.
+        event_tracker: Event tracker.
+        target_date: The date to process.
+        date_column: Business date column name.
+        output_dir: Directory for temp CSV files.
+        force: Skip guards if True.
+
+    Returns:
+        Number of rows extracted for this day.
+
+    Raises:
+        SchemaEvolutionError: If schema drift has type changes.
+        Exception: Any other processing error.
+    """
+    table_name = table_config.source_object_name
+    source_name = table_config.source_name
+    next_date = target_date + timedelta(days=1)
+
+    try:
+        # --- EXTRACT single day ---
+        with event_tracker.track("EXTRACT", table_config) as extract_event:
+            # OBS-2: Tag event with target date for per-day diagnostic filtering.
+            extract_event.event_detail = str(target_date)
+            df, csv_path = extract_windowed(table_config, target_date, output_dir)
+            extract_event.rows_processed = len(df)
+
+            # DTYPE-STABILIZE: Cast extraction dtypes to match existing Stage schema.
+            # Prevents false SchemaEvolutionErrors from Oracle/oracledb type inference
+            # instability (Null dtype on sparse days, Int64 vs Utf8 across days).
+            df = stabilize_extraction_dtypes(df, table_config)
+
+            # W-12: Release over-allocated memory from extraction operations.
+            if len(df) > 100_000:
+                df.shrink_to_fit(in_place=True)
+
+        # P3-11: Intermediate checkpoint — extraction succeeded, CDC pending.
+        # On retry, this date will be reprocessed (detect_gaps only treats SUCCESS
+        # as complete), but the checkpoint distinguishes "extraction OK, CDC failed"
+        # from "extraction itself failed" for debugging.
+        if len(df) > 0:
+            save_checkpoint(
+                table_name, source_name, target_date,
+                "EXTRACTED", event_tracker.batch_id,
+            )
+
+        if len(df) == 0:
+            logger.debug(
+                "Empty extraction for %s.%s on %s — skipping CDC/SCD2",
+                source_name, table_name, target_date,
+            )
+            # L-6: Save SUCCESS checkpoint for empty days inside _process_single_day
+            # to close the timing gap between returning and the caller's checkpoint.
+            save_checkpoint(
+                table_name, source_name, target_date,
+                "SUCCESS", event_tracker.batch_id,
+            )
+            return 0
+
+        # --- P1-13: Per-day extraction guard ---
+        if not force:
+            guard_ok = run_daily_extraction_guard(
+                table_config, len(df), event_tracker.batch_id, target_date,
+                drop_threshold=0,
+                first_run_ceiling=MAX_ROWS_PER_DAY,
+                # Per-table override from UdmTablesList.MaxRowsPerDay.
+                # NULL → keeps current behavior (5x multiplier + 10M ceiling).
+                max_rows_per_day_override=table_config.max_rows_per_day,
+            )
+            if not guard_ok:
+                raise RuntimeError(
+                    f"P1-13: Day {target_date} extraction ({len(df)} rows) exceeds guard "
+                    f"threshold. Use --force to override."
+                )
+
+        # Phase 3.1 of cdc_root_cause_blueprint.md: windowed source-count
+        # integrity. Compares len(df) to source COUNT(*) for the same
+        # [target_date, next_date) window the extractor used. Catches
+        # partial-day extractions that the historical-baseline guard
+        # above misses (first-load case, or steady-state under-extraction
+        # within a day). Tighter default tolerance for daily windows
+        # (CDC_SOURCE_COUNT_WINDOWED_TOLERANCE_PCT, default 0.1%) — daily
+        # counts have less natural drift than table totals.
+        if not force:
+            from extract.source_count_check import check_source_count_integrity
+            count_result = check_source_count_integrity(
+                df, table_config,
+                date_column=table_config.source_aggregate_column_name,
+                window_start=target_date,
+                window_end=next_date,
+            )
+            if not count_result.ok:
+                raise RuntimeError(
+                    f"Phase 3.1: Source-count integrity FAILED for "
+                    f"{source_name}.{table_name} on {target_date}: "
+                    f"extracted {count_result.extracted_count}, source "
+                    f"has {count_result.source_count} "
+                    f"(delta {count_result.delta_pct:.4f}% > "
+                    f"{count_result.tolerance_pct:.4f}% tolerance). "
+                    f"Use --force to override after confirming source state."
+                )
+        # --- E-11: PRE-PROCESSING SCHEMA VALIDATION ---
+        schema_warnings = validate_source_schema(table_config, df)
+        if schema_warnings:
+            has_missing = any("MISSING" in w for w in schema_warnings)
+            if has_missing:
+                raise RuntimeError(
+                    f"E-11: Schema validation failed for {table_config.source_name}."
+                    f"{table_config.source_object_name}: {'; '.join(schema_warnings)}"
+                )
+
+        # --- ENSURE TABLES (only needed on first day) ---
+        stage_created = ensure_stage_table(table_config, df)
+        bronze_created = ensure_bronze_table(table_config, df)
+
+        # --- SCHEMA EVOLUTION (P0-2) ---
+        # B-3: Capture result to condition E-12 warning during schema migration runs.
+        schema_result: SchemaEvolutionResult | None = None
+        if not stage_created and not bronze_created:
+            schema_result = evolve_schema(table_config, df)
+            if schema_result.hash_affecting_change:
+                logger.warning(
+                    "B-3: Schema migration detected for %s.%s — %d column(s) added: %s. "
+                    "All row hashes will change (new column included in hash). "
+                    "Expect mass CDC updates — this is correct behavior, not a bug.",
+                    source_name, table_name,
+                    len(schema_result.columns_added), schema_result.columns_added,
+                )
+
+        # --- COLUMN SYNC ---
+        if stage_created or bronze_created:
+            sync_columns(table_config)
+
+        # SCD-1: Ensure unique filtered index on Bronze to prevent duplicate
+        # active rows from INSERT-first retry. Created once; idempotent.
+        if table_config.pk_columns:
+            ensure_bronze_unique_active_index(table_config, table_config.pk_columns)
+            # V-9: Ensure point-in-time lookup index for historical queries.
+            ensure_bronze_point_in_time_index(table_config, table_config.pk_columns)
+
+        # --- NoPK-1: Reject keyless tables ---
+        if not table_config.pk_columns:
+            raise NoPrimaryKeyError(
+                f"NoPK-1: {source_name}.{table_name} has no PK columns "
+                f"after column sync. Run 'python3 discover_pks.py "
+                f"--source {source_name} --table {table_name}' to "
+                f"establish PKs from source metadata."
+            )
+
+        # --- WINDOWED CDC (P1-3/P1-4) ---
+        cdc_result = run_cdc_promotion(
+            table_config, df, event_tracker, schema_result, output_dir,
+            windowed=True,
+            date_column=date_column,
+            target_date=target_date,
+            next_date=next_date,
+        )
+
+        # P2-10: Release extraction DataFrame before SCD2 to reduce peak memory.
+        # At this point, CDC has captured everything needed in cdc_result.df_current
+        # and cdc_result.deleted_pks. The original extraction df is no longer needed.
+        extracted_row_count = len(df)
+        del df
+        # Item-19: Explicit gc.collect() ensures the extraction DataFrame's memory
+        # is returned to the allocator before SCD2 allocates. Without this, Python's
+        # cyclic GC may not run until memory pressure is high. Combined with
+        # MALLOC_ARENA_MAX=2 (W-4) and shrink_to_fit() (W-12), this closes the last
+        # gap in the memory management chain at the extraction→SCD2 transition point.
+        gc.collect()
+        _check_memory_pressure(source_name, table_name, target_date)
+
+        # --- TARGETED SCD2 (P1-3) ---
+        run_scd2_promotion(
+            table_config, cdc_result, event_tracker, output_dir,
+            targeted=True,
+            target_date=target_date,
+            index_rebuild_threshold=INDEX_REBUILD_THRESHOLD,
+        )
+    
+    except NoPrimaryKeyError:
+        raise  # Propagate to table level — no point retrying other days
+
+    except ConcatCorruptionError as e:
+        # P0-7d: Concat corruption detected — skip table, don't retry
+        logger.error("P0-7d: %s — skipping table", e)
+        extract_event.status = "FAILED"
+        extract_event.error_message = str(e)
+        return False
+
+    # --- CSV CLEANUP for this day ---
+    with event_tracker.track("CSV_CLEANUP", table_config) as cleanup_event:
+        cleanup_event.event_detail = str(target_date)  # OBS-2
+        cleaned = cleanup_csvs(output_dir, table_config)
+        cleanup_event.rows_processed = cleaned
+
+    return extracted_row_count
+
+
+def _check_null_date_column(
+    table_config: TableConfig,
+    source_name: str,
+    table_name: str,
+    date_column: str,
+) -> None:
+    """L-4: Check for NULL values in the date column that would be silently excluded.
+
+    Windowed extraction uses WHERE date_column >= X AND date_column < Y, which
+    excludes rows where date_column IS NULL. These rows never enter the pipeline.
+    """
+    try:
+        from utils.sources import get_source, SourceType
+
+        source = get_source(source_name)
+        if source.source_type == SourceType.ORACLE:
+            conn_uri = source.connectorx_uri()
+        else:
+            conn_uri = source.connectorx_uri()
+
+        import connectorx as cx
+        # Item-14: Use quote_identifier for SQL Server path (H-1 consistency).
+        # Oracle path uses double-quote escaping for identifier safety.
+        query = (
+            f"SELECT COUNT(*) AS null_count FROM {table_config.source_full_table_name} "
+            f"WHERE {quote_identifier(date_column)} IS NULL"
+        ) if source.source_type != SourceType.ORACLE else (
+            f"SELECT COUNT(*) AS null_count FROM {table_config.source_full_table_name} "
+            f'WHERE "{date_column}" IS NULL'
+        )
+
+        df = cx.read_sql(conn_uri, query, return_type="polars")
+        null_count = df[0, 0] if len(df) > 0 else 0
+
+        if null_count and null_count > 0:
+            logger.warning(
+                "L-4: %s.%s has %d rows with NULL %s — these are excluded from "
+                "windowed extraction. Consider: (a) fixing the source view, "
+                "(b) using COALESCE in SourceAggregateColumnName, or "
+                "(c) processing as a small table if row count permits.",
+                source_name, table_name, null_count, date_column,
+            )
+    except Exception:
+        logger.debug(
+            "L-4: Could not check NULL date column count for %s.%s — continuing",
+            source_name, table_name,
+            exc_info=True,
+        )
+
+
+def _check_memory_pressure(source_name: str, table_name: str, target_date: date) -> None:
+    """P3-8 + M-3: Check memory and FD usage before processing a day.
+
+    Logs warnings and triggers GC if memory usage is high.
+    M-3: Monitors open file descriptors to detect ConnectorX FD leaks.
+    """
+    try:
+        import gc
+        import psutil
+        proc = psutil.Process()
+        mem = psutil.virtual_memory()
+
+        if mem.percent > 95:
+            logger.error(
+                "P3-8: CRITICAL memory pressure (%.1f%%) before %s.%s date %s. "
+                "Triggering GC and pausing is recommended.",
+                mem.percent, source_name, table_name, target_date,
+            )
+            gc.collect()
+        elif mem.percent > 85:
+            logger.warning(
+                "P3-8: High memory usage (%.1f%%) before %s.%s date %s. "
+                "Triggering garbage collection.",
+                mem.percent, source_name, table_name, target_date,
+            )
+            gc.collect()
+
+        # M-3: Monitor file descriptor count to detect ConnectorX FD leaks.
+        # Default RHEL ulimit -n is 1024. ConnectorX opens N+1 FDs per read_sql.
+        try:
+            fd_count = proc.num_fds()
+            if fd_count > 800:
+                logger.error(
+                    "M-3: HIGH FD count (%d) for %s.%s before date %s — "
+                    "approaching default ulimit (1024). Set ulimit -n 65536. "
+                    "ConnectorX may be leaking connections.",
+                    fd_count, source_name, table_name, target_date,
+                )
+            elif fd_count > 500:
+                logger.warning(
+                    "M-3: Elevated FD count (%d) for %s.%s before date %s. "
+                    "Monitor for ConnectorX connection leaks.",
+                    fd_count, source_name, table_name, target_date,
+                )
+        except AttributeError:
+            pass  # num_fds() not available on all platforms
+
+    except ImportError:
+        pass  # psutil not installed — skip memory/FD check

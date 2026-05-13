@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+export MALLOC_ARENA_MAX=2
+
+cd /path/to/DeBI-Python-UDM-INGESTION
+
+# ---- Pre-pipeline setup (idempotent; verifies env, runs cleanup) ----
+python3 main_pre_pipeline_setup.py
+
+# ---- Small tables (each table is one unit; workers parallelize across tables) ----
+python3 main_small_tables.py --source CCM    --workers 4
+python3 main_small_tables.py --source DNA    --workers 4
+python3 main_small_tables.py --source EPICOR --workers 4
+
+# ---- Large tables (workers parallelize across tables; per-day inside is sequential per table) ----
+python3 main_large_tables.py --source DNA    --workers 6
+python3 main_large_tables.py --source EPICOR --workers 6

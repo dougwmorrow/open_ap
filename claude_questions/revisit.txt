@@ -1,0 +1,257 @@
+Great observation — the code overloading and density would be a real onboarding tax. Let me check if there's an existing glossary first, then author a comprehensive GLOSSARY.md.
+
+
+Ran 2 commands
+No glossary exists. Authoring docs/migration/GLOSSARY.md as a comprehensive code/acronym reference, then linking from HANDOFF + 00_OVERVIEW + CLAUDE.md.
+
+Created
+GLOSSARY.md
++578
+-0
+Now linking the glossary from the top-of-funnel docs.
+
+
+Edited 6 files
+Done. New file GLOSSARY.md (~33 KB) — a single-source-of-truth dictionary for every short-form identifier in the project, structured for both humans skimming and AI agents grepping.
+
+What's in it
+17 code families covered with examples, plus status icons, term abbreviations, and cross-doc citation syntax:
+
+Family	Meaning	Example
+D-numbers	Decisions (1-99)	D93 = Cross-doc cascade propagation requirement
+R-numbers (risks)	Delivery risks (1-31)	R28 = Round-level cascade self-attestation gap
+B-numbers (backlog)	WSJF-prioritized follow-ups (1-165)	B144 = Pitfall #9 sub-class 9.j candidate
+Round R<N>	Phase 1 sub-area rounds (1-8)	R7 = Phase 1 Round 7 (Schema Evolution Governance)
+Reviewer codes	Round-Cycle-Slot pattern	R8C3 = Round 8 Cycle 3 reviewer; R5C1-2 = Round 5 Cycle 1 Slot 2
+Pattern F instances	Round-N Pattern F paired-judgment	R8-PF-INST2 = Round 8 Pattern F Instance 2 (cascade-auditor that caught B155)
+Pattern A-F	Multi-agent orchestration discipline	Pattern E = 5-agent deep validation; Pattern F = cascade audit
+SP-N	Stored procedures (1-12)	SP-4 = PipelineExecutionGate_AcquireTest
+RB-N	Operational runbooks (1-12)	RB-12 = Pipeline Deployment
+Edge case series	M/S/I/N/P/G/D/F/V/T/DP/SI	F4 = Failover gate-acquire race
+Tier codes	Test (0-5) vs artifact-complexity (α-δ)	Tier δ = mega-spec >100 KB
+Pitfall #N	Project pitfalls 1-11 + 9.a-9.j sub-classes	Pitfall #9.j = B-item status-render discipline
+8.A-8.G	Round 8 self-improvement skills	8.F = udm-agent-prompt-versioner
+Trigger A-F	Pattern F cascade-audit triggers	Trigger A = D-acceptance substantiation
+Gate 1-5	Validation discipline gates	Gate 2 = Quality assurance (independent review)
+EventType families	CLI_* / CYCLE_* / MIGRATION_* / etc.	MIGRATION_AUTOMIC_INVENTORY
+Quick answers for your examples
+R8-PF = Round 8 Pattern F (close-out cascade audit; R8-PF-INST1 and INST2 are the two paired-judgment cascade-auditor instances)
+D93 = Decision 93 — Cross-doc cascade propagation requirement (formalizes Pattern F unscoped audit lesson)
+R7 = Round 7 — Phase 1 Round 7 (Schema Evolution Governance). Context matters: R7 in RISKS.md = Risk 7; R7 in round narrative = Round 7.
+D47 = Decision 47 — Round 0.5 spike authorization (pre-implementation spike validating D6/D16/D29 integrations)
+Linked from
+HANDOFF.md top banner ("Lost on a code like..." callout) + read order (slot 3) + quick-links section
+00_OVERVIEW.md Tier 1 (alongside CURRENT_STATE/HANDOFF/NORTH_STAR) + clarification that the existing "Key Glossary" section is for domain terms (CDC, SCD2, Bronze, L_99) while GLOSSARY.md is for codes
+CLAUDE.md AI agent read order (slot 3)
+Common-confusion section (the real value)
+The glossary explicitly calls out 7 overloaded prefixes that trip new readers:
+
+R<N> overloaded: Risk vs Round vs Reviewer
+B-<N> (hyphen) vs B<N> (no hyphen): CLAUDE.md code-level edge case vs BACKLOG follow-up
+D-<N> vs D<N>: edge-case D-series vs Decision
+P0-1 vs Phase 0 deliverable 0.1: phase-prefixed edge case vs Phase 0 deliverable
+Tier 0-5 vs Tier α-δ: test pyramid vs artifact-complexity
+Pattern E vs Pattern F: per-artifact content vs per-round cascade
+R7C5 reading rule: the middle character C is the disambiguator
+Maintenance discipline
+Glossary updates are part of the udm-round-closeout skill cascade going forward — any round that introduces a new code family (e.g., a hypothetical Round 9 introducing Trigger G/H per current Phase 2 R1 candidate proposals) must extend the glossary as Section 6 aggregate-doc work.
+
+Cool let's move onto the next phase. At a high level have we addressed everything for our teams data engineering needs?
+
+Honest answer: Phase 1 planning is genuinely complete (Rounds 1-8 🟢), but implementation prerequisites are NOT all met. A few real gaps your data engineers will hit on day one.
+
+What's actually addressed
+Phase 1 planning produced comprehensive specs the team can implement against:
+
+Need	Status	Source
+Database DDL (24 tables, 12 stored procs)	🟢 spec'd	phase1/01_database_schema.md
+Configuration (UdmTablesList, .env, GPG, parity, Automic frozen-11)	🟢 spec'd	phase1/02_configuration.md
+17 Python module interface specs (Parquet/PII/credentials/ledger/scheduling/observability/Snowflake)	🟢 spec'd	phase1/03_core_modules.md
+11 operator CLI specs	🟢 spec'd	phase1/04_tools.md
+6-tier test pyramid + per-module + per-tool test plans	🟢 spec'd	phase1/05_tests.md
+3-env deployment topology + immutable artifact contract + 5-stage module startup	🟢 spec'd	phase1/06_deployment.md
+Forward-only schema evolution governance + SchemaContract	🟢 spec'd	phase1/07_schema_evolution_governance.md
+11 operational runbooks (RB-1 through RB-12)	🟢 spec'd	05_RUNBOOKS.md
+Validation discipline (5-gate + D72 cycle ceiling + Pattern E/F + self-improvement)	🟢 operational	CHECKS_AND_BALANCES.md + skills
+Cumulative edge case register (M/S/I/N/P/G/D/F/V + T + DP + SI series, ~150+ cases)	🟢 enumerated + mitigated	04_EDGE_CASES.md + CLAUDE.md
+What is NOT addressed — actual prerequisites for Phase 2
+🔴 Phase 0 deliverables — 0 of 20 complete
+This is R01 (top active risk; score 9). Phase 2 cannot start without these:
+
+#	Deliverable	Owner	Blocks
+0.4	Tokenization vault DDL approved by DBA + compliance	DBA + compliance	Any deployment that touches PII
+0.7	Pilot table selected (small, ≤1M rows, low consumer impact)	Pipeline team	Phase 2 entirely
+0.2	Lateness measurement query run on top 5 large tables → per-table L_99 baseline	Pipeline team	Phase 3 (large tables)
+0.3	PII column inventory per source (DNA, CCM, EPICOR)	Pipeline + compliance	Tokenization correctness
+0.5	Network drive path standard finalized	Pipeline + sysadmin	Parquet writer module
+0.11	Cross-server parity baseline (RHEL version + Python pinned + library SHAs + systemd unit identical)	Pipeline + sysadmin	First deploy + every deploy after
+0.12	GPG-based credential strategy (TPM2 sealing per D64)	Pipeline + security	Credentials loading at startup
+0.14	Source-DB on-call escalation contacts captured	DB on-call team	Any production failover
+0.15	PiiTokenProvenance schema reviewed	DBA + compliance	Provenance writes
+0.17	Capacity baseline (row counts + growth rates + 7-year projections)	Pipeline team	Snowflake sizing + storage planning
+0.18	Alation integration scope agreed	Data governance	Phase 6 dashboards
+0.19	Offsite Parquet replication target identified	Pipeline + sysadmin	DR (DC-loss) recovery
+0.20	Ops-channel client integration (Slack / PagerDuty / email / SMS)	Pipeline + sysadmin	alert_dispatcher CLI (R4 § 3.11)
+0.6	Snowflake trial week-1 cost data	Snowflake admin	Phase 5 sizing
+0.9	Server failover protocol documented (RB-2 / RB-9)	Pipeline + sysadmin	Production outage response
+0.10	2x/day pipeline schedule windows agreed (against frozen-11 Automic jobs per R7)	Pipeline + ops	Production scheduling
+0.8	Acceptance criteria for each subsequent phase signed off	All	Stage gates
+0.1	Architecture sign-off from management + engineering leads	Management	Authorization to start
+🔴 Round 0.5 spike (D47) — authorized but NOT executed
+A pre-implementation spike that runs 3 highest-risk decision combinations with REAL code before Phase 1 implementation commits:
+
+D6 (in-house tokenization vault) — atomic UPDLOCK+HOLDLOCK pattern under concurrent load
+D16 (Parquet snapshot replacing Stage) — stage-check-exchange rename pattern with crash recovery
+D29 (Automic gate-table coordination + cooperative cancellation per D33)
+Status: authorized + plan written at phase1/03_round_0_5_spike_plan.md. Awaiting engineer assignment + dev environment access. R02 risk (medium-high).
+
+🟡 Other prerequisites
+DBA review queue for schema v3 — R05 risk. Schema ready for review since Round 1 v3 lock; external dependency on DBA bandwidth.
+Compliance sign-off on tokenization approach — Phase 0 0.4 partially overlaps; explicit compliance approval not yet recorded.
+Engineer(s) assigned — R03 (single-engineer Python expertise; bus factor); pair-programming during Phase 1 implementation strongly recommended.
+CI/CD infrastructure — not addressed in planning rounds; presumed to exist but not validated.
+Logging integration with corporate tools (Splunk, Datadog, etc.) — SqlServerLogHandler is canonical per CLAUDE.md but corporate-tool routing not specified.
+Implementation gaps (no production code written yet)
+Planning rounds produced specs, not code:
+
+17 Python modules — interfaces specified; implementations 0% complete
+11 CLI tools — argument specs + behaviors specified; implementations 0% complete
+12 stored procedures — DDL written + reviewed; not deployed to any database
+Tier 0-5 tests — plans specified; actual test files 0% complete
+Migrations — listed in 02_PHASES.md § Phase 1 Migrations; scripts 0% complete
+This is expected for a planning phase — the value of Rounds 1-8 is having a comprehensive, validation-passed blueprint before writing code. But your engineers should not start implementation thinking specs are code.
+
+Recommended order before starting Phase 2
+Get architecture sign-off (0.1) and engineering / management approval to proceed
+Run Round 0.5 spike (D47) — validates D6/D16/D29 before they ossify across 17 modules + 11 CLIs
+Close highest-priority Phase 0 deliverables in parallel:
+0.4 (vault DDL compliance sign-off) — gates PII work
+0.7 (pilot table selection) — gates Phase 2
+0.11 + 0.12 (parity baseline + GPG strategy) — gate any deployment
+0.5 (network drive path) — gates Parquet writer
+0.20 (ops-channel client) — gates alert dispatcher
+Assign at least 2 engineers to Phase 1 implementation (R03 bus factor)
+Then Phase 1 implementation — build modules / CLIs / migrations / tests per R3-R5 specs
+Then Phase 2 cutover — pilot table end-to-end with first production self-improvement loop invocation at Phase 2 R1 close-out (B160 lock criteria)
+TL;DR for the team
+Specs: ✅ Complete + validation-passed.
+Sign-offs + Phase 0 prerequisites: 🔴 0 of 20.
+Pre-implementation spike (Round 0.5): 🟡 Authorized, not started.
+Production code: 0% written.
+Don't start Phase 2 implementation until 0.1, 0.4, 0.7, 0.11, 0.12, and Round 0.5 spike are closed.
+
+The discipline framework (validation gates + Pattern F + self-improvement loop) is production-ready and will catch problems during implementation — but it can't substitute for the Phase 0 prerequisites that need humans (DBA, compliance, sysadmin, management) to sign off.
+
+Offer a quick statement on each of these items so that I can send messages to the team to discuss them 0.1, 0.4, 0.7, 0.11, 0.12. I'll setup a team meeting, but I need a message indicating what each topic is that needs to be discussed. Do the same for all 20 items that need to be addressed.
+
+Ready-to-send messages for each Phase 0 deliverable. Each is plain-English (no codes) and self-contained so you can paste into Slack/email/calendar invites. The 5 you flagged as priority (0.1, 0.4, 0.7, 0.11, 0.12) are marked.
+
+0.1 — Architecture sign-off [🔴 PRIORITY]
+The data pipeline rebuild is fully designed: 24 database tables, 12 stored procedures, 17 Python modules, 11 operator tools, 12 operational runbooks, plus an 8-round validation discipline. Before we start writing implementation code, we need formal sign-off from engineering management that the architecture is approved to proceed. This is a single decision meeting — no code changes, just go/no-go.
+
+Attendees: Engineering Manager, Pipeline Lead, optionally Director of Data Engineering
+
+0.2 — Lateness measurement on top 5 large tables
+The current pipeline uses a fixed 30-day lookback window. Research showed this is wasteful on some tables and risky on others. We need to run a one-time measurement query against the 5 largest source tables (ACCT, CARDTXN, AuditLog, plus 2 more TBD) to establish an empirical "99th percentile late-arrival window" per table. This drives our per-table lookback configuration going forward.
+
+Attendees: Pipeline Lead, plus whoever owns source-DB query access
+
+0.3 — PII column inventory per source
+Every PII column across DNA, CCM, and EPICOR sources needs to be inventoried and classified before we deploy the tokenization vault. We need a definitive list of which columns hold names, SSNs, account numbers, addresses, emails, etc., so the pipeline knows what to tokenize. Compliance also needs to confirm the classification.
+
+Attendees: Pipeline Lead, Compliance/Risk, source-system SMEs (DNA / CCM / EPICOR business owners)
+
+0.4 — Tokenization vault DDL approval [🔴 PRIORITY]
+We've designed an in-house tokenization vault (SQL Server-resident, no cloud KMS) to replace plaintext PII in Bronze with deterministic tokens. The DDL is reviewed internally and ready. We need DBA approval on the table design / indexes / constraints, AND compliance sign-off that this approach satisfies our PII protection requirements. This gates every downstream tokenization decision.
+
+Attendees: DBA, Compliance/Risk Officer, Pipeline Lead
+
+0.5 — Network drive path standard finalized
+Parquet snapshots will land on the network drive using a hierarchical path: \\archive\source=DNA\table=ACCT\year=2026\month=05\day=11\batch=N.parquet. We need agreement on the exact UNC path, mount conventions, permissions, and growth budget before the Parquet writer module is built. Sysadmin should confirm the path is stable and writable from all three servers.
+
+Attendees: Pipeline Lead, Sysadmin / Infrastructure
+
+0.6 — Snowflake trial week-1 cost data
+We've capped Snowflake spend at $120K/year and need real cost data from a trial week before we size the warehouse. Specifically: storage rate, COPY INTO compute, Iceberg query rate. Without this, we're guessing at the Phase 5 sizing decision.
+
+Attendees: Snowflake Admin, Pipeline Lead, optionally Finance
+
+0.7 — Pilot table selection [🔴 PRIORITY]
+Phase 2 is the pilot cutover: one small table runs the new pipeline end-to-end to validate everything works. We need to pick that table now. Criteria: small (≤1M rows), low daily change volume, low consumer-team impact, ideally not in the critical financial reporting path. This unblocks Phase 2 work.
+
+Attendees: Pipeline Lead, Engineering Manager, downstream consumer-team rep (so we don't pick a table that breaks a critical report)
+
+0.8 — Phase acceptance criteria sign-off
+Each phase (Pilot Cutover, Large Tables, Production Rollout, Snowflake Integration, Health Checks) has its own acceptance gate. We've drafted what "done" looks like for each phase — we need stakeholder sign-off on these criteria before we start, so there's no scope drift later.
+
+Attendees: All major stakeholders (Engineering Management, Pipeline Lead, DBA, Compliance, Operations rep)
+
+0.9 — Server failover protocol documented
+If the primary pipeline server fails during an AM or PM cycle, we have a 3-server architecture (dev/test/prod) that supports failover. The protocol — when to trigger, who authorizes, what the test server does to claim the workload — needs to be written up as a runbook (RB-2 and RB-9 are drafted; this is the final operational sign-off).
+
+Attendees: Pipeline Lead, Sysadmin, Operations / On-call lead
+
+0.10 — 2x/day pipeline schedule windows
+The pipeline runs twice daily (AM + PM cycle). We need agreement on the exact time windows — when AM kicks off, when PM kicks off, what the SLA is for completion, when downstream consumers expect Bronze to be current. Also: the 11 canonical Automic jobs (from Round 7) need to fit these windows.
+
+Attendees: Pipeline Lead, Operations, Automic scheduler owner, downstream consumer reps
+
+0.11 — Cross-server parity baseline [🔴 PRIORITY]
+Dev, test, and prod servers must be byte-for-byte identical in OS version, Python version, library versions, systemd unit files, and environment variables. We need to capture the canonical baseline now (a JSON file: /etc/pipeline/parity_baseline.json) so the pipeline can verify parity at startup and refuse to run if dev/test/prod have drifted. This is foundational — if servers drift, behavior diverges silently.
+
+Attendees: Pipeline Lead, Sysadmin, optionally Security (for audit trail)
+
+0.12 — GPG-based credential strategy [🔴 PRIORITY]
+Database credentials, Snowflake keys, vault keys all need to be encrypted at rest on each server. We've decided on GPG-encrypted credential files (/etc/pipeline/credentials.json.gpg) with the passphrase sealed against TPM2 (Trusted Platform Module). Security needs to confirm TPM2 is available on all 3 servers and approve the passphrase storage approach. Without this, we can't deploy credentials safely.
+
+Attendees: Pipeline Lead, Security, Sysadmin
+
+0.13 — REMOVED
+Was originally "watchdog host" — superseded by D29 which uses Automic for failover coordination instead. No action needed; preserved as audit trail.
+
+0.14 — Source-DB on-call escalation contacts
+When the pipeline can't reach DNA, CCM, or EPICOR — or when one of those source databases has a schema change or outage — our team needs a clear escalation path. We need names + phone numbers / page contacts captured in the runbook so on-call doesn't waste cycles figuring out who to call at 2am.
+
+Attendees: Pipeline Lead, DB On-call Team Lead, Operations
+
+0.15 — PiiTokenProvenance schema reviewed
+Beyond the tokenization vault itself, we have an append-only "provenance" table that records every first-observation of a plaintext value across sources. This is critical for audit-grade traceability ("when did this token first appear in DNA vs CCM?"). DBA needs to review the table design (it'll be large — ~250M rows over 7 years) and compliance needs to confirm the audit semantics are sufficient.
+
+Attendees: DBA, Compliance/Risk, Pipeline Lead
+
+0.16 — REMOVED
+Was originally "source schema contracts" with the source DB teams — superseded by an internal governance approach (we own schema-change detection, no external contract). No action needed; preserved as audit trail.
+
+0.17 — Capacity baseline
+Before we build, we need real numbers: how many rows are in each top-10 table today, how fast they're growing, how much storage that projects to over 7 years (the retention horizon). This drives database sizing, Parquet storage planning, and Snowflake budgeting. It's a one-time measurement.
+
+Attendees: Pipeline Lead, DBA (for current row counts), Sysadmin (for storage planning)
+
+0.18 — Alation integration scope
+Alation is our data catalog. We have an opportunity to publish pipeline metadata (table definitions, lineage, SCD2 effective dates) to Alation so downstream analysts can discover what's where. This is not urgent (Phase 6), but the data governance team wants to align scope early to avoid rework.
+
+Attendees: Pipeline Lead, Data Governance Team Lead
+
+0.19 — Offsite Parquet replication target
+Our DR strategy requires that Parquet snapshots can survive a data-center loss. We need to identify where offsite copies go (cloud object store? Second-datacenter NFS? Tape?). Sysadmin needs to confirm bandwidth and cost for the chosen target. Quarterly DR rehearsal (per RB-7) will exercise this.
+
+Attendees: Pipeline Lead, Sysadmin, optionally Disaster Recovery / Business Continuity Officer
+
+0.20 — Ops-channel client integration
+When the pipeline fires an alert (extraction failure, vault corruption, parity drift), it needs to route somewhere humans actually see. We need to pick the channel(s) — Slack webhook, PagerDuty Events API, SMTP email, or SMS — and provision the credentials per server. The alerting tool (alert_dispatcher) is designed; it just needs a real channel to talk to. Note: one outstanding design question — the proposed fallback order (Slack → PagerDuty → email → SMS) inverts canonical SRE practice where PagerDuty is the primary hub; we should discuss whether to restructure or document our project-specific reasoning.
+
+Attendees: Pipeline Lead, Sysadmin, Operations / On-call lead, optionally Security (for credential storage)
+
+Suggested meeting structure
+You might consolidate these into ~4 separate meetings rather than 20 one-offs:
+
+Meeting	Cover	Attendees
+#1: Architecture sign-off + Phase acceptance	0.1, 0.7, 0.8	Engineering Management + Pipeline Lead + consumer reps
+#2: DBA + Compliance review session	0.4, 0.15, 0.3	DBA + Compliance + Pipeline Lead
+#3: Infrastructure / Sysadmin session	0.5, 0.9, 0.11, 0.12, 0.14, 0.17, 0.19, 0.20	Sysadmin + Security + Operations + Pipeline Lead
+#4: Measurement / data work	0.2, 0.6, 0.10, 0.18	Pipeline Lead + Snowflake Admin + Data Governance + Operations
+The 5 priority items (0.1, 0.4, 0.7, 0.11, 0.12) span Meetings #1, #2, and #3 — if those three meetings happen first, the highest-risk gates close fastest.
+
+
+P3-5: Full-scan extraction returned 7274434 rows from database.schema.table. Consider using PartitionOn or date-windowed extraction for better performance.
+

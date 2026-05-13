@@ -1,0 +1,159 @@
+# Claude Code ignore patterns for the UDM pipeline project
+#
+# IMPORTANT: .claudeignore is NOT officially supported by Claude Code (as of May 2026).
+# The deny rules in .claude/settings.local.json (`permissions.deny`) are the
+# enforced mechanism. This file documents the same intent in .gitignore-style
+# syntax for human reference and for the community claude-ignore PreToolUse
+# hook (github.com/li-zhixin/claude-ignore) if/when that's installed.
+#
+# Mirror critical entries to settings.local.json `permissions.deny` for actual
+# enforcement.
+
+# ============================================
+# Credentials and secrets — never read
+# Per D103 (Claude Code security model):
+#   Claude's allowed scope = /debi project directory ONLY.
+#   All credentials live OUTSIDE /debi. Canonical locations Claude MUST NOT read:
+#     - /etc/pipeline/.env, /etc/pipeline/credentials.json.gpg (production)
+#     - /home/<user>/.ssh/**, /.gnupg/**, /.pipeline/**, /.aws/**
+#     - /dev/shm/snowflake_pk_* (ephemeral RSA keys)
+#     - C:/ProgramData/Pipeline/** (Windows dev)
+#     - C:/Users/*/AppData/Local/Pipeline/** (Windows dev)
+# ============================================
+.env
+.env.*
+.env.local
+.env.production
+.env.test
+.env.dev
+secrets.json
+credentials.json
+credentials.json.gpg
+**/secrets/**
+**/credentials/**
+*.pem
+*.ppk
+*.key
+*.crt
+*.p12
+*.pfx
+ssh_keys/
+
+# Linux production credential paths (Claude must remain outside)
+/etc/pipeline/**
+/etc/pipeline/.env
+/etc/pipeline/credentials.json.gpg
+/var/lib/pipeline/**
+/dev/shm/snowflake_pk_*
+/dev/shm/snowflake_pk_**
+
+# Home-directory credential paths (Claude must not read regardless of user)
+/home/**
+/root/**
+~/.ssh/**
+~/.gnupg/**
+~/.pipeline/**
+~/.aws/**
+~/.config/gcloud/**
+~/.config/credentials/**
+~/.kube/**
+~/.docker/config.json
+
+# Windows credential paths (if dev workstation is Windows)
+C:/ProgramData/Pipeline/**
+C:/Users/*/AppData/Local/Pipeline/**
+C:/Users/*/.ssh/**
+C:/Users/*/.aws/**
+C:/Users/*/.kube/**
+
+# GPG / age / sops encrypted files anywhere
+*.gpg
+*.age
+*.sops.yaml
+**/age/**
+
+# ============================================
+# PII tokenization vault — production data
+# ============================================
+vault/
+vault/**
+**/PiiVault.bak
+**/PiiVault.snapshot
+*.vault.encrypted
+PiiVault*.backup
+
+# ============================================
+# Logs that may contain PII
+# ============================================
+logs/
+*.log
+audit_logs/
+PipelineLog.export.*
+PiiVaultAccessLog.export.*
+
+# ============================================
+# Production / sensitive infrastructure
+# ============================================
+production_config/
+prod/
+**/production/**
+terraform/production/
+kubernetes/production/
+
+# ============================================
+# Build / IDE / OS artifacts
+# ============================================
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ============================================
+# Backups
+# ============================================
+*.bak
+*.backup
+*.backup-*
+*.backup_*
+*.tar.gz.bak
+
+# ============================================
+# Internal team / non-public data
+# ============================================
+team_internal/
+internal/
+NOT_FOR_AI/
+do-not-share/
+
+# ============================================
+# Temp files
+# ============================================
+.tmp/
+.tmp_*
+.tmp_skills/
+*.tmp
+*.temp

@@ -1,0 +1,13 @@
+# Weekly — Sunday morning, after the daily run completes
+export MALLOC_ARENA_MAX=2
+cd /path/to/DeBI-Python-UDM-INGESTION
+
+# Reconciliation: full PK comparison source vs Bronze (catches late deletes/inserts)
+# This is the existing Tier 3 (E-7). No CLI yet — call from a wrapper or schedule via SQL Agent.
+# Placeholder: build tools/reconcile.py later if needed.
+
+# Chain validation: structural integrity of every Bronze SCD2 table
+python3 tools/validate_scd2.py --all
+
+# Modified-date sweep: cross-checks Tier 2 results from the daily run
+python3 tools/sweep_modified.py --source DNA --window 30

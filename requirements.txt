@@ -1,0 +1,42 @@
+adbc-driver-manager==1.10.0
+adbc-driver-postgresql==1.10.0
+adbc-driver-sqlite==1.10.0
+bcpandas==2.7.2
+certifi==2026.2.25
+cffi==2.0.0
+charset-normalizer==3.4.4
+connectorx==0.4.5
+cryptography==46.0.5
+et_xmlfile==2.0.0
+fastexcel==0.19.0
+greenlet==3.3.1
+idna==3.11
+importlib_resources==6.5.2
+numpy==2.4.2
+openpyxl==3.1.5
+oracledb==3.4.2
+pandas==3.0.0
+# N-3: Minimum version for native str.normalize("NFC") support (PR #20483).
+# P-6: Native streaming engine anti-joins require v1.32+ (PR #21937).
+# Deploying with <1.32 silently falls back to the in-memory engine.
+polars==1.38.1
+# H-2: Pin polars-hash to exact version. polars-hash hashes the string
+# representation of values. A Polars or polars-hash version upgrade that
+# changes how values render as strings will silently change hashes, causing
+# every row to appear "changed" — a mass-update cascade. Run hash regression
+# tests before upgrading either package.
+polars-hash==0.5.6
+polars-runtime-32==1.38.1
+psutil==7.2.2
+pyarrow==23.0.1
+pycparser==3.0
+pyodbc==5.3.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.1
+pyxlsb==1.0.10
+requests==2.32.5
+six==1.17.0
+SQLAlchemy==2.0.46
+typing_extensions==4.15.0
+urllib3==2.6.3
+xxhash==3.6.0

@@ -1,0 +1,204 @@
+# ============================================
+# UDM Pipeline — .gitignore
+# Mirrors security intent of .claudeignore. Patterns added here
+# defend GitHub from accidental commits; .claude/settings.local.json
+# permissions.deny defends Claude Code reads.
+# ============================================
+
+# ============================================
+# CREDENTIALS / SECRETS — never commit
+# Per D103 (Claude Code security model); CLAUDE.md "Do NOT" rules.
+# ============================================
+.env
+.env.*
+!.env.example
+!.env.sample
+.env.local
+.env.production
+.env.test
+.env.dev
+secrets.json
+credentials.json
+credentials.json.gpg
+**/secrets/**
+**/credentials/**
+*.pem
+*.ppk
+*.key
+*.crt
+*.p12
+*.pfx
+*.gpg
+*.pgp
+*.age
+*.sops.yaml
+ssh_keys/
+**/age/**
+
+# ============================================
+# PII VAULT / SENSITIVE DATA STORES
+# Per D102 (AES-256-GCM PiiVault) and SECURITY_MODEL.md.
+# ============================================
+vault/
+**/PiiVault.bak
+**/PiiVault.snapshot
+*.vault.encrypted
+PiiVault*.backup
+
+# ============================================
+# DATA FILES — pipeline outputs may contain PII / business data
+# ============================================
+*.csv
+*.tsv
+*.parquet
+*.fmt
+*.bcp
+*.dat
+
+# ============================================
+# LOGS — may contain PII, query plans, stack traces
+# ============================================
+*.log
+logs/
+audit_logs/
+PipelineLog.export.*
+PiiVaultAccessLog.export.*
+
+# ============================================
+# PRODUCTION CONFIG — never commit
+# ============================================
+production_config/
+prod/
+**/production/**
+terraform/production/
+kubernetes/production/
+
+# ============================================
+# PYTHON BUILD ARTIFACTS
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+develop-eggs/
+sdist/
+wheels/
+share/python-wheels/
+MANIFEST
+
+# ============================================
+# PYTHON TEST / COVERAGE ARTIFACTS
+# ============================================
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+htmlcov/
+.tox/
+.nox/
+nosetests.xml
+
+# ============================================
+# VIRTUAL ENVIRONMENTS
+# ============================================
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+UDM2.0_venv/
+
+# ============================================
+# IDE / EDITOR
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.project
+.pydevproject
+.spyderproject
+.spyproject
+.ropeproject
+
+# ============================================
+# OS ARTIFACTS
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ============================================
+# BACKUPS
+# ============================================
+*.bak
+*.backup
+*.backup-*
+*.backup_*
+*.tar.gz.bak
+*.orig
+
+# ============================================
+# TEMP / SCRATCH
+# ============================================
+.tmp/
+.tmp_*
+*.tmp
+*.temp
+UsersbigbaDesktopTest_Repo-main.tmp_brainstorming.md
+
+# ============================================
+# INTERNAL / NON-PUBLIC
+# ============================================
+team_internal/
+internal/
+NOT_FOR_AI/
+do-not-share/
+ad_hoc_analytics/
+archive/
+
+# ============================================
+# CLAUDE CODE — local settings only
+# Track .claude/agents/ and .claude/skills/ (project-portable disciplines);
+# ignore user-specific local config. Adjust here if your team prefers to
+# keep custom agents/skills out of version control.
+# ============================================
+.claude/settings.local.json
+.claude/local/
+.claude/.cache/
+.claude/sessions/
+
+# ============================================
+# JUPYTER / NOTEBOOKS
+# ============================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ============================================
+# NODE (if any tooling is added later)
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
