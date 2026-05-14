@@ -465,6 +465,8 @@ Per `phase1/08_sub_agent_self_improvement.md`. 7 skills + 1 meta-doc + governanc
 
 Cascade order: 8.A → (8.B/C/D/E/G in parallel) → user-review session → 8.F applies approved batch.
 
+- **DELTA-A1..A4 / DELTA-B1..B3** — convention for tracking individual user-approval deltas surfaced at round close-out cascades per D95 umbrella + D98 semver discipline. A-series for Round N close-out; B-series for Round N+1 close-out; etc. Each delta is reviewed YES/NO per D95 before `udm-agent-prompt-versioner` (8.F) applies. Example: DELTA-A2 = Round 3 close-out 9.l extension (PATCH semver); DELTA-B2 = Round 4 close-out Step 11 → Gate 2 elevation (MINOR semver on udm-design-reviewer v1.0.0 → v1.1.0).
+
 ---
 
 ## Pattern F trigger codes — Trigger A through Trigger F

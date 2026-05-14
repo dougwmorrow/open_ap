@@ -16,6 +16,8 @@
 | `b5cd106` | Round 6 Tier 2 property tests — 53 properties + 1 production bug | +1535 cumulative |
 | `0a377ab` | B-262 fix (NFC ordering) + tracker cleanup | +1590 cumulative |
 
+> **Note**: this BUILD_LOG was authored in a subsequent docs commit (`f2ccdf8`) which is NOT in the table above — the 7-commit chain reflects the build-and-fix campaign through `0a377ab`; `f2ccdf8` is the consolidating docs cleanup commit. Future readers of `git log` will see 8+ commits on this branch; the first 7 cover Round 3/4/6 implementation, the rest is housekeeping.
+
 ## Artifacts delivered (35 total)
 
 ### Round 3 (18 = 17 modules + Wave 0 prereq)

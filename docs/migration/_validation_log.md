@@ -5308,3 +5308,42 @@ No other location references these counts at Phase-level granularity. Per-artifa
 This `_validation_log.md` entry IS the application of CLAUDE.md "Validation discipline" hard rule #9 (`udm-progress-logger`) to its own substantive completion event (the Phase-level tracker updates + SESSION_2026-05-13_BUILD_LOG.md authoring). Per CLAUDE.md #11 Pitfall #9.m, new discipline / new tracker must apply its own rule to its authoring artifact. The Phase-level tracker updates are themselves substantive work; this entry records them as such. Pass.
 
 ---
+
+## 2026-05-14 — Post-tracker-update gap-audit fixes (3 reviewer findings closed inline)
+
+**Reviewer**: independent gap-audit reviewer (commit `f2ccdf8` tracker-update cohort post-completion gap check per `udm-gap-check` discipline + CLAUDE.md hard rule 11).
+**Verdict**: 🟡 → ⚫ post-inline-fixes (substantive work was clean; 3 minor tracker-completeness gaps identified + closed in this entry; 1 LOW finding deferred to user surface).
+**Trigger**: user-direction to apply 3 reviewer-surfaced inline fixes against commit `f2ccdf8`; LOW finding 4 (PR description stale) DEFERRED to user surface (no file edit).
+
+### 3 fixes applied (forward-only additive per D92)
+
+| Fix | Severity | File | Edit |
+|---|---|---|---|
+| 1 | MEDIUM | `docs/migration/RISKS.md` | APPEND 1 bullet at end of "Round 3 CODE-build campaign close-out note (2026-05-14)" section (after L98) noting Tier 2 + B-262 empirical evidence: 53 properties across 8 files / 1 production bug surfaced + fixed (B-262 NFC-vs-Categorical hash ordering) / Tier 1 ↔ Tier 2 feedback loop operationalized / further reduces R11 + R28-sub-class confidence; no score change pending 2-event confirmation. |
+| 2 | LOW | `docs/migration/SESSION_2026-05-13_BUILD_LOG.md` | INSERT self-referential note paragraph between the "Commit chain (7 commits)" table (L17) and the next section header "Artifacts delivered (35 total)" (L19): notes that the BUILD_LOG was authored in a subsequent docs commit `f2ccdf8` not in the table; future readers seeing 8+ commits should know first 7 are build-and-fix, rest is housekeeping. |
+| 3 | LOW | `docs/migration/GLOSSARY.md` | INSERT DELTA-N convention entry after L466 (the "Cascade order:" line in the Round 8 self-improvement skill codes section): registers DELTA-A1..A4 / DELTA-B1..B3 convention for tracking individual user-approval deltas per D95 umbrella + D98 semver discipline; cross-refs `udm-agent-prompt-versioner` (8.F) + examples (DELTA-A2 = R3 close-out 9.l PATCH; DELTA-B2 = R4 close-out Step 11 → Gate 2 MINOR). |
+
+### 1 finding DEFERRED (no file edit)
+
+- **LOW finding 4 (PR description stale)**: reviewer noted PR body on `phase-1-round-3-build-campaign` branch does not reflect the 8th commit (`f2ccdf8` consolidating docs cleanup) or the 9th commit being authored now (this gap-audit fix cycle). DEFERRED to user surface — Claude cannot update the GitHub PR body autonomously per the network-isolation D103 layer 12 constraint (no authorized `gh` outbound to GitHub PR-write endpoints without user-attestation). Next-natural-action: commit this fix-cycle, push to origin, surface the updated commit count + suggested PR body refresh to the user.
+
+### Hard-rule checks (CLAUDE.md "Validation discipline" #1-#11)
+
+- ✅ Hard rule 1 (D55 5-gate): N/A — gap-audit fix-cycle is a reviewer-finding-closure event, not a 5-gate validation event. Reviewer 🟡 → ⚫ verdict transition is the discipline equivalent.
+- ✅ Hard rule 2 (D56 mandatory second-pass after 🔴): N/A — reviewer verdict was 🟡, not 🔴; no second-pass required. Inline-fixes are the closure path for 🟡.
+- ✅ Hard rule 3 (D60 round close-out): N/A — this is post-cohort gap-audit fix application, not round-close-out cascade.
+- ✅ Hard rule 4 (D61 pillar + risk + B-N): NORTH_STAR Audit-grade pillar served (tracker completeness ↑); R11 + R28-sub-class confidence ↓ via fix 1 documentation. No new B-Ns surfaced.
+- ✅ Hard rule 5 (D89-D91 Pattern F): N/A — Pattern F runs at round close-out, not at mid-round gap-audit fix-cycle.
+- ✅ Hard rule 6 (D95-D99 self-improvement skill suite): N/A — runs at round close-out.
+- ✅ Hard rule 7 (D113 POLISH_QUEUE): no new P-Ns surfaced; fixes are content-substantive (RISKS empirical evidence; BUILD_LOG self-ref; GLOSSARY convention registration), not cosmetic-only.
+- ✅ Hard rule 8 (`udm-execution-classifier`): N/A — documentation edits, not executable artifacts.
+- ✅ Hard rule 9 (`udm-progress-logger`): this entry IS the per-completion cadence row for the gap-audit fix-cycle completion event.
+- ✅ Hard rule 10 (`CODE_BUILD_STATUS.md`): N/A — no code-build state transitions.
+- ✅ Hard rule 11 (`udm-gap-check`): this entry IS the closure of the gap-audit reviewer findings. Reviewer 🟡 → ⚫ post-inline-fixes; LOW finding 4 deferred to user surface; tracker-update cohort can NOW be claimed 🟢 per CLAUDE.md hard rule 11 (no 🔴 verdict; 🟡 findings closed inline; no silent deferral — finding 4 explicitly surfaced as next-natural-action).
+
+### Pitfall #9 sub-class checks
+
+- **9.j (badge ↔ inline-annotation alignment)**: N/A — no B-item status flips in this edit; no leading badges to keep in sync.
+- **9.k (arithmetic-propagation drift)**: N/A — no count changes in any of the 3 fixes. Counts referenced (53 properties / 8 files / 7-commit chain / 8+ commits) sourced verbatim from existing trackers (`tests/property/` glob + `SESSION_2026-05-13_BUILD_LOG.md` commit table + `git log` runtime).
+- **9.m (discipline-applied-to-its-own-tracker)**: this `_validation_log.md` entry IS the self-application of CLAUDE.md "Validation discipline" hard rule #11 (`udm-gap-check`) to a gap-audit fix-cycle. The fix-cycle itself was the discipline application; this entry records the closure. Pass.
+
