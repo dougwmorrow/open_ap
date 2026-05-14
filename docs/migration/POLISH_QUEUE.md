@@ -288,3 +288,35 @@ Pattern F + sub-class 9.j FORMALIZED status-render discipline at HANDOFF §8: an
 ---
 
 Owner: pipeline lead (delegated to round close-out cascade authoring).
+
+
+### P-20 (🟡 Open): B-number hyphenation inconsistency — `B265` vs `B-263/B-264/B-266`
+
+**Surfaced**: 2026-05-14 reflection-gap audit on commit `9444f12`.
+
+**Detail**: `BACKLOG.md:228` uses `B265` (no hyphen); contemporaneous entries `B-263` / `B-264` / `B-266` use the hyphenated form. The hyphenated form is canonical per `GLOSSARY.md` "B-number" entry and matches B-243 / B-244 / B-245 / B-248 / B-251 / B-252 / B-254 / B-255 / B-256 / B-257 / B-258 / B-259 / B-260 / B-261 / B-262 prefix style introduced in late R3/R4 build campaign cohort.
+
+**Fix**: rename `B265` → `B-265` at `BACKLOG.md:228` (one cell edit). Also propagate to any subsequent cross-references (currently zero per `git grep B265`).
+
+**Why P-N not B-N**: Cosmetic only — won't break tooling, won't change a decision body, runbook, or pipeline code. Distinguishing test per D113 — no substantive impact.
+
+**Closure target**: Next POLISH_QUEUE sweep OR next round close-out cascade.
+
+---
+
+### P-21 (🟡 Open): `CODE_BUILD_STATUS.md` L12 `Last reviewed` narrative restructure — mega-paragraph readability
+
+**Surfaced**: 2026-05-14 reflection-gap audit on commit `9444f12`.
+
+**Detail**: `CODE_BUILD_STATUS.md:12` is a single bullet-line "Last reviewed" narrative that has grown reverse-chronologically with every code-build event. After commit `9444f12` it is ~102 KB of running prose inside one Markdown line. Scanning for "what changed on date X" requires reading the entire paragraph; the structure is implicit-chronological-via-"Earlier 2026-05-14:" interjections.
+
+**Fix proposal** (one of):
+- (a) Restructure as a proper dated event list — one section header per date + bullets per event under each date; chronologically descending. Touches only the L12 narrative; no semantic content lost.
+- (b) Move historical events older than 7 days to an archive section at end of file; keep L12 narrative scoped to the current week.
+- (c) Convert L12 to a table — date / event / artifact / pytest delta / 🟢 status; one row per event.
+
+Recommend **option (a)** for symmetry with `_validation_log.md` event-list structure.
+
+**Why P-N not B-N**: Pure readability / maintenance ergonomics; no behavioral change. Distinguishing test per D113 — content stays identical, only formatting changes.
+
+**Closure target**: Next POLISH_QUEUE sweep OR next round close-out cascade — but recommend doing sooner-rather-than-later because the narrative continues to grow with every code-build commit (5K-10K char delta per event).

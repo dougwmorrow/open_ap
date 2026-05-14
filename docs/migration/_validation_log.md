@@ -5557,3 +5557,61 @@ This entry IS the application of CLAUDE.md hard rule 9 (`udm-progress-logger`) t
 - `docs/migration/CODE_BUILD_STATUS.md:12` (Last reviewed narrative now mentions § 4.7 full impl)
 - `tests/audit_reports/tier0_drift_2026-05-14.md` (the 24 KB drift report whose RED verdict drove B-266)
 - B58 / B-265 / B-266 / B81 / B82 / Pitfall #9.j / Pitfall #9.k / Pitfall #9.m
+
+
+## 2026-05-14 — Reflection-gap fix sweep (post-`9444f12` follow-up commit)
+
+**Trigger**: User prompted "Reflect on if there are any gaps remaining" after commit `9444f12`. Parent-agent reflection surfaced 3 fresh recurrences. User authorized recommended fix order.
+
+**Gaps surfaced + fixed this turn (3 of 7)**:
+
+1. **Pitfall #9.n 3rd-event recurrence — Step 10 NOT applied to `tools/verify_tier0_drift.py` full-impl build**: The `146d97a` build added public surface (`DriftFinding`, `TierZeroDriftReport`, `DEFAULT_TIER0_DIRS`, `EVENT_TYPE = "CLI_VERIFY_TIER0_DRIFT"`, `_resolve_test_file`, `_resolve_module_name`, `_compute_drift_for_module`) but neither `CLAUDE.md` Structure section nor `GLOSSARY.md` Round 4 CLI public surfaces section were extended. **Grep evidence**: `git show HEAD:CLAUDE.md | grep -nE "verify_tier0_drift|DriftFinding|TierZeroDriftReport"` returned only L652 (inside Pattern F `verify_cascade.py` context, NOT a Structure row); `git show HEAD:docs/migration/GLOSSARY.md | grep -nE "verify_tier0_drift|DriftFinding|TierZeroDriftReport"` returned 0 hits. This is the **3rd documented Step-10-first-encounter failure event** per B-261 (Events 1+2 were Round 4.1 cohort + Round 4 § 3.4 decrypt_pii); 3-event evidence base + 2-round criterion now satisfied for mechanism-evolution work. **Fixed**: CLAUDE.md `tools/` Structure row added after decrypt_pii row + GLOSSARY.md Round 4 CLI public surfaces section extended with 6 new identifier rows (verify_tier0_drift / TierZeroDriftReport / DriftFinding / DEFAULT_TIER0_DIRS / EVENT_TYPE / EXIT_SUCCESS-WARNING-FATAL).
+
+2. **Pitfall #9.m recurrence — G2 P-N hyphenation candidate deferred but never opened**: `9444f12` commit body said G2 was "Deferred — P-N candidate; next POLISH_QUEUE sweep" but no P-N entry was added. This is literally the SAME pattern G1 fixed in `9444f12` (B-266 candidate noted but not opened). Within a single session that's 2 events of Pitfall #9.m. **Fixed**: P-20 opened at `POLISH_QUEUE.md` for `B265` → `B-265` hyphenation reconciliation.
+
+3. **CODE_BUILD_STATUS L12 mega-paragraph readability degradation**: After `9444f12` prepend, the "Last reviewed" narrative is ~102 KB of running prose inside one Markdown bullet line. Scanning for "what changed on date X" requires reading the entire paragraph; structure is implicit-chronological-via-"Earlier 2026-05-14:" interjections. **Fixed**: P-21 opened at `POLISH_QUEUE.md` proposing one of (a) dated event list / (b) archive 7+ day events / (c) tabular event log — recommend option (a) for symmetry with `_validation_log.md` event-list structure.
+
+**Tracker updates this turn**:
+
+- **`BACKLOG.md` B-261** body extended with 3rd-event evidence (commit `146d97a` § 4.7 verify_tier0_drift.py). Status flipped from "MONITOR sub-threshold" to "**3rd-event TRIGGER fired** — mechanism-evolution work eligible at next round close-out cascade per D95 umbrella + D98 semver versioning" (specifically `udm-producer-checklist-evolver` skill prompt MINOR semver delta).
+- **`CURRENT_STATE.md` L7** updated with `146d97a` + `9444f12` + this-turn fix narrative. Read-order #1 onboarding doc no longer stale.
+
+**Edits this turn (5 files; build-side untouched)**:
+
+| File | Change | Delta |
+|---|---|---|
+| `CLAUDE.md` | +1 Structure row (verify_tier0_drift.py after decrypt_pii.py) | +1,062 chars |
+| `docs/migration/GLOSSARY.md` | +6 rows in Round 4 CLI public surfaces section | +2,495 chars |
+| `docs/migration/POLISH_QUEUE.md` | +P-20 (hyphenation) + P-21 (CODE_BUILD_STATUS readability) | +2,478 chars |
+| `docs/migration/BACKLOG.md` | B-261 body extended with 3rd-event evidence | +1,152 chars |
+| `docs/migration/CURRENT_STATE.md` | L7 narrative updated (`146d97a` + `9444f12` + this-turn fix) | +2,433 chars |
+
+**Pytest baseline**: Unchanged at 2070 pass / 14 skip / 2 fail (B218 carryover; tracker-only commit).
+
+**Gaps deferred (4 of 7) — next round close-out polish sweep**:
+
+- HANDOFF.md staleness vs current 12-commit branch state
+- SESSION_2026-05-13_BUILD_LOG.md staleness (lists 7 commits; now 12)
+- B-266 disposition lacks explicit "re-run drift report after fix to verify RED → GREEN" step
+- G4: independent gap-check spawn discipline (CLAUDE.md hard rule 11) — parent-agent reflection caught most gaps but the Step 10 application miss surfaced only after a 2nd-pass reflection, suggesting an independent reviewer would have caught it earlier; recommend independent reviewer spawn before next code-build commit
+
+**Convention check**:
+
+| Convention | Pass/Fail | Evidence |
+|---|---|---|
+| Pitfall #9.j (badge ↔ inline-annotation alignment) | ✅ | P-20 + P-21 use leading `(🟡 Open)` badges with no inline `CLOSED` annotations. B-261 status updated to "3rd-event TRIGGER fired" — still 🟡 Open with annotation describing trigger; no inline-CLOSED claimed. |
+| Pitfall #9.k (arithmetic-propagation drift) | ✅ | No counts touched directly. CODE_BUILD_STATUS pytest baseline unchanged at 2070. |
+| Pitfall #9.m (discipline applied to its own tracker) | ✅ | This commit IS the application — found 2 fresh 9.m instances + 1 fresh 9.n instance and fixed all 3 in the same commit. |
+| Pitfall #9.n (convention-registration of new artifacts) | ✅ post-fix | Pre-fix: 3rd-event miss recorded as B-261 trigger. Post-fix: CLAUDE.md + GLOSSARY updated for verify_tier0_drift public surface. |
+| CLAUDE.md hard rule 9 (`udm-progress-logger` mid-round) | ✅ | This entry IS the application. |
+
+**Cross-references**:
+
+- `CLAUDE.md:88` (new verify_tier0_drift Structure row)
+- `docs/migration/GLOSSARY.md` (new verify_tier0_drift + TierZeroDriftReport + DriftFinding + DEFAULT_TIER0_DIRS + EVENT_TYPE + EXIT_* rows in Round 4 CLI public surfaces section)
+- `docs/migration/POLISH_QUEUE.md` P-20 + P-21
+- `docs/migration/BACKLOG.md:395` (B-261 body extended)
+- `docs/migration/CURRENT_STATE.md:7` (L7 narrative bumped)
+- B58 / B-261 / B-266 / Pitfall #9.m / Pitfall #9.n / D95 / D98
+
+**Meta-observation**: Within this single session (2026-05-14 afternoon → evening) the parent-agent gap-reflection pattern has now surfaced 3 distinct discipline recurrences across 3 successive commits (`146d97a` → `9444f12` → this commit). Pattern observation: each "gap-reflection" pass finds 1-2 fresh instances of disciplines we ostensibly already operationalized in the same session. This is itself evidence that gap-reflection-as-a-pass is producing real signal even when done by the same agent that produced the work (NOT necessarily independent reviewer). Recommend tracking via B-261 (mechanism-evolution work) and B-260 (sub-class 9.o promotion candidate).
