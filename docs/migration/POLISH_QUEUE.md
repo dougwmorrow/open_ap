@@ -203,6 +203,30 @@ A P-item closes when EITHER:
 - **Closure target**: Next CODE_BUILD_STATUS edit cycle (organic; not blocking).
 - **Why P not B**: cosmetic propagation discipline; no procedural change required.
 
+### P-17 (🟡 Open): Round 5 § 5.6 strict `<=` needs ULP-tolerance note for percentile monotonicity
+
+- **Affected**: `docs/migration/phase1/05_tests.md` § 5.6 ("Lateness percentile monotonicity")
+- **Issue**: Canonical § 5.6 wording asserts strict `<=` (`p50 <= p90 <= p95 <= p99 <= max`). Tier 2 property test cohort 2026-05-14 Agent D found that `statistics.quantiles()` with `method="inclusive"` on floats can produce a p_high value that is bit-equal to p_low under specific Hypothesis-generated sample distributions (e.g. all samples within 1 ULP of each other). Strict `<=` still holds in practice because the two floats compare equal, but the spec wording reads as if strict `<` were expected. Agent D worked around it via deduplicated-sample strategies in `test_lateness_monotonicity.py`.
+- **Polish item**: Add a 1-line note to § 5.6: "Strict `<=` semantics — for sample distributions where consecutive percentiles round to bit-equal floats (within 1 ULP), `p_low == p_high` is permitted under the inclusive-quantile algorithm; tests use `<=` not `<`." No behavior change.
+- **Closure target**: Next `phase1/05_tests.md` edit cycle (likely Round 5 close-out OR Phase 2 R1 spec re-read pass).
+- **Why P not B**: cosmetic spec clarification; behavior under `statistics.quantiles()` is correct; spec wording is the only drift.
+
+### P-18 (🟡 Open): § 5.3 NFC/NFD plaintext normalization upstream of SP-1 — future enhancement candidate
+
+- **Affected**: `docs/migration/phase1/05_tests.md` § 5.3 (tokenization determinism) + Round 1 § SP-1 contract docs
+- **Issue**: Tier 2 property test cohort 2026-05-14 Agent C's `test_unicode_nfc_nfd_distinct_tokens` documents SP-1's current contract: NFC-form `"é"` and NFD-form `"é"` produce DIFFERENT tokens because SP-1 hashes the byte sequence. This matches production behavior. Some sources may emit either form depending on the OS / driver / locale, which means the SAME logical user identifier could produce two tokens across a database migration. A future enhancement could normalize plaintext to NFC upstream of SP-1 (in `pii_tokenizer.tokenize_pii_columns`) to make tokenization Unicode-form-agnostic.
+- **Polish item**: Add a future-enhancement bullet to § 5.3 (or open a separate B-N once the operational impact is observed). For now, document the current contract more explicitly: "SP-1 is byte-form sensitive by design; callers wanting NFC-equivalent tokenization should normalize plaintext upstream."
+- **Closure target**: Spec-clarification at next round close-out; promotion to B-N if/when an operational incident surfaces NFC/NFD divergence in production.
+- **Why P not B**: documents existing behavior; behavior is correct per current SP-1 contract; no procedural / code change required unless an incident occurs.
+
+### P-19 (🟡 Open): § 5.3 empty-string vs NULL plaintext semantics
+
+- **Affected**: `docs/migration/phase1/05_tests.md` § 5.3 + Round 1 § PiiVault DDL (`Plaintext NVARCHAR(MAX) NOT NULL`)
+- **Issue**: Tier 2 property test cohort 2026-05-14 — § 5.3 example tokenization test uses `st.text(min_size=1, max_size=200)`, skipping empty strings. But Round 1 § PiiVault DDL admits empty string (`NOT NULL` only excludes NULL; `''` is valid). Agent C's `test_empty_string_handling` added a regression guard documenting that the mock vault DOES mint a token for `''`; the M4 module's NULL pass-through contract leaves None alone (not empty string). Spec § 5.3 example wording would be clearer if it explicitly stated the empty-string-is-non-NULL contract.
+- **Polish item**: Add a 1-line clarification to § 5.3: "Empty string is a valid plaintext per `PiiVault.Plaintext NVARCHAR(MAX) NOT NULL`; `min_size=1` in the example strategy is a property-test heuristic, not a contract restriction. NULL plaintext is pass-through in `tokenize_pii_columns` per the M4 module contract."
+- **Closure target**: Next `phase1/05_tests.md` edit cycle.
+- **Why P not B**: cosmetic spec clarification; the property test (Agent C) already pins the correct behavior via regression guard.
+
 ### ~~P-5~~ (⚫ CLOSED 2026-05-12): GLOSSARY P-number entry
 
 - ~~**Affected**: `docs/migration/GLOSSARY.md`~~
