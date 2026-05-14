@@ -5694,3 +5694,53 @@ This entry IS the application of CLAUDE.md hard rule 9 (`udm-progress-logger`) t
 - B58 (verify_tier0_drift.py full impl that produced the first drift report) / B81 / B82 (genuine-absent test files) / B214 (test injection points) / B228 (canonical utils.errors imports) / D67 / D74 / D75 / D76 / D77 / D80 / D92 (forward-only additive) / Pitfall #9.j (leading badge flip)
 
 **Meta-observation**: The B-266 implementation is a textbook example of the parent-agent-orchestrator + sub-agent-implementer pattern working as designed. Agent brief included file-path manifests + verbatim code + DO/DO NOT list — agent executed with 2 sound algorithm refinements + comprehensive verification. Engineering-deploy gate signal-to-noise dramatically improved without scope creep into B-267 territory.
+
+
+## 2026-05-14 — Gap-check fix sweep on commit `a4941ef` (G1 + G2)
+
+**Trigger**: User-prompted "Do a check if there are any gaps" on commit `a4941ef`. Parent-agent reflection surfaced 2 fixable + 1 investigation + 2 deferred gaps. User authorized recommended fix order.
+
+**Gaps fixed this turn**:
+
+- **G1 (Pitfall #9.k arithmetic-propagation drift)**: `CODE_BUILD_STATUS.md:28` Tests row still showed "1983 pass + 14 skip + 2 fail" — frozen at Tier 2 cohort baseline (`0a377ab`). Three subsequent commits (`146d97a` 2070, `a224a5d` 2070, `a4941ef` 2083) bumped L12 narrative but NOT L28 counts cell. Fixed: L28 updated to "2083 pass + 10 skip + 2 fail" with B-266 closure note.
+- **G2 (Pitfall #9.j-adjacent — row references obsolete B-N status)**: `CLAUDE.md:88` verify_tier0_drift.py Structure row authored at `a224a5d` referenced "B-266 spec-vs-code convention reconciliation candidate" but B-266 was ⚫ CLOSED at `a4941ef`. Fixed: row updated to reflect B-266 closure mechanism + current drift state (13 RED / 16 missing / 3 missing files) + B-267 surfacing for the residual 3rd-class drift.
+
+**Gaps flagged for investigation (deferred)**:
+
+- **G3 (skip count anomaly)**: Pre-B-266 baseline 14 skips → post-B-266 actual 10 skips. Agent attributed to "environmental fluctuation" but did not enumerate which 4 tests changed state. Could be Docker availability, polars-hash version, conditional skip predicate change. NOT blocking (no fails introduced). Investigation deferred to next round close-out polish sweep — recommended approach: `pytest --collect-only -q | grep skip` cross-reference at next polish window.
+
+**Gaps deferred to next round close-out**:
+
+- **G4**: HANDOFF.md staleness vs 13-commit branch state
+- **G5**: SESSION_2026-05-13_BUILD_LOG.md lists 7 commits; current is 13
+
+**Process observation (not a fixable gap)**:
+
+- Same parent-agent self-review pattern as last 4 commits (`146d97a` → `9444f12` → `a224a5d` → `a4941ef` → this commit). B-261 mechanism-evolution work (Step-10-application-verifier sub-agent firing BEFORE gap-check independent reviewer) would address this but is reserved for next round close-out cascade per D95 umbrella + D98 semver versioning.
+
+**Edits this turn (2 files; build-side untouched)**:
+
+| File | Change | Delta |
+|---|---|---|
+| `docs/migration/CODE_BUILD_STATUS.md` | L28 Tests row count bumped (1983 → 2083; 14 → 10 skip) + B-266 closure annotation appended | +433 chars |
+| `CLAUDE.md` | L88 verify_tier0_drift.py Structure row updated — B-266 candidate → B-266 ⚫ CLOSED + current state + B-267 reference | +315 chars |
+
+**Pytest baseline**: Unchanged at 2083 pass / 10 skip / 2 fail (tracker-only commit; no code touched).
+
+**Convention check**:
+
+| Convention | Pass/Fail | Evidence |
+|---|---|---|
+| Pitfall #9.j (badge ↔ inline-annotation alignment) | ✅ | No B-N badges touched; G2 fix updates the Structure-row reference to match the closed status of B-266 already documented elsewhere. |
+| Pitfall #9.k (arithmetic-propagation drift) | ✅ post-fix | G1 fix IS the application — found stale 1983 in L28, propagated to 2083 to match L12 narrative + BACKLOG B-266 closure + CURRENT_STATE L7 + this entry. |
+| Pitfall #9.m (discipline applied to its own tracker) | ✅ | G1 + G2 found and fixed in same commit + logged here per hard rule 9. |
+| Pitfall #9.n (convention-registration of new artifacts) | ✅ N/A | No new public surface; tracker-only. |
+| CLAUDE.md hard rule 9 (`udm-progress-logger` mid-round) | ✅ | This entry IS the application. |
+
+**Cross-references**:
+
+- `docs/migration/CODE_BUILD_STATUS.md:28` (G1 fix — Tests count bumped)
+- `CLAUDE.md:88` (G2 fix — verify_tier0_drift.py Structure row B-266 status)
+- B-266 (closed via `a4941ef`) / B-267 (open) / B-218 (carryover 2 fails) / B-262 / Pitfall #9.j / Pitfall #9.k / Pitfall #9.m
+
+**Pattern observation**: G1 is a textbook arithmetic-propagation drift instance — the L12 narrative bump caught the visible "Last reviewed" line that operators read at a glance, but the L28 Tests aggregate cell (the structured metric mirror) was missed because it has a different bump anchor than the narrative. This reinforces B-261 / B-260 evidence base for structural fixes: a Step-10-application-verifier or similar producer-side mechanism that catches mirror-site drift at commit time (not gap-reflection time) would have prevented G1 from accumulating across 3 commits.
