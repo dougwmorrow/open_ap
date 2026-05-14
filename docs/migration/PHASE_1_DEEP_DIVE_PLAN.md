@@ -140,7 +140,7 @@ DDL approved by DBA. Edge case tests pass. Stakeholder sign-off recorded.
 
 ## Round 3 — Core Modules
 
-**Status**: 🟢 Locked 2026-05-10 via D73 architectural-review acceptance (Round 3 math-infeasibility precedent established).
+**Status**: 🟢 Locked 2026-05-10 via D73 architectural-review acceptance (Round 3 math-infeasibility precedent established). **Code-build sub-status (2026-05-14)**: 17/17 modules 🟢 BUILT via 5-wave campaign (W0 prereq `utils/errors.py` + Waves 1-5 module bodies); 1063 Tier 0+1 tests pass; 0 net regression. Per-artifact detail in `CODE_BUILD_STATUS.md`; consolidating session record at `SESSION_2026-05-13_BUILD_LOG.md`.
 
 **Deliverable**: `phase1/03_core_modules.md` (~80 KB, 10 sections). 17 Python module interface specs across 7 layers: § 1 Parquet (parquet_writer / parquet_replay / parquet_registry_client) + § 2 PII/vault (pii_tokenizer / pii_decryptor / vault_client) + § 3 Credentials+parity (credentials_loader / server_parity_verifier) + § 4 Idempotency+state (idempotency_ledger / extraction_state) + § 5 Scheduling (range_scheduler / lateness_profiler / gap_detector) + § 6 Observability (sensitive_data_filter / log_handler / event_tracker) + § 7 Snowflake (snowflake_uploader). Cross-cutting D67 Tier 0 discipline + D68 error class hierarchy + D69 cursor ownership + D70 6-tier test pyramid + D71 Snowflake auth flow.
 
@@ -150,7 +150,7 @@ DDL approved by DBA. Edge case tests pass. Stakeholder sign-off recorded.
 
 ## Round 4 — Tools
 
-**Status**: 🟢 Locked 2026-05-10 via D78 math-infeasibility architectural-review acceptance (paralleling D73).
+**Status**: 🟢 Locked 2026-05-10 via D78 math-infeasibility architectural-review acceptance (paralleling D73). **Code-build sub-status (2026-05-14)**: 9/11 CLI tools 🟢 BUILT (82%); 2 🔴 blocked on external prereqs — § 3.9 `process_ccpa_deletion` (B81 SP-12 schema evo deployment) + § 3.11 `alert_dispatcher` (B82 ops-channel Phase 0 deliv). Per-artifact detail in `CODE_BUILD_STATUS.md`.
 
 **Deliverable**: `phase1/04_tools.md` (~85 KB, 11 CLI specs + cross-cutting CLI conventions + edge case mapping + validation gates). 11 operator CLI scripts wrapping Round 3 module interfaces: parquet_tier_review / parquet_verify / lateness_profile / decrypt_pii / detect_extraction_gaps / promote_test_to_prod / verify_server_parity / enforce_retention / process_ccpa_deletion / log_retention_cleanup / alert_dispatcher.
 
@@ -170,7 +170,7 @@ DDL approved by DBA. Edge case tests pass. Stakeholder sign-off recorded.
 
 ## Round 6 — Deployment
 
-**Status**: 🟢 Locked 2026-05-10 via D88 convergence-confirmed architectural-review acceptance. Pattern F discipline (D89/D90/D91) **authored** 2026-05-11 in post-Round-6 retrospective per R28 — **🟡 Proposed; lock pending Round 7 first-production-invocation empirical evidence**.
+**Status**: 🟢 Locked 2026-05-10 via D88 convergence-confirmed architectural-review acceptance. Pattern F discipline (D89/D90/D91) **authored** 2026-05-11 in post-Round-6 retrospective per R28 — **🟡 Proposed; lock pending Round 7 first-production-invocation empirical evidence**. **Code-build sub-status (2026-05-14)**: partial — Tier 2 property tests 🟢 (53 properties across 8 files + `conftest.py` per D81 Hypothesis budget); 1 production bug surfaced + fixed via Hypothesis (B-262 NFC-vs-Categorical hash ordering; Tier 1 regression backfill landed). Tier 3 integration + Tier 4 crash injection + B-item closures (11+ deferred B65/B68/B70/B72/B87/B88/B90/B103/B104/B115/B118) + § 4.7 `verify_tier0_drift.py` full impl (B58) + RHEL deploy pending.
 
 **Deliverable**: `phase1/06_deployment.md` (~110 KB, 13 sections). Covers three-environment topology (dev/test/prod), immutable git-tag artifact contract (D84), atomic symlink-swap deploy mechanism, module startup sequence (D85 — closes B69), deployment cadence (D86), pre/post-deploy checklist contract (D87), Tier 0-5 smoke test deployment, Automic frozen-8 inventory activation, EventType family registration (CLI_* / CYCLE_* / DEPLOYMENT_* / MIGRATION_* / STARTUP_* — closes B86), 7-trigger cross-cutting fix workstream, RB-12 deployment runbook (closes B41), 22 new BACKLOG items B120-B141.
 

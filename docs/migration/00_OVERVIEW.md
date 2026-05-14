@@ -10,6 +10,13 @@ This directory tracks the design and initial deployment of the UDM (Unified Data
 
 - **Current phase**: Phase 1 — Foundation Infrastructure **🟢 COMPLETE** — Rounds 1-8 all Locked 2026-05-11. R8 Sub-Agent Self-Improvement Discipline (LAST Phase 1 round) Locked via D99 convergence-confirmed acceptance. **Phase 2 (Pilot Cutover) is next.** Phase 0 deliverables 0.X still 🟡 In progress; proceed in parallel.
 - **Pattern F discipline (D89/D90/D91)**: 🟢 Locked at Round 7 first-production close-out 2026-05-11 (3-event evidence base extended to 4 at Round 8 close-out cascade).
+- **Code-build progress (Phase 1 implementation)**: as of 2026-05-14, ~75% complete via 7-commit campaign on `phase-1-round-3-build-campaign` branch:
+  - Round 3 (Core Modules): 17/17 BUILT (100%) — utils/errors.py prereq + 17 module bodies + 1063 Tier 0+1 tests
+  - Round 4 (Operator Tools): 9/11 BUILT (82%) — 2 blocked on B81 (SP-12 schema evo) + B82 (ops-channel Phase 0 deliv)
+  - Round 6 (Deployment): Tier 2 property tests landed (53 properties across 8 files); Tier 3/4 + B-item closures + actual RHEL deploy pending
+  - 1 production bug surfaced + fixed (B-262 NFC-vs-Categorical hash ordering via Hypothesis Tier 2 catch)
+  - Step 11 (canonical-spec verbatim citation) elevated to Gate 2 mandatory specialty in udm-design-reviewer v1.1.0 (first agent prompt versioned per D98)
+  - Per-artifact tracking at `CODE_BUILD_STATUS.md`; consolidating session record at `SESSION_2026-05-13_BUILD_LOG.md`
 - **First production deployment**: TBD (Phase 2 pilot)
 - **Full production rollout**: TBD (after Phase 4)
 - **Total phases**: 6 (Phase 6 cleanup removed — no legacy to clean up; current Phase 6 is Data Health Checks)
@@ -98,6 +105,7 @@ These items still need explicit sign-off before code lands. See `03_DECISIONS.md
 | File | Purpose |
 |---|---|
 | `PHASE_1_DEEP_DIVE_PLAN.md` | Phase 1 round-by-round plan |
+| `SESSION_2026-05-13_BUILD_LOG.md` | Consolidating record of the 7-commit Phase 1 build campaign (Round 3 + Round 4 + Round 6 Tier 2; 2026-05-13 / 2026-05-14) |
 | `phase1/00_phase_overview.md` | Phase 1 narrative for engineers / management / auditors / operators |
 | `phase1/01_database_schema.md` | Round 1 v3 — 24 tables + 11 stored procedures (🟢 Locked) |
 | `phase1/02_configuration.md` | Round 2 — UdmTablesList + .env per-server + GPG envelope + parity baseline + Automic frozen-8 inventory (🟢 Locked; D63-D66) |
