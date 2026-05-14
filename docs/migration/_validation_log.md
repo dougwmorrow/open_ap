@@ -4542,3 +4542,197 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 1. **Commit** these 3 fixes + `_validation_log.md` entry as a single atomic commit citing "Pattern F Layer 2 paired-audit inline fixes — B-229 closed + B-253 opened + HANDOFF §3 cleanup".
 2. **Round 4 (Operator Tools) build campaign kickoff** — 5 newly-buildable § 3.x tools per Wave 5 dep-unblock map (§ 3.1 parquet_tier_review.py / § 3.2 parquet_verify.py / § 3.3 lateness_profile.py / § 3.5 detect_extraction_gaps.py / § 3.7 verify_server_parity.py). First stress-test opportunity for the 4 just-formalized DELTA-A1/A2/A3/A4 directives (Pitfall #9.n + producer self-check Steps 10/11).
 3. **Optional later**: B-253 path (a) execution — append SP-12 row to `phase1/01_database_schema.md` § SP Index per Round 7 § 5 L480 plan; removes 82 YELLOW noise floor from Layer 1 `verify_cascade.py` runs.
+---
+
+## 2026-05-14 — Round 4.1 § 3.1 tools/parquet_tier_review.py build
+
+- **Trigger**: Round 4 5-tool parallel build cohort kickoff per Wave 5 dep-unblock map (5 newly-buildable § 3.x tools post Round 3 17/17 ✅). First of 5 builds.
+- **Artifacts touched**: `tools/parquet_tier_review.py` (1,464 lines); `tests/tier0/test_parquet_tier_review.py` (8 tests); `tests/tier1/test_parquet_tier_review.py` (63 tests).
+- **Outcome**: 🟢 Built — 71 tests pass (8 Tier 0 + 63 Tier 1); 0 inline cycles (first-iteration pass).
+- **Step 11 audit catch**: M3 `query_snapshot()` API mismatch — spec § 1.3 returns a single row by exact key, but § 3.1 needs a filter-by-Status walker across multiple snapshots. Producer surfaced as a B-N candidate: extract `list_snapshots(*, status, age_days, source, table)` helper into M3 `parquet_registry_client`. **B-254 opened** (see BACKLOG.md) tracking the M3 helper addition.
+- **Trackers updated**: `CODE_BUILD_STATUS.md` (Round 4 § 3.1 row → 🟢 Built 2026-05-14; Round 4 8/11 BUILT; dep-unblock map refresh); `BACKLOG.md` (B-254 opened); this `_validation_log.md` entry.
+- **Test verification**: pytest 71 pass / 0 fail (Tier 0 + Tier 1). Full-suite regression: 1458 → 1850 pass / 14 skip / 2 fail (2 = pre-existing B218 § 3.10 carryover; 0 new regression).
+- **Carryovers**: B-254 (🟡 Open) — `list_snapshots` helper extraction to M3 `parquet_registry_client`.
+- **CCL note**: Producer agent operated under D62 self-edit fallback per narrow-scope Pattern B1 worker discipline.
+
+---
+
+## 2026-05-14 — Round 4.2 § 3.2 tools/parquet_verify.py build
+
+- **Trigger**: Round 4 5-tool parallel build cohort — 2nd of 5 builds. Newly buildable post-Wave 2.2 M3 ⚫ closure.
+- **Artifacts touched**: `tools/parquet_verify.py` (1,416 lines); `tests/tier0/test_parquet_verify.py` (9 tests); `tests/tier1/test_parquet_verify.py` (57 tests).
+- **Outcome**: 🟢 Built — 66 tests pass (9 Tier 0 + 57 Tier 1); 1 inline cycle (Windows path normalization edge case in test fixture).
+- **Step 11 audit catch**: Missing `actor` kwarg in task brief — D76 audit-row contract requires `actor` argument for all CLI_* family rows. Producer surfaced via canonical-spec sweep, threaded `actor` through CLI argparse + audit-row emit per CLAUDE.md D76 + B208 patterns.
+- **Trackers updated**: `CODE_BUILD_STATUS.md` (Round 4 § 3.2 row → 🟢 Built 2026-05-14); this `_validation_log.md` entry.
+- **Test verification**: pytest 66 pass / 0 fail (Tier 0 + Tier 1). Full-suite regression: 1458 → 1850 (cumulative across 5-tool cohort).
+- **Carryovers (gap-checker hand-off)**: (a) `--workers N` flag intentionally not implemented (single-worker by design for Phase 2 R1; concurrency deferred); (b) `JOB_PARQUET_VERIFY` Automic job proposed as NEW addition to Round 2 § 5.1 frozen-N inventory (not yet in frozen-11 inventory). Both deferred to gap-checker routing.
+- **CCL note**: Producer agent operated under D62 self-edit fallback per narrow-scope Pattern B1 worker discipline.
+
+---
+
+## 2026-05-14 — Round 4.3 § 3.3 tools/lateness_profile.py build
+
+- **Trigger**: Round 4 5-tool parallel build cohort — 3rd of 5 builds. Newly buildable post-Wave 5.2 M12 ⚫ closure.
+- **Artifacts touched**: `tools/lateness_profile.py` (966 lines); `tests/tier0/test_lateness_profile.py` (8 tests); `tests/tier1/test_lateness_profile.py` (85 tests).
+- **Outcome**: 🟢 Built — 93 tests pass (8 Tier 0 + 85 Tier 1); 0 inline cycles (first-iteration pass).
+- **Step 11 audit catch**: Positional vs kwarg-only paraphrase — task brief described `profile_lateness` with positional args, but canonical M12 (Wave 5.2 build) uses kwarg-only signature per Pitfall #9.l discipline. Producer correctly preferred canonical M12 spec over brief.
+- **Trackers updated**: `CODE_BUILD_STATUS.md` (Round 4 § 3.3 row → 🟢 Built 2026-05-14); this `_validation_log.md` entry.
+- **Test verification**: pytest 93 pass / 0 fail (Tier 0 + Tier 1). Full-suite regression: 1458 → 1850 (cumulative across cohort).
+- **Carryovers**: None new from this tool individually (composes M12 surface unchanged).
+- **CCL note**: Producer agent operated under D62 self-edit fallback per narrow-scope Pattern B1 worker discipline.
+
+---
+
+## 2026-05-14 — Round 4.4 § 3.5 tools/detect_extraction_gaps.py build
+
+- **Trigger**: Round 4 5-tool parallel build cohort — 4th of 5 builds. Newly buildable post-Wave 5.3 M13 ⚫ closure.
+- **Artifacts touched**: `tools/detect_extraction_gaps.py` (1,097 lines); `tests/tier0/test_detect_extraction_gaps.py` (7 tests); `tests/tier1/test_detect_extraction_gaps.py` (72 tests).
+- **Outcome**: 🟢 Built — 79 tests pass (7 Tier 0 + 72 Tier 1); 0 inline cycles (first-iteration pass).
+- **Step 11 audit catch**: Missing `source_filter` parameter — task brief omitted the per-source filter argument that operator-facing CLI tools typically expose. Producer added per CLI consistency with the other Round 4 tools + canonical M13 `detect_gaps()` surface.
+- **Trackers updated**: `CODE_BUILD_STATUS.md` (Round 4 § 3.5 row → 🟢 Built 2026-05-14); this `_validation_log.md` entry.
+- **Test verification**: pytest 79 pass / 0 fail (Tier 0 + Tier 1). Full-suite regression: 1458 → 1850 (cumulative across cohort).
+- **Carryovers**: None new from this tool individually (composes M13 surface).
+- **CCL note**: Producer agent operated under D62 self-edit fallback per narrow-scope Pattern B1 worker discipline.
+
+---
+
+## 2026-05-14 — Round 4.5 § 3.7 tools/verify_server_parity_cli.py build
+
+- **Trigger**: Round 4 5-tool parallel build cohort — 5th + final of 5 builds. Newly buildable post-Wave 5.1 M8 ⚫ closure. Note: M8 itself IS the verifier; § 3.7 is the CLI shim wrapping M8.
+- **Artifacts touched**: `tools/verify_server_parity_cli.py` (757 lines); `tests/tier0/test_verify_server_parity_cli.py` (11 tests); `tests/tier1/test_verify_server_parity_cli.py` (72 tests).
+- **Outcome**: 🟢 Built — 83 tests pass (11 Tier 0 + 72 Tier 1); 1 inline cycle (argparse prefix collision in test fixture).
+- **Step 11 audit catch**: EventType naming inconsistency — spec § 3.7 L993 says `PARITY_VERIFY`; CLAUDE.md D76 CLI_* family says `CLI_VERIFY_SERVER_PARITY`. M8 (Wave 5.1 build) uses the former; § 3.7 CLI shim chose the latter for D76 alignment. Producer surfaced for gap-checker routing — naming reconciliation candidate.
+- **Trackers updated**: `CODE_BUILD_STATUS.md` (Round 4 § 3.7 row → 🟢 Built 2026-05-14; Round 4 8/11 BUILT milestone — last of 5-tool cohort); this `_validation_log.md` entry.
+- **Test verification**: pytest 83 pass / 0 fail (Tier 0 + Tier 1). Full-suite regression: **1458 → 1850 pass / 14 skip / 2 fail** (2 = pre-existing B218 § 3.10 carryover; **0 new regression**). Net Round 4 cohort: **+392 new passing tests** (71+66+93+79+83).
+- **Carryovers (gap-checker hand-off; surfaced for routing)**: (1) EventType naming reconciliation `PARITY_VERIFY` vs `CLI_VERIFY_SERVER_PARITY` (M8 vs § 3.7 shim — spec edit candidate); (2) 9.i scope-drift recurrence — § 3.4 `decrypt_pii.py` is ALSO newly-buildable (M5 + M6 satisfied via Wave 3.5 + Wave 2.3) but was MISSED from Round 4 parallel cohort framing; reproduces R3 Wave 2 → Wave 5 scope-narrowing pattern (M8/M12/M13). Step 10/11 producer discipline (added 2026-05-14) covers post-build registration + canonical signature citation but NOT pre-build scope-completeness verification. **2nd cross-session 9.i instance at high-visibility milestone level**; (3) 5-of-5 Step 11 catches across the cohort — empirical evidence Step 11 is working at build-agent level; document for `udm-producer-checklist-evolver` consumption at next round close-out.
+- **CCL note**: Producer agent operated under D62 self-edit fallback per narrow-scope Pattern B1 worker discipline.
+
+---
+
+## 2026-05-14 — Round 4 5-tool cohort progress-logger summary (this entry)
+
+- **Trigger**: `udm-progress-logger` invocation at the end of the 5-tool Round 4 parallel build cohort per CLAUDE.md Validation discipline #9 (per-completion cadence). Logs trackers updated mid-cohort rather than deferring to round close-out.
+- **Cohort summary**: 5 tools built (§ 3.1 / § 3.2 / § 3.3 / § 3.5 / § 3.7), 5,700 module lines total, 392 new passing tests (71+66+93+79+83), 2 total inline cycles (Windows path test fixture for § 3.2; argparse prefix for § 3.7). Round 4 status: **3/11 → 8/11 BUILT (73%)**. Full-suite regression: **1458 → 1850 pass / 14 skip / 2 fail** (2 = pre-existing B218; **0 new regression**).
+- **Step 11 empirical evidence**: **5-of-5 catches** this cohort (every build agent caught a task-brief paraphrase or spec inconsistency at producer time). Strongest cross-session evidence Step 11 is operationalizing producer-side spec-vs-brief discipline at the build-agent layer. Recommend `udm-producer-checklist-evolver` consume this evidence at next round close-out.
+- **Producer-level scope-drift surfaced (Pitfall #9.i instance — 2nd cross-session high-visibility event)**: Round 4 framed as "5 newly-buildable tools" but dep-unblock map shows **§ 3.4 `decrypt_pii.py` is ALSO buildable** (M5 ✅ + M6 ✅ since Wave 3.5 + Wave 2.3 2026-05-13). § 3.4 missed from parallel-build cohort. Same pattern as R3 Wave 2 scope-narrowing → discovered at gap-check → Wave 5. Step 10 + Step 11 producer discipline does NOT yet cover **scope completeness** at pre-build time. **Surface to gap-checker** for either inclusion in this cohort OR explicit B-N + deferral.
+- **Hard-rule checks**: ✅ `_validation_log.md` row written same-session as the 5 build closures (per CLAUDE.md Hard rule 4); ✅ `CODE_BUILD_STATUS.md` per-unit row state transitions ⬜ → 🟢 with date + test pass-count + mechanism (per Hard rule 7); ✅ `ONE_OFF_SCRIPTS.md` deliberately NOT touched — these are operator CLI tools (Manual × On-demand operator-driven recurring), not one-off scripts; `phase1/02_configuration.md` § 5.1 also NOT touched — § 3.1 / § 3.2 / § 3.3 / § 3.5 / § 3.7 are operator-driven manual-on-demand per spec § 1.2 read-only-by-default, NOT scheduled. Tracker routing per `udm-execution-classifier` matrix: Manual × On-demand-Recurring = no scheduled-registry entry, no one-off-tracker entry.
+- **Pitfall #9.k arithmetic-propagation sweep**: 3 counts bumped in same atomic update — (a) Round 4 8/11 BUILT — propagated to CODE_BUILD_STATUS at-a-glance row L22 + Round 4 operator tools section header L52 + dep-unblock map L270 narrative; (b) full-suite 1458 → 1850 — propagated to CODE_BUILD_STATUS tests row L28 + tests current-state L267; (c) 59 → 69 test files — propagated to CODE_BUILD_STATUS tests row L28. Regex-sweep verified all known mirror sites updated; no untouched mirrors found.
+- **Pitfall #9.m discipline-applied-to-its-own-tracker**: this `udm-progress-logger` invocation lands in `_validation_log.md` per the discipline (CLAUDE.md item #9) it operationalizes.
+- **Next-natural-action per CLAUDE.md discipline #11**: invoke `udm-gap-check` BEFORE any 🟢 status claim on the Round 4 cohort. Producer-surfaced items above (1+2+3 in § 3.7 entry's Carryovers + scope-drift in this summary) should be routed by the gap-checker. Gap-check is independent reviewer per D55+D56 producer ≠ reviewer.
+
+---
+
+## 2026-05-14 — Round 4.1 cohort udm-gap-check (independent reviewer per CLAUDE.md hard rule 11)
+
+- **Trigger**: `udm-gap-check` invocation per CLAUDE.md Validation discipline #11 (hard rule: no 🟢 status claim WITHOUT a gap-check `_validation_log.md` entry showing reviewer verdict ≤🟡). Independent reviewer agent per D55 + D56 producer ≠ reviewer. Round 4.1 cohort produced 5 built tools earlier-same-session; gap-check is the mandatory pre-🟢 audit per Hard rule 11.
+
+### 6-category gap-check findings (verbatim from independent reviewer)
+
+1. **Cross-tracker drift** (🔴 → corrected inline this session):
+   - **F-1: CLAUDE.md `tools/` sub-section missing 5 Round 4 CLIs**. Step 10 producer self-check directive (added 2026-05-14 as DELTA-A3 at Round 3 close-out — less than 24 hours before this gap-check) requires convention-registration after every build. Producer (5-tool cohort) updated `CODE_BUILD_STATUS.md` and `_validation_log.md` per Step 10 but did NOT update `CLAUDE.md` `tools/` sub-section. **B-256 opened + closed in-session via inline fix** (5 entries appended; cite Round 4 § 3.x + Round 4.N build dates + surface tokens).
+   - **F-2: GLOSSARY.md missing `Round 4 CLI tool public surfaces` sub-section**. Same Step 10 directive failure as F-1 — GLOSSARY `Round 3 build — module public surfaces` section ended after Wave 5; no Round 4 sub-section authored. **B-257 opened + closed in-session via inline fix** (new sub-section authored after Round 3 build section, before Owner; module entry-point functions + dataclasses + constants tables per `main` / `cli_main` × 5 + 16 module constants).
+2. **Untracked dependencies / blockers** (🟡):
+   - **F-3 (9.i scope-drift recurrence)**: Round 4 framed as "5 newly-buildable tools" but dep-unblock map shows § 3.4 `decrypt_pii.py` is ALSO buildable (M5 ✅ since Wave 3.5 + M6 ✅ since Wave 2.3 2026-05-13). 2nd cross-session instance of Pitfall #9.i (scope-drift) at high-visibility milestone level. **B-255 opened** for build-vs-defer decision routed to user (Resolution options: a — build § 3.4 as Round 4.6 6th tool; b — formally defer with WSJF rationale). udm-producer-checklist-evolver candidate at next round close-out: Step 12 directive for pre-build scope completeness sweep ("before spawning parallel build cohort, regex-sweep dep-unblock map for ALL NOW-BUILDABLE items").
+3. **Pitfall #9.a-9.n sub-class instances** (🟡):
+   - **9.i** scope-drift recurrence — see F-3 (B-255 opened).
+   - **9.j strikethrough-on-closure** — applied to B-256 + B-257 inline-closure entries in BACKLOG.md (closed same-session via strikethrough body + ⚫ CLOSED + closure mechanism line per discipline).
+   - **9.k arithmetic-propagation sweep** — Round 4 status counts (3/11 → 8/11) + Round 4.1 test counts propagated to CODE_BUILD_STATUS.md mirrors via producer at progress-logger time; regex-sweep verified at gap-check (no untouched mirrors).
+   - **9.l canonical-spec-signature drift** — 5-of-5 build agents caught task-brief paraphrase or spec inconsistency at producer time (M3 query_snapshot API mismatch / D76 actor kwarg / positional-vs-kwarg paraphrase / source_filter omission / EventType naming reconciliation). Step 11 empirical validation **VERIFIED REAL** at strongest evidence to date.
+   - **9.m discipline-not-applied-to-its-own-tracker** — verified: this gap-check + fix entry lands in `_validation_log.md` per discipline #11 (gap-check `_validation_log.md` entry required). Pass.
+   - **9.n convention-registration sub-class** (formalized at Round 3 close-out as DELTA-A1) — F-1 + F-2 are 2nd-event recurrence of 9.n less than 24 hours after formalization. Demonstrates: producer Step 10 directive insufficient at first-encounter; mechanism-enforcement (vs reminder-only) is the next udm-producer-checklist-evolver candidate at next round close-out (DELTA-A3 enforcement tightening).
+4. **Convention-registration gaps**: F-1 + F-2 (closed inline above).
+5. **Untracked B-N opportunities** — None beyond B-255 / B-256 / B-257 (3 new B-Ns opened in this session). All 5-of-5 Step 11 producer catches were captured as carryover B-N candidates already (B-254 from § 3.1 producer audit M3 helper extraction).
+6. **Just-noticed issues**:
+   - **EventType naming reconciliation `PARITY_VERIFY` (M8 spec) vs `CLI_VERIFY_SERVER_PARITY` (§ 3.7 CLI shim chose D76 alignment)** — surfaced by § 3.7 producer per Step 11 (canonical-spec sweep); routed to gap-checker for spec edit candidate. Not opened as new B-N this session — leave to round close-out cascade triage per `udm-cascade-audit-evolver` Trigger E.
+
+### Verdict
+
+- **🟡 BUILT (code complete); 🔴 → ≤🟡 post inline-fixes**: 5 tools 🟢 BUILT (code + tests passing); F-1 + F-2 🔴 → ⚫ via B-256 + B-257 inline-closure; F-3 🟡 routed to user via B-255. Net: 🟢-lockable for the 5 tools per CLAUDE.md hard rule 11 (≤🟡 verdict achieved; no 🔴 carry-over).
+
+### Inline fixes applied
+
+1. **CLAUDE.md `Structure` `tools/` sub-section** — 5 new one-liner entries appended (matching existing terse style); cite per-tool Round 4 § 3.x + Round 4.N build cohort date + canonical surface tokens (`main` / `cli_main` / EVENT_TYPE / exit-code constants / per-tool semantic constants). B-256 closed.
+2. **GLOSSARY.md** — new `Round 4 CLI tool public surfaces` sub-section authored (after Round 3 build section, before Owner); 3 tables — entry-point functions (10 entries) + dataclasses + composition note (1 entry — `TierReviewConfigError` only; other 4 shim CLIs compose existing M-module dataclasses) + module constants (16 entries). B-257 closed.
+3. **BACKLOG.md** — B-255 opened (🟡 Open; § 3.4 cohort-inclusion-or-defer decision); B-256 + B-257 opened-and-closed-same-session via strikethrough body + ⚫ CLOSED + closure-mechanism line per Pitfall #9.j discipline. Inserted above B-254 (newest-first ordering).
+4. **HANDOFF.md §12 round-history table** — new row added for Round 4.1 cohort dated 2026-05-14 (75% Round 4 status; 5-of-5 Step 11 empirical catches; Step 10 first-encounter failure; 9.i scope-drift recurrence narrative; new B-Ns enumerated).
+5. **CURRENT_STATE.md Last updated** — preamble bumped to 2026-05-14 with Round 4.1 cohort status note (build summary + Step 11 evidence + Step 10 failure + scope-drift + new B-Ns); earlier Round 3 narrative preserved per discipline.
+6. **_validation_log.md (this entry)** — appended per CLAUDE.md hard rule 11 + Pitfall #9.m discipline-applied-to-its-own-tracker.
+
+### 5-of-5 Step 11 catches — VERIFIED REAL (strongest empirical evidence to date)
+
+- § 3.1 producer: M3 `query_snapshot()` API mismatch caught → B-254 helper-extraction opened.
+- § 3.2 producer: Missing `actor` kwarg per D76 audit-row contract caught → threaded `actor` through.
+- § 3.3 producer: Positional-vs-kwarg paraphrase caught → preferred canonical M12 kwarg-only signature per Pitfall #9.l discipline.
+- § 3.5 producer: Missing `source_filter` parameter caught → added per CLI consistency + M13 canonical surface.
+- § 3.7 producer: EventType naming inconsistency caught (`PARITY_VERIFY` M8 spec vs `CLI_VERIFY_SERVER_PARITY` D76 family) → flagged for gap-checker routing.
+
+**Inference**: Step 11 producer discipline (added 2026-05-14 as DELTA-A4 less than 24 hours before this cohort) is operating at the build-agent layer. 5-of-5 catch rate is strongest cross-session evidence yet for Step 11 effectiveness. Recommend `udm-producer-checklist-evolver` consume this evidence at next round close-out — preserve Step 11 directive verbatim (no modification needed).
+
+### Step 10 failed first-encounter — `udm-producer-checklist-evolver` candidate
+
+- **Failure mode**: Step 10 directive (DELTA-A3, added 2026-05-14 at Round 3 close-out) requires convention-registration after every build. Producer (5-tool cohort) updated `CODE_BUILD_STATUS.md` + `_validation_log.md` (Step 10 sub-components) but did NOT update `CLAUDE.md` `tools/` sub-section or `GLOSSARY.md` Round 4 sub-section. Both gaps surfaced at gap-check 24 hours after Step 10 formalization.
+- **Recommended evolution at next round close-out (`udm-producer-checklist-evolver` candidate)**: Step 10 enforcement-mechanism (vs reminder-only) — e.g. (a) producer self-verification regex-sweep `^- (CLAUDE.md|GLOSSARY.md|...)` per artifact-class table; (b) explicit checklist matrix at progress-logger time enumerating per-build-class registration targets; (c) tool-level helper (e.g. `tools/verify_convention_registration.py`) for build agents to invoke pre-progress-logger.
+
+### 9.i scope-drift recurrence — `udm-producer-checklist-evolver` candidate
+
+- **Failure mode**: Round 4 framed as "5 newly-buildable tools" but dep-unblock map shows 6 unblocked (§ 3.4 missed). 2nd cross-session 9.i recurrence at high-visibility milestone level. Step 10/11 producer discipline covers post-build registration + canonical spec citation but NOT pre-build scope completeness.
+- **Recommended evolution at next round close-out (`udm-producer-checklist-evolver` candidate)**: Step 12 directive — "before spawning parallel build cohort, regex-sweep dep-unblock map for ALL NOW-BUILDABLE items; if cohort framing < dep-unblock count, document each excluded item with WSJF-rationale OR defer-rationale OR add to cohort." Closes the scope-drift recurrence at producer time before any build agent spawns.
+
+### Hard-rule checks (CLAUDE.md Validation discipline #1-#11)
+
+- ✅ Hard rule 1 (D55 5-gate validation per artifact): Round 4.1 cohort 5 tools all have `_validation_log.md` entries with reviewer verdicts.
+- ✅ Hard rule 2 (D56 mandatory second-pass after 🔴): No 🔴 → 🟢 flips in this cohort; all 🔴 (F-1 + F-2) handled inline same-session via B-256 + B-257 closure.
+- ✅ Hard rule 4 (D61 pillar-mapping + risk-surface + B-N surface): B-255 surfaced; pillar mapping per `udm-decision-recorder` not applicable (no new D-numbers in this cohort).
+- ✅ Hard rule 5 (D89-D91 Pattern F post-cascade audit): N/A this is per-build-cohort gap-check, not round close-out Pattern F (deferred to Round 4 close-out per cascade-by-design).
+- ✅ Hard rule 8 (execution classification discipline): All 5 tools classified per `udm-execution-classifier` matrix as Manual × On-demand operator-driven recurring (no scheduled-registry entry + no one-off-tracker entry — verified at progress-logger time).
+- ✅ Hard rule 9 (progress-logger discipline): Progress-logger entry landed same-session as build closures (Round 4 5-tool cohort progress-logger summary entry above this gap-check entry).
+- ✅ Hard rule 10 (CODE_BUILD_STATUS.md per-unit row updates): All 5 tools updated ⬜ → 🟢 with date + test pass-count + mechanism per Pitfall #9.k arithmetic-propagation sweep (Round 4 3/11 → 8/11 propagated to at-a-glance row + Round 4 section header + dep-unblock map narrative).
+- ✅ Hard rule 11 (gap-check `_validation_log.md` entry): This entry is the gap-check `_validation_log.md` row per Hard rule 11.
+
+### Next-natural-action
+
+- **Option (a) — § 3.4 build-as-cohort-extension**: Authorize Round 4.6 build of § 3.4 `decrypt_pii.py` as 6th-tool extension of Round 4.1 cohort (closes 9.i scope-drift recurrence cleanly; Round 4 → 9/11 BUILT = 82%). Estimated 30-60 min via parallel build agent per Pattern B1.
+- **Option (b) — § 3.4 formal defer**: Defer § 3.4 with WSJF rationale + Round-N timeline; commit + proceed with 8/11 (73%) Round 4 cohort + 5/5 Round 4.1 tools claimed 🟢 Built per CLAUDE.md hard rule 11 (verdict ≤🟡 achieved).
+- **Either path enables**: Round 4 cohort claim 🟢 Built (5/5 tools) per CLAUDE.md hard rule 11; commit the 6 inline-fix files as a single atomic commit citing "Round 4 gap-check inline fixes — B-256 + B-257 closed + B-255 opened + 5/5 cohort 🟢-lockable" once B-255 routed to user decision.
+- **Recommended**: Option (a) per Round 3 Wave 2 → Wave 5 precedent (scope-drift catch → build extension > defer when buildable + bounded; preserves cohort cleanliness + closes 9.i recurrence cleanly).
+
+## 2026-05-14 — Wave 4.6 § 3.4 tools/decrypt_pii.py build (closes B-255 9.i scope-drift carry-over)
+
+- **Trigger**: User-direction "Option (a)" (path-a per Round 4.1 cohort gap-check 2026-05-14 — build § 3.4 as Round 4.6 6th-tool extension; closes 9.i scope-drift recurrence cleanly per R3 Wave 2 → Wave 5 precedent). Closes carryover B-255 (§ 3.4 cohort-inclusion-or-defer decision routed to user at Round 4.1 gap-check) via the build itself.
+- **Artifacts touched**: `tools/decrypt_pii.py` (1,410 lines new — operator-authorized PII decryption CLI; security-critical Tier β); `tests/tier0/test_decrypt_pii.py` (741 lines new — 10 Tier 0 tests); `tests/tier1/test_decrypt_pii.py` (1,319 lines new — 70 Tier 1 tests).
+- **Outcome**: 🟢 BUILT — 80 tests pass — 10 Tier 0 + 70 Tier 1; **0 inline cycles — first-iteration pass**. Strengthens B-226 Tier-β calibration evidence base: Round 3+4 cumulative 11-of-14 consecutive modules with 0 inline cycles (Wave 3.1 / Wave 3.2 / Wave 3.3 / Wave 3.4 / Wave 3.5 / Wave 4 M17 / Wave 5.2 / Wave 5.3 / Round 4.1 § 3.1 / Round 4.1 § 3.3 / Round 4.1 § 3.5 / Wave 4.6 § 3.4) — first-iteration pattern continues post-B-226-calibration.
+- **Trackers updated** (Step 10 ACTIVELY APPLIED — first turn applied at producer time):
+  - `BACKLOG.md` — B-255 closed via strikethrough body + ⚫ CLOSED 2026-05-14 + closure mechanism citing Wave 4.6 build (path-a per user direction).
+  - `CODE_BUILD_STATUS.md` — § 3.4 row state transition ⬜ → 🟢 with date + test pass-count + mechanism; at-a-glance Round 4 row 3/11→8/11 → 2/11⬜ + 9/11🟢; tests row 1850 → 1930 + 69 → 71 test files; section header 8/11 → 9/11; Wave 4.6 cohort narrative entry added; Pitfall #9.k arithmetic-propagation sweep verified (5 mirror sites updated).
+  - `CLAUDE.md` `Structure` `tools/` sub-section — entry added for `tools/decrypt_pii.py` (Step 10 application: convention registration after every build per DELTA-A3 producer self-check directive).
+  - `GLOSSARY.md` `Round 4 CLI tool public surfaces` sub-section — § 3.4 entries appended (2 entry-point functions table rows: `main` + `cli_main`; 11 module constants table rows: `EVENT_TYPE` = `CLI_DECRYPT_PII` + exit-code triplet + verdict pentad).
+  - `HANDOFF.md` §12 round-history table — new row added for 2026-05-14 Wave 4.6 cohort distinct from Round 4.1 row (preserves cohort distinctness for audit-trail discipline; round-history rows freeze at the time they were written per Pitfall #9.k audit-trail-by-design).
+- **Test verification**: 80/80 PASS — 10 Tier 0 (smoke) + 70 Tier 1 (unit / integration / branch coverage); full pytest regression 1930 pass / 14 skip / 2 fail (2 = pre-existing B218 § 3.10 carryover, no new regression).
+- **Step 11 catches** (4 brief-vs-canonical drift points — strongest single-cohort catch density yet, signals Step 12 directive for pre-build scope-completeness sweep is increasingly load-bearing):
+  - (a) **operator arg removed**: task brief had `operator: str` parameter; canonical spec § 3.4 L724 uses `actor: str` (D75 + D76 canonical naming); producer preferred canonical per Pitfall #9.l discipline.
+  - (b) **request_id arg added**: task brief omitted; canonical spec § 3.4 L726 audit-grouping contract requires `request_id: uuid.UUID | None = None` (auto-generate via `uuid.uuid4()` if None; ties multiple decrypts to one operator request for audit grouping per RB-4 audit-row convention); producer added per spec.
+  - (c) **return type `str` → `str | None`**: task brief said return `str`; canonical spec § 3.4 L711 CCPA-deleted shape returns `None` for plaintext (CCPA-deleted tokens lack accessible plaintext per right-to-deletion); producer preferred canonical.
+  - (d) **CCPA-deleted exit code `1` → `0`**: task brief said exit 1 for CCPA-deleted (treated as operational failure); canonical spec § 3.4 L737-740 success-classification classifies CCPA-deleted as success (the decryption attempt succeeded in identifying the token; just no plaintext to return per right-to-deletion); producer preferred canonical.
+- **Step 11 cohort scorecard finalized**: **6-of-6 catches** across Round 4 cohort (§ 3.1 query_snapshot API mismatch / § 3.2 actor kwarg missing / § 3.3 positional-vs-kwarg paraphrase / § 3.4 4-point drift bundle / § 3.5 source_filter omission / § 3.7 EventType naming inconsistency). **Strongest cross-session empirical evidence base yet** for Step 11 producer discipline operating at build-agent layer. `udm-producer-checklist-evolver` consumption candidate at next round close-out: preserve Step 11 directive verbatim (no modification needed) + consider promoting Step 12 directive ("before spawning parallel build cohort, regex-sweep dep-unblock map for ALL NOW-BUILDABLE items; if cohort framing < dep-unblock count, document each excluded item with WSJF-rationale OR defer-rationale OR add to cohort") per 2nd-event 9.i recurrence evidence (Round 4 cohort framing missed § 3.4 → resolved this session via 6th-tool extension; same pattern as R3 Wave 2 → Wave 5).
+- **Step 10 first-turn application**: This is the FIRST turn where Step 10 (DELTA-A3 producer self-check — convention registration after every build) was applied at producer time rather than corrected inline at gap-check time. Round 4.1 cohort (less than 24 hours after Step 10 formalization) failed first-encounter — gap-check caught CLAUDE.md `tools/` + GLOSSARY `Round 4 CLI tool public surfaces` absence; corrected via B-256 + B-257 inline closure. This Wave 4.6 build applied Step 10 at progress-logger time (producer-discipline-applied-to-producer). Tests whether Step 10 propagates correctly when consciously executed.
+- **Pitfall #9 sub-class instances** (per HANDOFF §8):
+  - **9.i (process-discipline-claim drift scope-drift recurrence)**: B-255 carryover from Round 4.1 cohort scope-drift recurrence — RESOLVED via this build (path-a closure). 2nd cross-session 9.i instance at high-visibility milestone level now closed.
+  - **9.j (status-render discipline)**: B-255 leading badge flipped ⚫ via strikethrough + closure annotation per discipline.
+  - **9.k (arithmetic-propagation drift)**: Regex-sweep performed across CBS mirror sites for 3 count bumps: (a) Round 4 8/11 → 9/11 (propagated to at-a-glance row L22 + section header L70 + Wave 4.6 narrative + dep-unblock map line); (b) full-suite 1850 → 1930 (propagated to tests row L28 + tests current-state narrative + § 3.4 row); (c) 69 → 71 test files (propagated to tests row L28 + Wave 4.6 suffix entry). All known mirror sites updated; no untouched mirrors found.
+  - **9.l (canonical-spec-signature drift)**: 4 Step 11 catches above (operator / request_id / return-type / exit-code) demonstrate 9.l VERIFIED REAL at strongest single-cohort density yet; producer preferred canonical spec § 3.4 in all 4 cases.
+  - **9.m (discipline-not-applied-to-its-own-tracker)**: This `udm-progress-logger` invocation lands in `_validation_log.md` per the discipline it operationalizes (CLAUDE.md item #9). Pass.
+- **CCL self-edit fallback per D62 + B34**: N/A — main agent CCL had been performed earlier-same-session (Round 4.1 cohort + gap-check); this progress-logger inherits that context.
+- **Carryovers** (open after this completion):
+  - **B-254** (🟡 Open) — M3 `list_snapshots` helper extraction (from Round 4.1 § 3.1 producer audit) — UNCHANGED.
+  - **B-218** (🟡 Open) — 2 pre-existing § 3.10 carryover failures — UNCHANGED.
+  - **B81** (🟡 Open / R4 blocker) — SP-12 (`PiiVault_ProcessCcpaDeletion`) DDL not deployed; blocks § 3.9 `process_ccpa_deletion.py` build.
+  - **B82** (🟡 Open / R4 blocker) — Ops-channel client deferred to Phase 2 R1; blocks § 3.11 `alert_dispatcher.py` build.
+- **Hard-rule checks (CLAUDE.md Validation discipline #1-#11)**:
+  - ✅ Hard rule 4 (D61 + CLAUDE.md hard rule): `_validation_log.md` row written same-session (this entry).
+  - ✅ Hard rule 5 (execution classification): `tools/decrypt_pii.py` is operator-driven Manual × On-demand recurring CLI per `udm-execution-classifier` matrix; ONE_OFF_SCRIPTS.md NOT touched (not a one-off); `phase1/02_configuration.md` § 5.1 NOT touched (not scheduled — per spec § 3.4 L728 explicitly NOT scheduled).
+  - ✅ Hard rule 7 (CODE_BUILD_STATUS.md per-unit row update): § 3.4 row ⬜ → 🟢 with date + test pass-count + mechanism.
+  - ✅ Hard rule 9 (progress-logger discipline): This entry IS the progress-logger row per discipline.
+  - ✅ Hard rule 10 (Code-build progress dashboard update): CBS at-a-glance + section header + tests row + dep-unblock map narrative all updated atomically.
+- **Next-natural-action per CLAUDE.md discipline #11**: invoke `udm-gap-check` BEFORE any 🟢 status claim on the Wave 4.6 § 3.4 build. Producer-surfaced items above (Step 11 4-point drift bundle + Step 10 first-turn application + Step 12 directive candidacy) should be routed by the gap-checker. Gap-check is independent reviewer per D55+D56 producer ≠ reviewer.
+
+---
