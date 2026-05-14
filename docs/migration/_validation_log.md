@@ -5615,3 +5615,82 @@ This entry IS the application of CLAUDE.md hard rule 9 (`udm-progress-logger`) t
 - B58 / B-261 / B-266 / Pitfall #9.m / Pitfall #9.n / D95 / D98
 
 **Meta-observation**: Within this single session (2026-05-14 afternoon → evening) the parent-agent gap-reflection pattern has now surfaced 3 distinct discipline recurrences across 3 successive commits (`146d97a` → `9444f12` → this commit). Pattern observation: each "gap-reflection" pass finds 1-2 fresh instances of disciplines we ostensibly already operationalized in the same session. This is itself evidence that gap-reflection-as-a-pass is producing real signal even when done by the same agent that produced the work (NOT necessarily independent reviewer). Recommend tracking via B-261 (mechanism-evolution work) and B-260 (sub-class 9.o promotion candidate).
+
+
+## 2026-05-14 — B-266 implementation: drift tool recognizes project-convention naming + tools_ prefix translation
+
+**Trigger**: User-prompted suggested-next-step continuation from `a224a5d` reflection-gap fix sweep. B-266 was the natural follow-up: small, closes today's loop, makes drift tool actually useful (currently reports false-positive RED hiding the 2 real gaps).
+
+**Implementation delegated to general-purpose Agent** with file-path manifest brief (per session-established pattern from sub-agent prompts in Round 3 + Round 4 cohorts). Brief included: (a) canonical READ paths (`docs/migration/BACKLOG.md:229` for B-266 disposition; `tools/verify_tier0_drift.py` for current state; `tests/tier1/test_verify_tier0_drift.py` for test pattern); (b) WRITE paths (verify_tier0_drift.py + test_verify_tier0_drift.py); (c) verbatim code blocks for Changes A + B + C; (d) verbatim test class scaffolds for `TestB266ToolsPrefixStrip` + `TestB266DescriptiveMatching`; (e) explicit DO/DO NOT list (preserve `_TEST_FUNC_LETTER_RE` regex; preserve `_extract_assertions_from_test_file` letter-only return contract for existing test compat; underscore-prefix new helpers per private-API convention so no Step 10 application needed).
+
+**Files modified**:
+
+| File | Delta | Notes |
+|---|---|---|
+| `tools/verify_tier0_drift.py` | +218 lines (1400 → 1608) | Change A `_resolve_test_file` + Change B 4 new underscore-prefixed helpers + Change C `_compute_drift_for_module` descriptive fallback |
+| `tests/tier1/test_verify_tier0_drift.py` | +175 lines (1216 → 1391) | TestB266ToolsPrefixStrip (4 tests) + TestB266DescriptiveMatching (9 tests) = 13 new tests |
+| `tests/audit_reports/tier0_drift_2026-05-14.md` | regenerated | Re-run after B-266 fix shows 25 RED → 13 RED |
+
+**Agent algorithm refinements during implementation** (deviated from initial plan; both sound):
+1. `_extract_keywords`: also splits CamelCase backticked identifiers into snake_case constituents (so `` `LatenessReport` `` decomposes to `{lateness, report}`, matching `test_lateness_report_shape`). Without this, `test_backticked_identifier_alone_is_strong_signal` failed.
+2. `_assertion_keyword_match`: accepts 1-overlap when (a) overlap is a backticked identifier (high-signal) OR (b) spec has only 1 keyword after stopword filter. Without this, canonical Tier 0 (a) assertions like "module imports" → `{imports}` never matched their descriptive counterparts.
+
+**Pytest verification**:
+
+| Layer | Result |
+|---|---|
+| `tests/tier1/test_verify_tier0_drift.py` (isolated) | 86 passed / 0 failed (73 existing + 13 new) |
+| Full regression (tier0 + tier1 + unit + regression + property) | 2083 passed / 10 skipped / 2 failed |
+| Baseline delta | +13 pass (matches new tests); 2 fail = pre-existing B218 carryover (NOT introduced) |
+
+**Drift report re-run measurable improvement**:
+
+| Metric | Before | After | Delta |
+|---|---|---|---|
+| Modules checked | 25 | 25 | — |
+| Files RED | 25 | 13 | -12 (-48%) |
+| Files YELLOW | 0 | 3 | +3 (Tier 1 promotion candidates per D80) |
+| Files CLEAN | 0 | 9 | +9 |
+| Missing assertions | 50 | 16 | -34 (-68%) |
+| Missing test files | 12 | 3 | -9 (-75%) |
+| Extra assertions | 0 | 6 | +6 (YELLOW only) |
+
+**Remaining 3 missing-test-file findings**:
+- `tools_alert_dispatcher` — genuine absence, B82 ops-channel blocker
+- `tools_process_ccpa_deletion` — genuine absence, B81 SP-12 blocker
+- `server_parity_verifier` — separate 3rd-class drift (M-module-name vs verify-prefixed tool filename) → surfaced as B-267 below
+
+**Remaining 16 missing_assertion findings**: mostly cases where spec assertion text references a backticked identifier (e.g., `import uuid` in `pii_decryptor` spec (a)) that the descriptive test function name does not echo. These represent genuine spec-vs-test specificity gaps now correctly surfaced — engineering-deploy gate signal-to-noise dramatically improved.
+
+**Tracker updates**:
+
+- `docs/migration/BACKLOG.md`:
+  - B-266 closure annotation added (leading badge 🟡 → ⚫ per Pitfall #9.j; full closure mechanism documented)
+  - B-267 opened (3rd-class naming drift; WSJF 1.0; closure target next bug-fix cycle)
+- `docs/migration/CODE_BUILD_STATUS.md` L12 narrative bumped with B-266 closure event
+- `docs/migration/CURRENT_STATE.md` L7 narrative bumped with B-266 closure + B-267 open
+
+**Step 10 application**: NOT applicable. All new functions in `tools/verify_tier0_drift.py` are underscore-prefixed (`_extract_keywords` / `_function_name_tokens` / `_assertion_keyword_match` / `_extract_descriptive_test_functions` + 2 module-level private constants `_KEYWORD_STOPWORDS` + `_BACKTICKED_IDENT_RE`) — private-API convention. No CLAUDE.md Structure row update OR GLOSSARY entry needed.
+
+**Convention check**:
+
+| Convention | Pass/Fail | Evidence |
+|---|---|---|
+| Pitfall #9.j (badge ↔ inline-annotation alignment) | ✅ | B-266 leading badge flipped 🟡 → ⚫ in same edit as inline closure annotation; B-267 leading badge 🟡 with no inline closure (newly-opened) |
+| Pitfall #9.k (arithmetic-propagation drift) | ✅ | Pytest count bumped 2070 → 2083 in 3 mirror sites: BACKLOG B-266 closure / CODE_BUILD_STATUS L12 / CURRENT_STATE L7 / this validation log entry — all consistent at 2083 |
+| Pitfall #9.l (canonical schema/spec re-read before authoring) | ✅ | Agent brief explicitly cited `tools/verify_tier0_drift.py:415-429` (`_resolve_module_name`) + `:621-639` (`_resolve_test_file`) + L568 (`_TEST_FUNC_LETTER_RE`) for surgical-edit targeting |
+| Pitfall #9.m (discipline applied to its own tracker) | ✅ | B-266 closure properly logged in BACKLOG + CODE_BUILD_STATUS + CURRENT_STATE + this entry — no "noted but not opened" recurrence; B-267 opened explicitly (not just narrated) |
+| Pitfall #9.n (convention-registration of new artifacts) | ✅ N/A | No new public surface (all helpers underscore-prefixed) |
+| CLAUDE.md hard rule 9 (`udm-progress-logger` mid-round) | ✅ | This entry IS the application |
+
+**Cross-references**:
+
+- `tools/verify_tier0_drift.py` (+218 lines; Changes A + B + C)
+- `tests/tier1/test_verify_tier0_drift.py` (+175 lines; 2 new test classes)
+- `tests/audit_reports/tier0_drift_2026-05-14.md` (regenerated)
+- `docs/migration/BACKLOG.md` B-266 closure + B-267 open
+- `docs/migration/CODE_BUILD_STATUS.md` L12 narrative bump
+- `docs/migration/CURRENT_STATE.md` L7 narrative bump
+- B58 (verify_tier0_drift.py full impl that produced the first drift report) / B81 / B82 (genuine-absent test files) / B214 (test injection points) / B228 (canonical utils.errors imports) / D67 / D74 / D75 / D76 / D77 / D80 / D92 (forward-only additive) / Pitfall #9.j (leading badge flip)
+
+**Meta-observation**: The B-266 implementation is a textbook example of the parent-agent-orchestrator + sub-agent-implementer pattern working as designed. Agent brief included file-path manifests + verbatim code + DO/DO NOT list — agent executed with 2 sound algorithm refinements + comprehensive verification. Engineering-deploy gate signal-to-noise dramatically improved without scope creep into B-267 territory.

@@ -735,6 +735,181 @@ class TestDriftVerdicts:
 
 
 # ===========================================================================
+# § B-266 tools_ prefix strip + descriptive test name matching
+# ===========================================================================
+
+
+class TestB266ToolsPrefixStrip:
+    """B-266 fix: _resolve_test_file strips 'tools_' prefix as fallback."""
+
+    def test_strips_tools_prefix_when_canonical_not_found(self):
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        def file_exists(p):
+            # Only test_alert_dispatcher.py exists, NOT test_tools_alert_dispatcher.py
+            return p.name == "test_alert_dispatcher.py"
+        result = mod._resolve_test_file(
+            "tools_alert_dispatcher",
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_exists=file_exists,
+        )
+        assert result is not None
+        assert result.name == "test_alert_dispatcher.py"
+
+    def test_prefers_canonical_name_when_both_exist(self):
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        def file_exists(p):
+            return p.name in ("test_tools_alert_dispatcher.py", "test_alert_dispatcher.py")
+        result = mod._resolve_test_file(
+            "tools_alert_dispatcher",
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_exists=file_exists,
+        )
+        assert result.name == "test_tools_alert_dispatcher.py"
+
+    def test_no_strip_if_module_lacks_tools_prefix(self):
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        def file_exists(p):
+            return p.name == "test_credentials_loader.py"
+        result = mod._resolve_test_file(
+            "credentials_loader",
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_exists=file_exists,
+        )
+        assert result.name == "test_credentials_loader.py"
+
+    def test_returns_none_if_neither_form_exists(self):
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        def file_exists(p):
+            return False
+        result = mod._resolve_test_file(
+            "tools_alert_dispatcher",
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_exists=file_exists,
+        )
+        assert result is None
+
+
+class TestB266DescriptiveMatching:
+    """B-266 fix: descriptive test names match spec via keyword overlap."""
+
+    def test_extract_keywords_drops_stopwords(self):
+        mod = _load_tool_module()
+        keywords = mod._extract_keywords("module imports")
+        # "module" is in stopwords; "imports" is 7 chars
+        assert "imports" in keywords
+        assert "module" not in keywords
+
+    def test_extract_keywords_keeps_backticked_identifiers(self):
+        mod = _load_tool_module()
+        keywords = mod._extract_keywords("returns `CredentialsDict` shape")
+        # backticked identifiers always kept regardless of length
+        assert "credentialsdict" in keywords
+
+    def test_extract_keywords_short_words_excluded(self):
+        mod = _load_tool_module()
+        keywords = mod._extract_keywords("a is the of in to")
+        # all 1-3 char tokens excluded
+        assert keywords == set()
+
+    def test_function_name_tokens_strips_test_prefix(self):
+        mod = _load_tool_module()
+        tokens = mod._function_name_tokens("test_clean_exit_updates_to_completed")
+        assert "clean" in tokens
+        assert "exit" in tokens
+        assert "updates" in tokens
+        assert "completed" in tokens
+        assert "test" not in tokens  # stripped
+        assert "to" not in tokens  # below 3-char threshold
+
+    def test_keyword_match_two_overlap_succeeds(self):
+        mod = _load_tool_module()
+        # "clean exit UPDATEs to COMPLETED" overlap with test_clean_exit_updates_to_completed
+        assert mod._assertion_keyword_match(
+            "clean exit UPDATEs to COMPLETED",
+            "test_clean_exit_updates_to_completed",
+        )
+
+    def test_keyword_match_zero_overlap_fails(self):
+        mod = _load_tool_module()
+        assert not mod._assertion_keyword_match(
+            "raises CredentialsLoadError when gpg returns non-zero",
+            "test_completely_unrelated_thing",
+        )
+
+    def test_backticked_identifier_alone_is_strong_signal(self):
+        mod = _load_tool_module()
+        # Single backticked identifier match is enough (1-overlap when backticked)
+        assert mod._assertion_keyword_match(
+            "returns `LatenessReport`",
+            "test_lateness_report_shape",
+        )
+
+    def test_extract_descriptive_test_functions_skips_letter_prefixed(self):
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        def file_reader(p):
+            return (
+                "def test_a_module_imports():\n    pass\n"
+                "def test_module_imports():\n    pass\n"
+                "def test_clean_exit_updates_to_completed():\n    pass\n"
+            )
+        result = mod._extract_descriptive_test_functions(
+            P("/x/test_foo.py"), file_reader=file_reader,
+        )
+        names = {a.function_name for a in result}
+        assert "test_module_imports" in names
+        assert "test_clean_exit_updates_to_completed" in names
+        assert "test_a_module_imports" not in names  # letter-prefixed; excluded
+        assert all(a.letter == "" for a in result)  # sentinel
+
+    def test_full_drift_flow_descriptive_match_emits_match_not_red(self):
+        """Integration: spec has (c), test file has only descriptive -- should match."""
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        spec_assertions = [
+            mod.AssertionSpec(letter="a", description="module imports"),
+            mod.AssertionSpec(letter="c", description="clean exit UPDATEs to COMPLETED"),
+        ]
+        spec_info = {
+            "spec_doc": "docs/migration/phase1/03_core_modules.md",
+            "spec_line": 927,
+            "assertions": spec_assertions,
+        }
+        def file_exists(p):
+            return p.name == "test_foo.py"
+        def file_reader(p):
+            return (
+                "def test_module_imports():\n    pass\n"
+                "def test_clean_exit_updates_to_completed():\n    pass\n"
+            )
+        findings = mod._compute_drift_for_module(
+            "foo",
+            spec_info,
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_reader=file_reader,
+            file_exists=file_exists,
+        )
+        # No RED findings -- both should match via descriptive matcher
+        red_findings = [f for f in findings if f.severity == "red"]
+        assert red_findings == [], f"Unexpected RED findings: {red_findings}"
+        # Both should be 'match' type
+        match_findings = [f for f in findings if f.drift_type == "match"]
+        assert len(match_findings) == 2
+        # Detail should mention B-266 semantic match
+        details = " ".join(f.detail for f in match_findings)
+        assert "B-266" in details
+
+
+# ===========================================================================
 # § Exit code derivation (per D74 + spec section 4.7 L873)
 # ===========================================================================
 

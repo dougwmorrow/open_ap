@@ -569,6 +569,147 @@ _RAISES_RE = re.compile(
     r"(?:pytest\.raises|\braises\b|\bexcept\b)\s*\(?\s*([A-Z][A-Za-z0-9_]+)",
 )
 
+# Per B-266: project convention is descriptive test function names
+# (`test_clean_exit_updates_to_completed`) rather than letter-prefixed
+# (`test_c_clean_exit`). Tool now recognizes both naming conventions
+# via keyword-overlap matching against spec assertion descriptions.
+_KEYWORD_STOPWORDS = frozenset({
+    "module", "function", "returns", "raise", "raises", "raised", "when",
+    "with", "from", "value", "values", "shape", "passed", "valid", "true",
+    "false", "none", "test", "match", "given", "input", "output", "after",
+    "before", "into", "this", "that", "these", "those", "each", "every",
+    "where", "while", "until", "first", "last", "only", "also", "both",
+    "still", "again", "back", "next", "case", "must", "should", "would",
+    "could", "have", "has", "had", "been", "being", "exits", "does",
+    "exist", "exists", "type",
+})
+
+_BACKTICKED_IDENT_RE = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
+
+
+def _extract_keywords(text: str) -> set[str]:
+    """Extract significant keywords from a spec assertion description.
+
+    Per B-266: significant tokens = 4+ char alphabetic/underscore tokens
+    excluding stopwords PLUS backticked identifiers (no length filter
+    since these are high-signal). All lowercased. CamelCase identifiers
+    inside backticks are also split into their constituent snake_case
+    tokens (e.g. `LatenessReport` -> {'latenessreport', 'lateness',
+    'report'}) so descriptive snake_case function names can match them.
+    """
+    lower = text.lower()
+    keywords = {
+        w for w in re.findall(r"[a-z_][a-z_0-9]*", lower)
+        if len(w) >= 4 and w not in _KEYWORD_STOPWORDS
+    }
+    for match in _BACKTICKED_IDENT_RE.finditer(text):
+        ident = match.group(1)
+        keywords.add(ident.lower())
+        # Split CamelCase / snake_case into constituent tokens so a spec
+        # `LatenessReport` can match a function name `..._lateness_report_...`.
+        for piece in re.findall(r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|[0-9]+", ident):
+            piece_lower = piece.lower()
+            if len(piece_lower) >= 3:
+                keywords.add(piece_lower)
+    return keywords
+
+
+def _function_name_tokens(func_name: str) -> set[str]:
+    """Split a snake_case test function name into lowercase tokens.
+
+    Strips ``test_`` prefix. Returns tokens of 3+ chars.
+    """
+    stripped = func_name
+    if stripped.startswith("test_"):
+        stripped = stripped[5:]
+    return {t for t in stripped.lower().split("_") if t and len(t) >= 3}
+
+
+def _assertion_keyword_match(
+    spec_desc: str,
+    test_func_name: str,
+    *,
+    min_overlap: int = 2,
+) -> bool:
+    """True if test_func_name shares significant tokens with spec_desc.
+
+    Per B-266 semantic match algorithm:
+    - Backticked identifiers in spec_desc are high-signal -- overlap of 1
+      backticked identifier alone counts as a match.
+    - Spec descriptions with only ONE significant keyword (after
+      stopword filtering -- e.g. ``module imports``, ``help exits 0``)
+      match when that single keyword appears in the function name.
+    - Otherwise require min_overlap (default 2) shared non-stopword
+      tokens between spec keywords and function name tokens.
+    """
+    spec_keywords = _extract_keywords(spec_desc)
+    func_tokens = _function_name_tokens(test_func_name)
+    overlap = spec_keywords & func_tokens
+    backticked = {
+        m.group(1).lower() for m in _BACKTICKED_IDENT_RE.finditer(spec_desc)
+    }
+    if overlap & backticked:
+        return True
+    # Single-keyword spec descriptions (e.g. "module imports" -> {"imports"})
+    # match on a single overlap -- otherwise canonical Tier 0 (a) assertion
+    # never matches its descriptive test_module_imports counterpart.
+    if len(spec_keywords) <= 1 and len(overlap) >= 1:
+        return True
+    return len(overlap) >= min_overlap
+
+
+def _extract_descriptive_test_functions(
+    test_path: Path,
+    *,
+    file_reader: Callable[[Path], str] | None = None,
+) -> list[TestAssertion]:
+    """Parse a Tier 0 test file; return non-letter-prefixed test functions.
+
+    Per B-266: returns functions whose name is ``test_<descriptive>`` but
+    NOT ``test_<letter>_<...>``. Letter is set to empty string '' as
+    sentinel (these don't have a canonical letter binding).
+
+    Used as fallback for spec assertions that have no letter-prefix
+    match -- see ``_compute_drift_for_module`` keyword-match phase.
+    """
+    if file_reader is None:
+        def _default_reader(p: Path) -> str:
+            return p.read_text(encoding="utf-8")
+
+        file_reader = _default_reader
+    try:
+        source = file_reader(test_path)
+    except FileNotFoundError:
+        return []
+    try:
+        tree = ast.parse(source, filename=str(test_path))
+    except SyntaxError as exc:
+        logger.error("Test file %s has SyntaxError: %s", test_path, exc)
+        return []
+    descriptive: list[TestAssertion] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not node.name.startswith("test_"):
+            continue
+        # Skip letter-prefixed: handled by _extract_assertions_from_test_file.
+        if _TEST_FUNC_LETTER_RE.match(node.name):
+            continue
+        body_source = ast.unparse(node) if hasattr(ast, "unparse") else ""
+        exception_classes: list[str] = []
+        for rm in _RAISES_RE.finditer(body_source):
+            cls_name = rm.group(1)
+            if cls_name not in exception_classes:
+                exception_classes.append(cls_name)
+        descriptive.append(
+            TestAssertion(
+                letter="",
+                function_name=node.name,
+                exception_classes=tuple(exception_classes),
+            )
+        )
+    return descriptive
+
 
 def _extract_assertions_from_test_file(
     test_path: Path,
@@ -625,16 +766,26 @@ def _resolve_test_file(
     tier0_dirs: tuple[str, ...] = DEFAULT_TIER0_DIRS,
     file_exists: Callable[[Path], bool] | None = None,
 ) -> Path | None:
-    """Locate the Tier 0 test file for ``module_name``."""
+    """Locate the Tier 0 test file for ``module_name``.
+
+    Per B-266: project convention dropped the ``tools_`` prefix from
+    test filenames (spec sketches say ``test_tools_<X>.py`` but actual
+    files are ``test_<X>.py``). Try canonical name first, then strip
+    ``tools_`` prefix as fallback.
+    """
     if file_exists is None:
         def _default_exists(p: Path) -> bool:
             return p.exists()
 
         file_exists = _default_exists
+    candidates = [module_name]
+    if module_name.startswith("tools_"):
+        candidates.append(module_name[len("tools_"):])
     for d in tier0_dirs:
-        candidate = project_root / d / f"test_{module_name}.py"
-        if file_exists(candidate):
-            return candidate
+        for cn in candidates:
+            candidate = project_root / d / f"test_{cn}.py"
+            if file_exists(candidate):
+                return candidate
     return None
 
 
@@ -692,6 +843,9 @@ def _compute_drift_for_module(
     test_assertions = _extract_assertions_from_test_file(
         test_path, file_reader=file_reader
     )
+    descriptive_tests = _extract_descriptive_test_functions(
+        test_path, file_reader=file_reader,
+    )
     spec_by_letter = {a.letter: a for a in spec_assertions}
     tests_by_letter = {a.letter: a for a in test_assertions}
 
@@ -700,6 +854,58 @@ def _compute_drift_for_module(
     # SPEC minus TESTS -- missing assertions in test file.
     for letter, spec_a in spec_by_letter.items():
         if letter not in tests_by_letter:
+            # B-266 fallback: try keyword-overlap match against descriptive tests.
+            descriptive_match = None
+            for dt in descriptive_tests:
+                if _assertion_keyword_match(spec_a.description, dt.function_name):
+                    descriptive_match = dt
+                    break
+            if descriptive_match is not None:
+                # Treat as a match -- descriptive test covers this assertion.
+                # Still check exception class if spec names one.
+                spec_exc = spec_a.exception_class
+                if spec_exc and descriptive_match.exception_classes:
+                    if (
+                        spec_exc not in descriptive_match.exception_classes
+                        and "Exception" not in descriptive_match.exception_classes
+                    ):
+                        findings.append(
+                            DriftFinding(
+                                module_name=module_name,
+                                spec_doc=spec_doc,
+                                spec_line=spec_line,
+                                test_file=str(test_path),
+                                drift_type="type_mismatch",
+                                severity="red",
+                                detail=(
+                                    f"Spec ({letter}) names {spec_exc!r} but "
+                                    f"descriptive test "
+                                    f"{descriptive_match.function_name!r} "
+                                    f"references {list(descriptive_match.exception_classes)} "
+                                    f"-- type mismatch."
+                                ),
+                                letter=letter,
+                            )
+                        )
+                        continue
+                findings.append(
+                    DriftFinding(
+                        module_name=module_name,
+                        spec_doc=spec_doc,
+                        spec_line=spec_line,
+                        test_file=str(test_path),
+                        drift_type="match",
+                        severity="match",
+                        detail=(
+                            f"Assertion ({letter}) matched via descriptive test "
+                            f"{descriptive_match.function_name!r} (B-266 "
+                            f"keyword-overlap semantic match)."
+                        ),
+                        letter=letter,
+                    )
+                )
+                continue
+            # No letter match AND no descriptive match -- genuine gap.
             findings.append(
                 DriftFinding(
                     module_name=module_name,
@@ -710,7 +916,9 @@ def _compute_drift_for_module(
                     severity="red",
                     detail=(
                         f"Assertion ({letter}) in spec but no matching "
-                        f"test_{letter}_* function in {test_path.name}. "
+                        f"test_{letter}_* function in {test_path.name} "
+                        f"(B-266: also no descriptive test name with "
+                        f"keyword overlap >= 2). "
                         f"Spec text: {spec_a.description[:200]!r}"
                     ),
                     letter=letter,
