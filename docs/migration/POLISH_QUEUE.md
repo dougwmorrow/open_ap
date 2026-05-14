@@ -187,6 +187,22 @@ A P-item closes when EITHER:
 - **Closure target**: Next CLAUDE.md edit cycle
 - **Why P not B**: cosmetic wording drift.
 
+### P-15 (🟡 Open): Retroactive backport of bound-param + SCOPE_IDENTITY patterns to earlier tool tests
+
+- **Affected**: `tests/tier{0,1}/test_measure_lateness.py`, `test_capture_parity_baseline.py`, `test_verify_credentials_load.py`, `test_import_pii_inventory.py`, `test_lateness_columns.py`, `test_pii_inventory_audit_log.py`, `test_capacity_baseline_log.py` (7 test files from prior 8-unit cohort B183/B184/B188/B189/B190/B193/B194/B195)
+- **Issue**: Two patterns demonstrated effective in § 3.8 build (2026-05-12) — (1) **bound-param inspection** (test inspects `executed_params` AND `executed_sql`, mirroring B218 retroactive fix); (2) **SCOPE_IDENTITY for audit_event_id** (audit-row writer returns IDENTITY value as int, populating `audit_event_id` key per spec). The 7 earlier test files do NOT use these patterns; they may have similar latent issues OR be silently passing only because their author code uses literal SQL (not parameterized).
+- **Polish item**: Audit each of the 7 test files. Where author code uses parameterized SQL → add `executed_params` capture + bound-param inspection. Where audit_event_id is part of the JSON output spec → audit the author's `_write_audit_row` return semantics.
+- **Closure target**: Phase 2 R1 close-out polish-sweep OR engineer-side iteration during R1c deployment when test-infrastructure consistency becomes load-bearing.
+- **Why P not B**: doesn't change tool behavior; defends test files against latent flakiness if engineer modifies author code in the future. Cosmetic + defensive only.
+
+### P-16 (🟡 Open): CODE_BUILD_STATUS Round 4 section header arithmetic propagation cleanup
+
+- **Affected**: `docs/migration/CODE_BUILD_STATUS.md` L33 (was `"0/11 built"` header) — FIXED INLINE 2026-05-12 to `"2/11 built"` after gap-check 9.k finding.
+- **Issue**: Section header didn't propagate when at-a-glance count was updated post-§ 3.10 + § 3.8 builds (Pitfall #9.k arithmetic-propagation drift instance). Fixed inline.
+- **Polish item (forward-looking)**: When CODE_BUILD_STATUS Round 4 OR Round 3 count next changes, verify BOTH at-a-glance summary table (L22 region) AND per-section header (L33 + L48 region for Round 3) update in lockstep. Add a producer self-check note in the file's "How units move through state" section reminding of dual-location update.
+- **Closure target**: Next CODE_BUILD_STATUS edit cycle (organic; not blocking).
+- **Why P not B**: cosmetic propagation discipline; no procedural change required.
+
 ### ~~P-5~~ (⚫ CLOSED 2026-05-12): GLOSSARY P-number entry
 
 - ~~**Affected**: `docs/migration/GLOSSARY.md`~~

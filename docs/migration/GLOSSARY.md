@@ -251,6 +251,9 @@ Per `MULTI_AGENT_GUIDE.md`. Six orchestration patterns:
 |---|---|---|
 | **Pattern A** | Parallel research | Multi-faceted question; agents in parallel; results return together |
 | **Pattern B** | Specialized review | One custom subagent + one artifact (e.g., `udm-design-reviewer` on a stored proc) |
+| **Pattern B1** | Build cohort — single-agent | One author agent builds + tests one tool / module end-to-end; smallest unblocked cohort pattern (e.g. § 3.10 `log_retention_cleanup.py` 2026-05-12) |
+| **Pattern B2** | Build cohort — paired (author + test-author) | Two parallel agents read the canonical spec independently per D55 producer ≠ reviewer; design-reviewer agent NOT spawned (small-scope + low-risk; e.g. § 3.10 + § 3.8 + § 3.6 2026-05-12) |
+| **Pattern B3** | Build cohort — triad (author + test-author + design-reviewer) | Three parallel agents per D55 + D56 full discipline; reviewer issues blocking 🔴 findings before 🟢 build-state (e.g. Wave 1 cohort 2026-05-12; Wave 2 cohort 2026-05-13) |
 | **Pattern C** | Test-first via specialist | TDD-style: spec → `udm-test-author` → fail → impl → pass → `udm-design-reviewer` |
 | **Pattern D** | Reflection / progress check | Spawn reflection agent to assess phase progress |
 | **Pattern E** | 5-agent deep validation | Spec docs >50 KB; 4 blocking reviewers + 1 advisory researcher in one cycle |
@@ -422,9 +425,9 @@ Per `HANDOFF.md` §8. Lessons learned from actual project mistakes.
 | #11 | Cascade-level self-attestation without independent verification | Pattern F discipline mitigates (D89-D91) |
 | #12 | Naming-standard locked late | Grandfather cost is permanent — lock conventions in 30-min kickoff BEFORE output begins (Phase 0 prep 2026-05-11; D105) |
 
-### Pitfall #9 sub-classes (9.a through 9.j)
+### Pitfall #9 sub-classes (9.a through 9.m)
 
-When a 🔴 fix introduces a NEW reference to a canonical source, the validator MUST re-verify EVERY new reference. 10 sub-classes formalized (one per recurring bug pattern):
+When a 🔴 fix introduces a NEW reference to a canonical source, the validator MUST re-verify EVERY new reference. 13 sub-classes formalized (one per recurring bug pattern):
 
 | Sub-class | Name | First evidence |
 |---|---|---|
@@ -438,6 +441,9 @@ When a 🔴 fix introduces a NEW reference to a canonical source, the validator 
 | **9.h** | Wrong section number with invented description | Round 4 cycle 8 |
 | **9.i** | Process-discipline-claim drift (false-closure, stale B-range, silent omission, invented forward-reference) | Round 5/6 (formalized Round 6 close-out) |
 | **9.j** | B-item status-render discipline (leading `🟡 Open` badge + inline `**CLOSED**` annotation mismatch) | Round 6 unscoped + Round 7 first-production Pattern F (formalized Round 8 close-out) |
+| **9.k** | Arithmetic-propagation drift (count / row-index updated in one location, mirrors not propagated) | 5-event evidence base 2026-05-12 (CLAUDE.md L634 stale-summary propagation + Phase 2 R1 cycle 1 cascade); formalized 2026-05-12 per B198 + producer self-check Step 7 (regex-sweep + enumerate when counts change) |
+| **9.l** | Canonical-schema-detail working-memory drift (fix references canonical schema object but producer skipped re-read of canonical DDL) | 5-event evidence base from Phase 2 R1 spec doc Pattern E cycles 2-6 2026-05-12; formalized 2026-05-12 per B201 + producer self-check Step 8 (re-read canonical DDL before fixing schema-referencing procedures) |
+| **9.m** | Discipline-not-applied-to-its-own-tracker (new tracker / skill / discipline authored without immediately applying its rule to itself) | 2-event evidence base 2026-05-12 (D113 POLISH_QUEUE.md + udm-progress-logger); formalized 2026-05-12 per B196 + producer self-check Step 9 (apply new discipline to its own authoring artifact + verify pass) |
 
 Producer self-check: walk each sub-class against the artifact before Gate 2.
 
@@ -598,6 +604,9 @@ When introducing a new code family during a round:
 | R-numbers (risks) | `RISKS.md` |
 | B-numbers (backlog) | `BACKLOG.md` |
 | P-numbers (polish queue) | `POLISH_QUEUE.md` ← introduced 2026-05-12; cosmetic / readability / status-render / supersession-crumb / stale-date items; distinct from B-numbers |
+| CODE_BUILD_STATUS (build-state dashboard) | `CODE_BUILD_STATUS.md` ← introduced 2026-05-12; single-pane view of which CODE artifacts are built / tested / deployed; ⬜ / 🟡 / 🟢 / ✅ / ⚫ legend; per-unit row state transition required at moment of state-flip (NOT batched to round close-out) per `udm-progress-logger` Hard Rule 7 |
+| ONE_OFF_SCRIPTS (per-script operational tracker) | `ONE_OFF_SCRIPTS.md` ← canonical destination for Manual × One-time executable artifacts per `udm-execution-classifier` matrix (introduced 2026-05-12); distinct from `phase1/02_configuration.md` § 5.1 (Scheduled-recurring jobs) |
+| `udm-progress-logger` (per-completion tracker-discipline skill) | `.claude/skills/udm-progress-logger/SKILL.md` ← introduced 2026-05-12; fills mid-round tracker-drift gap; 5-step checklist + tracker-routing matrix; invoked AFTER any agent / sub-agent / multi-agent team finishes substantive work |
 | Round R<N> (Phase 1) | `PHASE_1_DEEP_DIVE_PLAN.md` + `phase1/0<N>_*.md` |
 | Reviewer R<N>C<M>-<K> / PF-INST<K> | `_reviewer_effectiveness.md` + `_validation_log.md` |
 | Pattern A-F | `MULTI_AGENT_GUIDE.md` |
@@ -608,7 +617,7 @@ When introducing a new code family during a round:
 | CLAUDE.md code-level (B-N / E-N / V-N / W-N / OBS-N / SCD2-*) | `CLAUDE.md` (project root) |
 | Tier 0-5 (test pyramid) | `06_TESTING.md` |
 | Tier α/β/γ/δ (artifact complexity) | `phase1/08_sub_agent_self_improvement.md` § 6.3 |
-| Pitfall #1-#12 + 9.a-9.j | `HANDOFF.md` §8 |
+| Pitfall #1-#12 + 9.a-9.m | `HANDOFF.md` §8 |
 | SQL naming standards (D105: Proc/Vw + grandfather clause) | `CLAUDE.md` § SQL Naming Standards + `03_DECISIONS.md` D105 |
 | Claude Code security model (D103: 13-layer + `/debi` boundary) | `SECURITY_MODEL.md` (canonical) + `CLAUDE.md` § Claude Code Security Model + `03_DECISIONS.md` D103 |
 | Round 8 skill codes 8.A-8.G | `phase1/08_sub_agent_self_improvement.md` + `.claude/skills/udm-*/SKILL.md` |
@@ -617,6 +626,55 @@ When introducing a new code family during a round:
 | EventType families | `CLAUDE.md` (project root) |
 
 ---
+## Round 3 build — module public surfaces
+
+Public-API surface of newly-authored Round 3 modules (Wave 0 + Waves 1-2; build cohort 2026-05-13). All module locations under `utils/`, `data_load/`, `cdc/`, `orchestration/`, `observability/` per CLAUDE.md "Structure" section. Each entry: identifier → module path → 1-line purpose. Authoritative source for module-level surfaces.
+
+### Exception classes (per D68 two-tier hierarchy)
+
+| Identifier | Module | Inheritance | Purpose |
+|---|---|---|---|
+| **PipelineError** | `utils/errors.py` | `Exception` | Root of the canonical two-tier hierarchy; carries `metadata: dict` kwarg for D76 audit-row forwarding |
+| **PipelineFatalError** | `utils/errors.py` | `PipelineError` | Non-retryable failures — config / contract / single-source-of-truth violations |
+| **PipelineRetryableError** | `utils/errors.py` | `PipelineError` | Retryable failures — transient network / lock / source-side issues |
+| **RegistryStatusInvalid / RegistryFileNotFound / RegistryHashMismatch / RegistryInsertConflict / RegistryNotFound** | `utils/errors.py` | Mix of Fatal / Retryable | Parquet registry transition failures (per M3 `data_load/parquet_registry_client.py`) |
+| **VaultUnavailable / VaultConfigError** | `utils/errors.py` | Retryable / Fatal | Vault SP-call failures (per M6 `data_load/vault_client.py`); naming-collision-reconciliation with `data_load/_exceptions.py` tracked at B222 |
+| **LedgerStepFailed / LedgerStuck / LedgerConfigError** | `utils/errors.py` | Fatal / Retryable / Fatal | IdempotencyLedger failure modes (per M9 `utils/idempotency_ledger.py`) |
+| **FilterConfigError** | `utils/errors.py` | Fatal | Sensitive-data-filter config errors (per M14 `observability/sensitive_data_filter.py`) |
+| **ParityFatalError** | `utils/errors.py` | Fatal | Cross-server parity check failures |
+| **InvalidTrustGate** | `utils/errors.py` | Fatal | Extraction-state trust-gate config error (per M10 `cdc/extraction_state.py`) |
+
+### Module classes
+
+| Identifier | Module | Purpose |
+|---|---|---|
+| **LedgerStep** | `utils/idempotency_ledger.py` | Context manager for D15 idempotency-step bracket; carries `was_short_circuited` + `prior_result` (the latter is always `None` until B63 lands — see B63 carryover) |
+| **SensitiveDataFilter** | `observability/sensitive_data_filter.py` | `logging.Filter` subclass; redacts P5 PII patterns from `record.msg` + `record.args` before emission |
+| **CredentialsDict** | `data_load/credentials_loader.py` | TypedDict for credential payload returned by `load_credentials()` |
+| **PassphraseSource** | `data_load/credentials_loader.py` | Enum / sentinel for credential passphrase provenance (TPM2 / keyring / env / GPG-cached) |
+| **ExtractionState** | `cdc/extraction_state.py` | Per-table extraction-attempt state dataclass |
+| **ExtractionPlan** | `orchestration/range_scheduler.py` | Ordered date-list + trust-gate verdict for windowed-CDC per-day processing |
+| **SqlServerLogHandler** (v2) | `observability/log_handler.py` | `logging.Handler` subclass; PRESERVES v1 API per drop-in v2 cutover (Wave 2.4 build 2026-05-13); writes to `General.ops.PipelineLog` |
+| **ParquetVerifyResult** | `data_load/parquet_registry_client.py` | Result dataclass for `verify_parquet_snapshot()` — registry status + verification outcome |
+
+### Module functions
+
+| Identifier | Module | Purpose |
+|---|---|---|
+| **ledger_step** | `utils/idempotency_ledger.py` | Factory for `LedgerStep` context manager; primary D15 entry point |
+| **startup_recovery_sweep** | `utils/idempotency_ledger.py` | Pipeline-startup sweep that resolves stuck IN_PROGRESS rows per D85 stage 4 |
+| **register_pii_pattern** | `observability/sensitive_data_filter.py` | Module-import-time pattern registration helper (mutates `SENSITIVE_PATTERNS`) |
+| **load_credentials** | `data_load/credentials_loader.py` | Loads `/etc/pipeline/.env` via GPG/TPM2 path (D64 + D71 + D103) |
+| **release_snowflake_key / clear_cache** | `data_load/credentials_loader.py` | Cleanup helpers for ephemeral Snowflake RSA key + module-level credential cache |
+| **is_date_trusted / most_recent_success / is_reextraction** | `cdc/extraction_state.py` | Read-side predicates for trust-gate + re-extraction detection per D11 / D13 / D14 |
+| **get_extraction_attempt / record_extraction_attempt** | `cdc/extraction_state.py` | Per-date extraction-attempt CRUD (INSERT-or-UPDATE state machine) |
+| **plan_extraction_range** | `orchestration/range_scheduler.py` | Computes ordered date plan from `FirstLoadDate` + `LookbackDays` + checkpoint state |
+| **call_vault_sp** | `data_load/vault_client.py` | Generic SP-call wrapper for PiiVault stored procedures (SP-1/SP-2/SP-10/SP-12) |
+| **configure_vault_connection_pool / release_vault_connection_pool** | `data_load/vault_client.py` | Connection-pool lifecycle for vault SP calls |
+| **set_log_context / clear_log_context** | `observability/log_handler.py` | v2 context-vars helpers (per D85 startup-stage routing) |
+| **mark_replicated / mark_archived / mark_purged / mark_missing / mark_replication_failed** | `data_load/parquet_registry_client.py` | State-machine transitions (created→verified→replicated→archived→purged); 5 of the 6 mutating ops |
+| **query_snapshot / is_legal_transition** | `data_load/parquet_registry_client.py` | Read-side + state-machine-validity helpers |
+
 
 ## Owner
 
@@ -624,4 +682,4 @@ Pipeline lead. Glossary is maintained per round close-out (extended whenever a n
 
 ## Last reviewed
 
-2026-05-12 (**Phase 0 user-sign-off batch + R01 de-escalation**: extended D-range to D108 (D106 schedule + D107 dual offsite paths + D108 ops-channel email); extended B-range to B190 (B188/B189/B190 added for Round 4.5b tools; B187 closed via D107; B156 closed via D108). R01 DE-ESCALATED 9 → 6 per ≥10/20 strict-closure threshold trigger. Earlier 2026-05-12: **Phase 0 sweep residuals**: extended B-range to B187; added B185 / B186 / B187 to Recent B-items list (PII inventory data-side / Phase 3-6 deep-dive plans / offsite Parquet target). Earlier 2026-05-11: **Phase 2 plan-draft authored**: extended Round codes section to include 4 proposed Phase 2 rounds (P2R1-P2R4) with `P2R<N>` disambiguation prefix; Phase 1 rounds R1-R8 marked complete. Earlier 2026-05-11: **Phase 0 prep close-out**: extended D-number range to D105; added R32 (Claude credential-access risk); added Pitfall #12 (naming-standard locked late); added two new where-each-code-family-lives index rows for D105 SQL naming standards + D103 Claude Code security model. Earlier 2026-05-11: authored at Round 8 close-out per user-driven onboarding-clarity requirement — Pattern F INSTANCE 2 catch of B155 false-closure surfaced cascade-discipline gap; user observed code density would be opaque to fresh engineers + AI agents and requested human-readable reference; this glossary is the single-source-of-truth response).
+2026-05-13 (**B220 inline closure — cross-tracker registration sweep**: added new "Round 3 build — module public surfaces" section enumerating Wave 0 + Wave 1 + Wave 2 module public APIs (exception classes per D68 two-tier hierarchy + module classes + module functions); extended Pitfall #9 sub-classes table from 9.a-9.j to 9.a-9.m (9.k arithmetic-propagation / 9.l canonical-schema-detail / 9.m discipline-not-applied-to-its-own-tracker) per HANDOFF §8 formalization 2026-05-12; extended Pattern codes table with Pattern B1/B2/B3 build-cohort variants (single-agent / paired / triad); extended "Where each code family lives" table with CODE_BUILD_STATUS / ONE_OFF_SCRIPTS / udm-progress-logger rows; Pitfall family marker updated from "9.a-9.j" to "9.a-9.m". Earlier 2026-05-12 (**Phase 0 user-sign-off batch + R01 de-escalation**: extended D-range to D108 (D106 schedule + D107 dual offsite paths + D108 ops-channel email); extended B-range to B190 (B188/B189/B190 added for Round 4.5b tools; B187 closed via D107; B156 closed via D108). R01 DE-ESCALATED 9 → 6 per ≥10/20 strict-closure threshold trigger. Earlier 2026-05-12: **Phase 0 sweep residuals**: extended B-range to B187; added B185 / B186 / B187 to Recent B-items list (PII inventory data-side / Phase 3-6 deep-dive plans / offsite Parquet target). Earlier 2026-05-11: **Phase 2 plan-draft authored**: extended Round codes section to include 4 proposed Phase 2 rounds (P2R1-P2R4) with `P2R<N>` disambiguation prefix; Phase 1 rounds R1-R8 marked complete. Earlier 2026-05-11: **Phase 0 prep close-out**: extended D-number range to D105; added R32 (Claude credential-access risk); added Pitfall #12 (naming-standard locked late); added two new where-each-code-family-lives index rows for D105 SQL naming standards + D103 Claude Code security model. Earlier 2026-05-11: authored at Round 8 close-out per user-driven onboarding-clarity requirement — Pattern F INSTANCE 2 catch of B155 false-closure surfaced cascade-discipline gap; user observed code density would be opaque to fresh engineers + AI agents and requested human-readable reference; this glossary is the single-source-of-truth response).

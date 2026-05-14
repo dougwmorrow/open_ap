@@ -1921,7 +1921,8 @@ GO
 EXEC dbo.sp_add_job
     @job_name = N'UDM_PipelineLog_ExtendPartition_Monthly',
     @description = N'Monthly partition function extension for PipelineLog (D45.2)',
-    @enabled = 1;
+    @enabled = 1,
+    @owner_login_name = N'sa';   -- B02: explicit owner; DBA replaces with canonical service account at deployment (sa is fail-safe default that exists on every SQL Server instance)
 
 EXEC dbo.sp_add_jobstep
     @job_name = N'UDM_PipelineLog_ExtendPartition_Monthly',
@@ -1932,14 +1933,17 @@ EXEC dbo.sp_add_jobstep
 
 EXEC dbo.sp_add_schedule
     @schedule_name = N'Monthly_FirstDayUTC',
-    @freq_type = 16,           -- monthly
-    @freq_interval = 1,        -- first day of month
-    @active_start_time = 020000;  -- 02:00 UTC
+    @freq_type = 16,                 -- monthly
+    @freq_interval = 1,              -- first day of month
+    @freq_recurrence_factor = 1,     -- B02: every 1 month (required for @freq_type=16; defaults to 0 which is invalid for monthly schedules)
+    @active_start_time = 020000;     -- 02:00 UTC
 
 EXEC dbo.sp_attach_schedule
     @job_name = N'UDM_PipelineLog_ExtendPartition_Monthly',
     @schedule_name = N'Monthly_FirstDayUTC';
 ```
+
+**B02 fix landed 2026-05-12** (additive per D92 forward-only): two msdb-DDL parameters that were missing from the original Round 1 v2 spec — `@owner_login_name` on `sp_add_job` (without it, ownership defaults to the calling-session login → non-portable across deployments) and `@freq_recurrence_factor` on `sp_add_schedule` (without it, monthly schedule with `@freq_type=16` defaults `factor=0` which is invalid). Both parameters are deployment-required; `sa` placeholder for the login is conservative-safe (always exists on every SQL Server instance) — DBA replaces with the canonical service account login (e.g., `sql_agent_proxy` or similar) at per-server deployment time. No SchemaContract row needed (msdb deployment artifact, not General-database schema object).
 
 **Edge cases addressed**: M1 (cold-start partition setup), prevents the time-bomb identified in ROUND_1_REVIEW.
 
