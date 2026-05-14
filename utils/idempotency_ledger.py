@@ -253,12 +253,29 @@ def ledger_step(
         ``'REPLAY'``. Non-AM/PM jobs use their canonical JOB_NAME (see
         ``02_configuration.md`` § 5.3.6).
     :param metadata: Reserved for B-223. Accepted but NOT persisted to the
-        ledger row. Pass ``None`` until B-223 lands.
+        ledger row. Pass ``None`` until B-223 lands. Per **B70 closure
+        (2026-05-14, Round 6 § 7.2)**: passing a non-None value emits
+        a :class:`DeprecationWarning` directing callers to
+        ``event_tracker.track()`` for canonical metadata persistence.
 
     :raises LedgerStepFailed: concurrent ``IN_PROGRESS`` row exists.
     :raises LedgerConfigError: table missing / schema mismatch / unexpected
         ``Status`` value in the existing row.
     """
+    # B70 closure (2026-05-14, Round 6 § 7.2) — DeprecationWarning on
+    # non-None metadata. Until B-223 lands (Metadata column persistence),
+    # the metadata kwarg is accept-and-discard, a "traceability beats
+    # convenience" violation per pillar rubric. The warning routes
+    # callers to event_tracker.track() for metadata persistence.
+    if metadata is not None:
+        import warnings
+        warnings.warn(
+            "ledger_step(metadata=...) is accept-and-discard until B-223 "
+            "lands. Use event_tracker.track() to persist Metadata. The "
+            "metadata kwarg will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     if batch_id is None or batch_id <= 0:
         raise LedgerConfigError(
             "batch_id must be a positive integer (received {!r})".format(batch_id),
@@ -454,7 +471,8 @@ def ledger_step(
 
     # The unused metadata reference silences linters that flag unused params.
     # The parameter is part of the public contract per § 4.1 and will be
-    # persisted once B-223 lands.
+    # persisted once B-223 lands. The non-None case has already emitted
+    # a DeprecationWarning at function entry per B70 (Round 6 § 7.2).
     del metadata
 
 

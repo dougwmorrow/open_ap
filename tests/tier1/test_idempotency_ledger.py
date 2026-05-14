@@ -508,6 +508,66 @@ class TestMetadataColumnCaveat:
 
 
 # ---------------------------------------------------------------------------
+# B70 — metadata kwarg DeprecationWarning (Round 6 § 7.2)
+# ---------------------------------------------------------------------------
+
+
+class TestMetadataDeprecationWarning:
+    """B70 closure (2026-05-14, Round 6 § 7.2): until B-223 lands,
+    passing ``metadata=`` to ``ledger_step()`` is accept-and-discard.
+    The new DeprecationWarning routes callers to ``event_tracker.track()``
+    for metadata persistence.
+    """
+
+    def test_non_none_metadata_emits_deprecation_warning(self):
+        """Non-None metadata MUST raise DeprecationWarning at function
+        entry — the "traceability beats convenience" pillar guardrail.
+        """
+        import warnings
+        from utils import idempotency_ledger as mod
+
+        cur = _make_cursor(fetchone_returns=(1,))
+        with patch.object(mod, "cursor_for", _make_cursor_for(cur)):
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                with mod.ledger_step(
+                    batch_id=1, source_name="DNA",
+                    table_name="ACCT", event_type="EXTRACT",
+                    metadata={"any_key": "any_value"},
+                ):
+                    pass
+            dep_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+            assert dep_warnings, (
+                "B70: metadata kwarg with non-None value MUST emit a "
+                "DeprecationWarning"
+            )
+            assert "ledger_step(metadata=" in str(dep_warnings[0].message)
+            assert "event_tracker.track()" in str(dep_warnings[0].message)
+
+    def test_none_metadata_does_not_emit_warning(self):
+        """Default None metadata MUST NOT trigger the DeprecationWarning.
+        Otherwise the spam would be unmanageable.
+        """
+        import warnings
+        from utils import idempotency_ledger as mod
+
+        cur = _make_cursor(fetchone_returns=(1,))
+        with patch.object(mod, "cursor_for", _make_cursor_for(cur)):
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                with mod.ledger_step(
+                    batch_id=1, source_name="DNA",
+                    table_name="ACCT", event_type="EXTRACT",
+                    # metadata defaults to None
+                ):
+                    pass
+            dep_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+            assert not dep_warnings, (
+                "B70: default None metadata MUST NOT emit DeprecationWarning"
+            )
+
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 

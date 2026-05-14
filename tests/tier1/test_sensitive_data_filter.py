@@ -340,6 +340,66 @@ class TestRegisterPiiPattern:
         finally:
             SENSITIVE_PATTERNS.pop("test_overwrite", None)
 
+    def test_b68_close_registration_blocks_subsequent_registration(self):
+        """B68 (Round 6 § 7.4 option (a)): after _close_registration(),
+        register_pii_pattern() raises FilterConfigError.
+        """
+        from observability.sensitive_data_filter import (
+            register_pii_pattern,
+            _close_registration,
+            _reopen_registration_for_tests,
+            SENSITIVE_PATTERNS,
+        )
+        from utils.errors import FilterConfigError
+
+        try:
+            _close_registration()
+            with pytest.raises(FilterConfigError, match="_close_registration"):
+                register_pii_pattern("b68_should_fail", r"x")
+            assert "b68_should_fail" not in SENSITIVE_PATTERNS, (
+                "B68: registration after _close_registration MUST NOT mutate "
+                "SENSITIVE_PATTERNS"
+            )
+        finally:
+            # Reset for subsequent tests in the same process.
+            _reopen_registration_for_tests()
+            SENSITIVE_PATTERNS.pop("b68_should_fail", None)
+
+    def test_b68_close_registration_is_idempotent(self):
+        """B68: _close_registration() is idempotent — re-calling on an
+        already-closed registration is a no-op.
+        """
+        from observability.sensitive_data_filter import (
+            _close_registration,
+            _reopen_registration_for_tests,
+        )
+        try:
+            _close_registration()
+            _close_registration()  # second call must not raise
+            _close_registration()  # third call must not raise either
+        finally:
+            _reopen_registration_for_tests()
+
+    def test_b68_reopen_restores_registration(self):
+        """B68: _reopen_registration_for_tests() restores the boundary so
+        register_pii_pattern() works again. Production code MUST NOT
+        rely on this — the name is a deliberate test-only marker.
+        """
+        from observability.sensitive_data_filter import (
+            register_pii_pattern,
+            _close_registration,
+            _reopen_registration_for_tests,
+            SENSITIVE_PATTERNS,
+        )
+        try:
+            _close_registration()
+            _reopen_registration_for_tests()
+            register_pii_pattern("b68_post_reopen", r"^reopened$")
+            assert "b68_post_reopen" in SENSITIVE_PATTERNS
+        finally:
+            _reopen_registration_for_tests()  # ensure default state for other tests
+            SENSITIVE_PATTERNS.pop("b68_post_reopen", None)
+
 
 # ---------------------------------------------------------------------------
 # Module surface
@@ -347,9 +407,24 @@ class TestRegisterPiiPattern:
 
 
 def test_module_all_surface():
+    """Module surface includes B68 boundary helpers.
+
+    Per **B68 closure (2026-05-14, Round 6 § 7.4 option (a))**:
+    ``_close_registration`` + ``_reopen_registration_for_tests``
+    are part of the public surface (registered in ``__all__``) so
+    static analysis + importers can find them. The underscore
+    prefixes are stylistic markers — they are not "private" in the
+    Python sense (private names would be omitted from ``__all__``).
+    """
     import observability.sensitive_data_filter as mod
 
-    expected = {"SENSITIVE_PATTERNS", "SensitiveDataFilter", "register_pii_pattern"}
+    expected = {
+        "SENSITIVE_PATTERNS",
+        "SensitiveDataFilter",
+        "register_pii_pattern",
+        "_close_registration",            # B68
+        "_reopen_registration_for_tests", # B68 test escape hatch
+    }
     assert set(mod.__all__) == expected
 
 

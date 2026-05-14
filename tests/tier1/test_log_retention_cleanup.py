@@ -111,7 +111,8 @@ _ACTOR = "test-author"
 # Retention windows per CLAUDE.md + § 3.10 L1270-1274
 _DEBUG_INFO_DAYS_DEFAULT = 30
 _WARNING_DAYS_DEFAULT = 90
-_BATCH_SIZE_DEFAULT = 50000
+# B104 closure 2026-05-14 (Round 6 § 7.8): 50000 -> 4000
+_BATCH_SIZE_DEFAULT = 4000
 _BATCH_SIZE_SMALL = 10000
 
 # LogLevel enum values per CK_PipelineLog_LogLevel
@@ -436,9 +437,14 @@ class TestBatchSizeHonored:
     """
 
     def test_batch_size_default_reflected_in_sql(self):
-        """Default batch-size (50000) reflected in DELETE statement.
+        """Default batch-size (4000 per B104 closure) reflected in DELETE
+        statement.
 
-        Per § 3.10 L1253: 'DELETE batch size capped at 50k rows per batch'.
+        Per § 3.10 L1253 + Round 6 § 7.8 (B104 closure 2026-05-14): the
+        former 50000 default was reduced to 4000 mirroring
+        ``config.SCD2_UPDATE_BATCH_SIZE`` per the B-2 lock-escalation
+        ceiling. The behavior contract (default value reflected in SQL or
+        bound params) is unchanged — only the default-value constant moved.
         Per B-2 (SCD2_UPDATE_BATCH_SIZE lessons): batch cap prevents SQL Server
         lock escalation from row locks to table-level exclusive locks.
 

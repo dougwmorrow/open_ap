@@ -86,7 +86,9 @@ _ACTOR = "test-build-smoke"
 # Retention windows per CLAUDE.md "Log retention policy" + § 3.10 L1270-1274
 _DEBUG_INFO_DAYS_DEFAULT = 30
 _WARNING_DAYS_DEFAULT = 90
-_BATCH_SIZE_DEFAULT = 50000
+# B104 closure 2026-05-14 (Round 6 § 7.8): default 50000 -> 4000
+# mirroring config.SCD2_UPDATE_BATCH_SIZE per B-2 5000-lock ceiling.
+_BATCH_SIZE_DEFAULT = 4000
 _BATCH_SIZE_OVERRIDE = 10000  # used in assertion (f)
 
 # LogLevel enum values per CK_PipelineLog_LogLevel

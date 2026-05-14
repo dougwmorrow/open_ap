@@ -68,12 +68,24 @@ __all__ = [
     "SENSITIVE_PATTERNS",
     "SensitiveDataFilter",
     "register_pii_pattern",
+    "_close_registration",
+    "_reopen_registration_for_tests",
 ]
 
 # Marker appended to record.msg when the filter itself raises an unexpected
 # exception. Per § 6.1: never drop the log line — emit it with a marker so
 # the operator knows redaction failed (still safer than silence).
 _FILTER_FAILED_MARKER = " <filter_failed>"
+
+
+# B68 closure (2026-05-14, Round 6 § 7.4 option (a)) — module-import-time
+# registration gate. Once ``pii_tokenizer`` has finished registering
+# UdmTablesList.PiiColumnList patterns at startup, it calls
+# ``_close_registration()`` to flip this to True. Subsequent
+# ``register_pii_pattern()`` calls then raise FilterConfigError instead
+# of silently mutating SENSITIVE_PATTERNS. Default OPEN preserves test
+# fixtures + the startup window.
+_REGISTRATION_CLOSED = False
 
 
 def _compile(pattern: str, *, flags: int = 0) -> Pattern[str]:
@@ -137,8 +149,23 @@ def register_pii_pattern(name: str, pattern: str, *, flags: int = 0) -> None:
         :class:`FilterConfigError`.
     :param flags: optional ``re`` flag bitmask. Defaults to 0.
 
-    :raises FilterConfigError: pattern fails to compile.
+    :raises FilterConfigError: pattern fails to compile, OR
+        ``_close_registration()`` has already been invoked (B68
+        boundary, Round 6 § 7.4 option (a) — registration
+        restricted to module-import time only).
     """
+    if _REGISTRATION_CLOSED:
+        raise FilterConfigError(
+            "register_pii_pattern() called after _close_registration(). "
+            "Per Round 6 § 7.4 option (a) (B68 closure), registration is "
+            "restricted to module-import time and startup-time. The "
+            "thread-safety guarantee 'patterns are read-only after "
+            "import' requires this boundary. If you genuinely need to "
+            "re-register patterns post-startup (tests only), call "
+            "_reopen_registration_for_tests() — a test-only escape "
+            "hatch; production code MUST NOT call this.",
+            metadata={"name": name},
+        )
     if not name or not isinstance(name, str):
         raise FilterConfigError(
             f"register_pii_pattern: name must be a non-empty string "
@@ -151,6 +178,37 @@ def register_pii_pattern(name: str, pattern: str, *, flags: int = 0) -> None:
             metadata={"name": name},
         )
     SENSITIVE_PATTERNS[name] = _compile(pattern, flags=flags)
+
+
+def _close_registration() -> None:
+    """Freeze SENSITIVE_PATTERNS — disallow further registration.
+
+    Per **B68 closure (2026-05-14, Round 6 § 7.4 option (a))**:
+    invoked by ``pii_tokenizer`` at the END of its module-import-time
+    ``UdmTablesList.PiiColumnList`` walk (D63). After this call, any
+    subsequent ``register_pii_pattern()`` invocation raises
+    :class:`FilterConfigError` — patterns are formally read-only.
+
+    Idempotent — re-calling on an already-closed registration is a
+    no-op (no exception). The close itself happens once at
+    module-import time per the option (a) semantic.
+    """
+    global _REGISTRATION_CLOSED
+    _REGISTRATION_CLOSED = True
+
+
+def _reopen_registration_for_tests() -> None:
+    """Test-only escape hatch — re-open registration after a close.
+
+    Per **B68 closure (2026-05-14, Round 6 § 7.4 option (a))**: tests
+    that exercise ``register_pii_pattern()`` after a
+    ``_close_registration()`` boundary need to reset the gate.
+    Production code MUST NOT call this — the leading underscore +
+    ``_for_tests`` suffix are deliberate discouragement signals so a
+    grep immediately surfaces any production misuse during code review.
+    """
+    global _REGISTRATION_CLOSED
+    _REGISTRATION_CLOSED = False
 
 
 def _redact(text: str) -> str:

@@ -219,10 +219,13 @@ EVENT_TYPE = "CLI_LOG_RETENTION_CLEANUP"
 # ('log_retention_cleanup',) ensures one cleanup at a time".
 LOCK_RESOURCE = "log_retention_cleanup"
 
-# Per spec § 3.10 L1274 — 50k batch is conservative against B-2 lock-
-# escalation (~5000 row threshold for table-level locks; DELETE rows are
-# narrower than SCD2 UPDATE rows so 10x headroom is acceptable).
-DEFAULT_BATCH_SIZE = 50000
+# Per spec § 3.10 L1274 + Round 6 § 7.8 (B104 closure 2026-05-14) — 4000
+# batch mirrors ``config.SCD2_UPDATE_BATCH_SIZE`` (B-2 lock-escalation
+# threshold: SQL Server escalates to table-level exclusive lock at
+# ~5000 locks). Original Round 4 default was 50000 — closed at Round 6
+# § 7.8 (code default) + § 8.3 (doc default). The cited B-2 lesson in
+# CLAUDE.md is authoritative: stay below 5000 to keep RCSI semantics.
+DEFAULT_BATCH_SIZE = 4000
 
 # Per CLAUDE.md retention policy + spec § 3.10 L1222.
 DEFAULT_DEBUG_INFO_DAYS = 30
@@ -1155,9 +1158,11 @@ def _build_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_BATCH_SIZE,
         help=(
-            f"Per-batch DELETE row cap "
-            f"(default: {DEFAULT_BATCH_SIZE}; lower to mitigate B-2 "
-            f"lock-escalation under unusual lock contention)."
+            f"Per-batch DELETE row cap (default: {DEFAULT_BATCH_SIZE}; "
+            f"mirrors config.SCD2_UPDATE_BATCH_SIZE per Round 6 § 7.8 "
+            f"+ B104 closure 2026-05-14 + B-2 lock-escalation threshold). "
+            f"Raise only if you understand the B-2 5000-lock ceiling; "
+            f"lower to mitigate lock contention under load."
         ),
     )
 

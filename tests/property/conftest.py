@@ -56,5 +56,18 @@ settings.register_profile(
     deadline=timedelta(seconds=10),
 )
 
+# Nightly profile per **B118 closure (2026-05-14, Round 6 § 7.11 cycle 2
+# fix)** — non-derandomized to surface fresh edge cases that the CI
+# derandomized profile would miss when test functions don't change for
+# weeks (the "coverage-freeze" property). Round 6 CI stage 3 (Tier 2
+# nightly per § 5.3) runs ``--hypothesis-profile=nightly`` in addition to
+# ``--hypothesis-profile=ci`` to mitigate this trade-off.
+settings.register_profile(
+    "nightly",
+    derandomize=False,
+    max_examples=500,
+    deadline=timedelta(seconds=20),
+)
+
 # Default to 'default' profile; CI overrides via HYPOTHESIS_PROFILE env var.
 settings.load_profile("default")
