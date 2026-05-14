@@ -5516,3 +5516,44 @@ Citation matches HEAD verbatim. No paraphrased assertions; all 6 spec steps mapp
 ### Pitfall #9.m self-check
 
 This entry IS the application of CLAUDE.md hard rule 9 (`udm-progress-logger`) to its own substantive completion event (the § 4.7 full-impl build). Validation log entry authored at the moment of build completion (mid-round cadence per CLAUDE.md #9). Pass.
+
+
+## 2026-05-14 — Post-commit `146d97a` gap-audit + tracker reconciliation
+
+**Trigger**: User-prompted gap review on commit `146d97a` (Track 1 B-item carryover + Track 2 § 4.7 verify_tier0_drift full impl). Per CLAUDE.md hard rule 11 (`udm-gap-check`) pattern — though this was an analytical review by the parent agent rather than an independent reviewer spawn.
+
+**Findings (5 total — 1 🟡 + 4 minor)**:
+
+- **G1 (🟡)**: `B-266` candidate referenced twice in commit `146d97a` (in BACKLOG.md L483 closure annotation "follow-up P-N tracker entry recommended" + in parent-agent response narrative) but NOT explicitly opened as a BACKLOG.md line item. **Pitfall #9.m recurrence** (discipline-not-applied-to-its-own-tracker): noting an issue is worth tracking ≠ actually tracking it. Fixed this turn: B-266 entry added to `BACKLOG.md:229` with full disposition (drift tool spec-vs-code convention reconciliation, WSJF 2.5, option 2 enhancement preferred).
+- **G2 (P-N candidate)**: Hyphenation inconsistency — `B265` (no hyphen) at `BACKLOG.md:228` vs `B-263`/`B-264`/`B-260` (hyphenated). Style drift only; doesn't break tooling but breaks regex audits. Deferred to next POLISH_QUEUE sweep (P-N candidate).
+- **G3 (rolled into G1)**: Drift report `tests/audit_reports/tier0_drift_2026-05-14.md` (24 KB) sitting in tree with no disposition. Closed by G1 fix (B-266 carries the disposition).
+- **G4 (process observation)**: No independent gap-check ran on `146d97a` itself — established session pattern is build → gap-check → commit, but Tracks 1 + 2 went build → commit without the intermediate step. G1-G3 are surfacing only now because of that. Going forward, recommend either independent reviewer spawn OR explicit parent-agent gap-audit before commit.
+- **G5 (🟡 → fixed)**: `CODE_BUILD_STATUS.md:12` `Last reviewed` narrative did NOT include the verify_tier0_drift stub→full-impl state transition event from commit `146d97a`. Fixed this turn: prepended new section as the most recent narrative event (B58 closure, 80 new tests, 0 inline cycles, 1985→2070 pytest, drift report observations, B-265 + B-266 newly opened).
+
+**Edits this turn (3 files; build-side untouched)**:
+
+| File | Change |
+|---|---|
+| `docs/migration/BACKLOG.md` | +1 line — B-266 entry inserted after B-265 at L229 |
+| `docs/migration/CODE_BUILD_STATUS.md` | L12 narrative — prepended verify_tier0_drift full-impl event as most-recent rollup section (+~2150 chars) |
+| `docs/migration/_validation_log.md` | This entry — Pitfall #9.m self-application of `udm-progress-logger` discipline |
+
+**Pytest regression baseline**: Unchanged (no code touched — tracker reconciliation only). Last verified state: 2070 pass / 14 skip / 2 fail (pre-existing B218 § 3.10 carryover).
+
+**Convention check**:
+
+| Convention | Pass/Fail | Evidence |
+|---|---|---|
+| Pitfall #9.j (badge ↔ inline-annotation alignment) | ✅ | B-266 entry uses leading `(🟡 Open)` badge with no inline `CLOSED` annotation — consistent state. |
+| Pitfall #9.k (arithmetic-propagation drift) | ✅ | No counts touched; this commit is annotation-only on existing trackers. |
+| Pitfall #9.m (discipline applied to its own tracker) | ✅ | G1 fix is the textbook application — found Pitfall #9.m recurrence (B-266 candidate noted but not opened), and fixed it by opening B-266 + this `_validation_log.md` entry per hard rule 9. |
+| Pitfall #9.n (convention-registration of new artifacts) | n/a | No new public surface — tracker edits only. |
+| CLAUDE.md hard rule 9 (`udm-progress-logger` mid-round application) | ✅ | This entry IS that application: every substantive completion (G1 fix + G5 fix) gets a `_validation_log.md` row in the same session. |
+
+**Cross-references**:
+
+- `docs/migration/BACKLOG.md:229` (new B-266 entry)
+- `docs/migration/BACKLOG.md:483` (B58 closure annotation that originally surfaced the B-266 candidate)
+- `docs/migration/CODE_BUILD_STATUS.md:12` (Last reviewed narrative now mentions § 4.7 full impl)
+- `tests/audit_reports/tier0_drift_2026-05-14.md` (the 24 KB drift report whose RED verdict drove B-266)
+- B58 / B-265 / B-266 / B81 / B82 / Pitfall #9.j / Pitfall #9.k / Pitfall #9.m
