@@ -4808,3 +4808,247 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 **Next-natural-action per CLAUDE.md discipline #11**: F-6 deferred Round 4 partial close-out cascade in next session per user direction. Optional: run `udm-gap-check` on this fix-application turn to verify inline-fix delivery — independent reviewer per D55+D56.
 
 ---
+
+## 2026-05-14 — Round 4 partial close-out cascade (D60 per CLAUDE.md #6 + #7; 9/11 build status)
+
+**Reviewer**: cascade orchestrator (per `udm-round-closeout` Section 10.1-10.7; D60 + Round 8 D95-D99 close-out flow)
+**Trigger**: Round 4 build campaign close 2026-05-14 — 9/11 = 82% Round 4 CLI tools built (§ 3.1 / § 3.2 / § 3.3 / § 3.4 / § 3.5 / § 3.6 / § 3.7 / § 3.8 / § 3.10); 2/11 external-blocked (§ 3.9 → B81 SP-12 + § 3.11 → B82 ops-channel client). User-direction post-session-gap-audit: F-6 deferred Round 4 partial close-out cascade. **PLANNING-MODE invocation per task scope**: 7 sub-skills produce proposals; user reviews + approves YES/NO per delta in follow-up; only `udm-retrospective-collector` (Step 1) and this `_validation_log.md` entry are mechanical writes. NO `.claude/agents/*.md` edits + NO HANDOFF §8 mutations in this turn.
+
+### Cascade outcomes (7 sub-skills + user-approval session per D95 umbrella)
+
+**1. `udm-retrospective-collector` (Step 1 — MECHANICAL append) — EXECUTED**
+
+- Action: appended Round 4 section to `docs/migration/_reviewer_effectiveness.md` (+43 lines; 475 → 518). 4 new ledger rows: R4-GC-Cohort1 (Round 4.1 5-tool cohort gap-check; 2 🔴 + 1 🟡 inline-resolved) + R4-GC-W4.6 (Wave 4.6 § 3.4 Step 11 producer self-check; 0 🔴 + 4 🟡 producer-resolved) + R4-SGC (session gap-audit; 0 🔴 + 5 actioned 🟡) + R4-PBV-Cohort1+W4.6 (post-build pytest cumulative; 0 🔴 + 0 🟡 + 0 net regression).
+- Trend updates: `cascade-audit` 18 → 21 events (3 new gap-checks); `feasibility-Tier0` 2 → 3 events (1 new cumulative cohort); 38 → 43 cumulative key empirical findings (+5 systemic patterns).
+- Confidence: **HIGH** (mechanical append per skill body "ALWAYS HIGH").
+- Verdict: **NO ACTION REQUIRED** (mechanical step; downstream skills consume the freshly-appended data).
+
+**2. `udm-specialty-tuner` (Step 2 — ANALYSIS) — verdict: NO ACTION**
+
+- Action: read trend tables from `_reviewer_effectiveness.md` post-R4-append; analyzed each canonical specialty against thresholds (false-clean > 25% over ≥4 events → 🔴 RETIRE-OR-PAIR; > 10% over ≥6 events → 🟡 REFINE; rising-catch + 0% false-clean → ✅ NO ACTION).
+- Per-specialty verdicts:
+  - `cascade-audit` (21 events, 0% false-clean): ✅ NO ACTION — Round 4 catch-rate compression (0-2 🔴/event vs Round 3's 0-13/event) is HEALTHY signal (Step 10 + Step 11 producer disciplines shifting catches Gate 2 → Gate 1). Skill body anti-pattern explicitly says "rising-catch + 0% false-clean = healthy; do NOT propose retire". Falling-catch with 0% false-clean = same logic + producer-discipline-working evidence.
+  - `feasibility-Tier0` (3 events, 0% false-clean): ✅ NO ACTION — narrow scope; cumulative 1529 new tests across 24 build units / 0 net regression confirms mechanical-verifier discipline working.
+  - `column-walk` (7 events, 0%): ✅ NO ACTION — no Round 4 invocation (build campaign, not spec validation); historical track record unchanged. Empirical case for Pattern E mandatory slot already locked.
+  - `comprehensive-5-gate` (8 events, 2/8 = 25% false-clean): **MARGINAL** — at the exact 25% threshold for 🔴 RETIRE-OR-PAIR. Skill description explicitly cites "comprehensive-5-gate 2/8 = 25% (REFINE candidate)". Conservative bias: hold at 🟡 MONITOR pending Round 5 spec-doc validation evidence (no Round 4 invocation; no NEW evidence this round either way). NO DELTA PROPOSED THIS ROUND.
+  - Other specialties: no R4 events; unchanged from prior round close.
+- Verdict: **NO ACTION** (Round 4 build campaign produced no Pattern E events; all spec-doc specialties unchanged).
+- Output file: `docs/migration/_agent_evolution/specialty-tuner-round4-2026-05-14.md` (would be authored if deltas proposed; NO DELTAS = NO FILE this round).
+
+**3. `udm-subclass-accumulator` (Step 3 — ANALYSIS) — verdict: 🟡 PROPOSED DELTA + 🟡 MONITOR**
+
+- Action: scanned Round 4 🔴 findings against existing Pitfall #9 sub-classes (9.a-9.m); clustered unmatched findings.
+- Existing sub-class hits this round:
+  - 9.i (process-discipline-claim drift): 1 fresh instance (R4 8/11 framing → § 3.4 missed); cumulative 6 events (R3 14/17 + R4 8/11 + 5 prior round close-out events). Already formalized; no new threshold cross.
+  - 9.j (status-render discipline): 6 fresh instances at session gap-audit (B-255 / B-245 / B-244 / B-243 / B-228 / B-226 leading-badge mismatches). Sub-class formalized R8 close-out 2026-05-11; this is **POST-FORMALIZATION recurrence**.
+  - 9.k (arithmetic-propagation drift): 2 fresh instances (R4.1 cohort: 3/11 → 8/11; W4.6: 8/11 → 9/11) — both producer-handled via regex-sweep at progress-logger time. No new threshold cross; producer-self-check Step 7 working as intended.
+  - 9.l (canonical-spec-signature drift): 6-of-6 catches at Round 4.1 + Wave 4.6 cohort = 10-event cumulative. Sub-class formalized R8 close-out + B198/B201 evidence; this is the strongest empirical case yet — but the sub-class IS formalized; threshold for elevation is reviewer-vs-producer (B-258 producer-checklist-evolver Step 11 elevation candidacy), not sub-class accumulation.
+  - 9.m (discipline-not-applied-to-its-own-tracker): producer-self-applied this round at every progress-logger entry; no new instances.
+- Unmatched-finding cluster (NEW sub-class candidate):
+  - **9.o candidate — discipline-formalization-without-application-mechanism**: Empirical pattern: sub-class 9.j formalized R8 close-out 2026-05-11 with explicit producer-self-check Step 6 directive ("after ANY cycle-N or close-out edit that adds/closes a B-item: verify leading badge matches inline annotation; flip badge if mismatch"). 3 days later (Round 4 close-out), 6 fresh 9.j instances surfaced at gap-audit — the formalization caught the bug class at REVIEWER time but did NOT prevent it at PRODUCER time. Pattern repeats at Step 10 (DELTA-A3 convention-registration directive added 2026-05-14 at R3 close-out; 1-of-2 first-encounter rate at R4.1 cohort). **Two-event evidence base**: (a) 9.j post-formalization recurrence at R4 close-out (6 fresh instances despite Step 6 directive); (b) Step 10 R4.1 first-encounter failure (F-1 + F-2 surfaced despite DELTA-A3 directive).
+  - Pattern inference: formalization-as-reviewer-checklist-item ≠ enforcement-at-producer-time. The class is "newly-formalized discipline survives at gap-check Gate 2 but reproduces at producer Gate 1 because formalization mechanism is reminder-grade, not enforcement-grade".
+  - Threshold check: **2 events / 2 rounds = sub-threshold** for skill's ≥3-events-≥2-rounds → 🟡 propose new sub-class (per skill body). Recommend 🟡 MONITOR — track for 3rd instance at Round 5 close-out before 🟡 propose-formalization.
+- Verdict: **🟡 PROPOSED DELTAS** (1 sub-class candidate at MONITOR; no immediate formalization).
+
+**Proposed deltas:**
+
+- **DELTA-B1: Open B-N (e.g., B-260) tracking sub-class 9.o candidate "discipline-formalization-without-application-mechanism"** for next-round empirical evidence accumulation. Description: "Track 3rd-instance evidence for sub-class 9.o candidate. Current evidence base = 2 events (Pitfall #9.j post-formalization recurrence at R4 close-out + Step 10 DELTA-A3 R4.1 first-encounter failure). If a 3rd instance surfaces at Round 5+ close-out, propose 9.o formalization in HANDOFF §8 with producer-self-check Step 10 directive: 'after formalizing a new sub-class or producer-discipline directive, verify the discipline has a producer-time enforcement mechanism (regex-sweep / pre-build helper tool / explicit checklist matrix) — NOT a reminder-only directive'." WSJF: 1.5 (COD 3, JS 2). Closure target: Round 5+ close-out OR Phase 1 close (whichever surfaces 3rd evidence event). (semver bump: N/A — BACKLOG-tracking item, not a `.claude/agents/*.md` edit; per D98 only agent prompt files are semver-versioned).
+
+**4. `udm-producer-checklist-evolver` (Step 4 — ANALYSIS; CRITICAL — B-258 + B-259 already open) — verdict: 🔴 ESCALATED + 🟡 PROPOSED DELTAS**
+
+- Action: scanned Round 4 🔴 + 🟡 findings vs producer self-check directives (HANDOFF §8 sub-class accumulator 9.a-9.m + Steps 1-9; spec doc § 1.5 walks).
+- Producer-missable misses per sub-class:
+  - **Step 11 (canonical-spec verbatim citation)**: 6-of-6 producer catches this round (Round 4.1 § 3.1 / § 3.2 / § 3.3 / § 3.5 / § 3.7 + Wave 4.6 § 3.4). Combined with Round 3's 4-event evidence base (M17 + M8 + M12 + M13) = **10 events across 2 rounds**.
+    - Threshold check: ≥3-events-≥2-rounds → 🟡 REFINE = **CROSSED** (10 events > 3, 2 rounds = 2); ≥5-events-≥3-rounds → 🔴 mandatory specialty elevation = **TECHNICALLY 2 ROUNDS NOT 3** but evidence density (6-of-6 single-cohort) compensates per skill body's "Empirical": "Strongest cross-session empirical evidence yet" precedent. Skill SI7 edge case applies: "if a sub-class has 5+ producer-missable instances AND the existing directive is already comprehensive (4-5 steps), propose ELEVATION to Gate 2 mandatory specialty rather than directive strengthening."
+    - **Recommendation**: 🔴 **ESCALATE to Gate 2 mandatory specialty elevation** (B-258 elevation candidacy unambiguously supported by empirical record). Per skill SI7 edge case: existing Step 11 directive IS already comprehensive (DELTA-A4 5-step audit added 2026-05-14 at R3 close-out); 10-event 100% producer-success rate proves the directive is operating; the next-iteration upgrade is mandatory-specialty status (semantic shift from per-cycle directive to Gate 2 enforcement). B-258 already tracks this candidacy at BACKLOG.md L390.
+  - **Step 10 (post-build convention registration)**: 1-of-2 first-encounter rate. Round 4.1 cohort FAILED first-encounter < 24 hours after Step 10 formalization (F-1 CLAUDE.md `tools/` sub-section missing + F-2 GLOSSARY Round 4 sub-section missing); Wave 4.6 § 3.4 SUCCEEDED first-encounter via consciously-applied Step 10 at producer time (Wave 4.6 progress-logger entry explicitly documents Step 10 application).
+    - Threshold check: 2 producer-missable instances / 1 round (R4) + 3 from Round 3 cohorts = 5-event cumulative across 2 rounds — but Round 3 produced the directive (DELTA-A3); R4 is FIRST round running under directive. Effective threshold = 2 events / 1 round under directive (Round 4) → sub-threshold for 🟡 REFINE (which requires ≥3-events-≥2-rounds).
+    - **Recommendation**: 🟡 **MONITOR + B-260 propose Step 10 mechanism-enforcement evolution**. Producer Step 10 directive INSUFFICIENT at first-encounter (reminder-grade); mechanism-enforcement (regex-sweep / pre-build helper tool / explicit checklist matrix at progress-logger time) is the next-iteration upgrade. Sub-threshold for formal directive evolution at Round 4 close-out; defer to Round 5 close-out per conservative bias.
+  - **Step 12 (pre-build scope-completeness sweep)** — B-259 candidacy: 2 cross-session 9.i scope-drift events (R3 14/17 + R4 8/11) = 2-event cumulative / 2 rounds. Skill threshold ≥3-events-≥2-rounds for 🟡 REFINE = **NOT YET CROSSED**. B-259 correctly assesses sub-threshold "strong-but-sub-threshold" classification.
+    - **Recommendation**: 🟡 **MONITOR** — keep B-259 open at sub-threshold tracking; do NOT propose Step 12 directive formalization at this close-out. If R5+ surfaces 3rd 9.i scope-drift instance, propose Step 12 at that close-out per skill threshold.
+- Verdict: **🔴 ESCALATED (B-258 Step 11 mandatory specialty elevation) + 🟡 PROPOSED DELTAS (Step 10 mechanism-enforcement evolution + Step 12 monitor)**.
+
+**Proposed deltas:**
+
+- **DELTA-B2 (🔴 ESCALATE per B-258): Promote Step 11 (canonical-spec verbatim citation) from per-cycle directive to Gate 2 mandatory specialty** — empirical base: 10 events / 2 rounds / 0% reviewer false-negative / strongest cross-session evidence in project history. Specific application: update `.claude/agents/udm-design-reviewer.md` (Gate 2 reviewer agent prompt) frontmatter to add "step-11-canonical-spec-citation" as mandatory specialty slot in every Pattern E batch + every comprehensive-5-gate single-agent invocation. Existing Step 11 directive at HANDOFF §8 producer self-check stays in place (producer-discipline retention). Reviewer mandate ADDITION: "Verify every signature citation in the artifact under review resolves to a canonical line number in the spec; flag any paraphrased citation as 🔴." (semver bump: **MINOR** per D98 — directive addition, not structural change to agent prompt; new mandatory specialty slot added but existing prompt-body structure unchanged). Application path: deferred to `udm-agent-prompt-versioner` (Step 7) after user approves; archive prior version to `.claude/agents/_archive/udm-design-reviewer-v<prior>-2026-05-14.md`.
+
+- **DELTA-B3 (🟡 MONITOR): Open B-N (e.g., B-261) tracking Step 10 mechanism-enforcement evolution candidate** — description: "Track 3rd-instance evidence for Step 10 mechanism-enforcement upgrade. Current evidence base = 2-of-2 producer-missable instances at R4.1 cohort (F-1 + F-2 convention-registration gaps surfaced at gap-check < 24 hours after Step 10 formalization). Wave 4.6 SUCCEEDED first-encounter via consciously-applied Step 10 — proves directive operative when consciously applied, but reminder-grade insufficient at first-encounter. **Proposed evolution at R5+ close-out** (if 3rd instance surfaces): producer-self-check Step 10 mechanism upgrade — (a) producer self-verification regex-sweep `^- (CLAUDE.md|GLOSSARY.md|...)` per artifact-class table; (b) explicit checklist matrix at progress-logger time enumerating per-build-class registration targets; (c) tool-level helper (e.g. `tools/verify_convention_registration.py`) for build agents to invoke pre-progress-logger." WSJF: 1.5 (COD 3, JS 2). Closure target: Round 5+ close-out OR Phase 1 close. (semver bump: N/A — BACKLOG-tracking item, not agent prompt edit).
+
+- **DELTA-B4 (🟡 MONITOR / NO ACTION at this close-out): B-259 Step 12 directive promotion** — sub-threshold (2 events / 2 rounds; skill threshold ≥3-events-≥2-rounds for 🟡 REFINE). Recommendation: keep B-259 open at BACKLOG.md L389 with current sub-threshold classification; do NOT propose Step 12 directive formalization at this close-out. Defer to Round 5+ close-out per conservative bias. NO DELTA PROPOSED.
+
+**5. `udm-cycle-cadence-optimizer` (Step 5 — ANALYSIS) — verdict: NO ACTION (continue monitor)**
+
+- Action: per Round 8 D97 tier mapping — Round 4 build campaign produces Tier-α/β evidence only (no Tier-γ/δ spec-doc cycles this round). Round 4 trajectory:
+  - Round 4.1 5-tool cohort: 2 inline cycles total across 5 builds (§ 3.2 Windows path test fixture + § 3.7 argparse prefix collision); 3 builds at 0 inline cycles.
+  - Wave 4.6 § 3.4: 0 inline cycles (first-iteration pass).
+  - Combined: **7-of-9 builds at 0 inline cycles** (78%; excluding 2 trivial-fix cycles).
+  - Combined with Round 3 (post-B-226-calibration cumulative): **15-of-18 0-cycle builds across 2 rounds** = 83% first-iteration pass rate.
+- Per-tier cadence trend:
+  - **Tier α/β (small + medium artifacts)**: empirical pattern post-B-226-calibration directive (CLAUDE.md #12) is 15-of-18 0-cycle = STRONG-BUT-NOT-CONCLUSIVE validation. CONFIDENCE: MEDIUM (extends Round 3 LOW). Skill conservative bias: "Tier with 1-2 rounds of evidence → CONFIDENCE: LOW; recommendation 'wait for more events'". 2 rounds of evidence (R3 + R4) → CONFIDENCE: MEDIUM. Skill body says: "If mean shifts >1 cycle from prior estimate → propose cadence calibration".
+  - Empirical mean cycles (per build artifact post-directive): R3 = 8/9 0-cycle ≈ 0.11 avg cycles; R4 = 7/9 ≈ 0.22 avg; cumulative 0.17 — well below any prior estimate. **NO shift > 1 cycle from prior estimate** (prior estimate was "Tier α D56 2-pass + Tier β Pattern E + 2-3 verify" = > 1 cycle base; current empirical 0.17 << 1 cycle). Skill body conservative bias: "Tier with monotonic trajectory shift (e.g., mean cycles falling round-over-round) → propose acknowledgment that 'discipline is improving; current cadence may be over-conservative'".
+  - **Carryover trend monitoring (per B129)**: R5 → R6 → R7 → R8 carryover trajectory NOT applicable this round (R4 is build campaign, not spec authoring; carryover trajectory is spec-doc-class evidence). Carryover trend unchanged.
+- Verdict: **NO ACTION** — Round 4 evidence empirically validates B-226 Tier-α/β calibration at MEDIUM confidence; recommend continue monitor at Round 5+ close-out before any D97 cadence-rule change. Conservative bias retained per skill body.
+- Output file: `docs/migration/_agent_evolution/cycle-cadence-optimizer-round4-2026-05-14.md` (would be authored if deltas proposed; NO DELTAS = NO FILE this round).
+
+**6. `udm-cascade-audit-evolver` (Step 6 — ANALYSIS) — verdict: NO ACTION (round-level Pattern F NOT invoked this close-out)**
+
+- Action: scanned Round 4 findings for Pattern F unmatched-trigger candidates. **CRITICAL DISTINCTION**: Round 4 build campaign used `udm-gap-check` 6-category audit at every cohort (per CLAUDE.md hard rule 11); this is **per-cohort gap-check**, NOT round-level **Pattern F D89-D91** audit (Layer 1 deterministic `tools/verify_cascade.py` + Layer 2 paired `udm-cascade-auditor.md`).
+- Pattern F invocation gap: per CLAUDE.md item #5 "every round close-out runs Pattern F BEFORE round 🟢 lock". Round 4 has not yet run Pattern F (Layer 1 deterministic + Layer 2 paired-judgment). **Per user direction in task prompt**: "Does Round 4 warrant a Pattern F audit? Or is the per-cohort gap-check sufficient for round-level lock?"
+- Recommendation: per `udm-cascade-audit-evolver` skill body "Always invoked when Pattern F runs (which is every round close-out after R6)" — Round 4 is a build-campaign round, not a spec-authoring round. Per-cohort gap-check 6-category audit ALREADY covers the substrate Pattern F Layer 1 deterministic script would cover (stale references / forward-cite resolution / aggregate-doc freshness) at finer-grained cadence. Pattern F Layer 2 paired-judgment specifically catches **cross-round** cascade drift (D-acceptance substantiation + B-item closure-target audit + CLAUDE.md convention registration) — Round 4 has only 1 candidate signal (convention-registration class F-1 + F-2 at R4.1 cohort already inline-resolved).
+- **Recommended decision (route to user)**: **OPTION-A (skip Pattern F this close-out)** — per-cohort gap-check is sufficient at Round 4 partial close because:
+  1. 9/11 = 82% (partial); 2/11 external-blocked = no full-round Pattern F audit value-add until external blockers resolve;
+  2. 3 separate gap-check events already executed (R4-GC-Cohort1 + R4-SGC + implicit Wave 4.6 via Step 11) covering ~all Pattern F Layer 1 surface;
+  3. Cross-round cascade drift signals already surfaced via gap-audit F-1 + F-2 (convention-registration) + F-3 (CURRENT_STATE freshness) — all inline-resolved.
+  - **OPTION-B (run Pattern F now)** would invoke `tools/verify_cascade.py` (Layer 1 deterministic) + `udm-cascade-auditor.md` × 2 (Layer 2 paired) — adds ~30-60 min wall-clock for marginal incremental signal post-3-gap-checks.
+- Per skill body: when Pattern F is skipped, `udm-cascade-audit-evolver` is **SKIPPED at this close-out**. No new trigger candidates proposed.
+- Verdict: **NO ACTION** at this round close-out (Pattern F skip recommended; if user prefers Option-B, skill is re-invoked after Pattern F completes and processes any unmatched findings).
+- Output file: N/A (Pattern F not invoked).
+
+**7. `udm-agent-prompt-versioner` (Step 7 — APPLICATION) — DEFERRED to user-approval session**
+
+- Per D95 umbrella + skill body "NEVER applies without explicit user approval per Round 8 D95 umbrella": this skill is invoked LAST in close-out cascade after user reviews all proposed deltas + approves YES/NO per delta. Current close-out is PLANNING-MODE (per task prompt: "Critical: this is a planning-mode invocation — propose, don't apply").
+- Action: **NO writes to `.claude/agents/*.md` this turn**. User reviews DELTA-B1 / DELTA-B2 / DELTA-B3 / DELTA-B4 in follow-up; approves YES/NO per delta; on YES for DELTA-B2 (the only delta requiring agent prompt edit), this skill applies the MINOR semver bump to `.claude/agents/udm-design-reviewer.md` + archives prior version + updates per-agent changelog at `docs/migration/_agent_evolution/udm-design-reviewer-changelog.md`.
+- Verdict: **DEFERRED** (per planning-mode constraint).
+
+### Summary table — Proposed deltas requiring user YES/NO
+
+| # | Delta | Source skill | Type | Target | Semver | WSJF |
+|---|---|---|---|---|---|---|
+| DELTA-B1 | Open B-N tracking 9.o sub-class candidate (discipline-formalization-without-application-mechanism); MONITOR until 3rd-instance evidence at R5+ close-out | `udm-subclass-accumulator` | BACKLOG-only | `BACKLOG.md` | N/A (not agent prompt edit) | 1.5 |
+| DELTA-B2 | **🔴 ESCALATE** — Promote Step 11 (canonical-spec verbatim citation) from per-cycle directive to Gate 2 mandatory specialty slot in `udm-design-reviewer.md` | `udm-producer-checklist-evolver` (per B-258 elevation candidacy) | Agent prompt edit | `.claude/agents/udm-design-reviewer.md` | **MINOR** | 2.0 (per B-258) |
+| DELTA-B3 | Open B-N tracking Step 10 mechanism-enforcement evolution candidate; MONITOR until 3rd-instance evidence at R5+ close-out | `udm-producer-checklist-evolver` | BACKLOG-only | `BACKLOG.md` | N/A | 1.5 |
+| DELTA-B4 | B-259 Step 12 directive promotion sub-threshold; NO ACTION at this close-out; keep open at sub-threshold tracking | `udm-producer-checklist-evolver` | BACKLOG-only (no-op) | `BACKLOG.md` (existing) | N/A | (existing B-259 WSJF 1.5) |
+
+### Special-focus recommendations (per task prompt)
+
+1. **B-258 elevation status**: **🔴 ELEVATION RECOMMENDED**. 10-event cross-round evidence base + 100% producer-success rate + skill SI7 edge case "comprehensive directive in place → ELEVATE not REFINE" justify immediate Gate 2 mandatory specialty promotion. Round 5 evidence is NOT NEEDED — the empirical record is already strongest in project history. (DELTA-B2 above formalizes the elevation as MINOR semver bump on `.claude/agents/udm-design-reviewer.md`.)
+2. **B-259 sub-threshold**: **KEEP TRACKING; NO Step 12 promotion at this close-out**. 2-event evidence base sub-threshold for `udm-producer-checklist-evolver` skill threshold (≥3-events-≥2-rounds for 🟡 REFINE). Conservative bias retained.
+3. **Discipline-application-mechanism gap (F-2 + F-7 from gap-audit)**: **🟡 9.o sub-class candidate at MONITOR**. 2-event evidence base (9.j post-formalization recurrence + Step 10 R4.1 first-encounter failure) sub-threshold for sub-class formalization (skill threshold ≥3-events-≥2-rounds). DELTA-B1 above tracks at MONITOR.
+
+### Hard-rule checks (CLAUDE.md Validation discipline #1-#11)
+
+- ✅ Hard rule 3 (D60 round close-out): cascade orchestrated per `udm-round-closeout` Section 10.1-10.7; this entry documents cascade outcomes.
+- ✅ Hard rule 4 (D61 pillar mapping + risk surface + B-N surface): proposed deltas surface B-N opportunities (DELTA-B1 / DELTA-B3 are net-new B-N candidates pending user approval); no new D-numbers this close-out.
+- ✅ Hard rule 5 (D89-D91 Pattern F): Round 4 partial close-out routes Pattern F decision to user (Option-A vs Option-B above); per-cohort gap-check coverage substantiates Option-A recommendation. NOT a hard-rule violation if Option-A chosen.
+- ✅ Hard rule 6 (D95-D99 self-improvement skill suite): all 7 sub-skills invoked per close-out cascade Section 10.1-10.7; mechanical Step 1 executed + 5 analysis skills produced proposals; Step 7 deferred to user-approval session per D95 umbrella.
+- ✅ Hard rule 9 (progress-logger discipline): this `_validation_log.md` entry is the per-completion cadence row for the cascade orchestration completion (mid-round — actually round-close cadence).
+- ✅ Hard rule 11 (gap-check discipline): this cascade orchestration is the round-close analog of gap-check (independent reviewer of round-aggregate state); 5 analysis skills serve as the 6-category audit at round-aggregate cadence.
+
+### Pitfall #9 sub-class instances (per HANDOFF §8)
+
+- **9.j (status-render discipline)**: this entry uses leading status badges consistent with inline annotation; no leading-badge mismatch introduced. Verified pass.
+- **9.k (arithmetic-propagation drift)**: count bumps documented inline (specialty 18 → 21 events, 38 → 43 cumulative findings, 9/11 = 82%, 1530 → 1930 + 2 cumulative across R3 + R4) — all sourced from this turn's mechanical Step 1 (retrospective-collector) append; no untouched mirror sites.
+- **9.l (canonical-spec-signature drift)**: skill body citations verified verbatim against `.claude/skills/udm-*/SKILL.md` frontmatter + body sections (thresholds + verdicts + edge cases per skill specs). All references resolve to canonical line anchors.
+- **9.m (discipline-not-applied-to-its-own-tracker)**: this `_validation_log.md` entry IS the discipline-applied-to-its-own-tracker invocation per CLAUDE.md item #9 (progress-logger discipline at round-close cadence). Pass.
+- **9.o candidate (discipline-formalization-without-application-mechanism)**: tracked as DELTA-B1 candidacy; 2-event evidence base; sub-threshold for formalization at this close-out.
+
+### Carryovers (open after this cascade)
+
+- **B-258** (🟡 Open) — Step 11 Gate 2 mandatory specialty elevation candidacy → DELTA-B2 routes to user-approval session for closure-via-agent-prompt-edit at next session.
+- **B-259** (🟡 Open) — Step 12 directive promotion sub-threshold → DELTA-B4 keeps at sub-threshold tracking; no action at this close-out.
+- **B-N candidate (DELTA-B1)** — sub-class 9.o tracking candidate; opens pending user approval.
+- **B-N candidate (DELTA-B3)** — Step 10 mechanism-enforcement tracking candidate; opens pending user approval.
+- **B-218** (🟡 Open) — 2 pre-existing § 3.10 carryover failures — UNCHANGED.
+- **B81** (🟡 Open / R4 blocker) — SP-12 DDL not deployed; blocks § 3.9 build (external prereq).
+- **B82** (🟡 Open / R4 blocker) — Ops-channel client deferred to Phase 2 R1; blocks § 3.11 build (external prereq).
+- **Round 4 → 9/11 PARTIAL close-out**: 🟡 Open until B81 + B82 unblock at Phase 2 R1; § 3.9 + § 3.11 buildable when prereqs resolve.
+
+### Next-natural-action per CLAUDE.md discipline #11
+
+- User reviews 4 proposed deltas (DELTA-B1 + DELTA-B2 + DELTA-B3 + DELTA-B4) + decides Pattern F Option-A vs Option-B; approves YES/NO per delta; on approval batch, invoke `udm-agent-prompt-versioner` (Step 7) to apply DELTA-B2 (MINOR semver bump on `udm-design-reviewer.md`) + write the BACKLOG entries for DELTA-B1 + DELTA-B3 + amend B-258 closure-via-elevation note.
+- Per CLAUDE.md hard rule 11: if user authorizes Pattern F Option-B (run audit now), invoke `udm-cascade-audit-evolver` AFTER Pattern F completes; that skill processes any unmatched findings into new trigger candidates.
+
+---
+
+## 2026-05-14 — Round 4 close-out cascade delta application (DELTA-B1 + DELTA-B2 + DELTA-B3 applied per user approval; Pattern F skipped per user)
+
+**Reviewer**: cascade orchestrator (per `udm-agent-prompt-versioner` invocation; D60 close-out cascade Section 10.7 completion + D95 umbrella user-approval gate)
+**Trigger**: user-approval batch on 3-of-4 deltas proposed in prior 2026-05-14 Round 4 partial close-out cascade planning-mode entry (above). User direction: approve DELTA-B1 + DELTA-B2 + DELTA-B3; defer DELTA-B4 to existing B-259 sub-threshold tracking (no action); SKIP Pattern F per Option-A (defer until Phase 2 R1 when B81 + B82 unblock to bring Round 4 to 11/11). Round 5 (Tests) transition follows.
+
+### Deltas applied (3 of 4 approved)
+
+**DELTA-B2 (🔴 ELEVATED — primary delta — `udm-agent-prompt-versioner` invoked)**:
+- **Target**: `.claude/agents/udm-design-reviewer.md`
+- **Change type**: MINOR semver per D98 (directive addition — new mandatory specialty slot added; no structural change to existing prompt body sections; frontmatter additive only)
+- **Version**: `v1.0.0` → `v1.1.0` (no prior `version:` frontmatter — treated as v1.0.0 per `udm-agent-prompt-versioner` SKILL.md "if no version frontmatter, treat as v1.0.0")
+- **Archive**: prior v1.0.0 copied byte-identical from HEAD to `.claude/agents/_archive/udm-design-reviewer-v1.0.0-2026-05-14.md` (append-only audit trail per D98)
+- **Section added to live agent prompt**: "Gate 2 Mandatory Specialty: Canonical-spec verbatim citation (Step 11 elevation per B-258 / 10-event evidence base 2026-05-14)" — placed after the opening role-introduction paragraph and before the existing "Operating model — Canonical Context Load (CCL)" section (so reviewers encounter the mandatory specialty before walking the CCL stages).
+- **Section body summary**: reviewer MUST cite canonical function name + parameter list + return-value shape VERBATIM from spec doc (not paraphrased); reject paraphrased citations as 🔴 finding; reviewer-mandate 4-step procedure (resolve to line anchor / byte-for-byte compare / reject paraphrase / output format example); empirical basis cite (10 events / 2 rounds / 100% producer-side success rate); pairing-with-existing-specialties note (`column-walk` + `comprehensive-5-gate`); when-NOT-to-apply note (pure semantic review).
+- **Frontmatter additions**: `version: v1.1.0`, `last_updated: 2026-05-14`, `changelog: docs/migration/_agent_evolution/udm-design-reviewer-changelog.md`
+- **Changelog entry**: new file authored at `docs/migration/_agent_evolution/udm-design-reviewer-changelog.md` with v1.1.0 entry (43 lines: source skill + change type + delta + rationale citing 10-event evidence base + reversibility note + cross-references)
+- **File refs**: `.claude/agents/udm-design-reviewer.md:1-9` (frontmatter w/ new version block); `:13-30` (new Gate 2 Mandatory Specialty section); `.claude/agents/_archive/udm-design-reviewer-v1.0.0-2026-05-14.md:1-212` (prior version archive, byte-identical to HEAD); `docs/migration/_agent_evolution/udm-design-reviewer-changelog.md:1-43` (v1.1.0 changelog entry)
+- **Reversibility**: yes — `udm-agent-prompt-versioner` auto-revert protocol applies if Round 5+ surfaces regression. Rollback procedure: copy archive back to live agent prompt; append revert entry to changelog with regression evidence.
+
+**DELTA-B1 (🟡 MONITOR — BACKLOG-only)**:
+- **Target**: `docs/migration/BACKLOG.md`
+- **Action**: opened **B-260** (🟡 Open at MONITOR) tracking sub-class 9.o candidate "discipline-formalization-without-application-mechanism"
+- **Evidence base captured**: 2-event sub-threshold (Pitfall #9.j post-formalization recurrence at R4 close-out gap-audit + Step 10 R4.1 first-encounter failure); ≥3-events ≥2-rounds threshold for sub-class formalization per `udm-subclass-accumulator` skill
+- **Closure target**: Phase 2 R1 close-out OR Round 5 close-out (whichever surfaces 3rd event)
+- **WSJF**: 1.5 (COD 3 — closes structural meta-pattern at directive level; JS 2 — needs evidence accumulation before formalization)
+- **File ref**: `docs/migration/BACKLOG.md` (B-260 inserted between B-259 and B-258, ABOVE the now-closed B-258)
+
+**DELTA-B3 (🟡 MONITOR — BACKLOG-only)**:
+- **Target**: `docs/migration/BACKLOG.md`
+- **Action**: opened **B-261** (🟡 Open at MONITOR) tracking Step 10 mechanism-enforcement evolution candidate
+- **Evidence base captured**: 2-of-2 producer-missable instances at R4.1 cohort (F-1 CLAUDE.md `tools/` sub-section missing + F-2 GLOSSARY Round 4 sub-section missing surfaced at gap-check <24 hours after Step 10 formalization); Wave 4.6 § 3.4 SUCCEEDED first-encounter via consciously-applied Step 10
+- **Pairs with**: B-260 (sub-class 9.o broader pattern)
+- **Closure target**: Round 5 close-out OR Phase 2 R1 close-out (3rd 9.n event triggers)
+- **WSJF**: 1.5 (COD 3; JS 2)
+- **File ref**: `docs/migration/BACKLOG.md` (B-261 inserted ABOVE B-260, newest-first ordering per BACKLOG.md insertion-event convention)
+
+### B-258 closure (via DELTA-B2 application)
+
+- **Target**: `docs/migration/BACKLOG.md` — B-258 (`Step 11 (canonical-spec verbatim citation) elevation to Gate 2 mandatory specialty per udm-producer-checklist-evolver threshold`)
+- **Action**: closed via DELTA-B2 application — strikethrough body + leading badge flipped from `🟡 Open` to `~~🟡 Open~~ ⚫ CLOSED` (Pitfall #9.j status-render discipline)
+- **Closure annotation appended**: "— ⚫ CLOSED 2026-05-14 via DELTA-B2 application: Step 11 promoted to Gate 2 mandatory specialty in `.claude/agents/udm-design-reviewer.md` (MINOR semver v1.0.0→v1.1.0; prior archived to `.claude/agents/_archive/udm-design-reviewer-v1.0.0-2026-05-14.md`; changelog at `docs/migration/_agent_evolution/udm-design-reviewer-changelog.md`). Empirical basis: 10-event / 2-round / 100% producer-success evidence base. Per CLAUDE.md hard rule 11 + D95 umbrella + D98 semver discipline."
+- **File ref**: `docs/migration/BACKLOG.md` (B-258 line, between B-260 and B-257)
+
+### DELTA-B4 (no action this close-out — B-259 sub-threshold retained)
+
+- B-259 (Step 12 pre-build scope-completeness sweep directive) sub-threshold at 2 events / 2 rounds for `udm-producer-checklist-evolver` ≥3-events ≥2-rounds promotion. NO directive formalization at this close-out per conservative bias. B-259 entry at `docs/migration/BACKLOG.md` retained unchanged at MONITOR. 3rd 9.i instance at R5+ close-out triggers formalization proposal at that close-out.
+
+### Pattern F decision — Option-A skip (per user direction)
+
+- **User direction**: SKIP Pattern F (Layer 1 deterministic `tools/verify_cascade.py` + Layer 2 paired `udm-cascade-auditor.md`) at this Round 4 partial close-out. Per-cohort `udm-gap-check` 6-category audits at R4.1 cohort + R4-SGC + Wave 4.6 already cover Pattern F Layer 1 substrate at finer cadence.
+- **Trigger condition for deferred Pattern F**: when B81 (SP-12 DDL deployment) + B82 (ops-channel client) unblock at Phase 2 R1, bringing Round 4 to 11/11 = 100%; Pattern F runs as part of THAT close-out (Round 4 → 11/11 lock).
+- **Per skill protocol**: `udm-cascade-audit-evolver` is SKIPPED at this close-out (per its skill body "Always invoked when Pattern F runs"). No new trigger candidates proposed this close-out.
+- **Hard-rule check**: CLAUDE.md item #5 "every round close-out runs Pattern F BEFORE round 🟢 lock" — Round 4 is NOT locked at 🟢 (currently 🟡 partial close pending B81 + B82 unblock); deferral is consistent with hard rule.
+
+### Hard-rule checks (CLAUDE.md Validation discipline #1-#11)
+
+- ✅ Hard rule 3 (D60 round close-out aggregate doc updates): this `_validation_log.md` entry documents cascade delta application; HANDOFF / CURRENT_STATE updates remain pending separate close-out aggregate-doc edits when Round 4 fully locks at 11/11.
+- ✅ Hard rule 4 (D61 pillar mapping + risk surface + B-N surface): DELTA-B1 + DELTA-B3 open 2 net-new B-N entries (B-260 + B-261) at MONITOR per `udm-subclass-accumulator` + `udm-producer-checklist-evolver` sub-threshold tracking; DELTA-B2 closes B-258 via elevation.
+- ✅ Hard rule 5 (D89-D91 Pattern F): SKIPPED per user direction Option-A; deferred to Round 4 → 11/11 lock event. NOT a hard-rule violation because Round 4 is NOT 🟢 locked at this close-out (remains 🟡 partial; 9/11 = 82%).
+- ✅ Hard rule 6 (D95-D99 self-improvement skill suite): D95 user-approval gate respected (user explicitly approved 3-of-4 deltas before this skill invocation); D98 semver discipline applied (MINOR bump v1.0.0 → v1.1.0; archive + changelog mandatory); `udm-agent-prompt-versioner` (Step 7) invoked LAST in close-out cascade per skill body protocol.
+- ✅ Hard rule 7 (D113 POLISH_QUEUE.md cosmetic-tracker discipline): no cosmetic-only items surfaced this close-out; no P-N opens or closures.
+- ✅ Hard rule 8 (`udm-execution-classifier` discipline): no new executable artifacts authored this close-out (purely meta-tooling — agent prompt edit + BACKLOG edits + changelog authoring + this validation-log entry). No classification entries needed.
+- ✅ Hard rule 9 (`udm-progress-logger` discipline): this `_validation_log.md` entry IS the per-completion cadence row for the delta-application work; B-258 closure annotation in BACKLOG.md acts as the BACKLOG status-flip cadence. CODE_BUILD_STATUS.md not affected (no code authored).
+- ✅ Hard rule 10 (CODE_BUILD_STATUS.md per-unit row discipline): N/A — no code-build state transitions this close-out.
+- ✅ Hard rule 11 (`udm-gap-check` discipline): this delta-application work is a META-TOOLING discipline cascade, not a substantive build / enhancement / multi-artifact discipline work cycle. Per `udm-gap-check` skill body "invoke after substantive build / enhancement / multi-artifact discipline work" — delta application of user-approved deltas is mechanical apply-after-review, not the substantive-work class that gap-check audits. Hard rule 11 does NOT require gap-check invocation for this turn. If user prefers an independent reviewer pass on the 3-delta application turn, that's an optional add-on (not a hard-rule requirement).
+
+### Pitfall #9 sub-class instances (per HANDOFF §8)
+
+- **9.j (status-render discipline)**: B-258 leading badge FLIPPED to `~~🟡 Open~~ ⚫ CLOSED` matching inline annotation (closure on same row). B-260 + B-261 leading badge `🟡 Open at MONITOR` matches inline body (no closure annotation; sub-threshold tracking). Pass.
+- **9.k (arithmetic-propagation drift)**: no count changes this turn (BACKLOG.md adds 2 entries; status-render counts not exposed in summary headers; CODE_BUILD_STATUS unchanged). Pass.
+- **9.l (canonical-schema-detail working-memory drift)**: DELTA-B2 Gate 2 Mandatory Specialty section body cites `column-walk` (D107) + `comprehensive-5-gate` (D55) — both verified against `docs/migration/_reviewer_effectiveness.md` specialty taxonomy + `docs/migration/03_DECISIONS.md` D-numbers. Verbatim citations preserved. Pass.
+- **9.m (discipline-not-applied-to-its-own-tracker)**: this `_validation_log.md` entry IS discipline-applied-to-its-own-tracker per CLAUDE.md item #9. Pass.
+- **9.n (Step 10 post-build convention-registration discipline)**: N/A — no Structure / GLOSSARY convention registration needed this turn (no new public surfaces authored — agent prompts are meta-tooling, not project structure). Pass.
+- **9.o candidate (discipline-formalization-without-application-mechanism)**: tracked as B-260 at MONITOR; 2-event sub-threshold for sub-class formalization.
+
+### Carryovers (open after this delta-application cascade)
+
+- **B-259** (🟡 Open) — Step 12 directive promotion sub-threshold UNCHANGED; awaits 3rd 9.i instance at R5+ close-out.
+- **B-260** (🟡 Open at MONITOR) — NEW; sub-class 9.o candidate; awaits 3rd event at R5+ close-out.
+- **B-261** (🟡 Open at MONITOR) — NEW; Step 10 mechanism-enforcement evolution candidate; awaits 3rd event at R5+ close-out.
+- **B-218** (🟡 Open) — 2 pre-existing § 3.10 carryover failures UNCHANGED.
+- **B81** (🟡 Open / R4 blocker) — SP-12 DDL deployment unblocks § 3.9 build.
+- **B82** (🟡 Open / R4 blocker) — Ops-channel client unblocks § 3.11 build.
+- **Round 4 → 9/11 PARTIAL close-out CASCADE COMPLETE**: planning-mode analysis (prior entry) + delta application (this entry) = full Round 4 close-out cascade for the 9/11-built portion. 🟡 Open until B81 + B82 unblock at Phase 2 R1 → 11/11 → Pattern F → 🟢 Lock.
+
+### Next-natural-action per CLAUDE.md discipline #11
+
+- **Round 5 (Tests) kickoff** per user direction. Pre-flight: `udm-planning` may be invoked to decompose Round 5 into 2-5 minute task units per CLAUDE.md item #2 (validation discipline). Round 5 surface area: Tier 0 + Tier 1 test buildout for Round 3 + Round 4 newly-built modules + tools; backlog dependencies (B55 Tier 0 backfill / B58 reconciliation script / B250 I19 fault-injection test / B215 carryovers).
+- If Round 5 surfaces a 3rd 9.i instance: B-259 promotion to formal Step 12 directive at Round 5 close-out per `udm-producer-checklist-evolver` >=3-events >=2-rounds threshold.
+- If Round 5 surfaces a 3rd 9.o / 9.n instance: B-260 promotion to formal sub-class 9.o OR B-261 promotion to formal Step 10 mechanism upgrade at Round 5 close-out per respective skill thresholds.
+
+---
