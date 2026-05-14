@@ -4736,3 +4736,75 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 - **Next-natural-action per CLAUDE.md discipline #11**: invoke `udm-gap-check` BEFORE any 🟢 status claim on the Wave 4.6 § 3.4 build. Producer-surfaced items above (Step 11 4-point drift bundle + Step 10 first-turn application + Step 12 directive candidacy) should be routed by the gap-checker. Gap-check is independent reviewer per D55+D56 producer ≠ reviewer.
 
 ---
+
+## 2026-05-14 — Session gap-audit inline fixes (F-7 + F-3 + F-2 + F-1 + F-8)
+
+**Reviewer**: producer-self-applied inline fixes (per CLAUDE.md hard rule 9 progress-logger discipline; Pitfall #9.m discipline-applied-to-its-own-tracker preserved by this entry)
+**Trigger**: comprehensive gap audit per user direction post-Wave 4.6 § 3.4 build close — 5 findings authorized (F-7 + F-3 + F-2 HIGH; F-1 + F-8 MEDIUM; F-6 deferred to next session)
+
+**Outcome**: 🟢 PASS — all 5 authorized findings actioned in single fix-application turn.
+
+**Findings actioned**:
+
+- **F-7 (HIGH) — Open B-258 + B-259 in BACKLOG.md**:
+  - **B-258** (🟡 Open) inserted at `docs/migration/BACKLOG.md:390` — "Step 11 (canonical-spec verbatim citation) elevation to Gate 2 mandatory specialty per `udm-producer-checklist-evolver` threshold" — 10-event cumulative evidence base (6-of-6 Round 4 + 4-event Round 3 M17+M8+M12+M13) crosses both ≥3-events-≥2-rounds 🟡 threshold AND ≥5-events-≥3-rounds 🔴 mandatory specialty elevation threshold. WSJF 2.0; closure target: R4 close-out OR Phase 1 close.
+  - **B-259** (🟡 Open) inserted at `docs/migration/BACKLOG.md:389` — "Step 12 pre-build scope-completeness sweep directive" — 2 cross-session 9.i scope-drift events (R3 14/17 framing + R4 8/11 framing). Currently sub-threshold (2 events / 2 rounds vs ≥3-≥2 threshold) but tracked for next 9.i recurrence. WSJF 1.5; closure target: Phase 1 close OR P2 R1 close-out.
+
+- **F-3 (HIGH) — CURRENT_STATE.md "Last updated" preamble bumped**:
+  - `docs/migration/CURRENT_STATE.md:7` PREPENDED with Wave 4.6 narrative: "Wave 4.6 § 3.4 `decrypt_pii.py` 🟢 BUILT — Round 4 status 8/11 → 9/11 (82%)" + 80 tests pass (10 Tier 0 + 70 Tier 1) + 1930 / 14 / 2 regression + Step 11 4-point catch + 6-of-6 cohort scorecard + B-255 closure + B-258/B-259 opening. Existing Round 4.1 narrative preserved verbatim as "Earlier 2026-05-14 (**Round 4.1 CLI tool cohort..." continuation per D92 forward-only additive discipline.
+
+- **F-2 (HIGH) — 6 leading-badge mismatches flipped per Pitfall #9.j**:
+  - `BACKLOG.md:391` B-255 leading `(🟡 Open)` → `(~~🟡 Open~~ ⚫ CLOSED)` (inline ⚫ CLOSED 2026-05-14)
+  - `BACKLOG.md:401` B-245 leading `(🟡 Open)` → `(~~🟡 Open~~ ⚫ CLOSED)` (inline ⚫ CLOSED 2026-05-14)
+  - `BACKLOG.md:402` B-244 leading `(🟡 Open)` → `(~~🟡 Open~~ ⚫ CLOSED)` (inline ⚫ CLOSED 2026-05-14)
+  - `BACKLOG.md:403` B-243 leading `(🟡 Open)` → `(~~🟡 Open~~ ⚫ CLOSED)` (inline ⚫ CLOSED 2026-05-14)
+  - `BACKLOG.md:416` B-228 leading `(🟡 Open)` → `(~~🟡 Open~~ ⚫ CLOSED)` (inline ⚫ CLOSED 2026-05-13)
+  - `BACKLOG.md:419` B-226 leading `(🟡 Open)` → `(~~🟡 Open~~ ⚫ CLOSED)` (inline ⚫ CLOSED 2026-05-13)
+  - All 6 verified post-edit via `git diff HEAD docs/migration/BACKLOG.md` — each line now renders consistent badge across leading + inline annotation.
+
+- **F-1 (MEDIUM) — 3 B-N IDs hyphenated per canonical convention**:
+  - `BACKLOG.md:423` `**B222**` → `**B-222**`
+  - `BACKLOG.md:424` `**B221**` → `**B-221**`
+  - `BACKLOG.md:425` `**B220**` → `**B-220**`
+  - Note: `_validation_log.md` historical references stay unhyphenated per D60 audit-trail-by-design.
+
+- **F-8 (MEDIUM) — B214 sweep on Round 4.1 + Wave 4.6 test files (12 files audited)**:
+  - **Pattern audited**: `sys.modules["..."] = stub` assignments outside auto-restoring contexts (the B214 root-cause failure mode that previously caused M15 v2 test pollution).
+  - **All 12 files use IDENTICAL B214-compliant pattern**:
+    1. `if _TOOL_MODULE_KEY in sys.modules: del sys.modules[_TOOL_MODULE_KEY]` (pre-cleanup of prior pollution; idempotent)
+    2. `with patch.dict("sys.modules", sys_modules_patch):` (auto-restoring context manager)
+    3. Inside the `with` block: `sys.modules[_TOOL_MODULE_KEY] = mod` followed by `spec.loader.exec_module(mod)` (B214 pre-registration; auto-cleaned on patch.dict exit)
+    4. `_call_main()` helper re-applies `patch.dict("sys.modules", mod._test_sys_modules_patch)` at invocation time per B218 lesson (also auto-restoring)
+  - **Verdict per file (10 files in user-specified pairs + 2 BONUS Wave 4.6 files)**:
+    - `tests/tier0/test_parquet_tier_review.py` — B214 sweep clean (lines 260-261 + 333-336 + 358-376 verified)
+    - `tests/tier1/test_parquet_tier_review.py` — B214 sweep clean (lines 267-268 + 340-343 + 384 + 1239 verified)
+    - `tests/tier0/test_parquet_verify.py` — B214 sweep clean (lines 142-147 + 246-250 + 272 verified; explicit "B214 pattern: pre-register sys.modules before exec_module()" comment)
+    - `tests/tier1/test_parquet_verify.py` — B214 sweep clean (lines 222-223 + 305-308 + 340 verified)
+    - `tests/tier0/test_lateness_profile.py` — B214 sweep clean (lines 170-177 + 273-277 + 293-294 + 315 verified; explicit "B214 pattern: sys.modules pre-registration before exec_module()" comment)
+    - `tests/tier1/test_lateness_profile.py` — B214 sweep clean (lines 206-207 + 285-288 + 321 + 1120 verified)
+    - `tests/tier0/test_detect_extraction_gaps.py` — B214 sweep clean (lines 66 + 184-185 + 277-281 + 303 + 328 verified; explicit "B214 (sys.modules pre-registration before exec_module — applied below)" comment)
+    - `tests/tier1/test_detect_extraction_gaps.py` — B214 sweep clean (lines 59 + 166-167 + 253-256 + 315 + 949-950 verified)
+    - `tests/tier0/test_verify_server_parity_cli.py` — B214 sweep clean (lines 218 + 224-225 + 254-259 + 292 verified)
+    - `tests/tier1/test_verify_server_parity_cli.py` — B214 sweep clean (lines 112 + 117-118 + 146-151 + 176 verified; explicit "Module loader (mirrors tier0 pattern; B214 sys.modules pre-register)" comment)
+    - `tests/tier0/test_decrypt_pii.py` (Wave 4.6 BONUS) — B214 sweep clean (lines 51 + 181 + 185-186 + 267-271 + 289 + 307 verified)
+    - `tests/tier1/test_decrypt_pii.py` (Wave 4.6 BONUS) — B214 sweep clean (lines 56 + 236 + 240-241 + 328-331 + 361 verified)
+  - **Risky files enumerated**: 0 — all 12 follow the canonical B214-compliant pattern.
+  - **Clean count**: 12 / 12 — full pass.
+
+**Hard-rule checks (CLAUDE.md Validation discipline #1-#11)**:
+- Hard rule (D92 forward-only additive): all 5 fixes are additive (B-258 + B-259 OPEN; CURRENT_STATE.md prepended not deleted; badge flips ADD `(~~🟡 Open~~ ⚫ CLOSED)` annotation; F-1 hyphenations are pure-rename of new IDs not retroactive rename of historical references; F-8 audit-only, no code changes).
+- Pitfall #9.j (status-render discipline): 6 leading-badge mismatches resolved post-discovery; producer-self-check Step 6 directive validated empirically (6-event single-session evidence).
+- Pitfall #9.k (arithmetic-propagation drift): CURRENT_STATE.md preamble counts bumped 8/11 → 9/11 + 1850 → 1930 + Step 11 6-of-6 finalized — propagated to `Last updated` row (BACKLOG.md still references 9/11 + 1930 from prior progress-logger entry; CBS state unchanged; no untouched mirror sites found).
+- Pitfall #9.m (discipline-not-applied-to-its-own-tracker): this `_validation_log.md` entry IS the discipline-applied-to-its-own-tracker invocation. Pass.
+- Hard rule 4 (D61 + CLAUDE.md hard rule): this entry written same-session as the 5-finding fix-application.
+- Hard rule 11 (gap-check discipline): no 🟢 status flip claimed in this turn — fix-application is INDEPENDENT of build/enhancement work; this entry documents inline fix-application per progress-logger discipline (mid-round tracker-drift fix).
+
+**Carryovers** (open after this turn):
+- **B-258** (🟡 Open) — Step 11 Gate 2 specialty elevation candidate at next round close-out.
+- **B-259** (🟡 Open) — Step 12 pre-build scope-completeness directive (sub-threshold; tracked for next 9.i instance).
+- **F-6 (DEFERRED)** — Round 4 partial close-out cascade per user direction (next session priority).
+- **B-218** (🟡 Open) — 2 pre-existing § 3.10 carryover failures — UNCHANGED.
+
+**Next-natural-action per CLAUDE.md discipline #11**: F-6 deferred Round 4 partial close-out cascade in next session per user direction. Optional: run `udm-gap-check` on this fix-application turn to verify inline-fix delivery — independent reviewer per D55+D56.
+
+---
