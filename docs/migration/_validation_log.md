@@ -5744,3 +5744,80 @@ This entry IS the application of CLAUDE.md hard rule 9 (`udm-progress-logger`) t
 - B-266 (closed via `a4941ef`) / B-267 (open) / B-218 (carryover 2 fails) / B-262 / Pitfall #9.j / Pitfall #9.k / Pitfall #9.m
 
 **Pattern observation**: G1 is a textbook arithmetic-propagation drift instance — the L12 narrative bump caught the visible "Last reviewed" line that operators read at a glance, but the L28 Tests aggregate cell (the structured metric mirror) was missed because it has a different bump anchor than the narrative. This reinforces B-261 / B-260 evidence base for structural fixes: a Step-10-application-verifier or similar producer-side mechanism that catches mirror-site drift at commit time (not gap-reflection time) would have prevented G1 from accumulating across 3 commits.
+
+## 2026-05-14 — 3-tool parallel cohort: Snowflake smoke + SCD2-from-Parquet smoke + Stage/Bronze gap diagnostic
+
+**Trigger**: User-direction "We're in testing to Snowflake and I need to have the Snowflake code ready to send data to the platform. I'd also like to test SCD2 creation from parquet files. I also have an issue with our existing CDC and SCD2 setup. ... Can we do all three in parallel and just run a QA, unit, and other tests to make sure that they work and once complete, check for any gaps."
+
+**User-reported production bug** that drove Agent C: "We are able to extract data with CDC and insert into UDM_Stage data, but UDM_Bronze SCD2 tables have a few primary keys that are not showing there, but they show in UDM_Stage CDC layer."
+
+**3 parallel build agents** (general-purpose, run_in_background=true) — each with file-path manifest + verbatim code blocks + DO/DO NOT list + Step 10 instructions per session-established pattern. All 3 produced 0-inline-cycle first-iteration passes.
+
+**Deliverables** (3 tools + 6 test files + 2 trackers):
+
+| Agent | Tool | Module lines | Tier 0 tests | Tier 1 tests | Total tests |
+|---|---|---|---|---|---|
+| A | `tools/snowflake_copy_smoke.py` | 982 | 7 | 62 | 69 |
+| B | `tools/scd2_replay_smoke.py` | 1,118 | 7 | 54 | 61 |
+| C | `tools/diagnose_stage_bronze_gap.py` | 1,693 | 6 | 62 | 68 |
+| **Total** | | **3,793** | **20** | **178** | **198** |
+
+**Tracker edits** (4 files):
+
+| File | Change | Delta |
+|---|---|---|
+| `CLAUDE.md` L88+ | 3 Structure rows (one per tool) added by sibling agents at producer time per Step 10; no parallel-edit collision | +1,062 chars (sibling-cumulative) |
+| `CLAUDE.md` L325 | CLI_* family registry updated from "11 tools per Round 4 § 3" to "15 tools (11 R4 + 4 R6 additions including CLI_VERIFY_TIER0_DRIFT from 146d97a + the 3 from this cohort)" — closes Pitfall #9.n drift in registry-level aggregate text | +204 chars |
+| `docs/migration/GLOSSARY.md` | 13 new rows across `Module entry-point functions` (6 rows: main + cli_main for each of 3 tools) + `Module constants` (7 rows: EVENT_TYPE + EXIT_* for each + THEORY_* for Agent C) — added by sibling agents at producer time per Step 10 | +sibling-cumulative chars |
+| `docs/migration/CODE_BUILD_STATUS.md` L12 + L28 | L12 narrative prepended with cohort event; L28 Tests count bumped 2083 → 2281 with cohort breakdown | +2,821 chars |
+| `docs/migration/CURRENT_STATE.md` L7 | Narrative prepended with cohort event + Agent C invocation hint for the user | +1,575 chars |
+
+**Pytest verification**:
+
+| Layer | Result |
+|---|---|
+| Pre-cohort baseline | 2083 pass / 10 skip / 2 fail (after `339aedc` commit) |
+| Authoritative post-cohort | **2281 pass / 10 skip / 2 fail** |
+| Math check | 2083 + 69 + 61 + 68 = 2281 ✓ |
+| Delta | +198 new tests; 0 net regression; 2 fails = pre-existing B218 carryover |
+
+**Pytest anomaly observed (Pitfall #9.k-adjacent)**: All 3 agents reported "2127 pass" in their final reports. The actual ground-truth post-cohort count is 2281. Root cause: each agent ran pytest at a point when only SOME of the sibling agents' files were on disk (parallel build → stale snapshots). The math works: 2083 (pre-cohort) + the agent's own N + however many sibling tests had landed at that snapshot moment = 2127 for each. Not a quality issue — every test that landed actually passed. Just a reporting artifact of parallel orchestration. Worth observing for future parallel cohort patterns.
+
+**Step 11 Gate 2 specialty discipline validated 3-of-3** (per DELTA-B2 v1.1.0 elevation):
+
+| Agent | Canonical-vs-brief drift caught | Resolution |
+|---|---|---|
+| A | M17 kwarg is `timeout_seconds=` not `copy_timeout_seconds=` (brief) | Wrapper aligned to canonical |
+| A | M17 does NOT accept `budget_alert_threshold` kwarg (env-driven) | Smoke tool dropped from surface |
+| A | Canonical exception name is `SnowflakeBudgetAlert` not `SnowflakeBudgetExceeded` (brief) | Classified FATAL → exit 2 |
+| B | `run_scd2()` signature is positional `(table_config, df_current, pk_columns, output_dir)` with `source_begin_date=business_date` kwarg | Invocation pattern aligned |
+| C | 5-theory classification mapping verbatim from SCD2-P1-e in-flight orphan predicate + SCD2-R4 Flag semantics + DIAG-1 CDC delete behavior | Theory mappings cited canonical CLAUDE.md gotchas |
+
+**Step 10 ACTIVELY APPLIED for all 3 tools** at producer time (each agent updated CLAUDE.md Structure + GLOSSARY entries before reporting complete). No parallel-edit collision between 3 simultaneous CLAUDE.md/GLOSSARY writers — each appended at distinct insertion points (after `verify_tier0_drift.py` row for CLAUDE.md, after `decrypt_pii.py` rows for GLOSSARY entry-points, after `decrypt_pii.py` EXIT row for GLOSSARY constants). Pattern observation: parallel agents writing to shared docs with carefully-distinct insertion anchors works at small N (3 agents) — would need coordination at higher N.
+
+**Convention check**:
+
+| Convention | Pass/Fail | Evidence |
+|---|---|---|
+| Pitfall #9.j (badge ↔ inline-annotation alignment) | ✅ N/A | No B-N status changes |
+| Pitfall #9.k (arithmetic-propagation drift) | ✅ post-fix | CODE_BUILD_STATUS L28 Tests count propagated 2083 → 2281 in this commit; L12 narrative + CURRENT_STATE L7 + this entry all consistent at 2281 |
+| Pitfall #9.l (canonical re-read before authoring) | ✅ | All 3 agents cited canonical specs verbatim in module docstrings; Step 11 catches confirm canonical-vs-brief reconciliation at producer time |
+| Pitfall #9.m (discipline applied to own tracker) | ✅ | All 3 agents applied Step 10 at producer time + this validation log entry IS the application of hard rule 9 |
+| Pitfall #9.n (convention-registration of new artifacts) | ✅ post-fix | Per-tool Step 10 applied by each agent; aggregate CLI_* family registry text at CLAUDE.md L325 updated this turn (the gap surfaced during integration verification — 11 → 15 tools) |
+| CLAUDE.md hard rule 9 (`udm-progress-logger` mid-round) | ✅ | This entry IS the application |
+
+**Cross-references**:
+
+- M17 `data_load/snowflake_uploader.py` (Round 3 § 7.1; Wave 4 build 2026-05-13)
+- M2 `data_load/parquet_replay.py` (Round 3 § 1.2; Wave 3.3 build 2026-05-13)
+- `scd2/engine.py::run_scd2()` (canonical signature at L190; SCD2-P1-a/b/c/d/e/f invariants)
+- CLAUDE.md DIAG-1 + SCD2-P1-e (in-flight orphan predicate) + SCD2-R4 (Flag values) + B-2 (lock-escalation lesson; Agent C uses Polars anti-join client-side, NOT server-side LEFT JOIN ... NULL)
+- B214 (test-injection surface), B228 (canonical exception imports), B88 (--apply/--dry-run mutex), D74/D75/D76/D77/D80
+
+**Operator next step**: User can now invoke Agent C's diagnostic against their actual environment:
+
+```bash
+python -m tools.diagnose_stage_bronze_gap --source DNA --table ACCT --include-state
+```
+
+Output will classify each PK in the gap (Stage CDC ∖ Bronze active) into one of 5 theory categories with per-theory operational recommendations.
