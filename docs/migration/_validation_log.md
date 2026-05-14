@@ -5152,3 +5152,108 @@ Opened as **B-262** (WSJF 2.5 — real production hash-determinism bug affecting
 - **Round 6 status**: implementation work BEGUN (was 0%; now ~5-10% with Tier 2 cohort complete).
 
 ---
+## 2026-05-14 — B-262 production bug fix + Tier 1 regression backfill + tracker cleanup (gap-audit 4 findings closed)
+
+**Author**: pipeline lead orchestrator (single-agent fix-cohort; gap-audit-driven fix-cycle following Tier 2 cohort B-262 surface)
+**Trigger**: post-Tier-2-cohort B-262 production bug fix-cycle per CLAUDE.md hard rule 9 (`udm-progress-logger`) + 11 (`udm-gap-check`) discipline. Per `_validation_log.md` 2026-05-14 Tier 2 cohort entry "next-natural-action" — B-262 fix-cycle in its own commit cycle (separate from build cohort) to preserve clean per-cohort audit trail. This fix-cohort lands 4 gap-audit findings: (1) B-262 production bug + (2) Tier 1 regression backfill + (3) CURRENT_STATE/HANDOFF §14 Tier 2 milestone propagation + (4) B-255 outer-`~~` render-discipline drift.
+
+### Fix 1 — B-262 production bug fix (HIGH WSJF 2.5)
+
+**Bug**: `data_load/row_hash.py::_normalize_for_hashing` previously ran NFC + RTRIM normalization on pre-existing `pl.Utf8`/`pl.String` columns BEFORE casting `pl.Categorical` → `pl.Utf8`. Result: Categorical-input strings skipped NFC/RTRIM normalization. Same logical string value hashed DIFFERENTLY depending on column dtype.
+
+**Failing repro** (Hypothesis-discovered counter-examples):
+- `豈` U+F900 CJK compat codepoint (NFC-normalizes to U+8C5A `豈`): `Utf8('豈')` hashes via post-NFC `'豈'` byte sequence; `Categorical('豈')` cast to Utf8 → hashes via pre-NFC `'豈'` byte sequence → different SHA-256.
+- `' '` single-space (RTRIMs to `''`): `Utf8(' ')` → hash `e3b0c44...` (SHA-256 of empty); `Categorical(' ')` cast to Utf8 → hash `36a9e7f1...` (SHA-256 of literal space).
+
+**Fix applied** (`data_load/row_hash.py::_normalize_for_hashing` reordered):
+1. **BEFORE** (lines 113-141 pre-fix): NFC + RTRIM on Utf8/String string_cols → Categorical → Utf8 cast at L141 (post-normalization).
+2. **AFTER** (B-262 fix): Categorical → Utf8 cast FIRST → Binary → hex cast SECOND → re-detect `string_cols` (unified set: originally-Utf8 + previously-Categorical + previously-Binary) → NFC + RTRIM single-pass on unified set.
+
+**Code change**: Single function `_normalize_for_hashing`; +35 / -24 line delta net +11; same function signature; hash invariant preserved for all dtype paths previously deterministic.
+
+**E-20 docstring**: B-262 fix comment block added inline at fix site citing: (a) prior order skipped NFC for Categorical-input strings; (b) E-20 covers physical-integer-encoding trap; (c) this fix covers NFC equivalence between Utf8 and Categorical forms; (d) hash invariant — regardless of column dtype, the same string value produces the same hash bytes after canonical NFC normalization.
+
+**Verification**:
+- `uv run pytest tests/unit/test_hash_determinism.py -v` — 12-of-12 existing tests pass (no regression on baseline hash determinism contract)
+- `uv run pytest tests/property/test_hash_stability.py -v` — 7-of-7 property tests pass (incl. `test_hash_categorical_matches_utf8_for_same_logical_values` — the originally-failing test now passes on the previously-failing Hypothesis examples)
+- Full suite: 1983 → 1985 pass (+2 from Fix 2), 14 skip, 2 fail (B218 carryover; 0 new regression)
+
+### Fix 2 — Tier 1 regression backfill (LOW WSJF 1.0 implicit)
+
+**Rationale**: Tier 1 ↔ Tier 2 feedback loop operationalization — Hypothesis-discovered counter-examples are valuable as unit-test regressions but should NOT depend on the Hypothesis cache (which may be cleared / regenerated independently of the bug being re-introduced). Pin the discovered counter-examples as explicit Tier 1 unit tests so the unit suite carries the lesson forward.
+
+**Tests added** (`tests/unit/test_hash_determinism.py` after existing E-20 `test_categorical_column_hashes_by_value`):
+1. `test_categorical_column_hashes_match_utf8_for_cjk_compat_codepoint` — pins CJK compat codepoint U+F900 `豈` Categorical-vs-Utf8 hash equivalence post-NFC normalization
+2. `test_categorical_column_hashes_match_utf8_for_trailing_whitespace` — pins single-space `' '` trailing-whitespace Categorical-vs-Utf8 hash equivalence post-RTRIM
+
+**Verification**: 14-of-14 `tests/unit/test_hash_determinism.py` tests pass (12 prior + 2 new B-262 regressions); 1983 → 1985 pass net (+2 from this fix).
+
+### Fix 3 — CURRENT_STATE.md §"Last updated" + HANDOFF.md §14 Tier 2 milestone propagation (MEDIUM)
+
+**Rationale**: Both umbrella "Last updated" labels previously ended at Wave 4.6 / Round 3 close-out narratives. Tier 2 cohort milestone (53 properties / 4 cycles / Step 11 Gate 2 4-of-4 catches / 1 production bug landed) needs propagation to umbrella trackers per `udm-progress-logger` mid-round cadence + Pitfall #9.k arithmetic-propagation Step 7 discipline.
+
+**Edits applied** (forward-only additive per D92 — PREPEND, no deletion of Wave 4.6 / Round 3 close narratives):
+- **CURRENT_STATE.md §"Last updated"**: prepended Tier 2 cohort narrative (~1.1 KB) citing 53 properties / 4 cycles / Step 11 Gate 2 specialty DELTA-B2 4-of-4 catches / B-262 production bug surface + closure / 3 new B-Ns (B-262/B-263/B-264) / 3 new P-Ns (P-17/P-18/P-19) / Tier 1 ↔ Tier 2 feedback loop operationalized. Wave 4.6 § 3.4 + Round 3 close narratives PRESERVED as "Earlier 2026-05-14 (..."
+- **HANDOFF.md §14**: prepended Tier 2 cohort narrative (~2.4 KB) with same milestone substance + 4 gap-audit findings recap + cross-ref to `_validation_log.md` 2026-05-14 entry "B-262 production bug fix + Tier 1 regression backfill + tracker cleanup". Round 3 + earlier narratives PRESERVED as "— earlier 2026-05-12 ...".
+
+### Fix 4 — B-255 outer-`~~` render-discipline drift (LOW)
+
+**Issue**: `docs/migration/BACKLOG.md:398` B-255 entry had malformed strikethrough: leading `~~**B-255** (~~🟡 Open~~ ⚫ CLOSED): **§ 3.4 ...` opened an unterminated outer strikethrough (paired with trailing `2026-05-14.~~` before the closure annotation). Canonical pattern used by B-256/B-257/B-258 is `- **B-N** (~~🟡 Open~~ ⚫ CLOSED): ~~**title**~~. body... — ⚫ CLOSED YYYY-MM-DD ...` — outer markdown wraps ONLY the title (not the B-N label or the closure annotation).
+
+**Fix applied**:
+1. Removed leading `~~` before `**B-255**` (label no longer struck through)
+2. Wrapped title in inner `~~**§ 3.4 ... scope-drift**~~` (matches B-256/B-257/B-258 pattern)
+3. Removed trailing `~~` after `Source: udm-gap-check 2026-05-14.` (no longer dangling strikethrough)
+
+**Verification**: BACKLOG.md line 398 now matches canonical pattern; no orphan `~~` markers remain.
+
+### Pitfall #9.j discipline applied (B-262 status-render flip)
+
+- **B-262** leading badge flipped `🟡 Open` → `~~🟡 Open~~ ⚫ CLOSED` matching inline closure annotation (` — ⚫ **CLOSED 2026-05-14**`)
+- Title wrapped in `~~**...**~~` per canonical pattern (B-256/B-257/B-258 alignment)
+- Closure annotation appended citing: (a) fix location `data_load/row_hash.py::_normalize_for_hashing` with operation reorder description; (b) Tier 1 regression backfill (2 new tests); (c) Tier 1 ↔ Tier 2 feedback loop operationalized; (d) pytest count 1985 pass / 14 skip / 2 fail (0 new regression); (e) cross-ref to this validation log entry
+
+### Pitfall #9.k discipline applied (test count propagation)
+
+Test count change 1983 → 1985 pass propagated to:
+- `BACKLOG.md` B-262 closure annotation cites "1985 pass / 14 skip / 2 fail (0 new regression vs 1983/14/2 baseline)"
+- `CURRENT_STATE.md` §"Last updated" Tier 2 prepend cites "1983 → 1985 pass (+2 Tier 1 regressions)"
+- `HANDOFF.md` §14 Tier 2 prepend cites same
+- This `_validation_log.md` entry cites same in Fix 1 Verification + Fix 2 Verification
+
+Step 7 regex-sweep verified — no other location references the 1983/1985 pytest counts that would need propagation.
+
+### Pitfall #9.m discipline applied (discipline-applied-to-its-own-tracker)
+
+This fix-cohort entry IS the `_validation_log.md` entry per CLAUDE.md "Validation discipline" hard rule #9 — `udm-progress-logger` discipline applied to its own work. Hard rule check: substantive completion claim WITHOUT a `_validation_log.md` row in the same session is a status mismatch (same severity as #8). This entry IS the row. Pass.
+
+### Hard-rule checks (CLAUDE.md "Validation discipline" #1-#11)
+
+- ✅ Hard rule 1 (D55 5-gate validation): N/A at per-completion fix-cycle cadence; applies at full round close-out.
+- ✅ Hard rule 2 (D56 mandatory second-pass after 🔴): no 🔴 verdict — production bug fix verified via existing test suite (12 prior tests pass) + 2 new regressions pin Hypothesis counter-examples. Independent re-verification: full pytest 1985 pass / 14 skip / 2 fail (B218 carryover; 0 new regression).
+- ✅ Hard rule 3 (D60 round close-out): N/A — mid-round per-completion cadence. Round 6 close-out runs later.
+- ✅ Hard rule 4 (D61 pillar + risk + B-N): B-262 closure mapped to NORTH_STAR Audit-grade pillar (hash chain integrity); R28 sub-class de-escalation candidate at Round 6 close-out review.
+- ✅ Hard rule 5 (D89-D91 Pattern F): N/A — mid-round fix-cycle, not round close-out.
+- ✅ Hard rule 6 (D95-D99 self-improvement skill suite): N/A — runs at round close-out.
+- ✅ Hard rule 7 (D113 POLISH_QUEUE): N/A — no new P-Ns surfaced; existing P-17/P-18/P-19 untouched.
+- ✅ Hard rule 8 (`udm-execution-classifier`): N/A — `data_load/row_hash.py` is library code (not Manual/Scheduled executable), `tests/unit/test_hash_determinism.py` is pytest-collected test (not standalone executable). Both classifications already registered.
+- ✅ Hard rule 9 (`udm-progress-logger`): this entry IS the cadence row + `CODE_BUILD_STATUS.md` Tests row test-count bump 1983→1985 propagated + BACKLOG.md B-262 ⚫ CLOSED inline.
+- ✅ Hard rule 10 (`CODE_BUILD_STATUS.md`): No code-build state transition (B-262 is bug fix to existing built module, not a new build). Test-count row bumped 1983→1985 per Pitfall #9.k Step 7.
+- ✅ Hard rule 11 (`udm-gap-check`): this fix-cohort IS the closure of 4 gap-audit findings. Pre-fix verification: gap-audit findings list (a) production bug from Tier 2 cohort entry; (b) Tier 1 regression backfill recommended in same entry; (c) CURRENT_STATE/HANDOFF §14 stale; (d) B-255 render drift. All 4 closed via this single fix-cohort.
+
+### Carryovers (open after this fix-cohort close)
+
+- **B-262** ⚫ CLOSED this entry — production bug fix landed.
+- **B-263** (🟡 Open WSJF 1.0) — § 5.1 spec wording UNCHANGED; closure target next round close-out.
+- **B-264** (🟡 Open WSJF 1.0) — `polars-hash` deps registry UNCHANGED; closure target next deps-housekeeping cycle.
+- **P-17 / P-18 / P-19** (🟡 Open) — UNCHANGED; closure target next `phase1/05_tests.md` edit cycle OR round close-out.
+- **B-218** (🟡 Open) — 2 pre-existing § 3.10 carryover failures UNCHANGED.
+- **B-259** (🟡 Open) — Step 12 sub-threshold UNCHANGED; awaits 3rd 9.i instance.
+- **B-260** (🟡 Open at MONITOR) — 9.o candidate sub-threshold UNCHANGED.
+- **B-261** (🟡 Open at MONITOR) — Step 10 mechanism evolution sub-threshold UNCHANGED.
+
+### Next-natural-action per CLAUDE.md discipline #11
+
+- **Commit + push**: this B-262 fix-cohort + Tier 1 regression backfill + 2 tracker bumps + B-255 render fix ready for commit per user-direction "commit + push" after fix-cycle lands clean. Commit message structure provided in user brief.
+
+---

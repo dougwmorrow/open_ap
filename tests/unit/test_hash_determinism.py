@@ -235,6 +235,75 @@ def test_categorical_column_hashes_by_value():
     )
 
 
+def test_categorical_column_hashes_match_utf8_for_cjk_compat_codepoint():
+    """B-262 regression: Categorical(``'豈'``) hashes identically to
+    Utf8(``'豈'``) after NFC normalization.
+
+    CJK compatibility codepoint U+F900 ('豈') NFC-normalizes to U+8C5A ('豈').
+    Pre-B-262 fix, ``_normalize_for_hashing`` ran NFC on pre-existing Utf8
+    columns BEFORE casting Categorical -> Utf8 — so Categorical-input strings
+    skipped NFC normalization entirely. Same logical string fed via Utf8 vs
+    Categorical produced different hashes.
+
+    E-20 protects against polars-hash's physical-integer-encoding trap;
+    this test pins the COMPLEMENTARY invariant — NFC equivalence across
+    dtypes. Surfaced by Tier 2 Hypothesis property test
+    (``test_hash_stability`` § 5.2) and backfilled here as a unit-test
+    regression so the Tier 1 suite carries the lesson forward without
+    depending on Hypothesis cache.
+    """
+    cjk_compat = "豈"  # 豈 (compat) — NFC-normalizes to U+8C5A
+
+    df_utf8 = pl.DataFrame({"PK": [1], "VAL": [cjk_compat]})
+    df_cat = pl.DataFrame({
+        "PK": [1],
+        "VAL": pl.Series([cjk_compat], dtype=pl.Utf8).cast(pl.Categorical),
+    })
+
+    h_utf8 = add_row_hash(df_utf8)["_row_hash"][0]
+    h_cat = add_row_hash(df_cat)["_row_hash"][0]
+
+    logger.info("Utf8(U+F900)        -> %s", h_utf8)
+    logger.info("Categorical(U+F900) -> %s", h_cat)
+
+    assert h_utf8 == h_cat, (
+        "B-262: Categorical-input CJK compat codepoint did NOT NFC-normalize "
+        "before hashing. Same logical string produced different hashes "
+        "depending on column dtype. Cast-before-NFC ordering broken."
+    )
+
+
+def test_categorical_column_hashes_match_utf8_for_trailing_whitespace():
+    """B-262 regression: Categorical(``' '``) hashes identically to
+    Utf8(``' '``) after RTRIM (E-4) normalization.
+
+    The Categorical path skipped the full string-normalization pipeline
+    (NFC + RTRIM) pre-B-262. Trailing-space-only strings produced divergent
+    hashes between Utf8 and Categorical inputs because RTRIM only ran on
+    pre-existing Utf8 columns.
+
+    Hypothesis discovered this counter-example alongside the CJK case;
+    backfilled here as a paired Tier 1 regression.
+    """
+    df_utf8 = pl.DataFrame({"PK": [1], "VAL": [" "]})
+    df_cat = pl.DataFrame({
+        "PK": [1],
+        "VAL": pl.Series([" "], dtype=pl.Utf8).cast(pl.Categorical),
+    })
+
+    h_utf8 = add_row_hash(df_utf8)["_row_hash"][0]
+    h_cat = add_row_hash(df_cat)["_row_hash"][0]
+
+    logger.info("Utf8(' ')        -> %s", h_utf8)
+    logger.info("Categorical(' ') -> %s", h_cat)
+
+    assert h_utf8 == h_cat, (
+        "B-262: Categorical-input trailing-space-only string did NOT RTRIM "
+        "before hashing. Same logical string produced different hashes "
+        "depending on column dtype. Cast-before-normalize ordering broken."
+    )
+
+
 # ---------------------------------------------------------------------------
 # SCD2-R10.2 — exclude_from_hash drops columns from the hash input.
 # ---------------------------------------------------------------------------

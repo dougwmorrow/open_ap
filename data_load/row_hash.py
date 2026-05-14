@@ -111,7 +111,42 @@ def _normalize_for_hashing(
     if float_cols:
         logger.debug("V-1: Float columns found for hash normalization: %s", float_cols)
 
+    # B-262 FIX: Cast Categorical/Binary -> Utf8 BEFORE NFC normalization.
+    # Previous order ran NFC on pre-existing Utf8 columns then cast Categorical
+    # -> Utf8 unchanged, so Categorical-input strings skipped NFC normalization
+    # (e.g. CJK compat codepoint U+F900 '豈' didn't normalize to U+8C5A '豈'
+    # when fed through a Categorical column; same string fed as Utf8 did).
+    # E-20 covers the physical-integer-encoding trap; this fix covers NFC
+    # equivalence between Utf8 and Categorical forms. Hash invariant:
+    # regardless of column dtype, the same string value produces the same
+    # hash bytes after canonical NFC normalization.
+
+    # E-20: Categorical column safety — cast to Utf8 FIRST so NFC applies.
+    cat_cols = [c for c in source_cols if df[c].dtype == pl.Categorical]
+    if cat_cols:
+        logger.warning(
+            "E-20: Categorical columns found before hashing: %s. "
+            "Casting to Utf8 to prevent physical encoding hash.",
+            cat_cols,
+        )
+        df = df.with_columns([pl.col(c).cast(pl.Utf8) for c in cat_cols])
+
+    # E-XX: Binary column safety — hex-encode to Utf8 BEFORE NFC normalization.
+    binary_cols = [c for c in source_cols if df[c].dtype == pl.Binary]
+    if binary_cols:
+        logger.warning(
+            "Binary columns found before hashing: %s. "
+            "Hex-encoding to Utf8 to prevent invalid utf8 ComputeError.",
+            binary_cols,
+        )
+        df = df.with_columns([
+            pl.col(c).bin.encode("hex").alias(c) for c in binary_cols
+        ])
+
     # V-2: Identify string columns for Unicode NFC normalization.
+    # Re-detect AFTER Categorical/Binary casts so the unified set
+    # (originally-Utf8 + previously-Categorical + previously-Binary) is
+    # NFC-normalized uniformly. This is the B-262 fix's load-bearing change.
     string_cols = {
         c for c in source_cols
         if df[c].dtype in (pl.Utf8, pl.String)
@@ -134,30 +169,6 @@ def _normalize_for_hashing(
         if source_is_oracle:
             logger.debug("E-1: Normalized empty strings to NULL for %d Oracle string columns", len(string_cols))
         logger.debug("V-2/E-4: NFC-normalized and RTRIM'd %d string columns (single pass)", len(string_cols))
-
-    # E-20: Categorical column safety.
-    cat_cols = [c for c in source_cols if df[c].dtype == pl.Categorical]
-    if cat_cols:
-        logger.warning(
-            "E-20: Categorical columns found before hashing: %s. "
-            "Casting to Utf8 to prevent physical encoding hash.",
-            cat_cols,
-        )
-        df = df.with_columns([pl.col(c).cast(pl.Utf8) for c in cat_cols])
-        string_cols = string_cols | set(cat_cols)
-
-    # E-XX: Binary column safety — hex-encode before Utf8 cast.
-    binary_cols = [c for c in source_cols if df[c].dtype == pl.Binary]
-    if binary_cols:
-        logger.warning(
-            "Binary columns found before hashing: %s. "
-            "Hex-encoding to Utf8 to prevent invalid utf8 ComputeError.",
-            binary_cols,
-        )
-        df = df.with_columns([
-            pl.col(c).bin.encode("hex").alias(c) for c in binary_cols
-        ])
-        string_cols = string_cols | set(binary_cols)
 
     # Build hash expressions — one per source column.
     hash_exprs = []
