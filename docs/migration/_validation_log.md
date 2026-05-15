@@ -7215,3 +7215,98 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated 
 **MARKDOWN_REFACTOR_PLAN.md status**: still uncommitted in working dir; waiting for user direction post-fix-acceptance to either (a) commit plan now that ALL TESTS PASS criterion is restored OR (b) re-evaluate plan scope given the demonstrated Tier 1 ↔ Tier 2 loop value (the plan's traversal-system might have implications for property-test discoverability).
 
 **No subsequent cascade Step 2 / Step 3 — this is a discrete bug-fix cycle, not a cascade invocation. Direct user direction was "Stop everything; investigate bug + plan separately"; the "separately" part means this commit is its own atomic unit; user will direct the next step.**
+
+---
+
+## 2026-05-15 -- MARKDOWN_REFACTOR_PLAN.md REVISED + research artifact landed (research-grounded + gap-audited per user 3-directive)
+
+**Trigger**: User 3-directive request: (1) "Have a research agent search how to help agents and agentic teams sift through large markdown repositories"; (2) "Use that information in our plan"; (3) "Consider any edge cases or gaps in our plan for markdown files." NOT a cascade invocation; direct user-direction work.
+
+**Selection**: Per user direction #1, spawn `udm-researcher` agent (foreground; need findings before plan synthesis); per user direction #2, integrate research findings into MARKDOWN_REFACTOR_PLAN.md; per user direction #3, walk plan independently for edge cases + gaps.
+
+**Workflow executed (4 sequential steps)**:
+
+1. **Sweep production code-file sizes for scope confirmation**: largest .py file `data_load/bcp_loader.py` 2,210 lines (well below user's original "6000+" framing). Per user clarifying directive #3 ("Specifically, we refactor markdown files"), code-file refactoring is OUT of plan scope. Logged in plan §10b.4.
+
+2. **udm-researcher agent invocation** (foreground; ~6.5 min runtime; 33 tool uses; 109,591 tokens): Authored `docs/migration/_research/agent-markdown-traversal-2026-05-15.md` (318 lines). 13 findings + 15 primary-source citations covering: Anthropic Claude Code best practices (CLAUDE.md "keep concise" guidance + subdirectory CLAUDE.md lazy-loading + skill SKILL.md 500-line cap + subagent pattern); llms.txt open standard (844K+ sites; Anthropic itself adopts; structurally equivalent to plan's INDEX.md); ETH Zurich AGENTbench research (138 Python tasks; LLM-generated context files reduce success ~3% + increase cost +20-23%; architectural overviews don't help navigation; routing-by-intent works); GitHub 2,500-repo lessons (150-200 line AGENTS.md split threshold); OpenAI Codex AGENTS.md docs; Mintlify state-of-AI March 2026 (45.3% agent traffic at doc sites); MAGI spec; Diátaxis framework; Chroma context-rot research (2,500-token cliff); Weaviate chunking strategies. Confidence: 🟡 Medium (no benchmark study directly measures internal-planning-doc corpora).
+
+3. **Plan synthesis** — applied 5 specific research-driven changes to MARKDOWN_REFACTOR_PLAN.md (470 → 525 lines):
+   - **§3.6 NEW** "Research validation" section — 5 plan validations + 5 calculus changes + counter-evidence subsection
+   - **§4.3 REVISED** Option T3 (`udm-find-canonical` skill) — verdict ELEVATED from "NICE-TO-HAVE Phase 4" to "STRONG candidate Phase 1 or 2" per native Claude Code skills mechanism
+   - **§4.5 NEW** Option T5 (`udm-context-loader` subagent) — for multi-agent Pattern E + Pattern F cycles; reduces per-cycle context cost ~50K-65K lines for 5-agent cycles
+   - **§5.1 REVISED** phased execution — Phase 1 adds `udm-find-canonical` task E; Phase 2 adds `udm-context-loader` task I; pre-commit hook DESIGN changed from "fail-if-stale" to "auto-add-if-changed" per agent-commit-compatibility evidence (research §3.6 Finding 13)
+   - **§11 EXTENDED** cross-references with research artifact + 4 primary-source URLs
+
+4. **Independent gap audit** — applied per user direction #3; surfaced in plan §10b NEW section with 4 sub-sections:
+   - §10b.1: 7 confirmed gaps (G-MR1 baseline measurement protocol / G-MR2 CLAUDE.md itself in violation per research / G-MR3 D62 CCL modification cost / G-MR4 re-archive cadence / G-MR5 generator failure modes / G-MR6 Phase 3 trigger timing / G-MR7 reviewer-burden cost analysis)
+   - §10b.2: 8 edge cases (EC-MR1 INDEX-vs-source line drift / EC-MR2 stale INDEX / EC-MR3 non-deterministic briefs / EC-MR4 Phase 3 split breaks Pattern F regex / EC-MR5 ad-hoc no-CCL sessions / EC-MR6 archive-split breaks grep / EC-MR7 GLOSSARY-vs-INDEX overlap / EC-MR8 INDEX self-violation if >500 lines)
+   - §10b.3: 4 untested assumptions (A-MR1 agent CCL discipline adoption / A-MR2 hook latency / A-MR3 ETH Zurich generalizability / A-MR4 udm-find-canonical invocation frequency)
+   - §10b.4: 4 out-of-scope confirmations (.py refactor / Snowflake docs / semantic search / llms-full.txt)
+   - 5 NEW open questions Q-8 through Q-12 added to §10 reflecting gap-audit findings
+
+**Deliverables landed (2 new files + plan revisions)**:
+
+| File | Action | Lines | Purpose |
+|---|---|---|---|
+| docs/migration/_research/agent-markdown-traversal-2026-05-15.md | NEW | 318 | udm-researcher artifact; 13 findings + 15 primary sources; canonical research backing for plan §3.6 + §10b |
+| docs/migration/MARKDOWN_REFACTOR_PLAN.md | REVISED (uncommitted before this session; this session adds research synthesis + gap audit) | 470 → 525 | Phase-1-through-4 markdown refactor + agent traversal system plan; now research-grounded + gap-audited; status 🟡 Plan-draft awaiting pipeline-lead |
+| docs/migration/CURRENT_STATE.md L7 | THOROUGH UPDATE | +~20 | Full event narrative |
+| docs/migration/HANDOFF.md § 14 | THOROUGH UPDATE | +~5 | Abbreviated narrative |
+| docs/migration/CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE | +~5 | Doc-only event |
+| docs/migration/_validation_log.md | This entry | +~85 | Event audit trail |
+
+**Test counts**: doc-only commit; no test changes.
+
+**Pytest verification (sanity)**:
+
+| Layer | Pre-commit | Post-commit |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2311 / 62 / 0 | **2311 / 62 / 0** |
+| Delta | -- | 0 (doc-only; expected) |
+
+**Cumulative B-N closures**: 31 (unchanged; plan revision only).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UNTOUCHED-AS-EXPECTED (no B-N closures/opens; plan PROPOSES 5 new open questions Q-8-Q-12 but no B-N tracking yet — pipeline-lead approval gates that) |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | None | UNTOUCHED-AS-EXPECTED |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | Plan §10 Q-5 PROPOSES a D-N candidate ("INDEX-front documentation discipline") but no lock this commit | UNTOUCHED-AS-EXPECTED — pipeline-lead approval gates |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | Plan §10b.2 PROPOSES EC-MR1-EC-MR8 but plan-internal scratch-pad, NOT formal M/S/I/N/P/G/D/F/V series additions | UNTOUCHED-AS-EXPECTED — formal series addition gated on plan approval + execution |
+| Risk change? | Plan §10b.1 PROPOSES R-MR1-R-MR9 but plan-internal scratch-pad, NOT formal RISKS.md additions | UNTOUCHED-AS-EXPECTED — formal R-N addition gated on plan approval + execution |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | None | UNTOUCHED-AS-EXPECTED |
+| Executable artifact? | None (plan + research artifacts; no scripts) | UNTOUCHED-AS-EXPECTED |
+| Spec edit? | YES — plan doc revised (470 → 525 lines) | UPDATED — plan deliverable IS the artifact under revision |
+| Sub-class formalization? | None | UNTOUCHED-AS-EXPECTED |
+| New skill/agent? | Plan PROPOSES udm-find-canonical (Phase 1) + udm-context-loader (Phase 2) but no authoring this commit | UNTOUCHED-AS-EXPECTED — skill authoring gated on plan approval |
+
+**Step 10 application**: ✅ N/A — no new public surface; plan + research are Markdown deliverables.
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched)
+- Pitfall #9.k OK (pytest 2311/62/0 unchanged; B-N count 31 unchanged; plan line count 470 → 525 cited consistently in CURRENT_STATE + HANDOFF + CODE_BUILD_STATUS + this entry)
+- Pitfall #9.l OK (Agent re-read research artifact verbatim BEFORE synthesis; Grep'd current plan structure to identify edit insertion points; canonical-re-read discipline applied)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional walked explicitly above)
+- Pitfall #9.n OK N/A (no new public surface)
+- Pitfall #10 (Tier 0/3 boundary) OK N/A (no test changes)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 26 unpushed commits ahead of master pre-this-commit (27 after this commit lands; HOLD push). 31 cumulative B-N closures (unchanged this commit; plan revision only). 0 still-open net-new.
+
+**Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; Q-1 through Q-12 answered (especially Q-11 udm-context-loader subagent approval + Q-12 CLAUDE.md trim approval); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown (1.0 baseline measurement + 1.1 archive cutoff + 1.2 archive cascade + 1.3 INDEX.md authoring + 1.4 per-file INDEX sidecars + 1.5 D62 CCL Stage 0 update + 1.5b skill-prompt cascade enumeration + 1.6 CLAUDE.md trim + 1.7 Pattern E independent review).
