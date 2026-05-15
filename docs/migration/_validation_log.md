@@ -7309,4 +7309,103 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
 
 **Branch state**: round-6-post-merge-tracking at 26 unpushed commits ahead of master pre-this-commit (27 after this commit lands; HOLD push). 31 cumulative B-N closures (unchanged this commit; plan revision only). 0 still-open net-new.
 
+---
+
+## 2026-05-15 -- MARKDOWN_REFACTOR_PLAN.md 2nd-revision + 2nd research artifact (§13 Option A deep-dive per user 4th-directive)
+
+**Trigger**: User 4-part directive request: (1) "If we have Option A from MARKDOWN_REFACTOR_PLAN.md then we should think of names to call each of these plans"; (2) "Think about agents that need to understand scope and context within the scope. We can come up with a table of contents that will help agents with discovering the proper markdown file"; (3) "Research how to help agents discover context, how to help agents find the information they are looking for"; (4) "What other research should be performed to help with discoverability for context that the agent needs to be aware of." NOT a cascade invocation; direct user-direction work.
+
+**Workflow executed (3 sequential steps)**:
+
+1. **udm-researcher agent invocation #2** (foreground; ~9.5 min runtime; 41 tool uses; 110,527 tokens): Authored `docs/migration/_research/agent-discoverability-2026-05-15.md` (541 lines). 17 primary-source citations covering: CodeCompass arxiv 2602.20048 (Navigation Paradox; 99.4% coverage with explicit links vs 78.2% grep-only); Formal Architecture Descriptors arxiv 2604.13108 (intent.lisp; 100% task accuracy + 33-44% reduction in exploration steps); Kubernetes content organization (semantic naming); Linux kernel docs (subsystem-per-directory); Lander Analytics agent knowledge base (00-start-here.md + numbered-prefix navigation); grep-vs-RAG hierarchy (yage.ai + Lander); qmd agent search; Mintlify state-of-AI; meta-repo pattern; nested AGENTS.md; context-engineering best practices (packmind); Zylos codebase intelligence; MyST cross-reference proposal; GitHub 2,500-repo lessons (re-cited from research #1); Harvard data management file naming; SIGPLAN repositories-as-knowledge-factories. 4 finding sections (A naming / B TOC / C discoverability / D cross-references) + 8 meta-research candidates (E). Confidence: 🟡 Medium-High.
+
+2. **Plan synthesis** — applied to MARKDOWN_REFACTOR_PLAN.md (525 → 708 lines; +183 lines); NEW §13 added with 6 sub-sections:
+   - **§13.1 Naming convention proposal** — `NN_SCOPE_{qualifier}.md` pattern; concrete keep-vs-split table for 9 UDM files (`_validation_log.md` archive split confirmed; `03_DECISIONS.md` proposed phase0/phase1/phase2_onwards split; `phase1/01_database_schema.md` etc. KEEP per <3K-line threshold; `CLAUDE.md` TRIM to <300 lines per Anthropic guidance); 4 anti-patterns rejected (part-N / date-for-reference / no-scope-prefix / sub-sub-directories)
+   - **§13.2 TOC structure proposal** — two-tier (root INDEX.md routing manifest + per-file scope statement); concrete skeletons for both
+   - **§13.3 Cross-reference preservation MANDATORY constraint** — Navigation Paradox per CodeCompass; binding precondition for Phase 3 splits; 4-step implementation (pre-split inventory + per-split rewrite via `tools/rewrite_cross_refs.py` + post-split verification + slug-stability check); failure mode prevented
+   - **§13.4 Heading-slug stability policy** — D-number/B-number/R-number as FIRST WORD in headings (e.g., `## D15 — Idempotency Ledger` → slug `d15-...`); audit before split per P3 meta-research; 4 best-practice / anti-pattern examples
+   - **§13.5 Meta-research candidates** — 8 topics prioritized P1-P8 (P1 Navigation Paradox UDM topology mapping / P2 token cost measurement / P3 heading-slug audit / P4 intent.lisp investigation / P5 multi-agent CCL distribution / P6 Snowflake docs / P7 auto-compaction / P8 Diátaxis); recommended execution order: P2 NOW + P1+P3+P4 BEFORE Option A approval + P5 Phase 2 + P6+P8 Phase 4+
+   - **§13.6 Plan calculus changes from §13** — 3 cascade changes: §3.1 Option A verdict revised + §6 Gate 1 routing-vs-structural sub-check + §10 Q-13 through Q-17
+
+3. **Cascade edits propagated**:
+   - §3.1 Option A verdict text updated to cite §13 deep-dive + §13.3 cross-ref preservation precondition
+   - §6 Gate 1 extended with routing-vs-structural validation + Navigation Paradox 🔴 BLOCKER for splits
+   - §10 added Q-13 through Q-17 (5 new pipeline-lead questions derived from §13.5 meta-research)
+   - §11 cross-references extended with research artifact #2 + 4 new primary-source URLs (CodeCompass + intent.lisp + Kubernetes + Linux kernel docs)
+   - Header status updated to "2nd revision" with summary of (a) §3.6 / (b) §10b / (c) §13 / (d) Q-8 through Q-17 additions; cumulative research-grounding noted (32 findings + 32 primary sources across 2 udm-researcher artifacts)
+   - **Section numbering**: §13 was first authored as §14 (after §11 + §12) but renumbered to §13 to keep sequence tight (no skipped numbers between §10b and §13)
+
+4. **Self-referential check**: Plan now 708 lines is approaching the 500-line SKILL.md cap discussed in §3.6 Finding 7. Below the §13.1 1,000-line split-trigger threshold. If plan grows further, should split per its own §13.1 naming convention into `MARKDOWN_REFACTOR_PLAN.md` (sections §1-§9) + `MARKDOWN_REFACTOR_PLAN_appendix.md` (sections §10b + §13 + §14). Self-referential note added to §13 preamble.
+
+**Deliverables landed (2 new + 5 modified)**:
+
+| File | Action | Lines | Purpose |
+|---|---|---|---|
+| docs/migration/_research/agent-discoverability-2026-05-15.md | NEW | 541 | udm-researcher artifact #2; 17 primary sources; canonical research backing for plan §13 |
+| docs/migration/MARKDOWN_REFACTOR_PLAN.md | REVISED (2nd revision) | 525 → 708 | NEW §13 + cascade edits to §3.1 + §6 + §10 + §11 + header |
+| docs/migration/CURRENT_STATE.md L7 | THOROUGH UPDATE | +~25 | Full event narrative |
+| docs/migration/HANDOFF.md § 14 | THOROUGH UPDATE | +~10 | Abbreviated narrative |
+| docs/migration/CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE | +~12 | Doc-only event |
+| docs/migration/_validation_log.md | This entry | +~115 | Event audit trail |
+
+**Test counts**: doc-only commit; no test changes.
+
+**Pytest verification (sanity)**:
+
+| Layer | Pre-commit | Post-commit |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2311 / 62 / 0 | **2311 / 62 / 0** |
+| Delta | -- | 0 (doc-only; expected) |
+
+**Cumulative B-N closures**: 31 (unchanged; plan revision + research only).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UNTOUCHED-AS-EXPECTED (no B-N closures/opens; plan PROPOSES Q-13 through Q-17 candidates but pipeline-lead approval gates B-N tracking; once approved, P1-P8 meta-research candidates would each open as B-Ns) |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | None | UNTOUCHED-AS-EXPECTED |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | Plan §13.4 PROPOSES heading-slug stability policy as binding rule (Q-17); D-N candidate IF approved | UNTOUCHED-AS-EXPECTED — pipeline-lead approval gates |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | None (plan proposes naming/TOC/cross-ref conventions; not edge cases) | UNTOUCHED-AS-EXPECTED |
+| Risk change? | Plan §13.3 Navigation Paradox is a NEW risk class for Phase 3 splits but plan-internal scratch-pad until Phase 3 actually executes | UNTOUCHED-AS-EXPECTED — formal R-N addition gated on Phase 3 execution |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | None | UNTOUCHED-AS-EXPECTED |
+| Executable artifact? | Plan PROPOSES `tools/rewrite_cross_refs.py` (§13.3) + `tools/regenerate_md_indexes.py` (Phase 2.1) but no authoring this commit | UNTOUCHED-AS-EXPECTED — script authoring gated on plan approval |
+| Spec edit? | YES — plan doc revised (525 → 708 lines; new §13) | UPDATED — plan deliverable IS the artifact under revision |
+| Sub-class formalization? | None | UNTOUCHED-AS-EXPECTED |
+| New skill/agent? | None YET (plan PROPOSES udm-find-canonical + udm-context-loader from prior revision; §13 doesn't add new skills) | UNTOUCHED-AS-EXPECTED — skill authoring gated on plan approval |
+
+**Step 10 application**: ✅ N/A — no new public surface; plan + research are Markdown deliverables.
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched)
+- Pitfall #9.k OK (pytest 2311/62/0 unchanged across all trackers; B-N count 31 unchanged; plan line count 525 → 708 cited consistently in CURRENT_STATE + HANDOFF + CODE_BUILD_STATUS + this entry; section §14 → §13 renumber documented)
+- Pitfall #9.l OK (Agent re-read research artifact #2 verbatim BEFORE synthesis; verified existing plan structure to identify edit insertion points; cross-checked §3.6 Finding 7 self-referentially against the plan's own growing line count; canonical-re-read discipline applied)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional walked explicitly above)
+- Pitfall #9.n OK N/A (no new public surface)
+- Pitfall #10 (Tier 0/3 boundary) OK N/A (no test changes)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 27 unpushed commits ahead of master pre-this-commit (28 after this commit lands; HOLD push). 31 cumulative B-N closures (unchanged this commit). 0 still-open net-new.
+
+**Cumulative session-research note**: 2 udm-researcher artifacts now exist for this plan: `agent-markdown-traversal-2026-05-15.md` (research #1; 13 findings + 15 sources; primary basis for §3.6 + §10b) + `agent-discoverability-2026-05-15.md` (research #2; 17 findings sub-divided into 4 sections + 8 meta-research candidates; primary basis for §13). Combined 30 findings + 32 primary sources (some overlap). Both are confidence 🟡 Medium-High.
+
+**Plan status**: still 🟡 Plan-draft awaiting pipeline-lead. Now has 17 open questions Q-1 through Q-17 (12 added today across 2 revisions). The single most-impactful question for next-step action is Q-13 (P2 token cost measurement) — 15-minute task with no infrastructure; informs Phase 1 priority sequencing immediately.
+
+**Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; answers Q-1 through Q-17 (especially Q-13 P2 token measurement to ground the optimization target empirically); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown.
+
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; Q-1 through Q-12 answered (especially Q-11 udm-context-loader subagent approval + Q-12 CLAUDE.md trim approval); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown (1.0 baseline measurement + 1.1 archive cutoff + 1.2 archive cascade + 1.3 INDEX.md authoring + 1.4 per-file INDEX sidecars + 1.5 D62 CCL Stage 0 update + 1.5b skill-prompt cascade enumeration + 1.6 CLAUDE.md trim + 1.7 Pattern E independent review).

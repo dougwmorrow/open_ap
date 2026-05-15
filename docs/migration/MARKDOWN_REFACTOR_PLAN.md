@@ -1,6 +1,6 @@
 # Markdown Refactor + Agent Traversal System — Plan
 
-**Status**: 🟡 Plan-draft authored 2026-05-15 — awaiting pipeline-lead review before any execution. **REVISED 2026-05-15** with: (a) research findings synthesis per §3.6 (udm-researcher artifact `_research/agent-markdown-traversal-2026-05-15.md`; 13 findings; 15 primary sources); (b) independent gap audit per §10b (7 confirmed gaps + 8 edge cases + 4 untested assumptions + 4 out-of-scope confirmations); (c) 5 new open questions Q-8 through Q-12 added to §10.
+**Status**: 🟡 Plan-draft authored 2026-05-15 — awaiting pipeline-lead review before any execution. **REVISED 2026-05-15 (2nd revision)** with: (a) research findings synthesis per §3.6 (udm-researcher artifact `_research/agent-markdown-traversal-2026-05-15.md`; 13 findings; 15 primary sources); (b) independent gap audit per §10b (7 confirmed gaps + 8 edge cases + 4 untested assumptions + 4 out-of-scope confirmations); (c) Option A deep-dive per §13 (NEW; ~250 lines covering naming convention proposals + TOC structure + Navigation Paradox cross-reference preservation MANDATORY constraint + heading-slug stability policy + 8 meta-research candidates); (d) 10 new open questions Q-8 through Q-17 added to §10. Backing research: 2 udm-researcher artifacts at `_research/` (32 cumulative findings; 32 primary sources; medium-high confidence on directional patterns).
 
 **Owner**: Pipeline lead. Contributor: parent-agent authoring this plan; no execution work landed.
 
@@ -91,7 +91,7 @@ Split each >1,000-line file into topic-based sub-files. Examples:
 | Ongoing-maintenance cost | 🟡 MEDIUM — author discipline to put new content in the right sub-file |
 | Discoverability gain | 🟢 HIGH — each sub-file is small + semantically self-contained |
 
-**Verdict**: Avoid as Phase 1. Reserve for Phase 3 (targeted splits where Phase 1+2 prove insufficient).
+**Verdict (REVISED 2026-05-15 per §13 deep-dive)**: Avoid as Phase 1. Reserve for Phase 3 (targeted splits where Phase 1+2 prove insufficient) — AND requires §13.3 cross-reference preservation as a binding precondition. The Navigation Paradox (research §C-2; arxiv 2602.20048) makes "see D15" plain-text references dead-on-split unless rewritten as `[D15](03_DECISIONS_phase1.md#d15)`. See §13.1 for naming convention + §13.2 for TOC structure + §13.3 for the binding cross-ref preservation rule + §13.4 for slug-stability policy.
 
 ### §3.2 Option B — Index-front (existing files keep; index sidecars added)
 
@@ -339,6 +339,8 @@ Each phase must pass these gates BEFORE merging to master:
 ### Gate 1 — Cross-reference integrity
 - For each newly-authored INDEX entry: assert the cited line range matches the source file's current state (script: `tools/verify_md_index_consistency.py`)
 - For each EXISTING cite in the repo (e.g., `phase1/05_tests.md § 8.2 L488`): assert it still resolves to the expected heading (Pattern F Layer 1 extension)
+- **NEW (per §13.6 plan calculus change #2)**: INDEX.md MUST be written as routing-by-intent ("if your task involves X, read file Y") NOT as structural-by-description ("file Y contains sections A/B/C"). Validation: Pattern E reviewer agent inspects INDEX.md against the routing-vs-structural distinction; flags structural-style entries as 🟡 for revision per ETH Zurich research §3.6 Finding 5 (structural overviews increase agent inference cost +20-23% with success rate -3%).
+- **NEW (per §13.3 Navigation Paradox constraint)**: For Phase 3 splits ONLY — verify all inbound cross-references to moved content are rewritten as relative Markdown links pointing to the new target file. Pattern F audit script extension at Phase 2.4 MUST verify this; failure on any unconverted plain-text reference = 🔴 BLOCKER.
 
 ### Gate 2 — QA / Pattern E independent reviewer
 - Spawn `udm-design-reviewer` agent + `udm-checks-and-balances` skill against the refactor commit
@@ -439,6 +441,8 @@ Phase 3 is invoked ONLY IF Phase 1+2 fail metrics 1 OR 2 by >25%.
 
 **Q-12 (NEW per gap §10b.1 G-MR2)**: Approve CLAUDE.md (project root, 715 lines) audit + content-trimming at Phase 1.6 per Anthropic's "Keep it concise" guidance (research §3.6 Finding 1)? Target: <300 lines; move "sometimes-relevant" content to skills. Highest single-file leverage since CLAUDE.md loads at EVERY agent startup.
 
+**Q-13 through Q-17** — see §13.6 (5 new questions derived from §13.5 meta-research candidates). Summary: Q-13 (token cost measurement P2 immediately) / Q-14 (Navigation Paradox UDM topology mapping P1 before Option A) / Q-15 (intent.lisp investigation P4 at Phase 1 design) / Q-16 (auto-compaction interaction P7 at Phase 1 design) / Q-17 (heading-slug stability policy §13.4 as binding rule for ALL future heading authoring).
+
 ---
 
 ## §10b. Independent gap audit (added 2026-05-15)
@@ -506,10 +510,189 @@ For audit-trail completeness, items confirmed OUT of scope:
 - `GLOSSARY.md` § "Where each code family lives (one-line index)" L601 — partial precedent for the master INDEX; merge-vs-separate decision deferred to gap §10b.2 EC-MR7 / open question Q-9
 - `MULTI_AGENT_GUIDE.md` § Canonical Context Load — modified by Phase 1.5
 - **`docs/migration/_research/agent-markdown-traversal-2026-05-15.md`** (added 2026-05-15) — udm-researcher artifact with 13 findings + 15 primary sources; canonical research backing for §3.6 + §10b
+- **`docs/migration/_research/agent-discoverability-2026-05-15.md`** (added 2026-05-15; follow-on) — udm-researcher artifact with 17 primary sources; canonical research backing for §13 (naming conventions + TOC design + Navigation Paradox + cross-reference preservation + 8 meta-research candidates); supersedes any pre-research scope-naming intuitions in earlier plan revisions
 - Anthropic Claude Code best practices: https://code.claude.com/docs/en/best-practices (cited in §3.6 Findings 1-2 + 11)
 - Anthropic Claude Code skills: https://code.claude.com/docs/en/skills (cited in §3.6 Findings 3 + 7)
-- llms.txt open standard: https://llmstxt.org/ (cited in §3.6 Finding 4; structural template for INDEX.md)
+- llms.txt open standard: https://llmstxt.org/ (cited in §3.6 Finding 4 + §13.2; structural template for INDEX.md)
 - ETH Zurich AGENTS.md research: https://www.infoq.com/news/2026/03/agents-context-file-value-review/ (cited in §3.6 Finding 5; counter-evidence for naive structural overviews)
+- **CodeCompass Navigation Paradox**: https://arxiv.org/html/2602.20048v1 (cited in §13.3; primary basis for cross-reference preservation MANDATORY constraint; 99.4% coverage with explicit links vs 78.2% grep-only)
+- **Formal Architecture Descriptors / intent.lisp**: https://arxiv.org/html/2604.13108 (cited in §13.5 P4 meta-research; LLM-generated structured descriptors achieve 100% task accuracy + 33-44% reduction in exploration steps)
+- Kubernetes content organization: https://kubernetes.io/docs/contribute/style/content-organization/ (cited in §13.1 Finding A-1; semantic-functional naming convention)
+- Linux kernel docs: https://docs.kernel.org/ (cited in §13.1; subsystem-per-directory semantic naming pattern)
+
+---
+
+## §13. Option A deep-dive — naming + TOC + discoverability (added 2026-05-15)
+
+Per user 4th-directive request: think more rigorously about Option A (split-by-section) — what to NAME each split file + how agents DISCOVER the right file + meta-research questions. Backed by `docs/migration/_research/agent-discoverability-2026-05-15.md` (17 primary sources; 4 finding sections + 8 meta-research candidates).
+
+**Important context for §13**: this section adds ~200 lines to a plan already at 525 lines. Self-referential note: the plan itself is approaching the 500-line SKILL.md cap discussed in §3.6 Finding 7. If §13 grows further, OR if the plan crosses ~700 lines total, it should split per its own §13.1 naming convention into `MARKDOWN_REFACTOR_PLAN.md` (sections §1-§9) + `MARKDOWN_REFACTOR_PLAN_appendix.md` (sections §10b + §13 + §13). For now (~725 lines projected), keep as one file.
+
+### §13.1 Naming convention proposal for split files
+
+Research-validated pattern: **`NN_SCOPE_{qualifier}.md`** — semantic-functional naming where `NN` is sort prefix, `SCOPE` is the original filename base, `qualifier` is the semantic scope boundary.
+
+**Industry evidence (research §A)**:
+- Kubernetes uses `topic-subtopic.md` (semantic, hyphen-separated; no Part-N)
+- Linux kernel uses subsystem-per-directory + `index.rst` per directory (semantic at every level)
+- Lander Analytics agent-knowledge-base recommends numbered prefixes (`00-start-here.md` / `10-`, `20-`, `30-`)
+- **Universal absence**: NO source uses `part-N` or `section-X-Y` naming for split planning docs; structural names are an anti-pattern (Navigation Paradox arxiv 2602.20048: filenames participate in grep — structural names are search-invisible)
+- Harvard data management: leading-zero sort keys (`001`, `002`) for sort stability at scale
+
+**Concrete proposals for UDM split files** (binding once Option A executes):
+
+| Original file | Proposed splits | Trigger | Rationale |
+|---|---|---|---|
+| `_validation_log.md` (7,129 lines) | `_validation_log.md` (live; last 30 days) + `_validation_log_archive_2026-04.md` (pre-2026-04-12 entries) | Existing archive policy at L14-23 | Time-based correct for append-only logs; semantic split would break append-only invariant |
+| `03_DECISIONS.md` (3,219 lines) | `03_DECISIONS_phase0.md` (D1-D50; foundational architecture) + `03_DECISIONS_phase1.md` (D51-D95; pipeline + validation discipline) + `03_DECISIONS_phase2_onwards.md` (D96+; security + naming + deployment) | If exceeds 5,000 lines OR Phase 1+2 metrics insufficient | D-range in name aids grep; phase qualifier aids routing intent |
+| `phase1/01_database_schema.md` (2,167 lines) | KEEP as single file; navigate via H2 headers within | Below 3,000-line threshold + clear H2 structure exists | Per Finding B-2: well-structured 2,000-line file may be MORE navigable than 4 × 500-line files with flat content |
+| `phase1/06_deployment.md` (1,846 lines) | KEEP as single file; navigate via H2 headers | Below 3,000-line threshold | Same rationale as above |
+| `phase1/03_core_modules.md` (1,724 lines) | KEEP as single file; navigate via H2 headers | Below 3,000-line threshold | Same rationale |
+| `phase1/04_tools.md` (1,628 lines) | KEEP as single file | Below 3,000-line threshold | Same rationale |
+| `05_RUNBOOKS.md` (1,545 lines) | KEEP as single file | Below 3,000-line threshold; RB-numbers are grep-precise | Same rationale |
+| `BACKLOG.md` (547 lines) | KEEP as single file | Already small; B-numbers are grep-precise | Splitting by B-number range creates orphan-reference risk per Navigation Paradox |
+| `CLAUDE.md` (715 lines) | TRIM (per gap §10b.1 G-MR2 + research §3.6 Finding 1) — target <300 lines; move "sometimes-relevant" content to skills | Anthropic explicit guidance: "bloated CLAUDE.md files cause Claude to ignore your actual instructions" | Highest-leverage single-file change since CLAUDE.md loads at every agent startup |
+
+**Anti-patterns (REJECTED based on research §A-3 + §A-4)**:
+- ❌ `03_DECISIONS_part_1.md` / `03_DECISIONS_part_A.md` / `03_DECISIONS_section_4_2.md` — communicates sequence/position, NOT scope; grep-invisible
+- ❌ `03_DECISIONS_2026-05.md` — date-based naming for reference material (date becomes stale); date-based correct only for changelogs and append-only logs
+- ❌ `D1-D50.md` (no scope prefix) — drops the original-file-base identifier; grep for "DECISIONS" loses the file
+- ❌ Sub-sub-directories (`docs/migration/decisions/phase0/D1-D50.md`) — adds depth without scope clarity; per gap §10b.2 EC-MR4 may break Pattern F regex patterns
+
+### §13.2 TOC / INDEX.md structure proposal (research-grounded)
+
+**Two-tier structure** per research §B (validated by llms.txt + "compass not encyclopedia" + Lander Analytics + Zylos):
+
+**Tier 1 — Root `INDEX.md` (routing manifest; Stage 0 of CCL)**:
+- Format: llms.txt-compatible (H1 project name + blockquote summary + sections with linked files + intent descriptions)
+- NOT a comprehensive TOC of all sub-sections (research §B-1 anti-pattern: nested TOC-of-TOCs)
+- Each entry follows: `[filename](path)` — "If your task involves X, read this. If your task involves Y, skip and read Z."
+- Stays under 500 lines per research §3.6 Finding 7 (SKILL.md cap)
+- Carries `last_regenerated_at: YYYY-MM-DD HH:MM` line at top (per gap §10b.2 EC-MR2: agents check freshness)
+
+**Tier 2 — Per-file scope statement (within each file at the top)**:
+- One paragraph immediately after H1 stating: scope + "see also" pointers to siblings + quick-find guidance
+- H2 headers act as within-file navigation primitives (research §B-2: agents navigate via H2 after arriving at file)
+- D-number / B-number / R-number headings use the pattern `## D15 — {title}` (D-number as FIRST WORD; per §13.4 slug-stability policy)
+
+**Concrete INDEX.md skeleton** (illustrative; actual content per Phase 1.3):
+
+```markdown
+# UDM Documentation Index
+
+> Intent-based routing for agents performing Canonical Context Load (CCL) Stage 0.
+> Read the entry that matches your task; skip others. Routing-by-intent only — NOT a structural map.
+
+**Last regenerated**: 2026-05-XX HH:MM
+
+## Stage 0 reads (every CCL invocation)
+
+- [CURRENT_STATE.md](CURRENT_STATE.md) — "Where is the project right now?" Read for in-flight context, recent events, run-state.
+- [HANDOFF.md](HANDOFF.md) — "How do I pick up this project mid-flight?" Read for fresh-agent onboarding context.
+- [GLOSSARY.md](GLOSSARY.md) — "What does this code/acronym mean?" Read on-demand for unfamiliar identifiers.
+
+## Decisions (D-numbers; canonical home for D-N rationale)
+
+- [03_DECISIONS_phase0.md](03_DECISIONS_phase0.md) — D1-D50 foundational architecture (greenfield, SCD2, tokenization, parity). Read if your task references D1-D50 OR involves architectural rationale.
+- [03_DECISIONS_phase1.md](03_DECISIONS_phase1.md) — D51-D95 pipeline design + validation discipline + round close-out. Read if your task references D51-D95.
+- [03_DECISIONS_phase2_onwards.md](03_DECISIONS_phase2_onwards.md) — D96+ security model + SQL naming + deployment. Read if your task references D96+.
+
+## Edge cases (M/S/I/N/P/G/D/F/V series)
+
+- [04_EDGE_CASES.md](04_EDGE_CASES.md) — All edge case series. Read if your task validates against documented edge cases per D55 Gate 3.
+
+## Validation trail
+
+- [_validation_log.md](_validation_log.md) — LIVE entries (last 30 days). Most agents read this for recent validation history.
+- [_validation_log_archive_2026-04.md](_validation_log_archive_2026-04.md) — ARCHIVE (pre-2026-04-12). Read only if your task involves a historical validation event.
+
+## [... continue per file family ...]
+```
+
+**Per-file scope statement skeleton** (illustrative; binding for split files):
+
+```markdown
+# Decisions — Phase 0 (D1-D50)
+
+**Scope**: D1 through D50, covering foundational architecture (greenfield deployment, SCD2 strategy,
+tokenization vault, parity baseline, Automic gate coordination). For D51-D95, see
+[03_DECISIONS_phase1.md](03_DECISIONS_phase1.md). For D96+, see
+[03_DECISIONS_phase2_onwards.md](03_DECISIONS_phase2_onwards.md).
+
+**Quick-find**: All D-numbers in this file have H2-level headings (`## D15 — {title}` pattern).
+Use grep `^## D15` to locate a specific decision.
+
+**Cross-references**: D-numbers cited from other files use the pattern
+`[D15](03_DECISIONS_phase0.md#d15)`. If you arrive here from a citation, the fragment anchor
+points directly to the section.
+```
+
+### §13.3 Cross-reference preservation MANDATORY constraint (Navigation Paradox)
+
+**This is a binding constraint for ANY Option A split execution** per research §C-2 (CodeCompass arxiv 2602.20048; 99.4% coverage with explicit cross-references vs 78.2% grep-only).
+
+**Rule**: Every inbound reference to content that moves to a new file MUST be updated to a relative Markdown link pointing to the new file location. "See D15" as plain text becomes a dead reference after splitting; it MUST become `[D15](03_DECISIONS_phase1.md#d15)` (or whichever target file + fragment anchor).
+
+**Implementation requirements**:
+1. **Pre-split inventory**: Before splitting any file, run `grep -rn "D15\|D17\|D55"` (and similar D-number / B-number / R-number / RB-N / SP-N / Pattern code patterns) across `docs/migration/` to enumerate all inbound references. Capture the inventory in `_research/cross-ref-inventory-pre-split-<date>.md`.
+2. **Per-split rewrite**: For each file being split, rewrite all outbound references to point to the new target file. Use a script (`tools/rewrite_cross_refs.py`) to handle this mechanically; no manual rewrites.
+3. **Post-split verification**: Re-run the inventory; assert all references resolve to a file that exists. Pattern F audit script extension (Phase 2.4) MUST verify this.
+4. **Slug-stability check**: Verify all fragment anchors (`#d15`) resolve to a heading in the target file with that exact slug.
+
+**Failure mode this prevents**: Agent reads a runbook citing "D15"; tries to follow the reference; D15 has moved to `03_DECISIONS_phase1.md`; no link exists; agent grep for "D15" works (D-number is grep-precise); agent grep for the D-number title may fail if the title was rewritten. The Navigation Paradox: grep alone is 78.2% effective; explicit links push that to 99.4%.
+
+**Cost of this constraint**: Mechanical (script-driven); estimated ~30 minutes for the script + ~10 minutes per file split. Negligible vs the cost of breaking Pattern F audit + cross-doc cascade per D93.
+
+### §13.4 Heading-slug stability policy
+
+**Rule**: Headings that participate in cross-references MUST use the convention `## {ID} — {title}` where `{ID}` is the first word (D-number, B-number, R-number, RB-N, SP-N, etc.).
+
+**Why**: Markdown auto-generates fragment anchors from headings (lowercase + hyphens). If the heading is `## Idempotency Ledger Decision (D15)`, the slug becomes `idempotency-ledger-decision-d15` — non-portable; rename breaks all inbound `#idempotency-ledger-decision-d15` links. If the heading is `## D15 — Idempotency Ledger Decision`, the slug becomes `d15-idempotency-ledger-decision` — but the FIRST WORD `d15` enables `#d15` as a stable shorter anchor (research §D-1).
+
+**Best practice for stable slugs**:
+- ✅ `## D15 — Idempotency Ledger` → slug `d15-idempotency-ledger`; cite as `#d15` (using the first-word anchor on platforms that match prefix; OR `#d15-idempotency-ledger` for full slug)
+- ✅ `## B-271 — FP-precision percentile fix` → slug `b-271-fp-precision-percentile-fix`; cite as `#b-271`
+- ❌ `## Idempotency Ledger (D15)` — D15 not first; slug-cite to `#d15` requires platform-specific prefix matching
+- ❌ `## D15: Idempotency Ledger (Locked 2026-05-09)` — date in heading; rename on supersession breaks inbound links
+
+**Audit before split**: Per meta-research Priority 3 (research §E), audit all headings in `docs/migration/` for first-word-stable patterns BEFORE executing splits. Headings that don't match the convention should be normalized first.
+
+### §13.5 Meta-research candidates (8 topics; prioritized per research §E)
+
+Per user direction "What other research should be performed to help with discoverability?" — research surfaced 8 candidate topics. Each annotated with rationale, effort, payoff, recommended timing. Open as B-Ns once pipeline-lead approves Option A execution.
+
+| Priority | Topic | Effort | Payoff | Timing |
+|---|---|---|---|---|
+| **P1** | Navigation Paradox applied to UDM cross-reference topology — map the D→B→R→RB→SP graph; test split-vs-unsplit agent navigation; quantify hidden-dependency risk | Medium | **HIGH** — changes split constraints | BEFORE Option A splits begin |
+| **P2** | Token cost measurement of current CCL — count actual tokens in 7-11 mandatory CCL reads; ground the optimization target empirically | Low (15 min) | **HIGH** — informs Phase 1 priority sequencing | IMMEDIATELY (no infrastructure needed) |
+| **P3** | Heading-slug stability audit — grep for heading patterns across `docs/migration/`; identify mutable headings; normalize before split | Low | Medium — informs cross-ref strategy | BEFORE splits |
+| **P4** | Formal Architecture Descriptors (intent.lisp) for UDM corpus — generate auto-descriptor; test against sample queries; compare to hand-authored INDEX.md | Medium | **HIGH** — could replace Phase 1 INDEX authoring | Phase 1 design decision |
+| **P5** | Multi-agent CCL cost distribution — test Pattern E cycle with vs without `udm-context-loader` subagent; measure quality loss from summary-vs-direct read | Medium | **HIGH** — quantifies subagent pattern value | Phase 2 |
+| **P6** | Snowflake docs conventions for AI agents (Phase 5) — targeted Snowflake docs structure search; relevance for Cortex / Snowpark / COPY INTO | Low | Medium — Phase 5 only | At Phase 5 planning |
+| **P7** | Auto-compaction interaction with CCL reads — test Anthropic's auto-compaction behavior on CCL Read calls; does compaction summarize and lose precision? | Medium | Medium — affects Phase 3 split necessity | Phase 1 design decision |
+| **P8** | Diátaxis-quadrant labeling for CCL routing — label files by quadrant; test routing-skill effectiveness | Low | Low — incremental at best | Phase 4 (after Phases 1-3 validated) |
+
+**Recommended execution order**:
+- **NOW (today, no infrastructure)**: P2 (token cost measurement)
+- **BEFORE Option A approval**: P1 + P3 + P4 (these inform the split design)
+- **Phase 1 design**: incorporate P4 + P7 findings
+- **Phase 2**: P5
+- **Phase 4+**: P6 + P8
+
+### §13.6 Plan calculus changes from §13 deep-dive (consolidated)
+
+Three changes propagate back to existing plan sections:
+
+**1. To §3.1 Option A**: revised verdict — Option A IS executable when needed (per Phase 3) but requires the §13.3 cross-reference preservation constraint as a HARD precondition. Without explicit link preservation, splitting becomes a Navigation Paradox failure mode (research §C-2). Update §3.1 verdict text: "Avoid as Phase 1. Reserve for Phase 3 (targeted splits where Phase 1+2 prove insufficient) — AND requires §13.3 cross-reference preservation as a binding precondition."
+
+**2. To §6 Quality gates**: add Gate 1 sub-check — "INDEX.md MUST be written as routing-by-intent ('if task = X, read Y') NOT as structural-by-description ('file Y contains sections A/B/C'). Validation: Pattern E reviewer agent inspects INDEX.md against the routing-vs-structural distinction; flags structural-style entries as 🟡 for revision."
+
+**3. To §10 Open questions**: add 5 new questions Q-13 through Q-17 derived from meta-research candidates:
+- **Q-13**: Approve P2 (token cost measurement) immediately, BEFORE Phase 1 work begins?
+- **Q-14**: Approve P1 (Navigation Paradox UDM topology mapping) BEFORE any Option A split?
+- **Q-15**: Approve P4 (intent.lisp / Formal Architecture Descriptors investigation) at Phase 1 design?
+- **Q-16**: Approve P7 (auto-compaction interaction with CCL) at Phase 1 design?
+- **Q-17**: Approve §13.4 heading-slug stability policy as a binding rule for ALL future heading authoring (not just splits)?
 
 ---
 
