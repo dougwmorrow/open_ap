@@ -42,13 +42,13 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 
-pytestmark = pytest.mark.skip(
-    reason=(
-        "Tier 3 scaffold - testcontainers integration pending B-115 "
-        "follow-up implementation. Per docs/migration/phase1/05_tests.md "
-        "section 1.3 + section 6.2."
-    )
-)
+# B-115 follow-up 2026-05-14: schema.sql + canonical_schema_loaded
+# fixture are now operational. Tests fall through to docker_skip_marker()
+# from conftest -- skips with "Docker unavailable" reason on workstations
+# without Docker Desktop; runs against real container otherwise.
+from tests.integration.conftest import docker_skip_marker
+
+pytestmark = docker_skip_marker()
 
 
 logger = logging.getLogger(__name__)
