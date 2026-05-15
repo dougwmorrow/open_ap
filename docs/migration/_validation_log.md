@@ -5896,3 +5896,164 @@ python -m tools.diagnose_stage_bronze_gap --source DNA --table ACCT --include-st
 ```
 
 Output classifies each PK in (Stage CDC ∖ Bronze active) into 5 theory categories with per-theory operational recommendations. Once you have the output, bring it back to this session for analysis of the specific PKs surfaced.
+
+## 2026-05-14 — PR #1 ⚫ MERGED to master — Phase 1 ~85% milestone
+
+**Trigger**: User confirmation "I've merged the commit and completed the PR. I will test tomorrow. Let us continue with the work related to our remaining rounds or phases. Reflect on progress completed thus far. Update any markdown files so all progress is properly tracked."
+
+**Branch state**:
+
+- `master` advanced to commit `155746e` (merge commit) — incorporates the 17-commit branch `phase-1-round-3-build-campaign` (b73220c → adbf8ca)
+- Local + remote feature branch retained (not deleted; user-discretion)
+- New feature branch `round-6-post-merge-tracking` opened for this turn's tracker-update commit
+
+**The 17-commit arc — full inventory** (chronological):
+
+| # | Commit | Subject | Phase of work |
+|---|---|---|---|
+| 1 | `a08c092` | build(round-3): Wave 0 + Waves 1-2 — 9 modules, +531 tests, 0 regression | Round 3 Wave 0-2 |
+| 2 | `38d8964` | build(round-3): Waves 3-5 close Round 3 at 17/17 — +1063 tests, 0 regression | Round 3 Wave 3-5 |
+| 3 | `ebe398d` | build(round-4): Round 4.1 (5 tools) + Wave 4.6 (§ 3.4) — 9/11 BUILT | Round 4 |
+| 4 | `24d5b81` | chore(round-4): session gap-audit inline fixes — 5 findings actioned | Round 4 gap-check |
+| 5 | `5ffe200` | chore(round-4-closeout): apply 3 user-approved deltas + close B-258 | Round 4 close-out |
+| 6 | `b5cd106` | build(round-6): Tier 2 property tests — 53 properties, 4 inline cycles, 1 production bug surfaced | Round 6 Tier 2 |
+| 7 | `0a377ab` | fix(round-6): B-262 NFC-before-Categorical-cast hash ordering + tracker cleanup | B-262 production fix |
+| 8 | `f2ccdf8` | docs(phase-1): tracker updates + SESSION_2026-05-13_BUILD_LOG.md consolidating record | Tracker consolidation |
+| 9 | `571f364` | chore: post-tracker-update gap-audit fixes — 3 reviewer findings closed | Tracker gap-check |
+| 10 | `146d97a` | build(round-6): close 8 B-items inline + B58 verify_tier0_drift full impl | Round 6 § 4.7 |
+| 11 | `9444f12` | chore(round-6): post-146d97a gap-audit — open B-266 + reconcile trackers | Gap-check |
+| 12 | `a224a5d` | chore(round-6): reflection-gap fix sweep — 3 recurrences fixed; B-261 3rd-event triggered | Reflection sweep |
+| 13 | `a4941ef` | fix(round-6): close B-266 — verify_tier0_drift.py recognizes project-convention naming + tools_ translation | B-266 closure |
+| 14 | `339aedc` | chore(round-6): gap-check fix sweep on a4941ef — G1 + G2 fixed | Gap-check |
+| 15 | `9b3007c` | build(round-6): 3-tool parallel cohort — Snowflake smoke + SCD2-from-Parquet smoke + Stage/Bronze diagnostic | 3-tool cohort |
+| 16 | `6eae9fb` | chore(round-6): gap-check on 9b3007c — close G6 + open B-268 + B-269 | Gap-check |
+| 17 | `adbf8ca` | docs(round-6): operator testing blueprint for the 3-tool cohort + production bug | Blueprint |
+
+**Aggregate metrics**:
+
+| Metric | Pre-session | Post-session | Delta |
+|---|---|---|---|
+| Pytest pass | 395 | **2281** | +1886 (+477%) |
+| Pytest skip | varied | 10 | — |
+| Pytest fail | 2 (B-218) | 2 (B-218) | 0 net (carryover only) |
+| Test files | ~30 | ~85 | +55 |
+| Module lines | varied | ~37,000+ added | substantial |
+| Round 3 M-modules built | 0 | 17 | +17 (100%) |
+| Round 4 CLI tools built | 0 | 9 | +9 of 11 (82%; 2 blocked) |
+| Tier 2 properties | 0 | 53 | +53 |
+| Round 6 follow-up tools | 0 | 4 | verify_tier0_drift + 3-tool cohort |
+| Production bugs surfaced + fixed | 0 | 1 | B-262 (NFC ordering) |
+| Operator blueprint | none | 618 lines | PHASE_1_TESTING_BLUEPRINT.md |
+
+**B-N inventory at PR merge** (curated; not exhaustive):
+
+| B-N | Title | Status | Disposition |
+|---|---|---|---|
+| B-58 | verify_tier0_drift.py stub→full impl | ⚫ CLOSED 2026-05-14 | Full impl landed at 146d97a; drift report operational |
+| B-65 | release_snowflake_key inline spec | ⚫ CLOSED 2026-05-14 | Pre-existing impl found at credentials_loader.py |
+| B-68 | sensitive_data_filter thread-safety gate | ⚫ CLOSED 2026-05-14 | Code edit + 3 Tier 1 tests at 146d97a |
+| B-70 | ledger_step(metadata=...) DeprecationWarning | ⚫ CLOSED 2026-05-14 | Code edit + 2 Tier 1 tests at 146d97a |
+| B-72 | LedgerStep.prior_result None safety | ⚫ CLOSED 2026-05-14 | Already addressed in M9 build |
+| B-87 | SIGINT/exit-130 convention | ⚫ CLOSED 2026-05-14 | Annotation-only |
+| B-88 | --dry-run / --apply mutex | ⚫ CLOSED 2026-05-14 | Annotation-only |
+| B-90 | AUTOMIC_RUN_ID actor heuristic | ⚫ CLOSED 2026-05-14 | Annotation-only |
+| B-103 | decrypt_token DecryptDenied docstring | ⚫ CLOSED 2026-05-14 | Already addressed in M5 build |
+| B-104 | log_retention_cleanup batch-size 50K→4K | ⚫ CLOSED 2026-05-14 | Code edit at 146d97a |
+| B-118 | Hypothesis nightly profile | ⚫ CLOSED 2026-05-14 | Profile added in Tier 2 cohort + nightly added at 146d97a |
+| B-258 | Step 11 Gate 2 elevation | ⚫ CLOSED 2026-05-14 | DELTA-B2 v1.1.0 elevation applied |
+| B-262 | NFC-before-Categorical-cast PRODUCTION BUG | ⚫ CLOSED 2026-05-14 | Hash-ordering fix + 2 Tier 1 regression tests at 0a377ab |
+| B-266 | verify_tier0_drift convention reconciliation | ⚫ CLOSED 2026-05-14 | 218-line enhancement + 13 Tier 1 tests at a4941ef |
+| B-115 | testcontainers fixture | 🟡 Open | Tier 3 scope; deferred to Tier 3 build start |
+| B-211 | unittest.mock._patch_dict monkey-patch review | 🟡 Open | R1a implementation engineer review |
+| B-213 | python-dotenv runtime dep declaration | 🟡 Open | Deps housekeeping cycle |
+| B-214 | sys.modules registration pattern standardization | 🟡 Open | R1 close-out polish sweep |
+| B-217 | B02 `sa` placeholder per-server DBA migration | 🟡 Open | Sysadmin + DBA coordination |
+| B-218 | § 3.10 log_retention_cleanup residual test alignments | 🟡 Open | 2 of 6 residuals carryover; reduced scope |
+| B-219 | B215-class author/test-alignment-iteration pattern | 🟡 Open | Pattern formalization at next round close-out |
+| B-260 | sub-class 9.o candidate (discipline-formalization-without-application-mechanism) | 🟡 Open at MONITOR | 2-event sub-threshold; 3rd-event triggers formalization |
+| B-261 | Step 10 mechanism-enforcement evolution candidate | 🟡 Open — 3rd-event TRIGGER fired | Mechanism-evolution work eligible at next round close-out per D95 + D98 |
+| B-263 | spec § 5.1 wording for tokenize_pii_columns deterministic-vs-idempotent | 🟡 Open | Single paragraph edit at next round close-out |
+| B-264 | polars-hash dev-env deps registry | 🟡 Open | Add to pyproject.toml |
+| B-265 | phase1/04_tools.md § 3.10 L1274 doc-default sync | 🟡 Open | Single cell edit |
+| B-267 | server_parity_verifier 3rd-class spec-name drift | 🟡 Open | 1-cycle fix in verify_tier0_drift._resolve_module_name |
+| B-268 | Parallel-agent pytest reporting anomaly | 🟡 Open | Agent template + parent workflow extension at next round close-out |
+| B-269 | Step 10 producer-directive needs CLI_* registry update sub-step | 🟡 Open | Skill prompt MINOR semver delta at next round close-out |
+
+**Empirical validations strengthened by this campaign**:
+
+1. **Step 11 Gate 2 specialty discipline (canonical-spec verbatim citation)** — 14-of-14 cumulative cross-session catches across Round 3 + Round 4 + Round 6 cohorts. DELTA-B2 v1.1.0 elevation 2026-05-14 was warranted by empirical signal.
+
+2. **Step 10 producer discipline (CLAUDE.md Structure + GLOSSARY post-build)** — applied at producer time in 4 successive cohorts post-formalization (Wave 4.6 + 3-tool cohort + B-266 closure + post-merge). B-261 3-event trigger fired for mechanism-evolution work (Step-10-application-verifier sub-agent before gap-check) at next round close-out.
+
+3. **B-226 Tier-α/β/γ/δ calibration directive (CLAUDE.md § 12 hard rule 12)** — empirically validated via 11+ consecutive 0-inline-cycle builds across Round 3 Wave 3+4+5 + Round 4.1 + Wave 4.6 + 3-tool cohort. Pre-build tier estimation discipline is operationalized at sub-agent prompt layer.
+
+4. **Tier 2 property tests as production-bug surfacer** — Hypothesis surfaced B-262 on first run; D81 budget profile per § 5.10 R5C1-5 advisory empirically validated. Tier 1 ↔ Tier 2 feedback loop operationalized (counter-examples backfilled as Tier 1 regression tests).
+
+5. **Parent-agent gap-reflection-as-a-pass pattern** — 7 successive commits in this session where parent-agent gap-reflection found at least 1 fresh discipline recurrence (G6 was 3rd-time deferral; G8a + G8b new B-N candidates). 7-commit evidence base anchors B-261 mechanism-evolution priority.
+
+**Open runway for next forward work (post-merge)**:
+
+| Item | Effort | Value | Status |
+|---|---|---|---|
+| **B-267** server_parity_verifier 3rd-class drift fix | 1 cycle | Closes residual RED in drift report (13 → 12) | 🟡 Open |
+| **§ 8 trivial spec polish** (9 stale B-items batch closure) | 1 cycle | Audit-trail cleanup; closes long-tail | 🟡 Open |
+| **Tier 3 integration test scaffolds** | 2-3 cycles | Foundation for future Tier 3 with testcontainers | 🟡 Open |
+| **B-218 fix** (2 long-standing carryover fails) | 1-2 cycles | "ALL TESTS PASS" milestone | 🟡 Open |
+| **Tier 4 crash-injection bodies** | 2 cycles | Round 5 § 6 implementation | 🟡 Open |
+| **Tier 5 quarterly drill docs** | 1 cycle | Round 5 § 8 implementation | ⬜ |
+| **B-261 mechanism-evolution work** | 1 cycle | Step-10-application-verifier; closes producer-side discipline gap | 🟡 3rd-event triggered |
+
+**Operator-blocked (cannot proceed without user action)**:
+
+- Round 4 § 3.9 `process_ccpa_deletion.py` — gated on B81 SP-12 deployment to General.ops
+- Round 4 § 3.11 `alert_dispatcher.py` — gated on B82 ops-channel client + Phase 0 deliverable
+- Phase 0 deliv 0.1 (D103 team meeting), 0.2/0.3 (data-side), 0.4 (vault DBA review), 0.17 (capacity baseline on real data)
+
+**Phase 2 (Pilot Cutover; spec 🟢 Locked) is the next major scope** — blocked on R02 Round 0.5 spike execution (engineer staffing accepted; spike not yet run). Phase 2 R1 → R2 → R3 → R4 sequence per `phase2/00_phase_overview.md`.
+
+**Phases 3-6 deep-dive plans deferred to just-in-time authoring** per B-186 (Phase 3 plan at P2R4 close-out; Phase 4 plan at P3 close-out; Phase 5 plan gated by B-191 Snowflake-test-conclusion ~mid-June 2026).
+
+**Tracker edits this turn (4 files; new feature branch `round-6-post-merge-tracking`)**:
+
+| File | Change | Delta |
+|---|---|---|
+| `docs/migration/CURRENT_STATE.md` | L7 narrative prepended with PR-merged milestone + branch strategy + open-runway summary | +1,898 chars |
+| `docs/migration/HANDOFF.md` | §14 narrative prepended with same milestone + reading-order pointer to PHASE_1_TESTING_BLUEPRINT.md | +1,786 chars |
+| `docs/migration/CODE_BUILD_STATUS.md` | L12 narrative prepended with master-state snapshot + status-transition eligibility note | +930 chars |
+| `docs/migration/_validation_log.md` | This entry — PR merge milestone with full 17-commit inventory + B-N status table + runway map | +this entry chars |
+
+**Pytest baseline**: Unchanged at 2281 pass / 10 skip / 2 fail (B-218 carryover; tracker-only commit; no code touched).
+
+**Convention check**:
+
+| Convention | Pass/Fail | Evidence |
+|---|---|---|
+| Pitfall #9.j (badge ↔ inline-annotation alignment) | ✅ | No B-N badge changes |
+| Pitfall #9.k (arithmetic-propagation drift) | ✅ | No counts touched (tracker-narrative only) |
+| Pitfall #9.l (canonical re-read before authoring) | ✅ | Used `git show HEAD:` to read trackers before editing |
+| Pitfall #9.m (discipline applied to own tracker) | ✅ | This entry IS the application — milestone logged in same session as the milestone event |
+| Pitfall #9.n (convention-registration of new artifacts) | ✅ N/A | No new public surface |
+| CLAUDE.md hard rule 9 (`udm-progress-logger` mid-round) | ✅ | This entry IS the application |
+| Git Safety Protocol (no destructive ops) | ✅ | Feature branch retained; new branch created via `git checkout -b`; no force-push, no reset, no branch -D |
+
+**Cross-references**:
+
+- `master` @ `155746e` (merge commit)
+- `phase-1-round-3-build-campaign` @ `adbf8ca` (retained; merged)
+- `round-6-post-merge-tracking` @ this commit (new branch for tracker-only updates)
+- `docs/migration/PHASE_1_TESTING_BLUEPRINT.md` (operator validation sequence; user runs tomorrow)
+- B-58 / B-262 / B-266 / B-267 / B-268 / B-269 (closure cycle)
+- D75 / D76 / D77 / D78 / D80 / D81 / D92 / D95 / D98 / D103 / B-226 / B-214 / B-228 (load-bearing decisions)
+
+**Operator next step (user-side, tomorrow)**:
+
+Per `docs/migration/PHASE_1_TESTING_BLUEPRINT.md`:
+1. Phase 0: pre-PR verification (pytest 2281 check) — except PR is already merged so this becomes "verify local master matches origin/master"
+2. Phase 2 (highest-value): run diagnostic against production CDC/SCD2 bug
+3. Phase 3: Snowflake smoke against trial credentials
+4. Phase 4: SCD2-from-Parquet smoke
+5. Bring diagnostic output back to chat session for analysis
+
+**Meta-observation — session arc shape**:
+
+This 17-commit campaign followed a build → gap-check → fix → commit pattern with high fidelity. Every build cohort produced its own gap-check pass, which surfaced fresh discipline recurrences, which got tracked as B-Ns or fixed inline. The pattern produced 1-3 fresh signal items per commit across the entire arc. Strong empirical anchor for B-261 mechanism-evolution priority (Step-10-application-verifier sub-agent BEFORE gap-check would shift the lag from post-commit reflection to producer-time validation; would reduce gap-check-cycle count from ~7 per major cohort to ~3).
