@@ -7800,4 +7800,137 @@ Cumulative findings: ~80 (across all artifacts; some overlap). Cumulative primar
 
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md §17 + `_research/gap-audit-synthesis-2026-05-15.md` for the 5 BLOCKERS + 3 CRITICAL failure-mode mitigations + 8 SERIOUS + 6 POLISH items; decides whether to authorize the 3 remaining pre-sign-off fixes (B-3 + B-4 + B-5) inline OR delegate to next session; then signs off Plan-final → 🟢 Locked. Phase 1 begins per §7.1 with F9.1 atomic-cohort + F1.1 two-phase-commit + F5.1 pass-through-verbatim mitigations applied at task definition.
 
+---
+
+## 2026-05-15 -- Multi-agent evidence-verification + mechanical-fix wave (3 parallel agents) — all 3 remaining BLOCKERS CLOSED inline + 3 CRITICAL mitigations APPLIED + plan §18 phase breakdown added
+
+**Trigger**: User 8th-directive 3-part request:
+1. "Are the gaps or edge cases backed by any evidence?"
+2. "Break down the effort into phases. Use a multi-agent team to help."
+3. "If all looks good, proceed with your recommended next steps."
+
+NOT a cascade invocation; direct user-direction work with conditional execute on evidence verification.
+
+**Workflow executed (2 waves)**:
+
+**Wave 1 (3 parallel general-purpose agents; ~5 min wall-clock)**:
+
+- **Agent A — Evidence verification of 3 remaining BLOCKERS**: Read each cited source verbatim; classify each claim ✅/🟡/🔴 evidenced; propose concrete actions. Output: `_research/blocker-evidence-verification-2026-05-15.md` (281 lines).
+  - **B-3 ✅ FULLY EVIDENCED**: `verify_cascade.py::default_scan_paths()` verbatim L381-405 — 17 hardcoded paths + `phase1/*.md` glob; ZERO `_archive/` reference; ZERO recursive globbing. 5-line unified diff drafted.
+  - **B-4 🟡 PARTIALLY EVIDENCED**: gap-audit's "3 conflicting rules" framing was WRONG — `_validation_log.md` L12-19 + `NEW_REPO_STARTER_TEMPLATE.md` L206-217 are bit-for-bit semantically equivalent ONE policy; "30/>30/90" are 3 ATTRIBUTES of same policy (90=trigger, 30=retention, >30=cutoff predicate) NOT 3 competing rules. Real gap is just "literal cutoff date not stamped in §7.1 task 1.1". Pipeline-lead binary decision (accept default 2026-04-15 vs revise retention window).
+  - **B-5 🟡 PARTIALLY EVIDENCED**: count correct at 24 unresolved; "17 of 24 unclassified" arithmetic was off — reality is 0 of 24 explicitly classified. 24-row classification table authored: 4 🔴 BLOCKING (Q-1/Q-2/Q-12/Q-23) + 8 🟡 DESIGN + 12 ⚪ DEFERRABLE. Convergent verdict with synthesis's "4 questions actually block".
+
+- **Agent B — F9.1+F1.1+F5.1 mitigation patches**: Author ready-to-apply inline edits with exact text + insertion points + acceptance criteria. Output: `_research/critical-failure-mitigation-patches-2026-05-15.md` (130 lines).
+  - F9.1 patch: 13-line insert before §5.1 L303 (atomic-cohort gate; 2 reject conditions; 2-layer Pattern F + round-close-out verification)
+  - F1.1 patch: 24-line insert at §7.1 task 1.2 L375 (table-row update + 6-step two-phase-commit procedure with `os.replace()` POSIX+Win32 portable + SHA-256 verify + .tmp suffix + stale-file detection at script startup)
+  - F5.1 patch: 7-line insert at §15.2 L778 + 4-line insert at §16.5 L970 (`verbatim_excerpts` brief-schema field for 4 content categories: Do-NOT / Pitfall #9.X / binding D-N status / R-N risk header)
+
+- **Agent C — Phased execution breakdown**: Author 8 phases A-H with summary table + per-phase scope/tasks/effort/dependencies/acceptance/risk/sign-off + critical-path analysis + recommended sequencing. Output: `_research/execution-phase-breakdown-2026-05-15.md` (427 lines).
+  - Phase A (pre-sign-off cleanup) → B (pre-execution mitigations) → C (sign-off ceremony) → D (Phase 1 execution) → E (Phase 2 tooling) → F (conditional file splits) → G (conditional polish) → H (long-term governance)
+  - Total mandatory effort A-D: ~5-8 hours active work / 1.5-3 cycles wall-clock
+  - Critical path: A → B → C (sign-off gate) → D
+  - Parallelization opportunities: A+B in single commit (saves 30 min); D.3+D.4+D.5 as parallel subagents (saves 2-3 hours); H.1-H.4 as parallel subagents (saves 1.5 hours)
+
+**Wave 2 (parent agent; sequential)**: Apply Wave 1 outputs as inline fixes.
+
+**6 inline fixes APPLIED THIS COMMIT**:
+
+| # | Fix | Source | Apply location |
+|---|---|---|---|
+| 1 | B-3 verify_cascade.py 5-line patch | Agent A | `tools/verify_cascade.py::default_scan_paths()` |
+| 2 | B-4 §7.1 task 1.1 cutoff date stamp | Agent A | `MARKDOWN_REFACTOR_PLAN.md` §7.1 task 1.1 |
+| 3 | B-5 §10.A Q-N classification table (24 rows) | Agent A | `MARKDOWN_REFACTOR_PLAN.md` §10.A NEW |
+| 4 | F9.1 atomic-cohort gate | Agent B | `MARKDOWN_REFACTOR_PLAN.md` §5.1 (before existing Phase 1 bullet) |
+| 5 | F1.1 two-phase-commit procedure | Agent B | `MARKDOWN_REFACTOR_PLAN.md` §7.1 task 1.2 |
+| 6 | F5.1 verbatim_excerpts brief schema | Agent B | `MARKDOWN_REFACTOR_PLAN.md` §15.2 Pattern (d) sub-bullet 5 + §16.5 anti-patterns NEW |
+
+**Plus brief §18 phase breakdown reference added** (43 lines; cites Agent C's 427-line research artifact for full detail; summary table + critical-path + parallelization opportunities + recommended sequencing inline).
+
+**Plan status flipped 🟡 Plan-final → 🟡 Plan-final-cleanup-complete**. Header status updated.
+
+**Pipeline-lead's remaining work reduced from "review 24 questions" to "answer 4 binary 🔴 BLOCKING questions"** (Q-1 approve Phase 1 / Q-2 accept 2026-04-15 cutoff / Q-12 approve CLAUDE.md trim to <300 / Q-23 approve 6-rule hygiene as binding). After 4 yes/no/redirect answers → 🟢 Locked + Phase 1 begins per §7.1 task breakdown WITH F9.1 atomic-cohort gate enforced + F1.1 two-phase-commit procedure documented + F5.1 verbatim_excerpts schema established.
+
+**Deliverables landed (3 NEW research + plan revised + 1 code edit + 4 trackers)**:
+
+| File | Action | Lines | Purpose |
+|---|---|---|---|
+| docs/migration/_research/blocker-evidence-verification-2026-05-15.md | NEW | 281 | Wave 1 Agent A verification (3 BLOCKERS) |
+| docs/migration/_research/critical-failure-mitigation-patches-2026-05-15.md | NEW | 130 | Wave 1 Agent B mitigation patches |
+| docs/migration/_research/execution-phase-breakdown-2026-05-15.md | NEW | 427 | Wave 1 Agent C 8-phase breakdown |
+| tools/verify_cascade.py | MODIFIED (5-line patch) | +5 | B-3 fix: default_scan_paths() globs _archive/*.md |
+| docs/migration/MARKDOWN_REFACTOR_PLAN.md | REVISED (6th revision) | 1072 → 1135 | §5.1 + §7.1 + §10.A + §15.2 + §16.5 + §18 + header |
+| docs/migration/CURRENT_STATE.md L7 | THOROUGH UPDATE | +~40 | Full event narrative |
+| docs/migration/HANDOFF.md § 14 | THOROUGH UPDATE | +~12 | Abbreviated narrative |
+| docs/migration/CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE | +~18 | Code+plan event |
+| docs/migration/_validation_log.md | This entry | +~140 | Event audit trail |
+
+**Test counts**: 1 production code edit (verify_cascade.py 5-line additive patch; guarded by archive_dir.exists()); no test changes.
+
+**Pytest verification (sanity)**:
+
+| Layer | Pre-commit | Post-commit |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2320 / 62 / 0 | **2320 / 62 / 0** |
+| Delta | -- | 0 (verify_cascade.py edit additive + guarded; no test impact) |
+
+**Cumulative B-N closures**: 31 (unchanged this commit; B-272/B-273/B-274 candidates have empirical verification + mechanical fixes applied inline — pipeline-lead can formalize closures on review per "reflect and identify + execute" scope).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UNTOUCHED-AS-EXPECTED (no formal B-N closures; though 3 candidates B-272/273/274 fixes are applied inline this commit — pipeline-lead can formalize closure annotations on review) |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | None (verify_cascade.py edit is internal to existing function) | UNTOUCHED-AS-EXPECTED |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | None | UNTOUCHED-AS-EXPECTED |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | None (gap-audit findings remain plan-internal scratch-pad until pipeline-lead reviews; B-3 closes future-Phase-1.0 audit-coverage gap which could promote to formal edge case at Phase 1 close-out) | UNTOUCHED-AS-EXPECTED |
+| Risk change? | None new in RISKS.md (B-3 fix de-risks Pattern F audit blind-spot but not yet formal R-N entry) | UNTOUCHED-AS-EXPECTED |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | §10.A added cleanly + §18 reference added cleanly + cross-references resolve | UPDATED — within plan, not separate POLISH_QUEUE artifact |
+| Executable artifact? | tools/verify_cascade.py edited (existing scheduled artifact); change is additive bugfix | UPDATED — existing artifact behavior extended, not new artifact |
+| Spec edit? | YES — plan revised (1072 → 1135 lines; +63 from 6 inline fixes + §18 reference) + 3 NEW research artifacts | UPDATED |
+| Sub-class formalization? | None | UNTOUCHED-AS-EXPECTED |
+| New skill/agent? | None | UNTOUCHED-AS-EXPECTED |
+
+**Step 10 application**: ✅ N/A — no new public surface; verify_cascade.py edit is internal to existing function `default_scan_paths()` (already in CLAUDE.md surface or covered as part of tools/verify_cascade.py existing surface).
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched; 3 candidates B-272/273/274 ready for pipeline-lead formalization on review)
+- Pitfall #9.k OK (pytest 2320/62/0 unchanged across all 5 canonical trackers; plan line count 1072 → 1135 cited consistently; cumulative research artifact count 15 cited consistently; 4 binary 🔴 BLOCKING questions consistently identified across plan + synthesis + verification)
+- Pitfall #9.l OK (Agent A re-read tools/verify_cascade.py L381-405 verbatim + read all 3 cutoff source citations verbatim + read plan §10 Q-N inventory verbatim BEFORE producing verdicts; canonical-re-read discipline applied empirically)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional walked explicitly above; SELF-REFERENTIAL acknowledgment via plan §17 self-violation acknowledgment from prior commit + this commit's 6 fixes are partial-application of #17 SERIOUS issues + POLISH items)
+- Pitfall #9.n OK N/A (no new public surface)
+- Pitfall #10 (Tier 0/3 boundary) OK N/A (no test changes; tier discipline maintained)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 31 unpushed commits ahead of master pre-this-commit (32 after this commit lands; HOLD push). 31 cumulative B-N closures (unchanged this commit). 0 still-open net-new.
+
+**Multi-agent execution patterns reinforced AGAIN**: 5th consecutive successful 3-parallel-agent invocation this session (cross-domain Q1+Q2+Q3 + em-dash+token+phase-breakdown + producer/adversarial/consistency gap audits + verify+mitigate+phase-breakdown). §16.5 anti-pattern "3 is the limit" empirically validated 5th time. Per §17.6 + §16.5 reinforcement: the 3-perspective-orthogonal-agents-with-convergent-synthesis pattern is the project-validated template for periodic deep-dive audits (NOT per-commit pattern).
+
+**Cumulative session research cohort**: 15 artifacts now exist for this plan effort:
+1-5. Original 5 udm-researcher artifacts (agent-markdown-traversal + agent-discoverability + llm-training + cross-ref-agent + web-crawler)
+6. udm-researcher #6 (em-dash test) — actually a tool-output artifact
+7. P0 empirical: ccl-baseline (token measurement)
+8-10. Wave-prior gap audits (producer + adversarial + consistency)
+11. Wave-prior synthesis
+12-14. Wave-current evidence-verification + mitigation-patches + phase-breakdown
+15. Wave-current synthesis (this entry IS the synthesis-equivalent for the verify+fix wave; no separate synthesis artifact since the 3 outputs are mechanically applied not consolidated)
+
+**Plan status**: still 🟡 Plan-final-cleanup-complete — all 5 BLOCKERS closed (2 prior commit; 3 this commit) + all 3 CRITICAL mitigations APPLIED inline; pipeline-lead's remaining work is **4 binary 🔴 BLOCKING question answers** (Q-1/Q-2/Q-12/Q-23 per §10.A). After 4 yes/no/redirect answers → 🟢 Locked + Phase 1 begins per §7.1 task breakdown WITH all mitigations enforced.
+
+**Next-natural-action**: pipeline-lead reads plan §10.A Q-N classification table; answers 4 binary 🔴 BLOCKING questions (Q-1 / Q-2 / Q-12 / Q-23); plan flips 🟡 Plan-final-cleanup-complete → 🟢 Locked; Phase 1 begins per §7.1 task breakdown (with F9.1 atomic-cohort gate per §5.1 + F1.1 two-phase-commit per §7.1 task 1.2 + F5.1 verbatim_excerpts per §15.2 Pattern (d) all enforced at task definition time). Phase D execution per §18 phase breakdown — D.0 prep + D.1+D.2 atomic cohort + D.3+D.4+D.5 parallel subagent cohort + D.6 Pattern E independent review.
+
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; Q-1 through Q-12 answered (especially Q-11 udm-context-loader subagent approval + Q-12 CLAUDE.md trim approval); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown (1.0 baseline measurement + 1.1 archive cutoff + 1.2 archive cascade + 1.3 INDEX.md authoring + 1.4 per-file INDEX sidecars + 1.5 D62 CCL Stage 0 update + 1.5b skill-prompt cascade enumeration + 1.6 CLAUDE.md trim + 1.7 Pattern E independent review).

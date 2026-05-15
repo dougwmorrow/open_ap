@@ -1,6 +1,6 @@
 # Markdown Refactor + Agent Traversal System — Plan
 
-**Status**: 🟡 **Plan-final** (was Plan-draft) — research-grounded + empirical-validation-complete; pipeline-lead §12 sign-off is the SINGLE remaining gate before 🟢 Locked. **REVISED 2026-05-15 (4th revision)** with: (a) §3.6 research synthesis #1; (b) §10b independent gap audit; (c) §13 Option A deep-dive (research #2); (d) §15 cross-domain synthesis (research #3-5; 3 parallel artifacts); (e) **§16 long-term maintenance + governance (NEW)** addressing user Q1-Q3 directives; (f) **EMPIRICAL VALIDATION COMPLETE** — Q-22 em-dash test resolved via `tools/test_github_slug.py` + `_research/em-dash-slug-test-2026-05-15.md` (binding revision: colon-form `## D15: Title` mandatory); Q-13 token cost measurement resolved via `tools/measure_ccl_overhead.py` + `_research/ccl-baseline-2026-05-15.md` (CCL Stage 1+2 = 362K tokens = 181% of 200K window; `_validation_log.md` alone = 115% of window; archive cascade promoted to Phase 1.0 immediate priority); (g) 19 cumulative open questions Q-8 through Q-26 (Q-13 + Q-22 RESOLVED; 17 remaining for pipeline-lead). Backing research: **6 udm-researcher artifacts** + **2 empirical-test deliverables** at `_research/` + `tools/` (~50 cumulative findings; ~70 primary sources; medium-high confidence + 2 P0 empirical results). Plan now ~1080 lines — recommend split at next refactor cycle. Companion: `NEW_REPO_STARTER_TEMPLATE.md` (greenfield template per Q-24).
+**Status**: 🟡 **Plan-final-cleanup-complete** (was Plan-final pre-cleanup) — research-grounded + empirical-validation-complete + 3 critical-failure mitigations APPLIED inline + 3 BLOCKERS CLOSED inline (B-3 verify_cascade.py glob fix; B-4 §7.1 task 1.1 literal cutoff date 2026-04-15; B-5 §10.A Q-N classification table 4 🔴 / 8 🟡 / 12 ⚪) + §18 phase breakdown reference; pipeline-lead **4 binary 🔴 BLOCKING question answers** is the SINGLE remaining gate before 🟢 Locked (Q-1 / Q-2 / Q-12 / Q-23 per §10.A). **REVISED 2026-05-15 (4th revision)** with: (a) §3.6 research synthesis #1; (b) §10b independent gap audit; (c) §13 Option A deep-dive (research #2); (d) §15 cross-domain synthesis (research #3-5; 3 parallel artifacts); (e) **§16 long-term maintenance + governance (NEW)** addressing user Q1-Q3 directives; (f) **EMPIRICAL VALIDATION COMPLETE** — Q-22 em-dash test resolved via `tools/test_github_slug.py` + `_research/em-dash-slug-test-2026-05-15.md` (binding revision: colon-form `## D15: Title` mandatory); Q-13 token cost measurement resolved via `tools/measure_ccl_overhead.py` + `_research/ccl-baseline-2026-05-15.md` (CCL Stage 1+2 = 362K tokens = 181% of 200K window; `_validation_log.md` alone = 115% of window; archive cascade promoted to Phase 1.0 immediate priority); (g) 19 cumulative open questions Q-8 through Q-26 (Q-13 + Q-22 RESOLVED; 17 remaining for pipeline-lead). Backing research: **6 udm-researcher artifacts** + **2 empirical-test deliverables** at `_research/` + `tools/` (~50 cumulative findings; ~70 primary sources; medium-high confidence + 2 P0 empirical results). Plan now ~1080 lines — recommend split at next refactor cycle. Companion: `NEW_REPO_STARTER_TEMPLATE.md` (greenfield template per Q-24).
 
 **Owner**: Pipeline lead. Contributor: parent-agent authoring this plan; no execution work landed.
 
@@ -300,6 +300,13 @@ Insert `<!-- anchor: D77 -->` HTML comments above every D-number heading. Agents
 
 ### §5.1 Phased execution
 
+**Phase 1 atomic-cohort gate (BINDING per F9.1 mitigation; 🔴 CRITICAL)** — Phase 1.0 (`_validation_log.md` archive cascade) and Phase 1.B (master `INDEX.md` authoring) are an **ATOMIC COHORT**. Both MUST land in the same round / same pull-request. Either-without-the-other is rejected.
+
+- **Reject condition #1**: PR contains Phase 1.0 archive-cascade changes (live `_validation_log.md` truncated OR `_validation_log_archive_*.md` created) but does NOT contain `docs/migration/INDEX.md` — REJECT with reason "F9.1 atomic-cohort violation".
+- **Reject condition #2**: PR contains `docs/migration/INDEX.md` but Phase 1.0 hasn't run (live `_validation_log.md` still >2,000 lines OR no `_validation_log_archive_*.md` present) — REJECT with same reason.
+- **Verification mechanism (two-layer per D89-D91 Pattern F)**: (1) `tools/verify_cascade.py` Trigger N extension (NEW per this gate; B-N candidate at Phase 2.4) asserts both atomic-cohort artifacts present-or-both-absent in any commit touching `_validation_log.md` OR `INDEX.md`; (2) `udm-round-closeout` skill CCL Stage 2.5 asserts the same invariant at round-boundary.
+- **Rationale**: per F9.1 (gap-audit-adversarial §9 + §17.3) — operator gets the fast win on Phase 1.0 then loses momentum on Phase 1.B; repo ends WORSE than pre-refactor because audit-trail navigation needs cross-file awareness without the routing manifest. The atomic-cohort gate forecloses the "ship MVP, never ship V1" partial-completion failure mode.
+
 **Phase 1 (low-risk; reversible; ~1-2 cycles)** — REVISED 2026-05-15 per research §3.6 + §15.4 empirical baseline:
 - **0. PROMOTED (per §15.4 empirical baseline 2026-05-15) — `_validation_log.md` archive cascade is the SINGLE-MOST-CONSEQUENTIAL Phase 1 task**: empirical token measurement shows this one file = 231K tokens = 115% of 200K context window for a single Stage 2 read. Trimming it by 73% (7,519 → 2,000 lines) recovers ~62% of CCL Stage 1+2 token cost. **Execute first; gate other Phase 1 tasks on this completing.**
 - **A. ~~Apply existing `_validation_log.md` archive policy NOW~~ → see Phase 1.0 above (promoted to Phase 1.0 immediate priority)**
@@ -371,8 +378,17 @@ Each phase must pass these gates BEFORE merging to master:
 
 | Task | Owner | Effort | Outputs |
 |---|---|---|---|
-| 1.1 Survey current `_validation_log.md` cutoff date for archive | Pipeline lead | <30 min | Cutoff date decided (proposed: 2026-04-12 per the policy as written) |
-| 1.2 Execute archive cascade for `_validation_log.md` | Parent agent | ~1 hour | `_validation_log_archive_2026-04.md` authored; live file truncated; 1-line back-reference added |
+| 1.1 Compute archive cutoff date for `_validation_log.md` per existing policy at L12-19 (B-4 fix 2026-05-15) | Pipeline lead | <10 min | Cutoff date = (today − 30 days) = **2026-04-15**; archive file named `_validation_log_archive_2026-04.md` (per L17 naming convention). Pipeline-lead may override to a different retention window (would require updating `_validation_log.md` L12-19 + `NEW_REPO_STARTER_TEMPLATE.md` L206-217 in lockstep) |
+| 1.2 Execute archive cascade for `_validation_log.md` (TWO-PHASE-COMMIT per F1.1 mitigation; 🔴 CRITICAL) | Parent agent | ~1 hour | `_validation_log_archive_2026-04.md` authored via two-phase-commit; live file truncated; 1-line back-reference added |
+
+**F1.1 mitigation — two-phase-commit procedure (BINDING for task 1.2)**:
+
+1. **Phase A — write archive to `.tmp`**: parent agent writes archive content to `_archive/_validation_log_archive_2026-04.md.tmp` (note `.tmp` suffix). Compute SHA-256 of the written content; record expected line count (= number of source entries in the archive cutoff range).
+2. **Phase A verify**: re-read the `.tmp` file; assert SHA-256 matches; assert line count matches; assert first line + last line match the expected cutoff boundary (first archived entry date ≤ cutoff, next entry in live file date > cutoff).
+3. **Phase B — atomically replace live file**: write the truncated live `_validation_log.md` content to `_validation_log.md.tmp.new`; verify line count = (original live line count) − (archived line count) + 1 (the back-reference line); use `os.replace('_validation_log.md.tmp.new', '_validation_log.md')` (atomic on both POSIX + Win32).
+4. **Phase C — finalize archive**: `os.replace('_archive/_validation_log_archive_2026-04.md.tmp', '_archive/_validation_log_archive_2026-04.md')`. Order Phase B BEFORE Phase C: if B succeeds + C crashes, the recovery path is "rename the existing `.tmp` to final"; if C succeeds + B crashes, recovery is impossible (live file has entries that already exist in finalized archive — duplicates).
+5. **Failure-mode detection (pre-commit + script-startup)**: any `_archive/*.tmp` file at script start = previous run crashed during Phase A/C; abort + require operator manual recovery. Any `_validation_log.md.tmp.new` at script start = previous run crashed during Phase B; same. Pattern F Layer 1 extension catches stale `.tmp` files in commits.
+6. **Acceptance verification**: post-run assertion: (a) SHA-256 of archive + truncated live + back-reference line concatenated together = SHA-256 of original pre-archive live file; (b) no `.tmp` files remain; (c) `wc -l` on truncated live ≤ 2,000.
 | 1.3 Author `docs/migration/INDEX.md` (cross-ref manifest) | Parent agent | ~2-3 hours | INDEX with D-numbers / B-numbers / R-numbers / SP-N / RB-N / Pattern codes / Pitfall sub-classes / EventType families |
 | 1.4 Author per-file `<file>_INDEX.md` for 10 large files | Parent agent | ~1-2 hours | 10 sidecar INDEX files |
 | 1.5 Update D62 CCL doctrine + relevant skill prompts | Pipeline lead | ~1 hour | D62 entry updated; udm-* skill SKILL.md files reference Stage 0 |
@@ -449,6 +465,51 @@ Phase 3 is invoked ONLY IF Phase 1+2 fail metrics 1 OR 2 by >25%.
 **Q-13 ✅ RESOLVED 2026-05-15** via empirical token measurement — see §15.4. CCL Stage 1+2 = 362K tokens (181% of 200K window); `_validation_log.md` alone = 231K (115% of window). Phase 1.0 promoted as immediate priority.
 
 **Q-23 through Q-26** — see §16.6 (4 new questions derived from §16 long-term maintenance + governance). Summary: Q-23 (6-rule markdown hygiene enforcement as binding D-N candidate) / Q-24 (NEW_REPO_STARTER_TEMPLATE.md as canonical greenfield reference) / Q-25 (Q11 quarterly research-refresh cadence) / Q-26 (year-1 milestones Day 0/30/90/180/365 as roadmap commitment).
+
+### §10.A Sign-off-blocking vs deferrable Q-N classification (B-5 fix 2026-05-15)
+
+Per blocker-evidence-verification artifact + Wave 1 Agent A audit. The 24 unresolved questions (Q-13 + Q-22 RESOLVED earlier) are classified below by sign-off impact:
+
+- 🔴 **SIGN-OFF BLOCKING** — pipeline-lead MUST answer before plan can flip 🟡 Plan-final → 🟢 Locked
+- 🟡 **PHASE-1 DESIGN DECISION** — answer when starting the affected Phase 1 task; doesn't block sign-off
+- ⚪ **DEFERRABLE** — answer when needed; not blocking; can land as B-N post-approval
+
+| Q-N | Brief description | Classification | Rationale |
+|---|---|---|---|
+| Q-1 | Approval to proceed with Phase 1? | 🔴 BLOCKING | Definitional — this IS the sign-off |
+| Q-2 | `_validation_log.md` archive cutoff date | 🔴 BLOCKING | Phase 1.0 (immediate-priority task) literally needs this date — see §7.1 task 1.1 (revised: default 2026-04-15 per existing policy) |
+| Q-3 | INDEX scope (canonical-only vs routing-by-intent) | 🟡 DESIGN | Answer when starting Phase 1.3 (INDEX.md authoring); doesn't gate sign-off |
+| Q-4 | Pre-commit hook adoption (auto-add vs fail-if-stale) | 🟡 DESIGN | Phase 2.3 question; Phase 1 doesn't touch hooks |
+| Q-5 | D-N for the refactor decision itself | ⚪ DEFERRABLE | Bookkeeping; per D111 process-infra exemption can land directly when authored |
+| Q-6 | Skill update scope for D62 | 🟡 DESIGN | Phase 1.5 question; bulk-update enumerable at execution time |
+| Q-7 | Snowflake test fixture pre-staging runbook | ⚪ DEFERRABLE | Orphan from prior cascade; not part of this refactor; can pair OR not |
+| Q-8 | INDEX.md ref'd from project-root CLAUDE.md? | 🟡 DESIGN | Phase 1.6 CLAUDE.md trim question; can decide at execution time |
+| Q-9 | GLOSSARY.md merge into INDEX.md? | 🟡 DESIGN | Phase 1.3 INDEX scope question; can decide at execution time |
+| Q-10 | Commission internal benchmark study post-Phase-1+2? | ⚪ DEFERRABLE | Post-Phase-2 question; doesn't gate Phase 1 |
+| Q-11 | Approve `udm-context-loader` subagent at Phase 2? | 🟡 DESIGN | Phase 2 question; doesn't gate Phase 1 sign-off |
+| Q-12 | Approve CLAUDE.md trim to <300 lines at Phase 1.6? | 🔴 BLOCKING | Phase 1.6 is in proposed Phase 1 scope per §7.1; can't ship Phase 1 without yes/no/defer |
+| Q-14 | Approve P1 Navigation Paradox UDM topology mapping? | ⚪ DEFERRABLE | Meta-research; doesn't gate Phase 1 execution |
+| Q-15 | Approve P4 intent.lisp investigation? | ⚪ DEFERRABLE | Meta-research; doesn't gate Phase 1 execution |
+| Q-16 | Approve P7 auto-compaction interaction investigation? | ⚪ DEFERRABLE | Meta-research; doesn't gate Phase 1 execution |
+| Q-17 | Approve §13.4 heading-slug stability as binding rule? | 🟡 DESIGN | Empirical revision already locked at §13.4 + Q-22 resolved; this Q is "binding for ALL future heading authoring?" — pipeline-lead picks at Phase 1.3+ |
+| Q-18 | Label CCL stages as quality tiers in D62? | ⚪ DEFERRABLE | D62 doctrine update Phase 1.5; framing question; not blocking |
+| Q-19 | Mandate lead-with-answer writing discipline for all NEW edits? | 🟡 DESIGN | Markdown hygiene rule; relates to Q-23; can pair |
+| Q-20 | Near-duplicate-paragraph audit across canonical trackers? | ⚪ DEFERRABLE | Polish work; can land as B-N post-Phase-1 |
+| Q-21 | 4-component cross-ref maintenance design? | 🟡 DESIGN | Phase 2.4 design question; doesn't gate Phase 1 |
+| Q-23 | 6-rule markdown hygiene as binding (D-N candidate)? | 🔴 BLOCKING | Hygiene rules referenced as binding in §7.1 task 1.4 + §16.1; need pipeline-lead approval before they "bind" |
+| Q-24 | NEW_REPO_STARTER_TEMPLATE.md as canonical greenfield ref? | ⚪ DEFERRABLE | Internal-only artifact; binding-or-not doesn't block Phase 1 |
+| Q-25 | Q11 quarterly markdown research-refresh cadence? | ⚪ DEFERRABLE | Quarterly cadence start date doesn't gate Phase 1 |
+| Q-26 | Year-1 milestones (Day 0/30/90/180/365) as roadmap commitment? | ⚪ DEFERRABLE | Roadmap framing; can iterate post-Phase-1 |
+
+**Count**: 4 🔴 BLOCKING / 8 🟡 DESIGN / 12 ⚪ DEFERRABLE = 24 total ✅
+
+**Shortest path to sign-off**: Pipeline-lead answers 4 binary 🔴 questions:
+1. **Q-1**: Approve Phase 1? (yes / no / redirect)
+2. **Q-2**: Accept 2026-04-15 archive cutoff per existing policy? (yes / pick different date / change policy)
+3. **Q-12**: Approve CLAUDE.md trim to <300 lines at Phase 1.6? (yes / no / partial)
+4. **Q-23**: Approve 6-rule markdown hygiene as binding? (yes / no / pick subset)
+
+Plan flips 🟡 Plan-final → 🟢 Locked once those 4 are answered. The 20 non-blocking questions move to Phase 1 design decisions OR a `_research/open_questions_post_sign_off.md` artifact post-approval.
 
 ---
 
@@ -776,6 +837,7 @@ NOT a single autonomous agent. Industry pattern (Drasi/GitHub Copilot case study
   2. **`verify_cascade.py` Trigger L extension** (Pattern F Layer 1): heading-slug drift + stale line-number detection
   3. **`tools/rewrite_cross_refs.py`** (one-shot at split-time only per §13.3): proposes diff; HUMAN approves before `git apply`
   4. **`udm-cross-ref-checker` SKILL** (on-demand): semantic-ambiguity cases; outputs to `_research/` only; never writes primary docs
+  5. **`udm-context-loader` brief schema `verbatim_excerpts` field** (NEW per F5.1 mitigation; 🔴 CRITICAL): every brief produced by `udm-context-loader` MUST carry a `verbatim_excerpts` field passing through (NOT summarizing) the following content categories: (a) every Do-NOT rule — any line starting with `Do NOT` or `❌` in `CLAUDE.md` + spec docs touched by the brief; (b) every Pitfall #9.X sub-class header — exact header text; (c) every binding `**D-N**: ... 🟢 Locked YYYY-MM-DD` status line; (d) every `R-N` risk header row (header only, not body). Distillation is permitted for everything else; these 4 categories are non-distillable. Brief consumers that touch production code (CDC/SCD2 engine, schema migrations, SP definitions, BCP CSV writers) MUST direct-Read the canonical source for any verbatim_excerpt before proposing a change — the brief carries the excerpt as a tripwire, not as a substitute for the full passage.
 
 **Pattern (e) — Slug-stability discipline as 301-redirect analog** (per Q3 web-crawler Finding):
 Web URL slugs never change without a 301 redirect; same principle applies to file paths. **When Phase 3 splits execute**, the master INDEX.md must record old-name → new-name mapping (the doc-corpus equivalent of a 301 redirect). Already partially captured in §13.3; this synthesis names the discipline + grounds it in web-SEO precedent.
@@ -968,6 +1030,7 @@ See `NEW_REPO_STARTER_TEMPLATE.md` for full template + skeleton files.
 - ❌ Spawning research agents on questions where empirical test is faster (the em-dash test should have been done as Wave 1, not deferred to a research artifact)
 - ❌ Running >3 parallel research agents (context-rot in synthesis; diminishing returns observed at this session's 5-artifact mark)
 - ❌ Research as a substitute for build (after 2+ artifacts validating direction, build the prototype + measure it)
+- ❌ Summarizing Do-NOT rules / Pitfall #9.X headers / binding D-N status lines / R-N risk headers in subagent briefs (per F5.1 mitigation; 🔴 CRITICAL) — `udm-context-loader` brief schema's `verbatim_excerpts` field is mandatory for these 4 content categories. Distilling them risks destruction-class production changes when downstream agents act on incomplete context. Distillation is permitted for everything else; these 4 categories are pass-through-verbatim only.
 
 ### §16.6 New open questions Q-23 through Q-26 added to §10
 
@@ -1057,6 +1120,42 @@ Two cascade changes propagate to existing plan sections:
 **2. To §15.2 Pattern D + §16.5**: add F5.1 mitigation — `udm-context-loader` briefs MUST pass-through-verbatim Do-NOT rules + Pitfall #9.x headers; never summarize them.
 
 These can be inline-applied at the next plan revision OR at the pre-sign-off cleanup pass (B-3 + B-4 + B-5 fix session).
+
+---
+
+## §18. Phased execution breakdown (added 2026-05-15)
+
+Per user 8th-directive sub-question "Break down the effort into phases. Use a multi-agent team to help." Wave 1 Agent C authored a comprehensive phase breakdown at **`docs/migration/_research/execution-phase-breakdown-2026-05-15.md`** (427 lines; 8 phases A through H with summary table + per-phase scope/tasks/effort/dependencies/acceptance/risk/sign-off + critical-path analysis + recommended sequencing). Brief reference here; full content in research artifact.
+
+**8 phases summary**:
+
+| Phase | Scope | Effort | Sequence |
+|---|---|---|---|
+| **A** | Pre-sign-off cleanup (3 BLOCKERS: B-3 verify_cascade.py + B-4 cutoff date + B-5 §10.A table) | ~30-60 min total | THIS COMMIT (mostly done) |
+| **B** | Pre-execution mitigations (3 CRITICAL: F9.1 atomic-cohort + F1.1 two-phase-commit + F5.1 verbatim_excerpts) | ~30 min | THIS COMMIT (done) |
+| **C** | Pipeline-lead sign-off ceremony (4 binary 🔴 BLOCKING Q-Ns from §10.A) | ~30-60 min pipeline-lead time | NEXT — gates Phase D |
+| **D** | Phase 1 actual execution per §7.1 (D.0 prep / D.1 archive / D.2 INDEX.md / D.3-D.5 D62+skill+CLAUDE / D.6 Pattern E) | 1-2 cycles | After Phase C sign-off |
+| **E** | Phase 2 tooling (regenerate_md_indexes / pre-commit hook / Pattern F extension / udm-context-loader) | ~1 cycle | After Phase D |
+| **F** | Conditional Phase 3 (file splits) | TBD | Only fires if Phase A-E metrics insufficient |
+| **G** | Conditional Phase 4 (frontmatter / udm-find-canonical polish) | TBD | After Phase A-F validated |
+| **H** | Long-term governance (Q11 quarterly + _research/_INDEX.md + sign-off mechanism + multi-agent gap-audit pattern) | ~3 hours one-time + recurring | Parallel with Phase D-E |
+
+**Critical-path sequence**: A → B → **C (sign-off gate)** → D → E (with optional Phase H parallel from Phase D onward).
+
+**Total mandatory effort (Phases A-E)**: ~5-8 hours active work over 1.5-3 cycles wall-clock.
+
+**Highest-leverage parallelization opportunities** (per Wave 1 Agent C analysis):
+1. **Phase A + Phase B in single commit** — saves ~30 min; both pre-sign-off mechanical edits to different sections (✅ DONE THIS COMMIT)
+2. **Phase D.3 + D.4 + D.5 as parallel subagent invocations** — saves ~2-3 hours (independent edits)
+3. **Phase H.1-H.4 as parallel subagent invocations** — saves ~1.5 hours (independent governance artifacts)
+
+**Recommended operator sequencing**:
+- **Next 1-2 sessions**: Phase C sign-off (pipeline-lead reviews §10.A + answers 4 binary 🔴 questions; ~30-60 min) → Phase D.0 prep
+- **Next 2-3 weeks**: Phase D execution in 3 sessions (D.0+D.1+D.2 atomic, then D.3-D.5 parallel cohort, then D.6 Pattern E review)
+- **Next month**: Phase E tooling + Phase H governance (parallelizable)
+- **Day 90 post-sign-off**: First Q11 quarterly drill triggers Phase F skip-vs-invoke decision
+
+**Key gating constraints**: F9.1 atomic-cohort blocks Phase D.1 from landing without D.2 (✅ enforced via §5.1 atomic-cohort gate); B-4 archive cutoff blocks Phase D.1 from starting (✅ default 2026-04-15 stamped in §7.1 task 1.1); F1.1 two-phase-commit required for safe D.1 execution (✅ procedure spec'd in §7.1 task 1.2). All 3 trace back to gap-audit BLOCKERS now closed.
 
 ---
 

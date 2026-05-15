@@ -402,6 +402,10 @@ def default_scan_paths() -> list[Path]:
     # plus all phase1/*.md
     if PHASE1_DIR.exists():
         paths.extend(sorted(PHASE1_DIR.glob("*.md")))
+    # plus all _archive/*.md (per B-3 / B-272 — post-Phase-1.0 archive cascade audit coverage)
+    archive_dir = DOCS_DIR / "_archive"
+    if archive_dir.exists():
+        paths.extend(sorted(archive_dir.glob("*.md")))
     return paths
 
 
