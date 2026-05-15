@@ -49,6 +49,7 @@ seed_data.sql / per-module fixture extensions.
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -138,6 +139,79 @@ def docker_skip_marker() -> pytest.MarkDecorator:
             "CI stage 3."
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Module-level skip helper - Snowflake test-account credentials.
+#
+# Per § 6.2 canonical scenario "test_snowflake_uploader_to_test_account":
+# the integration test against a real Snowflake trial account requires
+# operator-provisioned credentials that are NOT present on dev workstations
+# nor in standard CI runners. Account setup is presupposed by Phase 0
+# deliverable 0.6 (cost-data capture) per docs/migration/02_PHASES.md L44.
+#
+# This skip marker complements docker_skip_marker(): tests that hit BOTH
+# the local DB container AND a remote Snowflake account apply
+# ``pytestmark = [docker_skip_marker(), snowflake_creds_skip_marker()]``.
+# Either failure short-circuits collection so the file does not attempt
+# fixture resolution.
+#
+# The required env-var set is the minimum needed for
+# `data_load.snowflake_uploader.copy_parquet_to_snowflake` to authenticate
+# + locate a target schema. Each var is checked individually so the
+# operator gets a precise reason on which one is missing.
+# ---------------------------------------------------------------------------
+
+
+_SNOWFLAKE_REQUIRED_ENV_VARS = (
+    "SNOWFLAKE_TEST_ACCOUNT",
+    "SNOWFLAKE_TEST_USER",
+    "SNOWFLAKE_TEST_DATABASE",
+    "SNOWFLAKE_TEST_SCHEMA",
+    "SNOWFLAKE_TEST_WAREHOUSE",
+)
+
+
+def snowflake_creds_skip_marker() -> pytest.MarkDecorator:
+    """Return a ``pytest.mark.skipif`` decorator for Snowflake-required tests.
+
+    Test files apply this at module level (typically alongside
+    ``docker_skip_marker()``) via::
+
+        pytestmark = [docker_skip_marker(), snowflake_creds_skip_marker()]
+
+    All five env vars in ``_SNOWFLAKE_REQUIRED_ENV_VARS`` must be set + non-
+    empty for the marker to be a no-op. Any missing var yields a skip with
+    an explicit reason naming the absent variable + citing the spec.
+
+    The check is intentionally a presence-only probe — we do NOT attempt a
+    Snowflake handshake here. A handshake at collection time would slow
+    every collection by seconds even when no Snowflake test runs are
+    requested; per-test handshake (in the Snowflake fixture body) is the
+    right place for liveness verification.
+
+    Returns:
+        pytest.mark.skipif decorator; ``condition=True`` when any required
+        env var is missing or empty; ``condition=False`` only when all five
+        are populated.
+    """
+    missing: list[str] = [
+        var
+        for var in _SNOWFLAKE_REQUIRED_ENV_VARS
+        if not os.environ.get(var)
+    ]
+    skip_condition = bool(missing)
+    if missing:
+        reason = (
+            "Snowflake test-account env vars not configured: "
+            f"{', '.join(missing)}. Set all of "
+            f"{', '.join(_SNOWFLAKE_REQUIRED_ENV_VARS)} to enable. "
+            "Per docs/migration/phase1/05_tests.md § 6.2 + Phase 0 deliv "
+            "0.6 (account setup unscoped in Phase 0)."
+        )
+    else:
+        reason = "Snowflake test-account env vars all set"
+    return pytest.mark.skipif(skip_condition, reason=reason)
 
 
 # ---------------------------------------------------------------------------

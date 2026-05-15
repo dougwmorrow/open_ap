@@ -6814,3 +6814,82 @@ User message "Ok push the PR. Next, proceed with your recommended next steps." m
 **Branch state**: round-6-post-merge-tracking now at 19 unpushed commits ahead of master (after this commit lands + auto-push); 27 cumulative B-N closures; 0 still-open net-new.
 
 **Cascade Step 2 (gap-check) + Step 1.7.1 (auto-push) follow this commit. Then separate commit for skill extension per user direction #4.**
+
+---
+
+## 2026-05-15 -- Final Tier 3 § 6.2 cohort (9-of-9 canonical scenarios COMPLETE)
+
+**Trigger**: udm-next-step-cascade invoked via "Cool lets proceed with work for SESSION_RESUME.md" — ambiguous trigger that was interpreted as cascade-resume after permission-fix-restart per SESSION_RESUME.md document. NO push/PR semantics in trigger phrase -> Step 1.7.1 HOLD-push (default).
+
+**Continuity context**: Prior session (commit 7c5a72b) hit a permissions cache bug mid-cascade and produced SESSION_RESUME.md as a one-shot handoff before restart. New session loaded SESSION_RESUME.md via prompted Read, verified permissions healthy (Read+Write+Edit smoke tests all passed without prompts), then resumed Step 1 of the cascade exactly as documented.
+
+**Selection (skill priority+scope per SESSION_RESUME.md)**: MEDIUM priority "More Tier 3 tests (remaining 3)" (range_scheduler + lateness_profiler + snowflake_uploader scenarios) selected; smallest scope wins ties. The LOW-priority alternative (Tier 5 quarterly drill docs) was deferred per skill priority rule.
+
+**Work executed**: 3 final test files at `tests/integration/` mirroring the established fixture pattern from the 6 prior Tier 3 files; conftest.py extended with new `snowflake_creds_skip_marker()` factory.
+
+**Deliverables landed (3 test files + 1 conftest extension; +~1,140 lines)**:
+
+| File | Lines | Tests | Module under test | Coverage |
+|---|---|---|---|---|
+| tests/integration/test_range_scheduler_with_real_policies.py | 398 | 5 | M11 orchestration/range_scheduler.py | Default-lookback rolling window + policy-mode single-active range + policy-mode union of multiple ranges + inactive-rows-ignored (Active=0 filter) + re-extraction-flags from PipelineExtraction history (D11/D12/D14) |
+| tests/integration/test_lateness_profiler_full_history.py | 372 | 5 | M12 cdc/lateness_profiler.py | Uniform distribution -> equal percentiles + monotonicity over linear distribution + InsufficientHistory-raised below threshold + FAILED-status rows excluded from samples + negative-lateness clamped to zero (D11) |
+| tests/integration/test_snowflake_uploader_to_test_account.py | 370 | 4 | M17 data_load/snowflake_uploader.py | Verified->replicated status flip + SNOWFLAKE_COPY_INTO audit row per D76 + idempotent re-COPY safety per D15 + RegistryStatusInvalid-when-not-verified gate (D5/D15/D23/D71/D76) |
+| tests/integration/conftest.py (extension) | +70 | -- | -- | New `snowflake_creds_skip_marker()` factory; 5-env-var presence probe over SNOWFLAKE_TEST_ACCOUNT + _USER + _DATABASE + _SCHEMA + _WAREHOUSE; complements docker_skip_marker for dual-skip discipline on Snowflake-required tests |
+
+**Test counts**: 14 new Tier 3 tests; all module-level skipped on dev workstation (no Docker available; snowflake test additionally dual-skipped via snowflake_creds_skip_marker).
+
+**Pytest verification (authoritative full-scope; baseline freshly measured)**:
+
+| Layer | Pre-cohort (measured fresh) | Post-cohort |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | **2309 / 48 / 0** | **2309 / 62 / 0** |
+| Delta | -- | +14 skip (exactly matches 14 new tests authored) |
+
+**Note on baseline drift**: SESSION_RESUME.md cited prior baseline as `2309 / 44 / 0` but fresh measurement at HEAD (commit 7c5a72b) shows `2309 / 48 / 0` — +4 unattributed skips. Plausibly related to the G3 carryover note in CODE_BUILD_STATUS.md from the B-266 commit ("Skip count delta -4 ... agent attributed to environmental fluctuation but not enumerated; investigation deferred to next round close-out polish sweep"). Baseline used for this entry's delta calculation is the freshly-measured 48; reporting the 14-skip delta for transparency on actual work scope.
+
+**Tier 3 § 6.2 coverage**: **9-of-9 canonical scenarios now COMPLETE** (was 6-of-9 prior commit; runway item closed). Remaining Tier 3 work in scope of the canonical spec: § 6.3 Round 4 tool integration scenarios (7 scenarios; some operator-blocked) + § 6.4 cross-tool integration scenarios (3 scenarios) + § 6.1 pre-existing scenarios from 06_TESTING.md (preserved as-is).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UNTOUCHED-AS-EXPECTED (no B-N closures/opens this commit; build-only) |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended with full event narrative |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended with abbreviated event narrative |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended with per-file detail |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated explicitly per Pitfall #9.m discipline)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | snowflake_creds_skip_marker() factory in conftest.py | UPDATED — CLAUDE.md L92 tests/integration/ entry registered the new factory + refreshed stale aggregate counts (was "6 files / 3 example test files / 11 tests total"; now "11 files / 9 example test files / 39 tests total") |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | None | UNTOUCHED-AS-EXPECTED |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | None (T-series already covers Tier 3 scaffold) | UNTOUCHED-AS-EXPECTED |
+| Risk change? | None | UNTOUCHED-AS-EXPECTED |
+| Phase status? | Verified phase1/05_tests.md § 6.2 — no status counter exists at the section header to bump | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | None visible (CLAUDE.md count refresh handled under "NEW public surface" registration row above; not a separate cosmetic) | UNTOUCHED-AS-EXPECTED |
+| Executable artifact? | No (test files; no Manual/Scheduled classification) | UNTOUCHED-AS-EXPECTED |
+| Spec edit? | No § 6.2 status counter exists in phase1/05_tests.md to update | UNTOUCHED-AS-EXPECTED |
+| Sub-class formalization? | None | UNTOUCHED-AS-EXPECTED |
+| New skill/agent? | None | UNTOUCHED-AS-EXPECTED |
+
+**Step 10 application**: PARTIAL-APPLIED. Test files (`test_range_scheduler_with_real_policies.py` + `test_lateness_profiler_full_history.py` + `test_snowflake_uploader_to_test_account.py`) have no public surface; not registered. Conftest extension `snowflake_creds_skip_marker()` IS test-infrastructure public surface (mirrors existing `docker_skip_marker()` registration in CLAUDE.md L92) — registered per Pitfall #9.n discipline.
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched; build-only commit)
+- Pitfall #9.k OK (pytest count 2309/48/0 -> 2309/62/0 propagated to all 5 canonical trackers + CLAUDE.md count refresh)
+- Pitfall #9.l OK (Agent re-read existing conftest.py + 1 representative existing Tier 3 test file (gap_detector) for canonical pattern; re-read M11/M12/M17 module signatures + § 6.2 spec table before authoring)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional table walked explicitly above)
+- Pitfall #9.n OK (snowflake_creds_skip_marker registered in CLAUDE.md L92 inline at producer-time, not deferred to gap-check)
+- Pitfall #10 (Tier 0/3 boundary) OK (new tests module-level skipped via docker_skip_marker + snowflake_creds_skip_marker; tier 0 fast-feedback preserved)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 21 unpushed commits ahead of master (will become 22 after this commit lands; HOLD push); 27 cumulative B-N closures (unchanged this commit; build-only); 0 still-open net-new.
+
+**Cascade Step 2 (gap-check via udm-step-10-verifier + G1-G6 reflection) + Step 3 (report cascade-complete + delete SESSION_RESUME.md) follow this commit.**
