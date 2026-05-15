@@ -6968,4 +6968,90 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated 
 
 **Cascade Step 2 (gap-check via udm-step-10-verifier + G1-G6 reflection) + Step 3 (report cascade-complete) follow this commit. With this commit, the runway from prior cascade close-out is fully consumed — no auto-generated next-recommended item; awaiting user direction for next major scope.**
 
+---
+
+## 2026-05-15 -- B77 + B86 stale-badge alignment (2 Pitfall #9.j closures via leading-badge flip)
+
+**Trigger**: udm-next-step-cascade invoked via "Proceed with your suggested next steps." (cascade #8). User then accepted modified AskUserQuestion option "Push branch and open PR and then Audit BACKLOG.md.", combining auto-push semantics + B-N audit. Push completed prior to this commit (`round-6-post-merge-tracking` 7c5a72b..4ad0fce pushed to origin); audit + cleanup landed in this commit.
+
+**Selection (post-audit findings)**: BACKLOG audit surfaced 2 textbook Pitfall #9.j closure-annotation-only candidates:
+- B77 (R22 to RISKS.md per Pitfall #8 close-out task): VERIFIED already in RISKS.md L32 since Round 4 close-out 2026-05-10; closed via B119 batch 2026-05-10 per BACKLOG L524 Completed entry; upper-table leading badge L179 was stale 🟡 Open.
+- B86 (CLI_* EventType family registration in CLAUDE.md): VERIFIED in CLAUDE.md L328 ("EventType families registered per Round 4 D76 + Round 6 § 6.4 (closes B86)") since Round 6 close-out 2026-05-10; closed at L497 Completed entry; upper-table leading badge L188 was stale 🟡 Open.
+
+Both fixes follow the textbook Pitfall #9.j 4-day-staleness pattern documented in HANDOFF §8 sub-class accumulator (canonical inline annotation in lower Completed section was authoritative since 2026-05-10; this commit aligns the upper-table render).
+
+**Audit findings summary** (broader scope; informs runway):
+
+| B-N | Status | Action |
+|---|---|---|
+| B77 | ALREADY DONE; stale upper badge | CLOSED THIS COMMIT (badge flip + inline annotation) |
+| B86 | ALREADY DONE; stale upper badge | CLOSED THIS COMMIT (badge flip + inline annotation) |
+| B78 | Possibly partially done (F24 + I22 landed; P-next status unverified) | NOT closed this commit; needs P-series verification + scope decision; defer to user |
+| B83 | PARTIALLY DONE (Tier 0 tests landed for 9-of-11 Round 4 tools during build campaign; 2 blocked on B81+B82 unblock) | NOT closed; partial-completion state pending B81+B82 |
+| B84 | OPEN; udm-test-author skill template extension; ~1 cycle | NOT pulled this commit |
+| B91 | OPEN; gated on B78 | Blocked on B78 |
+| Most other HIGH WSJF items | Operator-blocked (B197 sysadmin / B185 data-side / B189 deferred to P2R1 / etc.) | Not Claude-doable |
+
+**Deliverables landed (1 file modified)**:
+
+| File | Action | Lines | Coverage |
+|---|---|---|---|
+| docs/migration/BACKLOG.md | EDITED L179 + L188 — leading-badge flip 🟡→⚫ + inline closure annotations citing canonical homes (RISKS L32 + CLAUDE.md L328) + F-1 fix annotations per Pitfall #9.j | +~6 / -2 | Render-discipline alignment |
+
+**Test counts**: doc-only commit; no test changes.
+
+**Pytest verification (sanity)**:
+
+| Layer | Pre-cohort | Post-cohort |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2309 / 62 / 0 | **2309 / 62 / 0** |
+| Delta | -- | 0 (doc-only; expected) |
+
+**Cumulative B-N closures**: 27 → 29 (+2).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UPDATED — 2 leading-badge flips at L179 + L188; inline closure annotations added |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended with full event narrative |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended with abbreviated event narrative |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended (doc-only event but the dashboard reflects last-reviewed cadence) |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated explicitly per Pitfall #9.m discipline)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | None | UNTOUCHED-AS-EXPECTED |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | None | UNTOUCHED-AS-EXPECTED |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | None | UNTOUCHED-AS-EXPECTED |
+| Risk change? | None — R22 already in RISKS.md since Round 4 close-out; this commit only flips the BACKLOG render-state badge that referenced R22 | UNTOUCHED-AS-EXPECTED (RISKS.md unchanged) |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | The badge-flip work IS itself a cosmetic-tracker-class fix (Pitfall #9.j status-render); but per D113 P-N discipline, badge flips that align with already-canonical inline annotations are tracked AS B-N closures rather than separate P-Ns since the underlying work is completed B-N closure | UNTOUCHED-AS-EXPECTED — no separate P-N opened |
+| Executable artifact? | None | UNTOUCHED-AS-EXPECTED |
+| Spec edit? | None | UNTOUCHED-AS-EXPECTED |
+| Sub-class formalization? | None | UNTOUCHED-AS-EXPECTED — Pitfall #9.j already formalized 2026-05-11 per D96 + B144; this commit IS instance N+1 of the 9.j evidence base but not a new sub-class |
+| New skill/agent? | None | UNTOUCHED-AS-EXPECTED |
+
+**Step 10 application**: ✅ N/A — no new public surface (BACKLOG.md edit is render-discipline alignment only).
+
+**Convention checks**:
+- Pitfall #9.j OK (this commit IS the application — 2 stale-badge fixes; +N event in 9.j evidence base ≥21 instances cumulative)
+- Pitfall #9.k OK (no count drift; pytest 2309/62/0 unchanged across all 5 canonical trackers; B-N closure count propagated 27→29 consistently)
+- Pitfall #9.l OK (Agent Grep'd CLAUDE.md L328 + RISKS.md L32 + BACKLOG.md L497 + L524 to verify canonical closures BEFORE applying badge flips; canonical-re-read discipline applied)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional table walked explicitly above; broader audit findings table also surfaces non-pulled items for transparency)
+- Pitfall #9.n OK N/A (no new public surface)
+- Pitfall #10 (Tier 0/3 boundary) OK N/A (no test changes)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 23 unpushed commits ahead of master pre-this-commit (24 after this commit lands). Will be pushed per same-exchange user authorization "Push branch and open PR and then Audit BACKLOG.md". 29 cumulative B-N closures (was 27; +2 this commit); 0 still-open net-new.
+
+**Cascade Step 2 (gap-check via Step 10 verifier SKIP per tracker-only criterion + G1-G6 reflection) + Step 3 (push + report cascade-complete) follow this commit.**
+
 **Cascade Step 2 (gap-check via udm-step-10-verifier + G1-G6 reflection) + Step 3 (report cascade-complete + delete SESSION_RESUME.md) follow this commit.**
