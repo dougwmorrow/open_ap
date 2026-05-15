@@ -1,6 +1,6 @@
 # Markdown Refactor + Agent Traversal System — Plan
 
-**Status**: 🟡 Plan-draft authored 2026-05-15 — awaiting pipeline-lead review before any execution. **REVISED 2026-05-15 (2nd revision)** with: (a) research findings synthesis per §3.6 (udm-researcher artifact `_research/agent-markdown-traversal-2026-05-15.md`; 13 findings; 15 primary sources); (b) independent gap audit per §10b (7 confirmed gaps + 8 edge cases + 4 untested assumptions + 4 out-of-scope confirmations); (c) Option A deep-dive per §13 (NEW; ~250 lines covering naming convention proposals + TOC structure + Navigation Paradox cross-reference preservation MANDATORY constraint + heading-slug stability policy + 8 meta-research candidates); (d) 10 new open questions Q-8 through Q-17 added to §10. Backing research: 2 udm-researcher artifacts at `_research/` (32 cumulative findings; 32 primary sources; medium-high confidence on directional patterns).
+**Status**: 🟡 Plan-draft authored 2026-05-15 — awaiting pipeline-lead review before any execution. **REVISED 2026-05-15 (3rd revision)** with: (a) §3.6 research synthesis (`_research/agent-markdown-traversal`); (b) §10b independent gap audit (7 gaps + 8 edge cases + 4 assumptions + 4 OOS); (c) §13 Option A deep-dive (`_research/agent-discoverability`; naming + TOC + Navigation Paradox + slug-stability + 8 meta-research P1-P8); (d) §15 cross-domain synthesis (3 NEW research artifacts: `_research/llm-training-data-storage` + `_research/cross-reference-maintenance-agent` + `_research/web-crawler-techniques`; 5 transfer patterns A-E; 5 negative findings; CRITICAL em-dash empirical-test caveat added to §13.4); (e) 15 new open questions Q-8 through Q-22 added to §10. Backing research: **5 udm-researcher artifacts** at `_research/` (~50 cumulative findings; ~70 primary sources; medium-high confidence on directional patterns). Plan now ~880 lines — exceeds §13 self-imposed split-trigger; recommend split at next refactor cycle into `MARKDOWN_REFACTOR_PLAN.md` (sections §1-§9 + §12) + `MARKDOWN_REFACTOR_PLAN_appendix.md` (sections §10b + §13 + §15).
 
 **Owner**: Pipeline lead. Contributor: parent-agent authoring this plan; no execution work landed.
 
@@ -443,6 +443,8 @@ Phase 3 is invoked ONLY IF Phase 1+2 fail metrics 1 OR 2 by >25%.
 
 **Q-13 through Q-17** — see §13.6 (5 new questions derived from §13.5 meta-research candidates). Summary: Q-13 (token cost measurement P2 immediately) / Q-14 (Navigation Paradox UDM topology mapping P1 before Option A) / Q-15 (intent.lisp investigation P4 at Phase 1 design) / Q-16 (auto-compaction interaction P7 at Phase 1 design) / Q-17 (heading-slug stability policy §13.4 as binding rule for ALL future heading authoring).
 
+**Q-18 through Q-22** — see §15.5 (5 new questions derived from §15 cross-domain synthesis). Summary: Q-18 (CCL stages as quality tiers per Q1 LLM-training Pattern A) / Q-19 (lead-with-answer writing discipline per Q3 GEO 44.2% finding) / Q-20 (near-duplicate-paragraph audit across canonical trackers per Q1 dedup pattern) / Q-21 (4-component cross-ref maintenance design per Q2 research) / Q-22 (P0 em-dash heading-slug empirical test BEFORE any other Option A approval).
+
 ---
 
 ## §10b. Independent gap audit (added 2026-05-15)
@@ -511,6 +513,9 @@ For audit-trail completeness, items confirmed OUT of scope:
 - `MULTI_AGENT_GUIDE.md` § Canonical Context Load — modified by Phase 1.5
 - **`docs/migration/_research/agent-markdown-traversal-2026-05-15.md`** (added 2026-05-15) — udm-researcher artifact with 13 findings + 15 primary sources; canonical research backing for §3.6 + §10b
 - **`docs/migration/_research/agent-discoverability-2026-05-15.md`** (added 2026-05-15; follow-on) — udm-researcher artifact with 17 primary sources; canonical research backing for §13 (naming conventions + TOC design + Navigation Paradox + cross-reference preservation + 8 meta-research candidates); supersedes any pre-research scope-naming intuitions in earlier plan revisions
+- **`docs/migration/_research/llm-training-data-storage-2026-05-15.md`** (added 2026-05-15; cross-domain Q1) — udm-researcher artifact on LLM training data storage techniques; ~20 primary sources including Anthropic FMTI report + Anthropic effective-context-engineering blog + MosaicML StreamingDataset + HuggingFace + NVIDIA + Gemini 2.5 technical report + Byte Latent Transformer ACL 2025 paper; canonical research backing for §15.2 Patterns A (quality tiers) + B (deduplication) + C (sidecar index files)
+- **`docs/migration/_research/cross-reference-maintenance-agent-2026-05-15.md`** (added 2026-05-15; cross-domain Q2) — udm-researcher artifact on autonomous cross-ref maintenance design space; surveys lychee + markdownlint + DocLinkChecker + Vale + Drasi/GitHub Copilot case study + WarpFix; canonical research backing for §15.2 Pattern D (4-component design) + §13.4 critical em-dash empirical-test caveat
+- **`docs/migration/_research/web-crawler-techniques-2026-05-15.md`** (added 2026-05-15; cross-domain Q3) — udm-researcher artifact on web crawler / search engine techniques; 20 primary sources including Google developers + W3C + SIAM Review (PageRank paper) + Microsoft Azure Search + 2026 GEO industry research + Leapd AI-search-engine study; canonical research backing for §15.2 Pattern E (slug-stability discipline) + §15.3 negative findings (llms.txt + PageRank + hybrid retrieval don't transfer)
 - Anthropic Claude Code best practices: https://code.claude.com/docs/en/best-practices (cited in §3.6 Findings 1-2 + 11)
 - Anthropic Claude Code skills: https://code.claude.com/docs/en/skills (cited in §3.6 Findings 3 + 7)
 - llms.txt open standard: https://llmstxt.org/ (cited in §3.6 Finding 4 + §13.2; structural template for INDEX.md)
@@ -655,6 +660,8 @@ points directly to the section.
 - ❌ `## Idempotency Ledger (D15)` — D15 not first; slug-cite to `#d15` requires platform-specific prefix matching
 - ❌ `## D15: Idempotency Ledger (Locked 2026-05-09)` — date in heading; rename on supersession breaks inbound links
 
+**⚠️ CRITICAL EMPIRICAL CAVEAT (added 2026-05-15 per Q2 cross-ref research artifact)**: The em-dash `—` character in heading examples (`## D15 — Idempotency Ledger`) may NOT produce the assumed `#d15` anchor due to GitHub's slug algorithm interaction with non-ASCII punctuation. The Q2 research artifact explicitly flagged this for **immediate empirical test BEFORE any Phase 3 split begins**. Test procedure (15 minutes): (1) author a test markdown file with 4 heading variants (em-dash, en-dash, hyphen-with-spaces, colon); (2) push to a test branch on GitHub; (3) inspect generated anchor IDs via "Copy link to heading"; (4) document actual vs expected slugs. If em-dash breaks the `#d15` short-form anchor, the canonical heading style should switch to `## D15 - Idempotency Ledger` (ASCII hyphen). This is a **P0 meta-research task** (added to §13.5; supersedes prior P1-P8 ordering until resolved).
+
 **Audit before split**: Per meta-research Priority 3 (research §E), audit all headings in `docs/migration/` for first-word-stable patterns BEFORE executing splits. Headings that don't match the convention should be normalized first.
 
 ### §13.5 Meta-research candidates (8 topics; prioritized per research §E)
@@ -693,6 +700,82 @@ Three changes propagate back to existing plan sections:
 - **Q-15**: Approve P4 (intent.lisp / Formal Architecture Descriptors investigation) at Phase 1 design?
 - **Q-16**: Approve P7 (auto-compaction interaction with CCL) at Phase 1 design?
 - **Q-17**: Approve §13.4 heading-slug stability policy as a binding rule for ALL future heading authoring (not just splits)?
+
+---
+
+## §15. Cross-domain research synthesis (added 2026-05-15)
+
+Per user 5th-directive request: spawn 3 parallel research agents on (Q1) LLM training data storage techniques + (Q2) dedicated cross-reference maintenance agent + (Q3) web crawler / search engine techniques. All 3 artifacts landed in `docs/migration/_research/` 2026-05-15 (LLM training-data-storage / cross-reference-maintenance-agent / web-crawler-techniques). Combined ~1,800 lines + ~50 primary sources across 3 angles.
+
+**Self-referential split-trigger note**: Plan now exceeds 700 lines per the §13 preamble's own split trigger. Post-this-edit: ~800 lines projected. **Recommended action at next refactor cycle**: split the plan per its own §13.1 naming convention — `MARKDOWN_REFACTOR_PLAN.md` (sections §1-§9 + §12 sign-off) + `MARKDOWN_REFACTOR_PLAN_appendix.md` (sections §10b + §13 + §15). Adding §15 anyway because (a) the synthesis content is too important to bury in `_research/`, (b) splitting the plan mid-revision would itself violate §13.3 cross-reference preservation discipline (would break inbound `§13.X` cites). Pitfall #9.m (discipline-not-applied-to-tracker) acknowledged in real-time.
+
+### §15.1 Independent triangulation across 3 research angles
+
+**The most important meta-finding**: All 3 research artifacts (LLM training, cross-ref maintenance, web crawlers) **independently converge** on the same structural intervention: a sidecar manifest / index file. This is significant because each angle reasons from a different domain:
+
+- **LLM training (Q1)**: MosaicML's `index.json` lets infrastructure locate training shards without reading shard content (Pattern C: sidecar index files transfer)
+- **Cross-ref maintenance (Q2)**: lychee + verify_cascade.py operate against an INDEX-as-source-of-truth for what files exist + what cross-refs are valid
+- **Web crawlers (Q3)**: sitemap.xml is the URL manifest — high-fidelity transfer to a `CORPUS_INDEX.md`
+
+When 3 independent research domains converge on the same answer, the convergence itself is signal. The plan's Phase 1 INDEX.md proposal is now triangulated by 3 angles + the original llms.txt finding from research #1 — 4 cumulative sources.
+
+### §15.2 New patterns from cross-domain synthesis
+
+**Pattern (a) — Quality tiers in the CCL** (per Q1 LLM-training Pattern A):
+Training labs explicitly weight high-quality curated data more than raw web data. The CCL's Stage 1 (mandatory) / Stage 2 (risk + backlog) / Stage 3 (task-specific) hierarchy IS this pattern, but the plan never named it as such. **Adoption**: explicitly label CCL stages as quality tiers in D62 doctrine — "Stage 1 = canon-tier (always read; never drift); Stage 2 = reference-tier (read on-demand); Stage 3 = ad-hoc-tier". This frames the CCL doctrine consistently with established LLM-training discipline. Zero infrastructure cost.
+
+**Pattern (b) — Lead-with-answer writing discipline** (per Q3 GEO research Finding):
+Empirically validated: 44.2% of all LLM citations come from the FIRST 30% of page content. Structured lists score 30-40% higher than prose walls. **Adoption**: mandate "lead-with-answer" structure for every section in `docs/migration/` going forward — 1-3 sentence direct answer / status statement at the top of every section before elaboration. Zero infrastructure cost; pure writing discipline. Apply to NEW edits + retroactively at next round close-out cascade. This is the single highest-ROI writing-discipline change surfaced across all 5 research artifacts.
+
+**Pattern (c) — Single-source-of-truth deduplication** (per Q1 LLM-training Pattern B):
+Training labs deduplicate near-identical documents because duplication distorts the model. The doc-corpus analog: any fact that must update when reality changes should exist in EXACTLY ONE authoritative location, with cross-reference links everywhere else. **Current drift risk**: HANDOFF.md L7 narrative + CURRENT_STATE.md L7 narrative + CODE_BUILD_STATUS.md L12 narrative all carry near-identical event narratives. The plan's Phase 1 should add: "audit for near-duplicate paragraphs across canonical trackers; consolidate to single source + cross-reference."
+
+**Pattern (d) — 4-component cross-ref maintenance design** (per Q2 cross-ref research):
+NOT a single autonomous agent. Industry pattern (Drasi/GitHub Copilot case study + WarpFix): AI documentation agents are detection-only monitors that file issues for human fix. **Adoption**: replace plan's vague "Phase 2.4 Pattern F audit script extension" with concrete 4-component design:
+  1. **`lychee-action` scheduled CI** (weekly cron): catches file-existence + in-file fragment failures; creates GitHub Issue; ZERO auto-fix
+  2. **`verify_cascade.py` Trigger L extension** (Pattern F Layer 1): heading-slug drift + stale line-number detection
+  3. **`tools/rewrite_cross_refs.py`** (one-shot at split-time only per §13.3): proposes diff; HUMAN approves before `git apply`
+  4. **`udm-cross-ref-checker` SKILL** (on-demand): semantic-ambiguity cases; outputs to `_research/` only; never writes primary docs
+
+**Pattern (e) — Slug-stability discipline as 301-redirect analog** (per Q3 web-crawler Finding):
+Web URL slugs never change without a 301 redirect; same principle applies to file paths. **When Phase 3 splits execute**, the master INDEX.md must record old-name → new-name mapping (the doc-corpus equivalent of a 301 redirect). Already partially captured in §13.3; this synthesis names the discipline + grounds it in web-SEO precedent.
+
+### §15.3 What does NOT transfer (negative findings worth recording)
+
+- **llms.txt as crawler-discoverable convention**: per Q3 research, no major AI provider (OpenAI / Google / Anthropic / Meta / Mistral) reads it in production as of 2026. **The plan uses llms.txt FORMAT (H1 + blockquote + sections + descriptions) as a STRUCTURAL TEMPLATE for INDEX.md, NOT as a crawler-discovery file.** This distinction is important and should be clarified in §13.2: we adopt the llms.txt FORMAT for human + agent consumption inside the repo; we do NOT depend on web crawlers picking it up.
+- **PageRank / link-graph weighting**: per Q3 web-crawler research, doesn't transfer at 25-file scale. The CCL's explicit 4-seed-reads (NORTH_STAR / HANDOFF / CURRENT_STATE / CHECKS_AND_BALANCES) already implement the intent without machinery. No infrastructure investment justified.
+- **Hybrid retrieval (BM25 + vector)**: per Q3 + prior research, requires RAG infrastructure that conflicts with §2.2 non-goal #4 (no non-stdlib dependencies). Agents already use grep-first; the inverted-index IS the grep index implicitly.
+- **Fully autonomous cross-ref maintenance agent**: per Q2 research bottom line — industry AI doc agents are detection-only monitors; humans fix. Don't build a continuously-running autonomous fixer. The 4-component design (Pattern d above) is the right shape.
+- **LLM training shard-size conventions** (64 MB - 5 GB): per Q1 research, irrelevant at our KB-scale corpus. Markdown file-size targets should be agent-traversal-driven (per §13.1 1,000-line trigger), not training-shard-derived.
+
+### §15.4 Critical empirical-validation requirements added to plan
+
+Two empirical tests MUST run before any Option A split:
+
+1. **§13.4 em-dash heading-slug test** (P0; 15 minutes; per Q2 critical side finding) — added inline to §13.4 as critical caveat. Tests whether `## D15 — Title` (em-dash) produces `#d15` short-form anchor on GitHub. If broken, switch to ASCII hyphen `## D15 - Title`.
+2. **P2 token cost measurement** (per §13.5 + Q1 sidecar-index-files validation) — already in §13.5 as P2; status unchanged. 15-minute task; informs Phase 1 priority sequencing.
+
+Both tests are zero-infrastructure + no-decision-required. Pipeline-lead should authorize both at the same approval as §12 sign-off.
+
+### §15.5 New Q-numbers added to §10 open questions
+
+- **Q-18 (NEW per §15.2 Pattern a)**: Approve labeling CCL stages as quality tiers in D62 doctrine ("Stage 1 = canon-tier; Stage 2 = reference-tier; Stage 3 = ad-hoc-tier")? Frames CCL discipline consistently with established LLM-training data-curation patterns.
+- **Q-19 (NEW per §15.2 Pattern b)**: Mandate lead-with-answer writing discipline for all NEW section edits in `docs/migration/`? Highest-ROI writing change per Q3 empirical evidence (44.2% AI citations from first 30% of content).
+- **Q-20 (NEW per §15.2 Pattern c)**: Approve near-duplicate-paragraph audit across HANDOFF.md / CURRENT_STATE.md / CODE_BUILD_STATUS.md L7-L12 narratives? Single-source-of-truth deduplication per Q1 LLM-training Pattern B.
+- **Q-21 (NEW per §15.2 Pattern d)**: Approve 4-component cross-ref maintenance design (lychee CI + verify_cascade.py extension + rewrite_cross_refs.py + udm-cross-ref-checker SKILL)? Replaces plan's vague Phase 2.4 Pattern F audit script extension with concrete architecture.
+- **Q-22 (NEW per §15.4)**: Authorize P0 em-dash heading-slug test BEFORE any other Option A approval? 15 minutes; informs whether §13.4 policy needs revision.
+
+### §15.6 Cross-domain synthesis impact summary
+
+| Plan section | Change from §15 synthesis |
+|---|---|
+| §3.6 (research validation) | Augmented — 3 NEW research artifacts confirmed prior research direction; triangulated via independent angles |
+| §13.2 (TOC structure) | Clarified — llms.txt is FORMAT template only; NOT relying on crawler discovery |
+| §13.4 (heading-slug stability) | CRITICAL caveat added — em-dash empirical test BEFORE any split |
+| §13.5 (meta-research) | Added P0 (em-dash test); P2 unchanged but now triangulated by Q1 research |
+| §10 (open questions) | +5 (Q-18 through Q-22) |
+| §11 (cross-references) | +3 research artifacts cited |
+| §3.2 + §5.1 (Phase 2 cross-ref tooling) | Refined — 4-component design replaces single Pattern F extension item |
 
 ---
 

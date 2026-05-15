@@ -7408,4 +7408,112 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
 
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; answers Q-1 through Q-17 (especially Q-13 P2 token measurement to ground the optimization target empirically); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown.
 
+---
+
+## 2026-05-15 -- MARKDOWN_REFACTOR_PLAN.md 3rd-revision + 3 NEW parallel research artifacts (Q1+Q2+Q3) — §15 cross-domain synthesis per user 5th-directive
+
+**Trigger**: User 3-part follow-up directive: (Q1) "Research blob storage and training techniques for LLMs. How do LLMs train with large amounts of text data?"; (Q2) "Research if we can have a dedicated explicit cross-reference links agent that keeps all explicit cross-reference links up to date"; (Q3) "Research how webcrawlers gather data from webpages. Perhaps we can leverage how Google and similar search engines organizes webpages." NOT a cascade invocation; direct user-direction work.
+
+**Workflow executed (5 sequential steps)**:
+
+1. **3 PARALLEL udm-researcher invocations** — first parallel research session in this plan-revision cycle. All 3 spawned in single Agent tool batch per parallel-execution best practice; all 3 completed within ~10 minutes of wall-clock time (vs ~30 minutes if sequential). Combined ~285 K tokens consumed across 3 sub-agents; ~75 tool uses cumulative.
+
+2. **Q1 artifact landed**: `docs/migration/_research/llm-training-data-storage-2026-05-15.md` (256 lines; ~20 primary sources). Verdict: training-data patterns and documentation-corpus patterns are solving opposite problems. 3 patterns transfer (quality tiers + dedup + sidecar index files); most don't transfer (training is petabyte-scale one-shot read; docs are KB-scale repeated targeted read).
+
+3. **Q2 artifact landed**: `docs/migration/_research/cross-reference-maintenance-agent-2026-05-15.md` (323 lines). Bottom line: NOT a single autonomous agent; recommends 4-component design (lychee CI + verify_cascade.py extension + rewrite_cross_refs.py at split-time + udm-cross-ref-checker SKILL on-demand). **CRITICAL side finding**: §13.4 heading-slug `## D15 — Title` em-dash interaction with GitHub slug algorithm needs immediate empirical test BEFORE any Phase 3 split.
+
+4. **Q3 artifact landed (with reconstruction note)**: `docs/migration/_research/web-crawler-techniques-2026-05-15.md` (240 lines; 20 primary sources). The Q3 sub-agent returned content as chat-text without writing to file (skill-instruction misread). Parent agent reconstructed the artifact verbatim from sub-agent output per audit-trail discipline; reconstruction note added to artifact header. Content fidelity preserved 1:1.
+
+5. **Plan synthesis** — applied to MARKDOWN_REFACTOR_PLAN.md (708 → 791 lines; +83 lines). NEW §15 added with 6 sub-sections:
+   - **§15.1 Independent triangulation across 3 research angles**: meta-finding that all 3 independent research domains (LLM training + cross-ref maintenance + web crawlers) converge on sidecar manifest / index file as right structural intervention
+   - **§15.2 New patterns from cross-domain synthesis**: 5 transfer patterns (A quality tiers / B lead-with-answer / C dedup / D 4-component cross-ref / E slug-stability-as-301-redirect)
+   - **§15.3 What does NOT transfer (negative findings)**: 5 explicit non-transfers (llms.txt as crawler-discoverable / PageRank weighting / hybrid retrieval / fully-autonomous cross-ref agent / LLM training shard sizes)
+   - **§15.4 Critical empirical-validation requirements**: 2 P0 tests added — em-dash heading-slug + token cost measurement
+   - **§15.5 New Q-numbers added to §10**: Q-18 through Q-22 (5 new)
+   - **§15.6 Cross-domain synthesis impact summary**: per-section change table
+
+**Cascade edits propagated**:
+   - §13.4 CRITICAL em-dash empirical-test caveat added inline (overrides P1-P8 ordering — em-dash test is now P0)
+   - §10 added Q-18 through Q-22 cross-references
+   - §11 cross-references extended with 3 new research artifacts + per-artifact source counts
+   - Header status updated to "3rd revision" with cumulative research-grounding (5 udm-researcher artifacts + ~50 cumulative findings + ~70 primary sources)
+   - Self-referential split-trigger note in §15 preamble — plan now exceeds §13 700-line trigger; defer split to next refactor cycle
+
+**Self-referential split-trigger note**: Plan now 791 lines exceeds the §13's own 700-line split-trigger. Pitfall #9.m (discipline-not-applied-to-tracker) acknowledged in §15 preamble. Rationale for deferring split: splitting mid-revision would itself violate §13.3 cross-reference preservation discipline (would break inbound `§13.X` cites in tracker entries + cross-doc cites). Split deferred to next refactor cycle when (a) plan crosses 1000 lines OR (b) pipeline-lead approves Option A execution + the cross-ref preservation tooling lands first.
+
+**Most important meta-finding**: 3 INDEPENDENT research domains converge on the same structural intervention (sidecar manifest / index file). When 3 independent research angles converge on the same answer, the convergence itself is signal. The plan's Phase 1 INDEX.md proposal is now triangulated by 4 angles total (counting llms.txt finding from research #1).
+
+**Deliverables landed (3 new + plan revisions + 4 trackers)**:
+
+| File | Action | Lines | Purpose |
+|---|---|---|---|
+| docs/migration/_research/llm-training-data-storage-2026-05-15.md | NEW | 256 | udm-researcher Q1; ~20 primary sources; canonical research backing for §15.2 Patterns A+B+C |
+| docs/migration/_research/cross-reference-maintenance-agent-2026-05-15.md | NEW | 323 | udm-researcher Q2; canonical research backing for §15.2 Pattern D + §13.4 critical em-dash caveat |
+| docs/migration/_research/web-crawler-techniques-2026-05-15.md | NEW (parent-reconstructed from chat-text) | 240 | udm-researcher Q3; 20 primary sources; canonical research backing for §15.2 Pattern E + §15.3 negative findings |
+| docs/migration/MARKDOWN_REFACTOR_PLAN.md | REVISED (3rd revision) | 708 → 791 | NEW §15 + §13.4 caveat + §10 Q-18-Q-22 + §11 cross-refs + header |
+| docs/migration/CURRENT_STATE.md L7 | THOROUGH UPDATE | +~30 | Full event narrative |
+| docs/migration/HANDOFF.md § 14 | THOROUGH UPDATE | +~10 | Abbreviated narrative |
+| docs/migration/CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE | +~12 | Doc-only event |
+| docs/migration/_validation_log.md | This entry | +~120 | Event audit trail |
+
+**Test counts**: doc-only commit; no test changes.
+
+**Pytest verification (sanity)**:
+
+| Layer | Pre-commit | Post-commit |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2311 / 62 / 0 | **2311 / 62 / 0** |
+| Delta | -- | 0 (doc-only; expected) |
+
+**Cumulative B-N closures**: 31 (unchanged; plan revision + research only).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UNTOUCHED-AS-EXPECTED (no B-N closures/opens; plan PROPOSES Q-18-Q-22 but pipeline-lead approval gates B-N tracking; once approved, the 4-component cross-ref maintenance design + lead-with-answer discipline + em-dash test would each open as B-Ns) |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | None | UNTOUCHED-AS-EXPECTED |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | Plan §10 Q-22 PROPOSES em-dash test as P0 PRECONDITION but no D-N lock | UNTOUCHED-AS-EXPECTED — pipeline-lead approval gates |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | None (plan proposes patterns; not edge cases) | UNTOUCHED-AS-EXPECTED |
+| Risk change? | Plan §13.4 em-dash issue is a NEW discovered RISK in plan-internal scratch-pad; not formal RISKS.md until Phase 3 actually executes | UNTOUCHED-AS-EXPECTED — formal R-N gated on Phase 3 |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | None | UNTOUCHED-AS-EXPECTED |
+| Executable artifact? | Plan §15.2 Pattern D PROPOSES 4-component cross-ref maintenance (lychee CI + verify_cascade.py extension + rewrite_cross_refs.py + udm-cross-ref-checker SKILL) but no authoring this commit | UNTOUCHED-AS-EXPECTED — script + skill authoring gated on plan approval |
+| Spec edit? | YES — plan doc revised (708 → 791 lines; new §15) | UPDATED — plan deliverable IS the artifact under revision |
+| Sub-class formalization? | Pitfall #9.m self-referential acknowledgment in §15 preamble (plan exceeds its own 700-line split-trigger; deferred per §13.3 cross-ref preservation tradeoff) | UNTOUCHED-AS-EXPECTED — acknowledgment, not new sub-class |
+| New skill/agent? | Plan §15.2 Pattern D PROPOSES udm-cross-ref-checker SKILL but no authoring this commit | UNTOUCHED-AS-EXPECTED — skill authoring gated on plan approval |
+
+**Step 10 application**: ✅ N/A — no new public surface; plan + research are Markdown deliverables.
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched)
+- Pitfall #9.k OK (pytest 2311/62/0 unchanged across all trackers; B-N count 31 unchanged; plan line count 708 → 791 cited consistently in CURRENT_STATE + HANDOFF + CODE_BUILD_STATUS + this entry; cumulative research artifact count 5 cited consistently)
+- Pitfall #9.l OK (Agent re-read all 3 research artifacts verbatim BEFORE synthesis; cross-checked Q2's em-dash finding against §13.4 plan content; identified plan bug in real-time; canonical-re-read discipline applied)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional walked explicitly above; SELF-REFERENTIAL Pitfall #9.m acknowledgment in §15 preamble — plan exceeds its own 700-line split-trigger; explicit reasoning for deferring split provided)
+- Pitfall #9.n OK N/A (no new public surface)
+- Pitfall #10 (Tier 0/3 boundary) OK N/A (no test changes)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 28 unpushed commits ahead of master pre-this-commit (29 after this commit lands; HOLD push). 31 cumulative B-N closures (unchanged this commit). 0 still-open net-new.
+
+**Cumulative session-research note**: 5 udm-researcher artifacts now exist for this plan: research #1 `agent-markdown-traversal-2026-05-15.md` + research #2 `agent-discoverability-2026-05-15.md` + research #3 `llm-training-data-storage-2026-05-15.md` + research #4 `cross-reference-maintenance-agent-2026-05-15.md` + research #5 `web-crawler-techniques-2026-05-15.md`. Combined: ~50 findings (some overlap) + ~70 primary sources across 5 angles. Confidence: 🟡 Medium-High overall. The 3 PARALLEL Q1+Q2+Q3 invocations were the first parallel-research session in this plan-revision cycle; demonstrates the parallel-agent pattern's value (3× wall-clock-time savings vs sequential).
+
+**Plan status**: still 🟡 Plan-draft awaiting pipeline-lead. Now has 22 open questions Q-1 through Q-22 (5 added today). Most-impactful next-step action: Q-22 (P0 em-dash heading-slug empirical test) — 15-minute task; if test reveals em-dash breaks `#d15` short-form anchor, the §13.4 policy needs revision BEFORE any other Option A work begins.
+
+**Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; answers Q-1 through Q-22 (especially Q-22 P0 em-dash test + Q-13 P2 token measurement to ground optimization target empirically); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown WITH cross-ref preservation tooling (Q-21 Pattern D 4-component design) authored FIRST per §13.3 mandatory precondition.
+
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; Q-1 through Q-12 answered (especially Q-11 udm-context-loader subagent approval + Q-12 CLAUDE.md trim approval); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown (1.0 baseline measurement + 1.1 archive cutoff + 1.2 archive cascade + 1.3 INDEX.md authoring + 1.4 per-file INDEX sidecars + 1.5 D62 CCL Stage 0 update + 1.5b skill-prompt cascade enumeration + 1.6 CLAUDE.md trim + 1.7 Pattern E independent review).
