@@ -6581,3 +6581,56 @@ WSJF 1.5 (COD 3; JS 2). Closure target: next bug-fix cycle OR Tier 4 deep-integr
 **Cascade complete**. udm-next-step-cascade Step 1 (Tier 4 scaffold build at 323c30a) + Step 2 (this gap-check at next commit) executed cleanly. Branch round-6-post-merge-tracking now at 11 unpushed commits ahead of master; 24 cumulative B-N closures + 1 new B-N opened (B-270).
 
 **Awaiting user direction** per udm-next-step-cascade output contract -- do NOT auto-proceed to next runway item.
+
+## 2026-05-14 -- B-268 CLOSED via udm-next-step-cascade Step 1.3.1 extension (parallel-agent re-verification)
+
+**Trigger**: User-invoked udm-next-step-cascade via "Proceed with next steps." Skill's tie-breaker (smallest scope) selected B-268 from the prior runway (4 MEDIUM + 1 LOW).
+
+**B-268 disposition** (per BACKLOG body): "extend parent-agent integration workflow with an explicit re-run pytest authoritatively after all sibling agents complete step BEFORE trusting any sub-agent pytest count. Update agent prompt template to surface this contract..."
+
+**Implementation choice**: extend `.claude/skills/udm-next-step-cascade/SKILL.md` Step 1.3 with a new sub-step 1.3.1 "Parallel-agent re-verification". This is the cleanest home because:
+- The cascade skill IS the parent-agent orchestration layer that spawns sub-agents
+- The directive applies at Step 1 (build execution), not at Step 2 (gap-check) -- so it fits inline in the existing Step 1 procedure
+- Alternative homes (HANDOFF section 8 Pitfall sub-class / udm-progress-logger / udm-post-build-verify) would be referenced but not operationalize the directive at the orchestration timepoint
+
+**Step 1.3.1 directive (+1,415 chars to skill)**:
+
+- **Anti-pattern**: copy-pasting a sub-agent's reported pytest count into the commit message without re-verification = Pitfall #9.k arithmetic-propagation drift via sub-agent-stale-snapshot
+- **Mechanism**: parent agent invokes `udm-post-build-verify` skill OR runs `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression tests/integration tests/crash -q --no-header` directly after the LAST sub-agent reports completion
+- **Scoping**: parallel multi-agent cohorts only; sequential single-agent work is NOT subject (single agent's pytest count is authoritative since no sibling work is in flight)
+- **Empirical anchor**: commit 9b3007c -- 3 parallel build agents each reported "2127 pass" but authoritative post-cohort count was 2281 (math: 2083 + 69 + 61 + 68 = 2281). Each agent ran pytest before sibling files landed.
+
+**Files modified this commit (4)**:
+
+| File | Change | Delta |
+|---|---|---|
+| .claude/skills/udm-next-step-cascade/SKILL.md | +Step 1.3.1 sub-step (parallel-agent re-verification) | +1,415 chars |
+| docs/migration/BACKLOG.md | B-268 leading-badge flip + comprehensive closure annotation citing skill update + anti-pattern + scoping | +1,061 chars |
+| docs/migration/CURRENT_STATE.md L7 | B-268 closure milestone narrative prepended; 25 cumulative branch closures noted; second udm-next-step-cascade invocation noted | +674 chars |
+| docs/migration/HANDOFF.md section 14 | Same B-268 milestone narrative | +241 chars |
+| docs/migration/_validation_log.md | This entry | +this entry chars |
+
+**Pytest baseline**: Unchanged at 2288 pass / 30 skip / 0 fail. **Per the new Step 1.3.1 directive itself**: this is sequential single-agent work (no parallel agents spawned), so the directive does NOT require pytest re-verification (only applies to multi-agent parallel cohorts).
+
+**Step 10 application**: N/A. Skill file extension is documentation; not new public surface. No CLAUDE.md Structure changes needed (skill already registered).
+
+**Convention checks**:
+- Pitfall #9.j OK (B-268 leading-badge flipped with closure annotation)
+- Pitfall #9.k OK (pytest count 2288/30/0 unchanged; sequential-work-no-reverify-needed per new directive itself; CURRENT_STATE + HANDOFF + this entry all consistent at "25 cumulative" closures)
+- Pitfall #9.l OK (re-read B-268 disposition + Step 1 existing structure before authoring Step 1.3.1)
+- Pitfall #9.m OK (B-268 closed AND tracked simultaneously)
+- Pitfall #9.n OK N/A (no new public surface)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Second udm-next-step-cascade invocation -- skill working as designed**:
+
+| Check | Verdict |
+|---|---|
+| Trigger phrase ("Proceed with next steps") matched | OK |
+| Identified prior-turn runway item (4 MEDIUM + 1 LOW) | OK |
+| Tie-breaker applied (smallest scope; B-268 selected) | OK |
+| Step 1 executed (skill extension authoring) | OK |
+| Step 1.3.1 directive NOT yet operationalized this commit (sequential work) | OK (per directive scoping) |
+| Step 2 gap-check follows this commit | PENDING |
+
+**Branch state**: round-6-post-merge-tracking now at 12 unpushed commits ahead of master; 25 cumulative B-N closures + 1 still-open (B-270 opened in last commit cycle 1cdd44c).
