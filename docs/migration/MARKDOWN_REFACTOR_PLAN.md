@@ -655,15 +655,22 @@ points directly to the section.
 
 ### §13.4 Heading-slug stability policy
 
-**Rule**: Headings that participate in cross-references MUST use the convention `## {ID} — {title}` where `{ID}` is the first word (D-number, B-number, R-number, RB-N, SP-N, etc.).
+**Rule (revised 2026-05-15 per Q-22 empirical findings)**: Headings that participate in cross-references MUST use the convention `## {ID}: {title}` (COLON-FORM) where `{ID}` is the first word (D-number, B-number, R-number, RB-N, SP-N, etc.). **Em-dash and en-dash variants are PROHIBITED for new headings** — empirically verified to break GitHub's slug algorithm (see §15.4 for test results).
 
-**Why**: Markdown auto-generates fragment anchors from headings (lowercase + hyphens). If the heading is `## Idempotency Ledger Decision (D15)`, the slug becomes `idempotency-ledger-decision-d15` — non-portable; rename breaks all inbound `#idempotency-ledger-decision-d15` links. If the heading is `## D15 — Idempotency Ledger Decision`, the slug becomes `d15-idempotency-ledger-decision` — but the FIRST WORD `d15` enables `#d15` as a stable shorter anchor (research §D-1).
+**Why colon-form**: Markdown auto-generates fragment anchors from headings (lowercase + non-alphanumeric handling). Colon strips cleanly to a hyphen-separator; em-dash + en-dash + ASCII hyphen are preserved literal in the slug (per Unicode `\p{Pd}` dash-punctuation handling), producing unusable anchors like `d15-—-idempotency-ledger`. See full empirical detail in **§15.4 below + `_research/em-dash-slug-test-2026-05-15.md`**.
 
-**Best practice for stable slugs**:
-- ✅ `## D15 — Idempotency Ledger` → slug `d15-idempotency-ledger`; cite as `#d15` (using the first-word anchor on platforms that match prefix; OR `#d15-idempotency-ledger` for full slug)
-- ✅ `## B-271 — FP-precision percentile fix` → slug `b-271-fp-precision-percentile-fix`; cite as `#b-271`
-- ❌ `## Idempotency Ledger (D15)` — D15 not first; slug-cite to `#d15` requires platform-specific prefix matching
+**Best practice for stable slugs (POST-REVISION)**:
+- ✅ `## D15: Idempotency Ledger` → slug `d15-idempotency-ledger`; cite as `#d15-idempotency-ledger`
+- ✅ `## B-271: FP-precision percentile fix` → slug `b-271-fp-precision-percentile-fix`; cite as `#b-271-fp-precision-percentile-fix`
+- ❌ `## D15 — Idempotency Ledger` (em-dash) — slug becomes `d15-—-idempotency-ledger` (em-dash embedded literal); **PROHIBITED for new headings**
+- ❌ `## D15 – Idempotency Ledger` (en-dash) — same problem; **PROHIBITED**
+- ❌ `## D15 - Idempotency Ledger` (ASCII hyphen with surrounding spaces) — slug becomes `d15---idempotency-ledger` (triple hyphen); **PROHIBITED**
+- ❌ `## Idempotency Ledger (D15)` — D15 not first; slug-cite requires platform-specific prefix matching
 - ❌ `## D15: Idempotency Ledger (Locked 2026-05-09)` — date in heading; rename on supersession breaks inbound links
+
+**Forward-only migration per D92**: Existing em-dash headings stay (their current slugs continue resolving — no inbound-link breakage). NEW headings authored after this revision (2026-05-15) MUST use colon-form. Bulk normalization deferred to next round close-out OR Phase 3 split (whichever fires first).
+
+**Self-referential exemption acknowledged**: This plan document itself uses em-dash in many of its own historical headings (§3.6, §10b, §13.X, §15.X, §16.X). Per forward-only D92 + Pitfall #9.m self-referential acknowledgment, those existing headings stay; future plan revisions or splits will normalize incrementally. The plan is not yet self-compliant with its own §13.4 colon-form rule — this is acknowledged drift, not contradiction.
 
 **⚠️ EMPIRICAL TEST COMPLETE (Q-22 RESOLVED 2026-05-15)** — see `docs/migration/_research/em-dash-slug-test-2026-05-15.md` for full findings + `tools/test_github_slug.py` for the deterministic stdlib-only Python implementation of GitHub's slug algorithm.
 
@@ -870,7 +877,7 @@ Per user 6th-directive request: (Q1) how do we keep track of research + create p
 | All NEW sections lead-with-answer (1-3 sentence direct answer) | regex check (best-effort; advisory not blocking) |
 | All NEW research artifacts register in `_research/_INDEX.md` | `udm-researcher` skill update |
 | Files >2,000 lines auto-flagged for split candidate review at next round close-out | `tools/measure_ccl_overhead.py` --report-large flag |
-| `_validation_log.md` triggers archive cascade at 5,000 lines OR quarterly (whichever first) | extended archive policy at L14-23 |
+| `_validation_log.md` triggers archive cascade at 2,000 lines OR quarterly (whichever first) | extended archive policy at L14-23. **REVISED 2026-05-15 from 5K → 2K lines per consistency-audit C-2 + alignment with §9 CCL metric (≤2,000 lines target) + alignment with NEW_REPO_STARTER_TEMPLATE.md threshold** |
 
 ### §16.2 New-repo starter pattern (Q2)
 
@@ -964,7 +971,7 @@ See `NEW_REPO_STARTER_TEMPLATE.md` for full template + skeleton files.
 
 ### §16.6 New open questions Q-23 through Q-26 added to §10
 
-- **Q-23 (NEW per §16.1)**: Approve the 6-rule markdown hygiene enforcement table as binding (D-N candidate)? Includes colon-form headings + explicit cross-ref links + lead-with-answer + `_research/_INDEX.md` registration + 2K-line file flag + 5K-line `_validation_log.md` archive trigger.
+- **Q-23 (NEW per §16.1)**: Approve the 6-rule markdown hygiene enforcement table as binding (D-N candidate)? Includes colon-form headings + explicit cross-ref links + lead-with-answer + `_research/_INDEX.md` registration + 2K-line file flag + 2K-line `_validation_log.md` archive trigger (revised from 5K per consistency-audit C-2; aligns with §9 metric + new-repo template).
 - **Q-24 (NEW per §16.2)**: Approve `NEW_REPO_STARTER_TEMPLATE.md` as canonical greenfield reference? Pipeline-lead can adopt as binding template for any new internal repos.
 - **Q-25 (NEW per §16.3)**: Approve Q11 quarterly markdown hygiene + agent-discoverability research refresh cadence (mirrors Tier 5 Q1-Q10 quarterly drills)?
 - **Q-26 (NEW per §16.4)**: Approve year-1 milestones (Day 0 / 30 / 90 / 180 / 365) as roadmap commitment, OR redirect timeline?
@@ -982,6 +989,74 @@ This is the 4th plan revision; cumulative governance discipline now spans:
 | Per-year | full re-evaluation of plan against fresh research baseline | annual milestone review |
 
 **Plan moves from 🟡 Plan-draft (research-grounded) → 🟡 Plan-final (decision-required)** with this commit. Pipeline-lead's §12 sign-off is the ONE remaining gate. After sign-off → 🟢 Locked + execution begins per §7.1 task breakdown WITH the §15.4 empirical-baseline-driven priority reordering (Phase 1.0 archive cascade FIRST).
+
+---
+
+## §17. Multi-agent gap-audit reflection (added 2026-05-15)
+
+Per user 7th-directive request: "Reflect on the last planning sessions. Are there any gaps in the plans? Are there any edge cases worth considering? Use a multi-agent team to help."
+
+3 parallel general-purpose agents executed independent gap audits from 3 perspectives (producer/execution + adversarial/edge-case + consistency/governance) per §16.5 multi-agent pattern. Combined ~600 lines of independent scrutiny; full synthesis at **`docs/migration/_research/gap-audit-synthesis-2026-05-15.md`**.
+
+### §17.1 Headline finding
+
+🔴 **Plan is research-rich but execution-poor.** All 3 audits independently converged on this verdict. Plan validates direction strongly but lacks concrete execution specifications. **5 mandatory pre-sign-off fixes** identified; 2 already applied inline this commit, 3 remain.
+
+### §17.2 BLOCKERS (5; pre-sign-off)
+
+| # | Finding | Source audit | Status |
+|---|---|---|---|
+| B-1 | §13.4 internal contradiction: opened with "MUST use em-dash" rule + listed em-dash as ✅ + later said em-dash 🔴 BROKEN | Consistency C-1 | ⚫ FIXED THIS COMMIT (§13.4 restructured to lead with empirical findings + colon-form) |
+| B-2 | Archive trigger contradiction: §16.1 said 5K lines; §16.2 + new-repo template + measurement script said 2K | Consistency C-2 | ⚫ FIXED THIS COMMIT (standardized on 2K lines) |
+| B-3 | `tools/verify_cascade.py` doesn't glob `_archive/` — Phase 1.0 archive cascade silently drops audit coverage | Producer F-7 | 🔴 OPEN; mandatory pre-sign-off; 5-line fix |
+| B-4 | Three conflicting archive cutoff dates (30 / >30 / 90 days); operator can't pick | Producer F-1 | 🔴 OPEN; mandatory pre-sign-off; pipeline-lead decision |
+| B-5 | 17 of 24 open Q-N unclassified by sign-off-blocking vs deferrable | Producer F-15 | 🔴 OPEN; mandatory pre-sign-off; new §10.A classification table |
+
+### §17.3 CRITICAL failure modes (3; mitigate before execution)
+
+| # | Failure mode | Mitigation | Status |
+|---|---|---|---|
+| F9.1 | Phase 1.0 lands; INDEX.md never does → repo WORSE than before | Bundle Phase 1.0 + 1.B as ATOMIC COHORT (reject if either lands without other) | Add to §5.1 as binding constraint |
+| F1.1 | Archive partial-write crash → append-only invariant violated | Two-phase-commit semantics for archive script | Add to §7.1 task 1.2 procedural requirement |
+| F5.1 | `udm-context-loader` brief silently omits Do-NOT rule → destruction-class production change possible | PASS-THROUGH-VERBATIM Do-NOT + Pitfall #9.x headers (not summarize) | Add to §15.2 Pattern D + §16.5 anti-patterns |
+
+### §17.4 SERIOUS issues (8; Phase 1 fix OR B-N)
+
+See synthesis §"SERIOUS" table for full list. Highlights:
+- `_research/_INDEX.md` register MISSING (referenced 4× as binding governance; doesn't exist)
+- Plan violates own colon-form rule (uses em-dash in own historical headings; D92 forward-only acknowledged)
+- Plan is 997 lines / 42% past §13's own 700-line split-trigger (acknowledged)
+- 5 stale "12K-16K lines per CCL" estimate references (empirical baseline shows 9,212 lines / 362K tokens)
+- `udm-find-canonical` skill design unclear (multi-candidate? case sensitivity? OOM?)
+- External-platform breaking changes not in risk register
+
+### §17.5 POLISH items (6; P-Ns post-approval)
+
+§14 missing (renumbering artifact) / §12 sign-off appears AFTER §16 (cosmetic) / lead-with-answer not applied to plan's own sections / NEW_REPO_STARTER_TEMPLATE.md doesn't fully demonstrate principles it preaches / 5-line quick-start missing from plan / sign-off mechanism procedurally undefined.
+
+### §17.6 Multi-agent pattern reinforcement (Q4 reflection from §16.5)
+
+This was the 2nd 3-parallel-agent session this cycle. Empirical observations:
+
+✅ **3-parallel-agent pattern works for ORTHOGONAL audits** — when each agent has a genuinely different perspective, parallel execution yields convergent findings WITHOUT context-rot. ~5 min wall-clock vs ~15 min if sequential.
+
+✅ **Convergence is signal** — when all 3 audits independently flag the same finding, that's high-confidence ground truth (e.g., "research-rich but execution-poor" surfaced from all 3 perspectives).
+
+⚠️ **§16.5 anti-pattern empirically validated AGAIN**: 3 is the limit. A 4th parallel agent would not have added marginal value.
+
+⚠️ **Cost calibration**: each gap-audit agent ~160K tokens / ~20 tool uses / ~3-4 min. Sustainable for periodic deep-dive audits; NOT a per-commit pattern.
+
+**Recommendation**: add a new pattern to §16.5 — "**Periodic gap-audit cohort (3-perspective parallel)**" — fire at major plan revisions or pre-lock; not at every cycle.
+
+### §17.7 Plan calculus changes from §17 reflection
+
+Two cascade changes propagate to existing plan sections:
+
+**1. To §5.1 (Phase 1)**: add F9.1 mitigation — Phase 1.0 + 1.B authored as ATOMIC COHORT; sign-off requires both to land together; explicit "do not commit Phase 1.0 without Phase 1.B" gate.
+
+**2. To §15.2 Pattern D + §16.5**: add F5.1 mitigation — `udm-context-loader` briefs MUST pass-through-verbatim Do-NOT rules + Pitfall #9.x headers; never summarize them.
+
+These can be inline-applied at the next plan revision OR at the pre-sign-off cleanup pass (B-3 + B-4 + B-5 fix session).
 
 ---
 

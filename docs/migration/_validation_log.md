@@ -7663,4 +7663,141 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
 
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; answers Q-1 through Q-12 + Q-14 through Q-21 + Q-23 through Q-26 (24 questions); critical first decision: Q-23 6-rule hygiene enforcement as binding D-N + Q-24 NEW_REPO_STARTER_TEMPLATE.md adoption + Q-25 Q11 quarterly cadence + Q-26 year-1 milestones. If approved, Phase 1 work begins WITH Phase 1.0 (`_validation_log.md` archive cascade) as IMMEDIATE FIRST TASK per §5.1 + §15.4 empirical-baseline-driven priority.
 
+---
+
+## 2026-05-15 -- Multi-agent gap-audit reflection on planning sessions (3 parallel agents) + 2 BLOCKER fixes inline + plan §17 added
+
+**Trigger**: User 7th-directive: "Reflect on the last planning sessions. Are there any gaps in the plans? Are there any edge cases worth considering? Use a multi-agent team to help." NOT a cascade invocation; direct user-direction reflection request.
+
+**Workflow executed (3 waves)**:
+
+**Wave 1 (parallel; 3 general-purpose agents; ~5 min wall-clock)**: 3 independent gap audits from orthogonal perspectives.
+
+- **Agent A — Producer/execution gap audit**: "Engineer about to execute Phase 1 tomorrow morning. Fresh-read perspective. What's vague / missing / undocumented / ambiguous?" Output: `_research/gap-audit-producer-2026-05-15.md` (188 lines). Top finding (F-7 BLOCKER): `tools/verify_cascade.py` doesn't glob `_archive/` — Phase 1.0 archive cascade silently drops audit coverage.
+
+- **Agent B — Adversarial/edge-case gap audit**: "Red-team reviewer. Find ways this plan can fail. Edge cases. Race conditions. Silent corruptions." Output: `_research/gap-audit-adversarial-2026-05-15.md` (130 lines). Top finding (F9.1 CRITICAL): Phase 1.0 lands but INDEX.md never does → repo WORSE than before; canonical "ship MVP, never ship V1" anti-pattern.
+
+- **Agent C — Consistency/governance gap audit**: "Cross-cutting auditor. Find contradictions, drift, unenforceable rules." Output: `_research/gap-audit-consistency-2026-05-15.md` (182 lines). Top finding (C-1 CONTRADICTION): §13.4 opens with "MUST use em-dash" + lists em-dash as ✅ + 14 lines later says em-dash 🔴 BROKEN; top-down readers got WRONG rule until reaching empirical caveat.
+
+**Wave 2 (parent agent; sequential)**:
+
+- Author synthesis artifact `_research/gap-audit-synthesis-2026-05-15.md` (184 lines) consolidating all 3 audit findings + severity classification + concrete pre-sign-off action plan.
+- Apply 2 BLOCKER fixes inline:
+  - **B-1 fix**: §13.4 RESTRUCTURED — opens with revised colon-form mandate + deprecated em-dash variants as PROHIBITED with explicit ❌ markers + self-referential D92 forward-only acknowledgment for plan's own historical em-dash headings. Top-down reader now gets the CORRECT rule from the start.
+  - **B-2 fix**: Archive trigger threshold STANDARDIZED on 2,000 lines (was inconsistent: §16.1 said 5K vs §16.2 + new-repo template + measurement script said 2K). §16.1 hygiene table + Q-23 reference both updated.
+- Author NEW §17 "Multi-agent gap-audit reflection" in plan (75 lines) covering BLOCKERS / CRITICAL / SERIOUS / POLISH + multi-agent pattern reinforcement + plan calculus changes.
+
+**Wave 3 (this commit)**: tracker pass + commit + report.
+
+**Headline finding (3 audits independently converged)**: 🔴 plan is research-rich but execution-poor. Plan validates direction strongly but lacks concrete execution specifications.
+
+**5 BLOCKERS identified** (must close before pipeline-lead sign-off):
+
+| # | Finding | Status |
+|---|---|---|
+| B-1 | §13.4 internal contradiction (em-dash MUST + em-dash BROKEN) | ⚫ FIXED THIS COMMIT |
+| B-2 | Archive trigger 5K vs 2K vs unspecified contradiction | ⚫ FIXED THIS COMMIT |
+| B-3 | `tools/verify_cascade.py` doesn't glob `_archive/` (silently drops audit coverage on Phase 1.0) | 🔴 OPEN; mandatory pre-sign-off; 5-line fix |
+| B-4 | Three conflicting archive cutoff date rules (30 / >30 / 90 days); operator can't pick | 🔴 OPEN; mandatory pre-sign-off; pipeline-lead decision |
+| B-5 | 17 of 24 open Q-N unclassified by sign-off-blocking vs deferrable | 🔴 OPEN; mandatory pre-sign-off; new §10.A classification table |
+
+**3 CRITICAL failure modes** (mitigations identified for plan integration; not yet applied):
+
+| # | Failure mode | Mitigation |
+|---|---|---|
+| F9.1 | Phase 1.0 lands; INDEX.md never does → repo WORSE than before | Bundle Phase 1.0 + 1.B as ATOMIC COHORT |
+| F1.1 | Archive partial-write crash → append-only invariant violated | Two-phase-commit semantics for archive script |
+| F5.1 | `udm-context-loader` brief silently omits Do-NOT rule → destruction-class production change | PASS-THROUGH-VERBATIM Do-NOT + Pitfall #9.x headers |
+
+**8 SERIOUS issues + 6 POLISH items** identified — full list in `_research/gap-audit-synthesis-2026-05-15.md` §"SERIOUS" + §"POLISH" tables.
+
+**Multi-agent pattern reinforcement (per §16.5 + new §17.6)**:
+- ✅ 3-parallel-agent pattern WORKS for ORTHOGONAL audits (genuine perspective diversity → convergent findings WITHOUT context-rot)
+- ✅ Convergence is signal: when all 3 audits independently flag same finding, high-confidence ground truth
+- ⚠️ §16.5 anti-pattern "Running >3 parallel research agents" empirically validated AGAIN (3 is the limit)
+- ⚠️ Cost calibration: each audit ~160K tokens / ~20 tool uses / ~3-4 min; sustainable for periodic deep-dive; NOT per-commit
+- **NEW pattern added to plan §16.5 / §17.6**: "Periodic gap-audit cohort (3-perspective parallel)" — fire at major plan revisions or pre-lock; not at every cycle
+
+**Deliverables landed (4 NEW research + plan revised + 4 trackers)**:
+
+| File | Action | Lines | Purpose |
+|---|---|---|---|
+| docs/migration/_research/gap-audit-producer-2026-05-15.md | NEW | 188 | Wave 1 Agent A audit (producer/execution perspective) |
+| docs/migration/_research/gap-audit-adversarial-2026-05-15.md | NEW | 130 | Wave 1 Agent B audit (adversarial/edge-case perspective) |
+| docs/migration/_research/gap-audit-consistency-2026-05-15.md | NEW | 182 | Wave 1 Agent C audit (consistency/governance perspective) |
+| docs/migration/_research/gap-audit-synthesis-2026-05-15.md | NEW | 184 | Wave 2 synthesis + concrete pre-sign-off action plan |
+| docs/migration/MARKDOWN_REFACTOR_PLAN.md | REVISED (5th revision) | 997 → 1072 | NEW §17 + §13.4 restructure + §16.1 archive-trigger fix |
+| docs/migration/CURRENT_STATE.md L7 | THOROUGH UPDATE | +~30 | Full event narrative |
+| docs/migration/HANDOFF.md § 14 | THOROUGH UPDATE | +~12 | Abbreviated narrative |
+| docs/migration/CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE | +~15 | Doc-only event |
+| docs/migration/_validation_log.md | This entry | +~140 | Event audit trail |
+
+**Test counts**: doc-only commit; no test changes.
+
+**Pytest verification (sanity)**:
+
+| Layer | Pre-commit | Post-commit |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2320 / 62 / 0 | **2320 / 62 / 0** |
+| Delta | -- | 0 (doc-only; expected) |
+
+**Cumulative B-N closures**: 31 (unchanged; reflection + 2 BLOCKER fixes inline; 3 B-N candidates B-272/B-273/B-274 identified for pipeline-lead formalization).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UNTOUCHED-AS-EXPECTED (no B-N closures/opens; 3 candidates B-272/273/274 identified in synthesis but NOT formally opened — pipeline-lead can formalize on review per "reflect and identify" scope) |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | None | UNTOUCHED-AS-EXPECTED |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | None | UNTOUCHED-AS-EXPECTED |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | Plan §17 surfaces 8 SERIOUS + 6 POLISH issues + 3 CRITICAL failure modes; some could become formal M/S/I/N/P/G/D/F/V edge cases but more naturally fit as plan-internal scratch-pad | UNTOUCHED-AS-EXPECTED — formal edge-case-series promotion gated on pipeline-lead review |
+| Risk change? | None new in RISKS.md (audit surfaced potential risks but they're plan-internal until pipeline-lead reviews) | UNTOUCHED-AS-EXPECTED |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | §17 added cleanly; cross-references resolve | UPDATED — within plan, not separate POLISH_QUEUE artifact |
+| Executable artifact? | None | UNTOUCHED-AS-EXPECTED |
+| Spec edit? | YES — plan revised (997 → 1072 lines; §17 NEW + §13.4 restructured + §16.1 fix) + 4 NEW research artifacts | UPDATED — plan + research are the artifacts under revision |
+| Sub-class formalization? | Multi-agent §16.5 anti-pattern empirically validated AGAIN (3 is the limit); new pattern "Periodic gap-audit cohort" added per §17.6 | UPDATED — within §16.5 / §17.6 scope; not Pitfall #9 sub-class addition |
+| New skill/agent? | None | UNTOUCHED-AS-EXPECTED |
+
+**Step 10 application**: ✅ N/A — no new public surface; plan + research artifacts are Markdown deliverables.
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched; though B-272/273/274 candidates surfaced for pipeline-lead formalization)
+- Pitfall #9.k OK (pytest 2320/62/0 unchanged across all 5 canonical trackers; plan line count 997 → 1072 cited consistently; cumulative research artifact count 12 cited consistently)
+- Pitfall #9.l OK (Agent re-read all 3 gap audits BEFORE synthesis; cross-checked against §13.4 + §16.1 plan content; identified 2 inline-fixable BLOCKERS via empirical evidence + applied them; canonical-re-read discipline applied)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional walked explicitly above; SELF-REFERENTIAL acknowledgment in §17.4 SERIOUS table — plan violates own colon-form rule + plan exceeds own split-trigger; acknowledged as forward-only D92)
+- Pitfall #9.n OK N/A (no new public surface)
+- Pitfall #10 (Tier 0/3 boundary) OK N/A (no test changes)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 30 unpushed commits ahead of master pre-this-commit (31 after this commit lands; HOLD push). 31 cumulative B-N closures (unchanged this commit; 3 B-N candidates identified). 0 still-open net-new.
+
+**Cumulative session research cohort**: 12 artifacts now exist for this plan effort:
+1-5. Original 5 udm-researcher artifacts (agent-markdown-traversal + agent-discoverability + llm-training-data-storage + cross-reference-maintenance-agent + web-crawler-techniques)
+6. udm-researcher #6 (em-dash test result)
+7. P0 empirical: ccl-baseline (token measurement)
+8-10. Wave 1 gap audits (producer + adversarial + consistency)
+11. Wave 2 synthesis
+(Plus the 2 P0 empirical-test deliverables = 12 + 2 = 14 if counting deliverables)
+
+Cumulative findings: ~80 (across all artifacts; some overlap). Cumulative primary sources: ~80 (some overlap). Confidence: 🟢 High (3 independent gap audits converged on headline; 5 BLOCKERS classified; 2 mechanically fixed inline).
+
+**Plan status**: still 🟡 Plan-final — 2 of 5 BLOCKERS closed this commit; 3 BLOCKERS remain pre-sign-off (mechanical fixes; ~30-60 min total: B-3 verify_cascade.py 5-line edit + B-4 pipeline-lead picks cutoff date + B-5 §10.A Q-N classification table). Pipeline-lead §12 sign-off remains the SINGLE remaining gate AFTER 3 remaining BLOCKERS closed. After sign-off → 🟢 Locked + Phase 1 begins per §7.1 task breakdown WITH F9.1/F1.1/F5.1 mitigations applied at task definition time.
+
+**Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md §17 + `_research/gap-audit-synthesis-2026-05-15.md` for the 5 BLOCKERS + 3 CRITICAL failure-mode mitigations + 8 SERIOUS + 6 POLISH items; decides whether to authorize the 3 remaining pre-sign-off fixes (B-3 + B-4 + B-5) inline OR delegate to next session; then signs off Plan-final → 🟢 Locked. Phase 1 begins per §7.1 with F9.1 atomic-cohort + F1.1 two-phase-commit + F5.1 pass-through-verbatim mitigations applied at task definition.
+
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; Q-1 through Q-12 answered (especially Q-11 udm-context-loader subagent approval + Q-12 CLAUDE.md trim approval); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown (1.0 baseline measurement + 1.1 archive cutoff + 1.2 archive cascade + 1.3 INDEX.md authoring + 1.4 per-file INDEX sidecars + 1.5 D62 CCL Stage 0 update + 1.5b skill-prompt cascade enumeration + 1.6 CLAUDE.md trim + 1.7 Pattern E independent review).
