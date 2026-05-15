@@ -6074,3 +6074,64 @@ This 17-commit campaign followed a build → gap-check → fix → commit patter
 **Convention checks**: Pitfall #9.j OK post-fix / #9.k OK (count consistent) / #9.l OK (post-B-266 state re-read) / #9.m OK (closures landed + tracked) / #9.n OK N/A / CLAUDE.md hard rule 12 OK N/A (Tier alpha) / hard rule 9 OK (this entry).
 
 **Meta-observation**: 9 B-Ns sat with stale leading badges for 4 days (Round 5 close-out 2026-05-10 -> this commit 2026-05-14). Pitfall #9.j was formalized at Round 8 close-out 2026-05-11 (one day AFTER Round 5 close-out); temporal gap explains why these 9 werent caught at fix-time. This batch represents the first systematic sweep of pre-9.j-formalization render-drift. Worth tracking: pre-9.j-formalization drift rate = ~9 instances per round close-out timing.
+
+## 2026-05-14 -- Gap analysis on cb76334 + Round 6 close-out residual sweep
+
+**Trigger**: User direction "Run a gap analysis to see if anything was missed" after cb76334 (B-267 + section 8 polish batch).
+
+**Gap probes (6 surfaces)**:
+
+| # | Surface | Result |
+|---|---|---|
+| G1 | Other Pitfall #9.j stale-leading-badge drift beyond section 8 batch | 10 MORE confirmed real drift instances (B122-126 + B136-141); 1 meta-text false positive (B144); 2 genuinely open (B-221, B-223) |
+| G2 | Pytest count 2132 propagation across mirror sites | Only in BACKLOG B-267 closure annotation; correct (2132 = today-local tier0+tier1 scope; CODE_BUILD_STATUS L28 carries the broader 2281 from yesterdays full-scope run) |
+| G3b | CLAUDE.md L88 verify_tier0_drift Structure row still says "B-267 surfaced as candidate" | STALE -- B-267 closed at cb76334; needed update |
+| G4 | CODE_BUILD_STATUS L12 narrative mentions cb76334 | STALE -- needed prepend with cb76334 cohort event |
+| G5 | CURRENT_STATE L7 open-runway list mentions B-267 (1-cycle) | STALE -- B-267 closed; needed removal from runway |
+| G6 | HANDOFF L? §14 open-runway list mentions B-267 (1-cycle) | STALE -- same pattern as G5; needed removal |
+
+**Updated empirical baseline -- pre-9.j-formalization render-drift rate**: Earlier validation-log meta-observation (post-cb76334) claimed ~9 instances per round close-out timing. With G1 surfacing 10 MORE (Round 6 close-out residual), the actual baseline is ~19 instances total across Rounds 5+6+7+8 close-outs. This recalibration STRENGTHENS B-261 mechanism-evolution priority (Step-10-application-verifier sub-agent firing at commit-time, not next-round-close-out time).
+
+**Fixes this turn (5 files; 10 B-N closures + 4 tracker propagations)**:
+
+| File | Change | Delta |
+|---|---|---|
+| BACKLOG.md | 10 leading-badge flips (B122/123/124/125/126/136/137/138/140/141) per Round 6 close-out residual cleanup | +2,870 chars |
+| CLAUDE.md | L88 verify_tier0_drift row: "B-267 surfaced as candidate" -> "B-267 CLOSED 2026-05-14" with fix detail | +199 chars |
+| CODE_BUILD_STATUS.md | L12 narrative prepended with cb76334 cohort event (B-267 fix + section 8 batch + pytest 2127 -> 2132) | +1,015 chars |
+| CURRENT_STATE.md | L7 runway list: removed "B-267 (1-cycle)" entry (now closed) | -57 chars |
+| HANDOFF.md | §14 runway list: removed "B-267 (1-cycle), " entry (now closed) | -17 chars |
+
+**B-N inventory delta this commit**: 10 B-Ns CLOSED (B122 + B123 + B124 + B125 + B126 + B136 + B137 + B138 + B140 + B141). 0 introduced. Combined with cb76334s 10 closures, this branch (round-6-post-merge-tracking) has closed **20 B-Ns total** across the 3 commits b0418dd + cb76334 + this commit.
+
+**Pytest baseline**: Unchanged at 2132 pass (tier0+tier1 scope) / 10 skip / 2 fail (B218 carryover; tracker-only commit; no code touched).
+
+**Convention check**:
+
+- Pitfall #9.j OK post-fix (10 more leading-badge flips align with inline closure annotations)
+- Pitfall #9.k OK (no test counts touched; B-267 / cb76334 / 2132 mentions consistent across all 4 trackers updated this turn)
+- Pitfall #9.l OK (re-read CLAUDE.md verify_tier0_drift row + CODE_BUILD_STATUS L12 narrative + CURRENT_STATE L7 + HANDOFF §14 runway list before editing each)
+- Pitfall #9.m OK (G1+G3b+G4+G5+G6 all fixed AND tracked simultaneously per hard rule 9; no "noted but not fixed" instances)
+- Pitfall #9.n OK N/A (no new public surface)
+- CLAUDE.md hard rule 9 (udm-progress-logger) OK (this entry IS the application)
+- CLAUDE.md hard rule 12 (B-226 Tier calibration) OK N/A (tracker-only commit; no code build)
+
+**Cross-references**:
+
+- Round 6 close-out 2026-05-10/11 (the upstream fixes that landed 10 closures whose render-state was finally aligned in this commit)
+- B-261 mechanism-evolution candidate (empirical case strengthened from 9-instance to 19-instance baseline)
+- B-260 sub-class 9.o candidate (also strengthened)
+- 144 (Pitfall #9.j meta-tracker; surfaced as false-positive in this sweep -- its body describes the 9.j pattern itself; B144 itself genuinely still open)
+- B-221 + B-223 (UNCLEAR-classified in probe; verified as genuinely open via full-line review; B-221 = B79 supersession-cascade cleanup pending Phase 2 R1; B-223 = IdempotencyLedger Metadata column absence pending Round 6 deployment)
+
+**Branch state**: round-6-post-merge-tracking now at 3 commits (b0418dd + cb76334 + this). Not pushed per user direction "hold the push". Ready as a coherent post-merge follow-up PR.
+
+**Meta-observation -- gap-analysis-as-pattern**:
+
+This commit represents the FOURTH successive parent-agent gap-reflection in this session to find Pitfall #9.j drift (Round 5 § 8 batch = 9; this turn = 10 more = total 19 closures in 2 days). Each gap-reflection finds MORE than the previous one because:
+
+1. **Discovery widens** with each pass -- once the pattern is named, easier to enumerate exhaustively
+2. **Probe regex tightens** over iterations -- catches more genuine instances; filters false positives more reliably
+3. **Comparison-class identifies** -- having closed N items previously, you can pattern-match remaining drift more efficiently
+
+Recommendation: at next round close-out cascade, the **udm-cascade-audit-evolver** skill should run a SYSTEMATIC enumeration of all `^\- \*\*B[\-]?[0-9]+\*\* \([yellow] Open\):` lines with inline `CLOSED 2026-` and produce a definitive count + closure batch. This would close the discipline gap that allowed 19 instances to accumulate.
