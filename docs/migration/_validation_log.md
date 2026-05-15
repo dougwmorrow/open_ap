@@ -6351,3 +6351,66 @@ pytestmark = docker_skip_marker()
 - Pitfall #10 OK (Tier 0/3 boundary preserved; 11 Tier 3 tests still skip on dev workstation without Docker)
 - CLAUDE.md hard rule 9 (udm-progress-logger) OK (this entry IS the application)
 - CLAUDE.md hard rule 12 (B-226 Tier calibration) OK N/A (SQL DDL authoring; no module-build tier-mis-classification risk)
+
+## 2026-05-14 -- B-261 CLOSED: udm-step-10-verifier skill authored
+
+**Trigger**: User standing instruction "1. Proceed with your recommended next steps. 2. Check for any gaps to ensure that nothing is missed."
+
+**Recommended next step**: B-261 mechanism-evolution (1 cycle; strongest empirical case in the runway).
+
+**Deliverable: new skill `.claude/skills/udm-step-10-verifier/SKILL.md` (497 lines)**
+
+The skill is a producer-side application-mechanism for the Step 10 directive (Pitfall #9.n formalization 2026-05-14). It fires AFTER a build cohort completes AND BEFORE the udm-gap-check independent reviewer. Verifies that every newly-authored module/tool has its public surface registered in CLAUDE.md "Structure" section + GLOSSARY.md public-surface tables + CLAUDE.md L325 CLI_* family registry. Emits CLEAN / IN-FLIGHT-DRIFT / N/A verdict. IN-FLIGHT-DRIFT BLOCKS udm-gap-check until producer fixes inline.
+
+**5-step verification procedure** (see skill body):
+1. Identify public surface via `git diff` (skip test/doc/skill files, underscore-prefixed helpers)
+2. Verify CLAUDE.md Structure registration (file row + surface list + canonical spec citation + build-date)
+3. Verify GLOSSARY.md public-surface registration (per-NAME presence; correct section)
+4. Verify Last reviewed date bump
+5. Emit verdict + actionable fix list
+
+**Empirical evidence base (26-event anchor)**:
+
+| Category | Count | Notes |
+|---|---|---|
+| Step 10 first-encounter failures | 3 | Round 4.1 + section 3.4 + section 4.7 |
+| Post-formalization Pitfall #9.j render-drift | 19 | 9 (section 8 batch) + 10 (Round 6 close-out residual) |
+| CLI_* family registry drift | 4 | B-269 evidence base |
+| **Total** | **26** | Shifts catch-time from 1-4 day lag to 0-day lag |
+
+**Companion edits this commit**:
+
+| File | Change | Delta |
+|---|---|---|
+| .claude/skills/udm-step-10-verifier/SKILL.md | NEW (497 lines; canonical skill format mirroring udm-producer-checklist-evolver) | new file |
+| docs/migration/HANDOFF.md section 8 | Step 12 directive added (extends 11-step audit per B-261 closure) + section 14 narrative prepended | +1,237 + +336 chars |
+| CLAUDE.md L681 | Step 12 reference (extends 9.n / 9.l producer self-check chain) | +429 chars |
+| BACKLOG.md | B-261 leading-badge flip with comprehensive closure annotation (26-event evidence + skill home + integration with udm-gap-check) | +1,149 chars |
+| CURRENT_STATE.md L7 | B-261 closure milestone prepended (24 cumulative branch closures noted) | +678 chars |
+| CODE_BUILD_STATUS.md L12 | B-261 closure event prepended | +484 chars |
+
+**B-N inventory delta**: 1 CLOSED (B-261). 0 introduced. 24 cumulative closures across branch round-6-post-merge-tracking (b0418dd 0 + cb76334 11 + 184aac8 10 + 088ac28 1 + bc91f79 1 + 1df6e2b 0 + this commit 1).
+
+**Skill discoverability verified**: After authoring the skill via Write tool, the next system-reminder confirmed `udm-step-10-verifier` is listed in available skills with the canonical description. This means future agent invocations can reference + invoke the skill immediately.
+
+**Convention checks**:
+- Pitfall #9.j OK (B-261 leading badge flipped with closure annotation)
+- Pitfall #9.k OK (no pytest counts touched; this is skill-authoring commit)
+- Pitfall #9.l OK (re-read udm-producer-checklist-evolver SKILL.md for canonical skill format before authoring)
+- Pitfall #9.m OK (B-261 closed AND tracked simultaneously per hard rule 9)
+- Pitfall #9.n OK (the skill IS the meta-fix for 9.n recurrence; new public surface = new SKILL.md file; CLAUDE.md hard rule 9 reference is the Step 10 application for this new artifact)
+- CLAUDE.md hard rule 9 (udm-progress-logger) OK (this entry IS the application)
+- CLAUDE.md hard rule 12 (B-226 Tier calibration) OK N/A (skill authoring; no module-build tier-mis-classification risk)
+
+**Pattern observation**: This is the FIRST production-grade application of the D95 self-improvement umbrella in this branch -- a discipline that was tracked as MONITOR at sub-threshold (B-260 sub-class 9.o candidate) and 3rd-event-triggered B-261 mechanism-evolution candidate, both surfaced at gap-checks throughout the session. The discipline accumulator -> mechanism-evolution -> skill-authoring cycle closed cleanly in single-cycle work, validating the udm-producer-checklist-evolver -> udm-agent-prompt-versioner D98 semver MINOR pattern at full-cycle level.
+
+**Branch state**: round-6-post-merge-tracking now at 7 unpushed commits ahead of master:
+1. b0418dd -- post-merge tracker snapshot
+2. cb76334 -- B-267 + section 8 polish batch (11 closures + 5 new tests)
+3. 184aac8 -- Round 6 close-out residual sweep (10 more closures)
+4. 088ac28 -- B-218 ALL TESTS PASS milestone (1 closure + 3 fixes)
+5. bc91f79 -- Tier 3 integration test scaffold (1 closure + 11 new tests)
+6. 1df6e2b -- Tier 3 fixture FULLY ACTIVATED (B-115 follow-up; schema.sql + skip-decorator wiring)
+7. NEW (this commit) -- B-261 mechanism-evolution (udm-step-10-verifier skill authored)
+
+24 cumulative B-Ns closed across the branch. 0 introduced. Engineering-deploy-gate status: ALL TESTS PASS still CLEARED.
