@@ -6457,3 +6457,79 @@ Future workflow: when a build cohort lands a new public surface, parent agent sh
 - CLAUDE.md hard rule 9 (udm-progress-logger) OK (this entry IS the application)
 
 **Closure**: d99395b commit + this gap-check fix yield ✅ CLEAN verdict.
+
+
+## 2026-05-14 -- Tier 4 crash-injection test scaffold BUILT (first udm-next-step-cascade invocation)
+
+**Trigger**: User invoked udm-next-step-cascade skill via "2. Proceed with your suggested next steps" (the explicit trigger phrase per the skill's authorization).
+
+**Cascade Step 1 execution**: Recommended runway item from prior turn = Tier 4 crash-injection bodies (MEDIUM priority; per Round 5 section 7 spec + 06_TESTING.md Tier 4 framework).
+
+**Delegated to general-purpose Agent** with comprehensive brief mirroring the just-landed Tier 3 scaffold pattern. Agent authored 5 files / 2,195 lines / 9 tests:
+
+| File | Lines | Content |
+|---|---|---|
+| tests/crash/__init__.py | 24 | Tier 4 package marker; 06_TESTING.md + section 7 spec citations |
+| tests/crash/conftest.py | 712 | Canonical fixture set: _docker_available (session subprocess probe) + _crash_orchestration_available (SIGKILL-platform-semantics probe; skips on Windows) + mssql_container_with_seed (session-scope; 100 IdempotencyLedger + 50 ParquetSnapshotRegistry seed rows) + crash_subprocess_factory (function-scope; barrier-token + SIGKILL timing) + crash_recovery_run (function-scope) + docker_skip_marker + crash_orchestration_skip_marker factories |
+| tests/crash/test_crash_c2_inflight_parquet.py | 464 | 3 tests for C2 "After Parquet _inflight write, before atomic rename" (06_TESTING.md Tier 4): test_crash_after_inflight_write_leaves_orphan / test_recovery_cleans_orphan / test_recovery_idempotent |
+| tests/crash/test_crash_c7_scd2_activation.py | 551 | 3 tests for C7 "After SCD2 close-old, before activate-new" (B-14 transient window): test_crash_between_close_and_activate_leaves_zero_active / test_recovery_via_e2_runs_activate_new_versions / test_in_flight_orphan_marker_cleaned_up |
+| tests/crash/test_crash_c11_parquet_tier_review_midbatch.py | 444 | 3 tests for C11 NEW CLI-level (Round 5 section 7.2): test_crash_after_n_transitions_some_rows_done / test_recovery_resumes_remaining / test_audit_log_reflects_both_invocations |
+
+**Test counts**: 9 Tier 4 tests across 3 modules; all module-level skipped at scaffold-landing per Pitfall #10 Tier 0/4 boundary discipline.
+
+**Pytest verification (authoritative)**:
+
+| Layer | Pre-scaffold | Post-scaffold |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2288 / 21 / 0 | **2288 / 30 / 0** |
+| Delta | -- | +9 skip (all 9 new Tier 4 tests module-level skipped) |
+
+**Engineering-deploy-gate status**: ALL TESTS PASS criterion remains CLEARED. Zero failures.
+
+**Step 10 application** (CLAUDE.md Structure + GLOSSARY):
+
+- CLAUDE.md Structure row added for tests/crash/ before tests/integration/ row (mirrors Tier 3 placement; tests/integration was before tests/property/)
+- GLOSSARY N/A -- Tier 4 scaffold introduces no new public surface (consumes existing module APIs; subprocess + signal stdlib only). Test files are not registered in GLOSSARY public-surface tables per skill convention.
+
+**Agent algorithm refinements** (per Agent final report):
+- Two-marker skip pattern (Docker + SIGKILL-platform-semantics) -- Windows dev workstations skip even when Docker IS available because signal.SIGKILL is undefined on Windows; canonical Tier 4 is Linux-container only
+- mssql_container_with_seed distinct from Tier 3 mssql_container -- pre-seeds 100 IdempotencyLedger + 50 ParquetSnapshotRegistry rows so C11 predecessor-Status filter has realistic state
+- Barrier-token pattern via subprocess stdout polling (INFLIGHT_WRITE_DONE / CLOSE_OLD_COMPLETE / TRANSITIONS_DONE_3) for deterministic SIGKILL timing
+- Test harness hooks reference yet-to-exist `_crash_test_harness_c2 / _c7 / _c11` callables (scaffold follow-up B-N; mirrors Tier 3 schema.sql deferred-authoring pattern)
+- Cleanup discipline: crash_subprocess_factory tracks spawned processes + kills any still running on teardown
+
+**Cascade Step 2 -- gap-check** to follow this commit per the udm-next-step-cascade procedure (Layer 2a: udm-step-10-verifier + Layer 2b: parent-agent reflection).
+
+**Trackers updated this commit (4 files)**:
+
+| File | Change | Delta |
+|---|---|---|
+| CLAUDE.md | +1 Structure row for tests/crash/ inserted before tests/integration/ row | +1,633 chars |
+| CURRENT_STATE.md L7 | Tier 4 scaffold milestone narrative prepended; first udm-next-step-cascade invocation noted | +1,212 chars |
+| HANDOFF.md section 14 | Same milestone narrative | +319 chars |
+| CODE_BUILD_STATUS.md L12 | Tier 4 scaffold event prepended; ALL TESTS PASS criterion reaffirmed | +878 chars |
+| _validation_log.md | This entry | +this entry chars |
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched; this is build-cohort commit)
+- Pitfall #9.k OK (pytest 2288/30/0 propagated to 4 trackers + this entry; +9 skip delta explicit)
+- Pitfall #9.l OK (re-read 06_TESTING.md Tier 4 + 05_tests.md section 7 + Tier 3 conftest.py pattern before authoring)
+- Pitfall #9.m OK (no "noted but not opened" -- direct cascade execution per udm-next-step-cascade Step 1)
+- Pitfall #9.n OK post-fix (Step 10 applied: CLAUDE.md Structure row landed; GLOSSARY N/A no new public surface)
+- Pitfall #10 (Tier 0 vs Tier 4 boundary discipline) OK (module-level paired-skip prevents Tier 4 from running on dev workstations without Docker + Linux-compatible SIGKILL)
+- CLAUDE.md hard rule 9 (udm-progress-logger) OK (this entry IS the application)
+- CLAUDE.md hard rule 12 (B-226 Tier calibration) OK N/A (scaffold-only; no module-build tier-mis-classification risk)
+
+**Branch state**: round-6-post-merge-tracking now at 10 unpushed commits ahead of master:
+1. b0418dd -- post-merge tracker snapshot
+2. cb76334 -- B-267 + section 8 polish batch (11 closures)
+3. 184aac8 -- Round 6 close-out residual sweep (10 closures)
+4. 088ac28 -- B-218 ALL TESTS PASS milestone
+5. bc91f79 -- Tier 3 integration test scaffold
+6. 1df6e2b -- Tier 3 fixture activation (B-115 follow-up)
+7. d99395b -- B-261 udm-step-10-verifier skill
+8. b1213d2 -- gap-check on d99395b (GLOSSARY entry)
+9. 0ae243a -- udm-next-step-cascade skill authored
+10. NEW (this commit) -- Tier 4 crash-injection test scaffold (first udm-next-step-cascade invocation)
+
+24 cumulative B-Ns closed across branch. 0 introduced this commit.
