@@ -398,6 +398,7 @@ Per D60, this section appends one row per round during close-out. Read top-to-bo
 
 ## §13. Quick links
 
+- **`docs/migration/PHASE_1_TESTING_BLUEPRINT.md`** -- Operator validation sequence: PR creation -> diagnostic against the production CDC/SCD2 bug -> Snowflake smoke -> SCD2-from-Parquet smoke -> repair-per-theory decision tree. Authored 2026-05-14 at user request for hands-on testing against real environment. Self-contained: each phase has explicit success criterion, expected output, failure-mode table, and "what to do next" pointer.
 - North Star: `NORTH_STAR.md`
 - Current state: `CURRENT_STATE.md`
 - Backlog: `BACKLOG.md`
