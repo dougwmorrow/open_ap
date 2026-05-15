@@ -61,7 +61,28 @@ When in doubt: **ASK the user to clarify** rather than invoking. Cost of asking 
    - _validation_log.md (event entry)
 5. **Apply Step 10** per HANDOFF §8 Pitfall #9.n if new public surface added (CLAUDE.md Structure + GLOSSARY)
 6. **Commit** on the current branch
-7. **Hold push** unless explicit instruction to push (recent user direction "hold the push" is the default)
+7. **Hold push by default**; auto-push ONLY when user trigger phrase includes explicit PR-submission semantics (see Step 1.7.1 below).
+   - **1.7.1 — Optional PR submission (added 2026-05-14 per user-direction)**: If user's trigger phrase contains BOTH "next steps" AND ("push" OR "submit" OR "PR" OR "open a PR" OR "make a PR" OR "open PR") semantics, the cascade DOES auto-push the branch after the gap-check completes AND reports the PR creation URL. Otherwise default = hold push (per session-established "hold the push" convention).
+
+   **Trigger-phrase examples that auto-push**:
+   - "Push the PR. Next, proceed with next steps." (combines explicit push + cascade trigger)
+   - "Proceed with next steps and submit PR"
+   - "Move forward + open PR"
+   - "Continue with next steps + make a PR after"
+
+   **Trigger-phrase examples that do NOT auto-push (default hold)**:
+   - "Proceed with your next steps" (no push/PR semantics)
+   - "Move forward" (no push/PR semantics)
+
+   **Mechanism when auto-push fires**:
+   1. Run `git push origin <current-branch>` after Step 2 gap-check completes cleanly
+   2. Capture the GitHub PR-create URL from the push response (or construct it manually: `https://github.com/<owner>/<repo>/pull/new/<branch>`)
+   3. Include the PR URL in the Step 3 cascade-complete report
+   4. Suggest PR title + body sections in the report (do NOT auto-open the PR via `gh pr create` — user opens via the URL)
+
+   **Anti-pattern**: auto-pushing without explicit user direction = silent state-change to remote (operator may have wanted to inspect commits locally before pushing). Always require BOTH trigger conditions (cascade-trigger phrase AND PR/push semantics) before auto-pushing.
+
+   **Safety scoping**: auto-push only runs at end of cascade (after Step 2 gap-check clears); NEVER push partial work. If Step 2 surfaces 🟡 IN-FLIGHT-DRIFT, the cascade fixes inline FIRST + commits; THEN auto-push if trigger semantics matched.
 
 ### Step 2 — Gap-check on the just-landed commit
 
