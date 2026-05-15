@@ -6634,3 +6634,51 @@ WSJF 1.5 (COD 3; JS 2). Closure target: next bug-fix cycle OR Tier 4 deep-integr
 | Step 2 gap-check follows this commit | PENDING |
 
 **Branch state**: round-6-post-merge-tracking now at 12 unpushed commits ahead of master; 25 cumulative B-N closures + 1 still-open (B-270 opened in last commit cycle 1cdd44c).
+
+
+## 2026-05-14 -- B-269 CLOSED (already-addressed via B-261 mechanism-evolution)
+
+**Trigger**: udm-next-step-cascade invoked via "Ok push the PR. Next, proceed with your recommended next steps." Per newly-added Step 1.7.1 (PR submission trigger semantics), this message matched BOTH cascade-trigger + push/PR semantics -- auto-push at cascade end qualifies.
+
+**Selection (skill tie-breaker)**: B-269 selected from prior runway (4 MEDIUM + 1 LOW) per smallest-scope rule. B-269 had "<1 cycle" effort estimate (smallest).
+
+**Closure mechanism**: B-269 disposition was "extend Step 10 producer-directive with explicit sub-step: when adding a new EVENT_TYPE constant to a tool module, also update the CLI_* family registry at CLAUDE.md L325". The udm-step-10-verifier skill authored in commit d99395b ALREADY explicitly includes this directive in its Step 3 verification procedure:
+
+> "For EventType constants: verify mention in CLAUDE.md L325 CLI_* family registry (per B-269 follow-up)"
+
+The skill's mechanism (in-flight verifier firing AFTER build cohort AND BEFORE gap-check) operationalizes the directive at producer time. No separate HANDOFF section 8 directive line needed.
+
+B-269s original WSJF 1.5 disposition was "single directive line in producer self-check + skill prompt MINOR semver delta"; the B-261 mechanism-evolution work landed the WHOLE skill instead, which is a STRONGER closure than the original disposition envisioned.
+
+**Files modified this commit (3)**:
+
+| File | Change | Delta |
+|---|---|---|
+| BACKLOG.md | B-269 leading-badge flip + closure annotation citing udm-step-10-verifier Step 3 | +768 chars |
+| CURRENT_STATE.md L7 | B-269 closure milestone narrative; 26 cumulative branch closures noted; third udm-next-step-cascade invocation (first with auto-push) | +740 chars |
+| HANDOFF.md section 14 | Same B-269 milestone narrative | +265 chars |
+| _validation_log.md | This entry | +this entry chars |
+
+**Pytest baseline**: Unchanged at 2288 pass / 30 skip / 0 fail (closure-annotation-only commit; no code touched).
+
+**Step 10 application**: N/A (no new public surface; this is a tracker-only closure).
+
+**Step 1.7.1 (auto-push) trigger condition check**: 
+
+User message "Ok push the PR. Next, proceed with your recommended next steps." matched BOTH:
+- Cascade trigger phrase: "proceed with your recommended next steps" OK
+- PR/push semantics: "push the PR" OK
+
+=> auto-push fires at end of cascade after Step 2 gap-check clears.
+
+**Convention checks**:
+- Pitfall #9.j OK (B-269 leading-badge flipped with closure annotation)
+- Pitfall #9.k OK (pytest count 2288/30/0 unchanged; closure counts 25 -> 26 consistently updated across CURRENT_STATE + HANDOFF + this entry)
+- Pitfall #9.l OK (re-read udm-step-10-verifier Step 3 verbatim to confirm B-269 directive presence before authoring closure)
+- Pitfall #9.m OK (closure landed AND tracked simultaneously)
+- Pitfall #9.n OK N/A (no new public surface)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking now at 14 unpushed commits ahead of master (will become 15 after this commit lands + push); 26 cumulative B-N closures + 1 still-open net-new (B-270).
+
+**Cascade Step 2 (gap-check) follows this commit; auto-push at end per Step 1.7.1**.
