@@ -6753,3 +6753,64 @@ User message "Ok push the PR. Next, proceed with your recommended next steps." m
 **Branch state**: round-6-post-merge-tracking now at 16 unpushed commits ahead of master (will become 17 after this commit lands + auto-push per Step 1.7.1); 27 cumulative B-N closures + 0 still-open net-new (B-270 was the last opened; now closed).
 
 **Cascade Step 2 (gap-check) + Step 1.7.1 (auto-push) follow this commit**.
+
+## 2026-05-15 -- More Tier 3 tests cohort (3 additional canonical scenarios)
+
+**Trigger**: udm-next-step-cascade invoked via "1. Proceed with the PR. 2. Proceed with your recommended next steps. 3. After proceeding, update any markdown files... 4. Update the [skill]..." Cascade trigger matched; PR/push semantics matched ("Proceed with the PR") -> Step 1.7.1 auto-push enabled. User direction #3 explicitly mandated thorough tracker updates. User direction #4 mandates separate skill extension (handled in next commit).
+
+**Selection (skill priority+scope)**: More Tier 3 tests (MEDIUM 1-2 cycles) selected over Tier 5 docs (LOW 1 cycle). HIGHEST priority (MEDIUM) wins; no MEDIUM tie-breaker needed (B-270 was the last other MEDIUM; now closed).
+
+**Scope chosen**: 3 representative scenarios from section 6.2 (out of 6 remaining): credentials_loader_full_decrypt (security-critical) + event_tracker_with_real_pipeline_event_log (canonical observability) + gap_detector_synthetic_gaps (operational monitoring). The other 3 remaining (range_scheduler / lateness_profiler / snowflake_uploader) defer to runway.
+
+**Delegated to general-purpose Agent** with brief mirroring the established Tier 3 fixture pattern (reuse conftest + docker_skip_marker; no new fixtures; no new public surface).
+
+**Deliverables landed (3 files; +1,225 lines)**:
+
+| File | Lines | Tests | Coverage |
+|---|---|---|---|
+| tests/integration/test_credentials_loader_full_decrypt.py | 374 | 4 | M7 GPG envelope decrypt + audit-event-written + sentinel-detection-raises + release_snowflake_key tmpfs cleanup |
+| tests/integration/test_event_tracker_with_real_pipeline_event_log.py | 416 | 5 | track() IN_PROGRESS->SUCCESS transition + FAILED-on-exception + Status enum match (Pitfall #9.c) + OBS-7 metadata merge + D33 cancellation poll |
+| tests/integration/test_gap_detector_synthetic_gaps.py | 435 | 5 | M13 detect no-gap + 1-day gap + N-day gap + ACTION_BACKFILL recommendation + ACTION_NO_ACTION recommendation |
+
+**Test counts**: 14 new Tier 3 tests; all module-level skipped via docker_skip_marker.
+
+**Pytest verification (authoritative full-scope)**:
+
+| Layer | Pre-cohort | Post-cohort |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2309 / 30 / 0 | **2309 / 44 / 0** |
+| Delta | -- | +14 skip (all 14 new tests module-level skipped) |
+
+**Tier 3 section 6.2 coverage**: 6-of-9 canonical scenarios covered (3 prior bc91f79 + 3 this commit). Remaining: range_scheduler_with_real_policies + lateness_profiler_full_history + snowflake_uploader_to_test_account (deferred runway).
+
+**Tracker updates this commit (per user direction #3)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UNTOUCHED (no B-N closures/opens this commit) |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE +1,467 chars |
+| HANDOFF.md section 14 | THOROUGH UPDATE +415 chars |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE +1,159 chars |
+| _validation_log.md | This entry +this entry chars |
+| POLISH_QUEUE.md | UNTOUCHED (no cosmetic items surfaced) |
+| RISKS.md | UNTOUCHED (no risk changes) |
+| GLOSSARY.md | UNTOUCHED (Step 10 N/A; no new public surface) |
+
+**User direction #3 satisfied**: explicit verification of EACH tracker (touched OR untouched-as-expected) above.
+
+**User direction #4 follows**: separate commit will extend the cascade skill Step 1.4 with per-build-type markdown-files-related-to-build checklist so future cascade invocations explicitly walk the same tracker landscape this commit just walked.
+
+**Step 10 application**: N/A (test files; consume existing module APIs; no new public surface).
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched; build-only commit)
+- Pitfall #9.k OK (pytest count 2309/30/0 -> 2309/44/0 propagated; 27 cumulative closures unchanged; 0 net-new still-open unchanged)
+- Pitfall #9.l OK (Agent re-read existing conftest + 3 prior Tier 3 test files for canonical pattern before authoring)
+- Pitfall #9.m OK (this entry IS the application; no "noted-but-not-tracked" instances)
+- Pitfall #9.n OK N/A (no new public surface)
+- Pitfall #10 (Tier 0/3 boundary) OK (new tests module-level skipped via docker_skip_marker; tier 0 fast-feedback preserved)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking now at 19 unpushed commits ahead of master (after this commit lands + auto-push); 27 cumulative B-N closures; 0 still-open net-new.
+
+**Cascade Step 2 (gap-check) + Step 1.7.1 (auto-push) follow this commit. Then separate commit for skill extension per user direction #4.**
