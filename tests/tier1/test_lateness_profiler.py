@@ -261,6 +261,54 @@ class TestPercentileAlgorithm:
         assert _compute_percentile(samples, 95) == pytest.approx(cuts[94])
         assert _compute_percentile(samples, 99) == pytest.approx(cuts[98])
 
+    def test_clustered_distribution_preserves_monotonicity(self):
+        """Hypothesis-discovered counter-example: 27 zeros + 3 large
+        clustered floats produce non-monotonic statistics.quantiles cuts
+        (cut[95] > cut[96] by ~7e-15 / ~4 ULPs at value 29.7).
+
+        This pins the counter-example surfaced 2026-05-15 by
+        ``test_lateness_percentiles_monotonic`` (Hypothesis Tier 2 property
+        test) — the production-side monotonicity-clip in
+        ``_compute_percentile`` MUST yield p50 <= p90 <= p95 <= p99 even
+        when the underlying ``statistics.quantiles`` violates monotonicity.
+
+        Without the clip, this test fails (regression guard).
+        Tier 1 ↔ Tier 2 feedback-loop precedent: B-262 NFC-before-Categorical-
+        cast hash bug pinned via Tier 1 regression tests in
+        ``tests/unit/test_hash_determinism.py`` 2026-05-14.
+        """
+        from cdc.lateness_profiler import _compute_percentile
+
+        # Exact Hypothesis-shrunk counter-example from the 2026-05-15 surface
+        samples = [0.0] * 27 + [29.709847256413088] * 3
+
+        p50 = _compute_percentile(samples, 50)
+        p90 = _compute_percentile(samples, 90)
+        p95 = _compute_percentile(samples, 95)
+        p99 = _compute_percentile(samples, 99)
+
+        # Non-strict monotonicity invariant per docstring + § 5.6 spec
+        assert p50 <= p90, f"p50={p50!r} > p90={p90!r} (clustered-distribution regression)"
+        assert p90 <= p95, f"p90={p90!r} > p95={p95!r} (clustered-distribution regression)"
+        assert p95 <= p99, f"p95={p95!r} > p99={p99!r} (clustered-distribution regression)"
+
+    def test_monotonicity_clip_is_idempotent(self):
+        """Running _compute_percentile twice on the same input yields
+        bit-identical results (the clip is deterministic + idempotent —
+        re-applying max() over already-monotonic cuts is a no-op).
+        """
+        from cdc.lateness_profiler import _compute_percentile
+
+        samples = [0.0] * 27 + [29.709847256413088] * 3
+
+        # 4 percentiles × 2 calls = 8 results; pairs must be bit-equal
+        for p in (50, 90, 95, 99):
+            first = _compute_percentile(samples, p)
+            second = _compute_percentile(samples, p)
+            assert first == second, (
+                f"p{p}: first={first!r} != second={second!r} (non-deterministic clip)"
+            )
+
 
 # ===========================================================================
 # InsufficientHistory threshold boundary

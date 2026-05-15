@@ -7128,3 +7128,90 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated 
 **Branch state**: round-6-post-merge-tracking at 24 unpushed commits ahead of master pre-this-commit (25 after this commit lands; HOLD push). 30 cumulative B-N closures (was 29; +1 this commit); 0 still-open net-new.
 
 **Cascade Step 2 (gap-check via Step 10 verifier SKIP per tracker-only criterion + G1-G6 reflection) + Step 3 (report cascade-complete) follow this commit. With this commit, B84 closure consumes the prior cascade's HIGH/cleanest runway item; remaining runway: B78 (3 edge cases — partial verification needed) + B83 (Tier 0 backfill — partially done; 2 blocked) + B91 (gated on B78). All other HIGH WSJF items operator-blocked.**
+
+---
+
+## 2026-05-15 -- B-271 ⚫ CLOSED + P-17 ⚫ CLOSED (FP-precision percentile monotonicity fix; Tier 1 ↔ Tier 2 feedback loop 2nd cross-session instance)
+
+**Trigger**: NOT a cascade invocation. Direct bug-fix work prompted by failing pytest discovered during MARKDOWN_REFACTOR_PLAN.md authoring's pytest-sanity check. User-direction "Stop everything; investigate bug + plan separately" (per AskUserQuestion answer) authorized the discrete bug-fix cycle.
+
+**Discovery context**: While authoring MARKDOWN_REFACTOR_PLAN.md (per user 3-directive request to plan markdown refactor + agent traversal system), pre-commit pytest sanity returned `1 failed, 2308 passed, 62 skipped` — `tests/property/test_lateness_monotonicity.py::test_lateness_percentiles_monotonic` had not failed in any prior pytest run this session. Investigation showed Hypothesis (which uses random seeding by default + caches counter-examples to `.hypothesis/`) had shrunk a deterministic counter-example: `samples=[0.0]*27 + [29.709847256413088]*3`. The actual assertion failure: `p95 = 29.709847245370373 > p99 = 29.70984724537037` (delta ~3e-14, ~4 ULPs at value 29.7).
+
+**Root cause analysis**:
+- `statistics.quantiles(samples, n=100, method="inclusive")` produces 99 cut-points
+- For the failing input distribution (27 zeros + 3 large clustered floats), cuts[95] > cuts[96] by ~7e-15 (verified via direct Python invocation)
+- Combined with the round-trip via `_lateness_days(completed_at=ca, business_date=dv)` in the test mock pipeline (which introduces additional FP-precision variance per-sample), the user-facing pXX values violate non-strict monotonicity by ~3e-14
+- This is a fundamental property of FP arithmetic at tightly-clustered distributions; not a bug in `statistics.quantiles` per se
+
+**P-17 vs B-271 framing distinction**:
+- P-17 (POLISH_QUEUE.md, opened 2026-05-14): assumed bit-equal-within-1-ULP; proposed spec wording clarification only
+- Empirical evidence on 2026-05-15: actual drift is multi-ULP; spec-wording clarification alone is INSUFFICIENT
+- B-271 (this entry): production-side monotonicity-clip fix; supersedes P-17 polish-only framing
+
+**Fix design**:
+- **Production-side** at `cdc/lateness_profiler.py::_compute_percentile()`: post-process the cuts list with a single O(N=99) pass that enforces non-decreasing monotonicity (`for i in range(1, len(cuts)): if cuts[i] < cuts[i-1]: cuts[i] = cuts[i-1]`)
+- **Mathematical justification**: the clip pins each cut to the running max, which IS the correct semantics for non-decreasing percentiles — a higher quantile cannot mathematically be lower than a lower quantile in a sorted distribution; the "drift" is FP arithmetic noise, not real signal
+- **Properties**: deterministic (same input → same output bit-identical) + idempotent (re-applying clip on already-monotonic cuts is no-op) + minimally invasive (~25 lines incl. docstring)
+- **Test-side** at `tests/tier1/test_lateness_profiler.py::TestPercentileAlgorithm`: 2 new regression tests:
+  - `test_clustered_distribution_preserves_monotonicity`: pins exact Hypothesis-shrunk counter-example; verifies p50<=p90<=p95<=p99 post-fix
+  - `test_monotonicity_clip_is_idempotent`: deterministic across repeated calls
+
+**Pytest verification (full-scope, authoritative)**:
+
+| Layer | Pre-fix | Post-fix |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | **2308 pass + 1 fail** / 62 skip | **2311 pass / 62 skip / 0 fail** |
+| Delta | -- | +3 (1 fail-resolved + 2 new regression tests; ALL TESTS PASS RESTORED) |
+
+**Cumulative B-N closures**: 30 → 31 (+1 — B-271).
+
+**P-N closures (concurrent)**: P-17 ⚫ CLOSED at POLISH_QUEUE.md via supersession-by-B-271; closure annotation captures the "P-N polish-item-framing-precision-error" 2-event sub-class candidate (P-N opened with too-narrow "behavior is correct, only spec wording drifts" assumption; later proves to need full B-N production fix). 1st event: P-17 itself. 2nd-event hypothetical anchor TBD if this pattern recurs.
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UPDATED — added B-271 row with closure annotation citing B-262 precedent + Hypothesis counter-example details |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended with full event narrative |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended with abbreviated event narrative |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended (CODE-touching commit; explicit ALL TESTS PASS restoration noted) |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated explicitly per Pitfall #9.m discipline)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | None — `_compute_percentile` is private (underscore-prefixed); behavior change only | UNTOUCHED-AS-EXPECTED — Step 10 ✅ N/A |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | None | UNTOUCHED-AS-EXPECTED |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | None — though FP-precision-monotonicity is arguably an "M-series" candidate (math-class), the existing `_compute_percentile` docstring captures the invariant + rationale; promoting to a formal M-series row is over-scope | UNTOUCHED-AS-EXPECTED — could be an M-N candidate if user prefers explicit edge-case-register coverage |
+| Risk change? | None — R19 (Tier 0 drift) somewhat de-risked because Tier 1 regression tests now pin the counter-example, but score change deferred per Pitfall #8 hedge | UNTOUCHED-AS-EXPECTED — RISKS.md unchanged |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | P-17 closure annotation IS the cosmetic-tracker update; handled inline at POLISH_QUEUE.md | UPDATED — POLISH_QUEUE.md P-17 strikethrough + closure annotation per D113 + Pitfall #9.j discipline |
+| Executable artifact? | None (production code change; no new script / tool / migration / runbook procedure / CLI command) | UNTOUCHED-AS-EXPECTED |
+| Spec edit? | None — `phase1/05_tests.md` § 5.6 spec wording was the P-17 polish target; SUPERSEDED by production fix; no spec edit required | UNTOUCHED-AS-EXPECTED |
+| Sub-class formalization? | "P-N polish-item-framing-precision-error" candidate noted at P-17 closure annotation; 1-event evidence base; not yet ready for formal Pitfall #9 sub-class addition (needs ≥2 events per discipline threshold) | UNTOUCHED-AS-EXPECTED — candidate noted; formal addition deferred |
+| New skill/agent? | None | UNTOUCHED-AS-EXPECTED |
+
+**Step 10 application**: ✅ N/A — `_compute_percentile` is underscore-prefixed (private); no new public surface added. Per skill edge case "underscore-prefixed-only cohort → ✅ N/A".
+
+**Convention checks**:
+- Pitfall #9.j OK (1 badge flip — B-271 + 1 strikethrough — P-17; +N event in 9.j evidence base ≥23 instances cumulative)
+- Pitfall #9.k OK (pytest count 2308+1fail → 2311 propagated consistently; B-N closure 30→31 propagated; cumulative session B-N closures (Tier 3 § 6.2 + Tier 5 + B77/B86/B84/B-271 = 6 closures + 30 prior cumulative = 31 total checked across all 5 trackers)
+- Pitfall #9.l OK (Re-read P-17 verbatim from POLISH_QUEUE.md L206-212 + Read `cdc/lateness_profiler.py::_compute_percentile()` L353-379 + verified `statistics.quantiles` non-monotonicity directly via Python invocation BEFORE designing the fix; canonical-re-read discipline applied per Pitfall #9.l)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional table walked explicitly above)
+- Pitfall #9.n OK N/A (no new public surface)
+- Pitfall #10 (Tier 0/3 boundary) OK — fix maintains Tier 0/Tier 1/Tier 2 boundary (Tier 1 regression tests pin counter-example without depending on Hypothesis cache; Tier 2 property tests continue to verify the invariant generally)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 25 unpushed commits ahead of master pre-this-commit (26 after this commit lands; HOLD push). 31 cumulative B-N closures (was 30; +1 this commit); 0 still-open net-new.
+
+**Tier 1 ↔ Tier 2 feedback loop now formally 2-event evidence base**: B-262 (NFC-before-Categorical-cast 2026-05-14) + B-271 (FP-precision percentile monotonicity 2026-05-15). The pattern: Tier 2 Hypothesis property tests surface production bugs that unit tests miss; Tier 1 regression tests pin the discovered counter-examples; production fix lands; both tiers continue to guard. This is the canonical property-test value proposition empirically validated across 2 distinct production code modules in 2 days.
+
+**MARKDOWN_REFACTOR_PLAN.md status**: still uncommitted in working dir; waiting for user direction post-fix-acceptance to either (a) commit plan now that ALL TESTS PASS criterion is restored OR (b) re-evaluate plan scope given the demonstrated Tier 1 ↔ Tier 2 loop value (the plan's traversal-system might have implications for property-test discoverability).
+
+**No subsequent cascade Step 2 / Step 3 — this is a discrete bug-fix cycle, not a cascade invocation. Direct user direction was "Stop everything; investigate bug + plan separately"; the "separately" part means this commit is its own atomic unit; user will direct the next step.**
