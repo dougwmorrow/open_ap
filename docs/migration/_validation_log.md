@@ -6892,4 +6892,80 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated 
 
 **Branch state**: round-6-post-merge-tracking at 21 unpushed commits ahead of master (will become 22 after this commit lands; HOLD push); 27 cumulative B-N closures (unchanged this commit; build-only); 0 still-open net-new.
 
+---
+
+## 2026-05-15 -- Tier 5 quarterly drill docs (closes phase1/05_tests.md § 8.2 Q6-Q10)
+
+**Trigger**: udm-next-step-cascade invoked via "Proceed with your recommended next steps." HIGH-confidence trigger phrase match. NO push/PR semantics → HOLD push by default.
+
+**Selection (skill priority+scope)**: LOW priority "Tier 5 quarterly drill docs — Round 5 § 8 audit-drill spec (~1 cycle)" — only runway item remaining from prior cascade close-out. No HIGH or MEDIUM items in scope.
+
+**Scope chosen**: Author the operator-facing procedural detail for Q6-Q10 in `docs/migration/06_TESTING.md` Tier 5 section (mirroring the existing Q1-Q5 density), per phase1/05_tests.md § 8.2 catalog. Plus author 2 audit-report templates at `docs/migration/audit_reports/` so operators have starting points for the first quarterly + weekly drill cycles.
+
+**Reasoning**: phase1/05_tests.md § 8.2 carries the 5-row catalog table for Q6-Q10. The operator-facing PROCEDURAL detail (numbered steps, SQL hints, pass criteria) belongs in 06_TESTING.md alongside Q1-Q5 (which already follow that pattern). Cross-doc home-of-record convention: 06_TESTING.md = horizontal strategy + per-tier detail; phase1/05_tests.md = per-artifact catalog + cohort scope.
+
+**Deliverables landed (3 files)**:
+
+| File | Action | Lines | Coverage |
+|---|---|---|---|
+| docs/migration/06_TESTING.md | EXTENDED Tier 5 section after Q5 with Q6-Q10 procedural detail + Reporting subsection update for Q10 separate filing convention + section header `Run` update for Q10 weekly cadence | +~75 | Q6-Q10 operator procedures per § 8.2 spec catalog |
+| docs/migration/audit_reports/_TEMPLATE_quarterly.md | NEW (creates audit_reports/ dir) | ~150 | Q1-Q9 quarterly drill report skeleton: per-Qn pass criteria + verdict slots + sign-off table (operator + reviewer + pipeline lead) |
+| docs/migration/audit_reports/_TEMPLATE_q10_weekly.md | NEW | ~50 | Q10 weekly drill report skeleton with incident-escalation table (only fires on 🔴) |
+
+**Test counts**: doc-only commit; no test changes.
+
+**Pytest verification (sanity)**:
+
+| Layer | Pre-cohort | Post-cohort |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2309 / 62 / 0 | **2309 / 62 / 0** |
+| Delta | -- | 0 (doc-only; expected) |
+
+**Tier 5 § 8.2 coverage**: **Q6-Q10 procedural detail now COMPLETE** (was catalog-only; runway item closed).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UNTOUCHED-AS-EXPECTED (no B-N closures/opens this commit; doc-only; Q6-Q10 spec coverage closed but not via a B-N — § 8.2 catalog already named the runway item rather than tracking it as a B-N) |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended with full event narrative |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended with abbreviated event narrative |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended (doc-only event but the dashboard reflects last-reviewed cadence) |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated explicitly per Pitfall #9.m discipline)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | None (Q6-Q10 are operator manual procedures + 2 report templates; no Python public functions / classes / module-level constants) | UNTOUCHED-AS-EXPECTED |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | None | UNTOUCHED-AS-EXPECTED |
+| NEW RB-N? | None — Q6-Q10 reference existing RB-7 + RB-10 + W-12 cadence; no new runbook authored | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | None | UNTOUCHED-AS-EXPECTED |
+| Risk change? | None | UNTOUCHED-AS-EXPECTED |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | None visible | UNTOUCHED-AS-EXPECTED |
+| Executable artifact? | None (Q6-Q10 are MANUAL operator procedures; no script / tool / migration / runbook procedure / CLI command authored) | UNTOUCHED-AS-EXPECTED — Manual cadence drills are authored in 06_TESTING.md procedurally; no entry in ONE_OFF_SCRIPTS.md or `phase1/02_configuration.md` § 5.1 needed |
+| Spec edit? | YES — extended 06_TESTING.md Tier 5 section + closes phase1/05_tests.md § 8.2 Q6-Q10 spec catalog → procedural detail | UPDATED — 06_TESTING.md is the canonical home for Tier 5 procedural detail per pre-existing Q1-Q5 precedent; no edit to phase1/05_tests.md § 8.2 needed (the catalog table there is canonical) |
+| Sub-class formalization? | None | UNTOUCHED-AS-EXPECTED |
+| New skill/agent? | None | UNTOUCHED-AS-EXPECTED |
+
+**Step 10 application**: ✅ N/A — no new public surface (Q6-Q10 are operator manual procedures; templates are Markdown skeletons; no Python module changes).
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched; doc-only commit)
+- Pitfall #9.k OK (pytest count 2309/62/0 unchanged; propagated identically across all 5 canonical trackers; no count drift)
+- Pitfall #9.l OK (Agent re-read § 8.2 spec table at phase1/05_tests.md L488-496 + Q1-Q5 procedure pattern at 06_TESTING.md L355-389 + canonical Tier 5 reporting subsection L391-398 before authoring; verified CcpaDeletionLog exists in canonical schema before citing it in Q9)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional table walked explicitly above)
+- Pitfall #9.n OK N/A (no new public surface)
+- Pitfall #10 (Tier 0/3 boundary) OK N/A (no test changes)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 22 unpushed commits ahead of master (will become 23 after this commit lands; HOLD push); 27 cumulative B-N closures (unchanged this commit; doc-only); 0 still-open net-new.
+
+**Cascade Step 2 (gap-check via udm-step-10-verifier + G1-G6 reflection) + Step 3 (report cascade-complete) follow this commit. With this commit, the runway from prior cascade close-out is fully consumed — no auto-generated next-recommended item; awaiting user direction for next major scope.**
+
 **Cascade Step 2 (gap-check via udm-step-10-verifier + G1-G6 reflection) + Step 3 (report cascade-complete + delete SESSION_RESUME.md) follow this commit.**
