@@ -1,0 +1,437 @@
+{
+  "method": "heuristic",
+  "context_window": 200000,
+  "measurements": [
+    {
+      "path": "docs/migration/00_OVERVIEW.md",
+      "lines": 196,
+      "chars": 14936,
+      "tokens": 3734,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/01_ARCHITECTURE.md",
+      "lines": 238,
+      "chars": 17393,
+      "tokens": 4348,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/02_PHASES.md",
+      "lines": 327,
+      "chars": 28288,
+      "tokens": 7072,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/03_DECISIONS.md",
+      "lines": 3220,
+      "chars": 266230,
+      "tokens": 66558,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/04_EDGE_CASES.md",
+      "lines": 297,
+      "chars": 36006,
+      "tokens": 9002,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/05_RUNBOOKS.md",
+      "lines": 1546,
+      "chars": 64499,
+      "tokens": 16125,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/06_TESTING.md",
+      "lines": 502,
+      "chars": 23544,
+      "tokens": 5886,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/07_LOGGING.md",
+      "lines": 501,
+      "chars": 21552,
+      "tokens": 5388,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/09_VISUALS.md",
+      "lines": 712,
+      "chars": 24089,
+      "tokens": 6022,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/_agent_evolution/step-10-verifier-36d500e-2026-05-15.md",
+      "lines": 110,
+      "chars": 7432,
+      "tokens": 1858,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/_agent_evolution/udm-design-reviewer-changelog.md",
+      "lines": 43,
+      "chars": 3906,
+      "tokens": 976,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/_NEXT_STEPS_2026-05-12.md",
+      "lines": 135,
+      "chars": 9682,
+      "tokens": 2420,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/_reviewer_effectiveness.md",
+      "lines": 519,
+      "chars": 80750,
+      "tokens": 20188,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/_templates/decision_template.md",
+      "lines": 36,
+      "chars": 796,
+      "tokens": 199,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/_templates/edge_case_template.md",
+      "lines": 42,
+      "chars": 782,
+      "tokens": 196,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/_templates/runbook_template.md",
+      "lines": 58,
+      "chars": 1072,
+      "tokens": 268,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/_validation_log.md",
+      "lines": 7519,
+      "chars": 924155,
+      "tokens": 231039,
+      "ccl_stage": "2"
+    },
+    {
+      "path": "docs/migration/audit_reports/_TEMPLATE_q10_weekly.md",
+      "lines": 65,
+      "chars": 1979,
+      "tokens": 495,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/audit_reports/_TEMPLATE_quarterly.md",
+      "lines": 176,
+      "chars": 5525,
+      "tokens": 1381,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/BACKLOG.md",
+      "lines": 549,
+      "chars": 221730,
+      "tokens": 55432,
+      "ccl_stage": "2"
+    },
+    {
+      "path": "docs/migration/CHECKS_AND_BALANCES.md",
+      "lines": 346,
+      "chars": 20704,
+      "tokens": 5176,
+      "ccl_stage": "1"
+    },
+    {
+      "path": "docs/migration/CODE_BUILD_STATUS.md",
+      "lines": 384,
+      "chars": 128180,
+      "tokens": 32045,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/CURRENT_STATE.md",
+      "lines": 205,
+      "chars": 110753,
+      "tokens": 27688,
+      "ccl_stage": "1"
+    },
+    {
+      "path": "docs/migration/GLOSSARY.md",
+      "lines": 800,
+      "chars": 86379,
+      "tokens": 21595,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/HANDOFF.md",
+      "lines": 428,
+      "chars": 134251,
+      "tokens": 33563,
+      "ccl_stage": "1"
+    },
+    {
+      "path": "docs/migration/MAINTENANCE.md",
+      "lines": 323,
+      "chars": 16162,
+      "tokens": 4040,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/MARKDOWN_REFACTOR_PLAN.md",
+      "lines": 792,
+      "chars": 76635,
+      "tokens": 19159,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/MULTI_AGENT_GUIDE.md",
+      "lines": 414,
+      "chars": 23991,
+      "tokens": 5998,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/NORTH_STAR.md",
+      "lines": 114,
+      "chars": 12580,
+      "tokens": 3145,
+      "ccl_stage": "1"
+    },
+    {
+      "path": "docs/migration/OBSIDIAN_GUIDE.md",
+      "lines": 233,
+      "chars": 9327,
+      "tokens": 2332,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/ONE_OFF_SCRIPTS.md",
+      "lines": 222,
+      "chars": 19448,
+      "tokens": 4862,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase0/_sweep_2026-05-12.md",
+      "lines": 90,
+      "chars": 11494,
+      "tokens": 2874,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/00_phase_overview.md",
+      "lines": 164,
+      "chars": 7491,
+      "tokens": 1873,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/01_database_schema.md",
+      "lines": 2168,
+      "chars": 90506,
+      "tokens": 22626,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/01a_control_tables.md",
+      "lines": 779,
+      "chars": 44205,
+      "tokens": 11051,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/01b_bronze_stage_example_ddl.md",
+      "lines": 419,
+      "chars": 23993,
+      "tokens": 5998,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/01c_data_flow_walkthrough.md",
+      "lines": 1147,
+      "chars": 51393,
+      "tokens": 12848,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/01d_consumer_query_patterns.md",
+      "lines": 374,
+      "chars": 14315,
+      "tokens": 3579,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/02_configuration.md",
+      "lines": 1405,
+      "chars": 96610,
+      "tokens": 24152,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/03_core_modules.md",
+      "lines": 1725,
+      "chars": 114441,
+      "tokens": 28610,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/03_round_0_5_spike_plan.md",
+      "lines": 604,
+      "chars": 23497,
+      "tokens": 5874,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/04_tools.md",
+      "lines": 1629,
+      "chars": 136245,
+      "tokens": 34061,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/04a_phase_0_prep_tools.md",
+      "lines": 365,
+      "chars": 40905,
+      "tokens": 10226,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/04b_phase_0_closure_tools.md",
+      "lines": 257,
+      "chars": 20645,
+      "tokens": 5161,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/05_tests.md",
+      "lines": 827,
+      "chars": 86954,
+      "tokens": 21738,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/06_deployment.md",
+      "lines": 1847,
+      "chars": 135309,
+      "tokens": 33827,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/07_schema_evolution_governance.md",
+      "lines": 807,
+      "chars": 64372,
+      "tokens": 16093,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/07a_schema_contract_examples.md",
+      "lines": 407,
+      "chars": 21391,
+      "tokens": 5348,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase1/08_sub_agent_self_improvement.md",
+      "lines": 1130,
+      "chars": 68188,
+      "tokens": 17047,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase2/00_phase_overview.md",
+      "lines": 268,
+      "chars": 19683,
+      "tokens": 4921,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase2/01_pilot_prerequisites.md",
+      "lines": 518,
+      "chars": 56835,
+      "tokens": 14209,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/phase2/01a_execution_order.md",
+      "lines": 118,
+      "chars": 6185,
+      "tokens": 1546,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/PHASE_1_DEEP_DIVE_PLAN.md",
+      "lines": 340,
+      "chars": 26203,
+      "tokens": 6551,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/PHASE_1_TESTING_BLUEPRINT.md",
+      "lines": 618,
+      "chars": 25188,
+      "tokens": 6297,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/POLISH_QUEUE.md",
+      "lines": 323,
+      "chars": 34832,
+      "tokens": 8708,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/RISKS.md",
+      "lines": 101,
+      "chars": 24444,
+      "tokens": 6111,
+      "ccl_stage": "2"
+    },
+    {
+      "path": "docs/migration/ROUND_1_REVIEW.md",
+      "lines": 126,
+      "chars": 8096,
+      "tokens": 2024,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/SECURITY_MODEL.md",
+      "lines": 408,
+      "chars": 18462,
+      "tokens": 4616,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/SELF_IMPROVEMENT_DISCIPLINE.md",
+      "lines": 148,
+      "chars": 8675,
+      "tokens": 2169,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/SESSION_2026-05-13_BUILD_LOG.md",
+      "lines": 99,
+      "chars": 5072,
+      "tokens": 1268,
+      "ccl_stage": "3"
+    },
+    {
+      "path": "docs/migration/SKILLS_PLAN.md",
+      "lines": 144,
+      "chars": 8693,
+      "tokens": 2173,
+      "ccl_stage": "3"
+    }
+  ],
+  "s1_tokens": 69572,
+  "s2_tokens": 292582,
+  "s3_tokens": 559615,
+  "total_tokens": 921769
+}

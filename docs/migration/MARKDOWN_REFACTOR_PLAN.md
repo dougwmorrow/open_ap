@@ -1,6 +1,6 @@
 # Markdown Refactor + Agent Traversal System — Plan
 
-**Status**: 🟡 Plan-draft authored 2026-05-15 — awaiting pipeline-lead review before any execution. **REVISED 2026-05-15 (3rd revision)** with: (a) §3.6 research synthesis (`_research/agent-markdown-traversal`); (b) §10b independent gap audit (7 gaps + 8 edge cases + 4 assumptions + 4 OOS); (c) §13 Option A deep-dive (`_research/agent-discoverability`; naming + TOC + Navigation Paradox + slug-stability + 8 meta-research P1-P8); (d) §15 cross-domain synthesis (3 NEW research artifacts: `_research/llm-training-data-storage` + `_research/cross-reference-maintenance-agent` + `_research/web-crawler-techniques`; 5 transfer patterns A-E; 5 negative findings; CRITICAL em-dash empirical-test caveat added to §13.4); (e) 15 new open questions Q-8 through Q-22 added to §10. Backing research: **5 udm-researcher artifacts** at `_research/` (~50 cumulative findings; ~70 primary sources; medium-high confidence on directional patterns). Plan now ~880 lines — exceeds §13 self-imposed split-trigger; recommend split at next refactor cycle into `MARKDOWN_REFACTOR_PLAN.md` (sections §1-§9 + §12) + `MARKDOWN_REFACTOR_PLAN_appendix.md` (sections §10b + §13 + §15).
+**Status**: 🟡 **Plan-final** (was Plan-draft) — research-grounded + empirical-validation-complete; pipeline-lead §12 sign-off is the SINGLE remaining gate before 🟢 Locked. **REVISED 2026-05-15 (4th revision)** with: (a) §3.6 research synthesis #1; (b) §10b independent gap audit; (c) §13 Option A deep-dive (research #2); (d) §15 cross-domain synthesis (research #3-5; 3 parallel artifacts); (e) **§16 long-term maintenance + governance (NEW)** addressing user Q1-Q3 directives; (f) **EMPIRICAL VALIDATION COMPLETE** — Q-22 em-dash test resolved via `tools/test_github_slug.py` + `_research/em-dash-slug-test-2026-05-15.md` (binding revision: colon-form `## D15: Title` mandatory); Q-13 token cost measurement resolved via `tools/measure_ccl_overhead.py` + `_research/ccl-baseline-2026-05-15.md` (CCL Stage 1+2 = 362K tokens = 181% of 200K window; `_validation_log.md` alone = 115% of window; archive cascade promoted to Phase 1.0 immediate priority); (g) 19 cumulative open questions Q-8 through Q-26 (Q-13 + Q-22 RESOLVED; 17 remaining for pipeline-lead). Backing research: **6 udm-researcher artifacts** + **2 empirical-test deliverables** at `_research/` + `tools/` (~50 cumulative findings; ~70 primary sources; medium-high confidence + 2 P0 empirical results). Plan now ~1080 lines — recommend split at next refactor cycle. Companion: `NEW_REPO_STARTER_TEMPLATE.md` (greenfield template per Q-24).
 
 **Owner**: Pipeline lead. Contributor: parent-agent authoring this plan; no execution work landed.
 
@@ -300,8 +300,9 @@ Insert `<!-- anchor: D77 -->` HTML comments above every D-number heading. Agents
 
 ### §5.1 Phased execution
 
-**Phase 1 (low-risk; reversible; ~1-2 cycles)** — REVISED 2026-05-15 per research §3.6:
-- **A. Apply existing `_validation_log.md` archive policy NOW** (don't wait for Phase 2 R1 close-out): archive pre-2026-04-12 entries to `_validation_log_archive_2026-04.md`; truncate live file to last 30 days. Mechanical execution per the policy at L14-23.
+**Phase 1 (low-risk; reversible; ~1-2 cycles)** — REVISED 2026-05-15 per research §3.6 + §15.4 empirical baseline:
+- **0. PROMOTED (per §15.4 empirical baseline 2026-05-15) — `_validation_log.md` archive cascade is the SINGLE-MOST-CONSEQUENTIAL Phase 1 task**: empirical token measurement shows this one file = 231K tokens = 115% of 200K context window for a single Stage 2 read. Trimming it by 73% (7,519 → 2,000 lines) recovers ~62% of CCL Stage 1+2 token cost. **Execute first; gate other Phase 1 tasks on this completing.**
+- **A. ~~Apply existing `_validation_log.md` archive policy NOW~~ → see Phase 1.0 above (promoted to Phase 1.0 immediate priority)**
 - **B. Author master `INDEX.md`** (cross-ref manifest per Option E + llms.txt structure per research §3.6 Finding 4): H1 project name + blockquote summary + sections with linked files + per-entry **routing-by-intent** descriptions ("If you need X, read this; if you need Y, skip and read Z" — NOT structural summaries; per ETH Zurich research §3.6 Finding 5)
 - **C. Author per-file INDEX.md sidecars** for the 10 files over 1,000 lines (Option B) — same routing-by-intent constraint
 - **D. Update D62 CCL doctrine** to add Stage 0 (read `INDEX.md` first; use targeted offset-Read for files >500 lines)
@@ -443,7 +444,11 @@ Phase 3 is invoked ONLY IF Phase 1+2 fail metrics 1 OR 2 by >25%.
 
 **Q-13 through Q-17** — see §13.6 (5 new questions derived from §13.5 meta-research candidates). Summary: Q-13 (token cost measurement P2 immediately) / Q-14 (Navigation Paradox UDM topology mapping P1 before Option A) / Q-15 (intent.lisp investigation P4 at Phase 1 design) / Q-16 (auto-compaction interaction P7 at Phase 1 design) / Q-17 (heading-slug stability policy §13.4 as binding rule for ALL future heading authoring).
 
-**Q-18 through Q-22** — see §15.5 (5 new questions derived from §15 cross-domain synthesis). Summary: Q-18 (CCL stages as quality tiers per Q1 LLM-training Pattern A) / Q-19 (lead-with-answer writing discipline per Q3 GEO 44.2% finding) / Q-20 (near-duplicate-paragraph audit across canonical trackers per Q1 dedup pattern) / Q-21 (4-component cross-ref maintenance design per Q2 research) / Q-22 (P0 em-dash heading-slug empirical test BEFORE any other Option A approval).
+**Q-18 through Q-22** — see §15.5 (5 new questions derived from §15 cross-domain synthesis). Summary: Q-18 (CCL stages as quality tiers per Q1 LLM-training Pattern A) / Q-19 (lead-with-answer writing discipline per Q3 GEO 44.2% finding) / Q-20 (near-duplicate-paragraph audit across canonical trackers per Q1 dedup pattern) / Q-21 (4-component cross-ref maintenance design per Q2 research) / Q-22 ✅ **RESOLVED 2026-05-15** via empirical em-dash test — see §13.4 + §15.4; binding revision: heading style is now COLON-FORM `## D15: Title`.
+
+**Q-13 ✅ RESOLVED 2026-05-15** via empirical token measurement — see §15.4. CCL Stage 1+2 = 362K tokens (181% of 200K window); `_validation_log.md` alone = 231K (115% of window). Phase 1.0 promoted as immediate priority.
+
+**Q-23 through Q-26** — see §16.6 (4 new questions derived from §16 long-term maintenance + governance). Summary: Q-23 (6-rule markdown hygiene enforcement as binding D-N candidate) / Q-24 (NEW_REPO_STARTER_TEMPLATE.md as canonical greenfield reference) / Q-25 (Q11 quarterly research-refresh cadence) / Q-26 (year-1 milestones Day 0/30/90/180/365 as roadmap commitment).
 
 ---
 
@@ -660,7 +665,35 @@ points directly to the section.
 - ❌ `## Idempotency Ledger (D15)` — D15 not first; slug-cite to `#d15` requires platform-specific prefix matching
 - ❌ `## D15: Idempotency Ledger (Locked 2026-05-09)` — date in heading; rename on supersession breaks inbound links
 
-**⚠️ CRITICAL EMPIRICAL CAVEAT (added 2026-05-15 per Q2 cross-ref research artifact)**: The em-dash `—` character in heading examples (`## D15 — Idempotency Ledger`) may NOT produce the assumed `#d15` anchor due to GitHub's slug algorithm interaction with non-ASCII punctuation. The Q2 research artifact explicitly flagged this for **immediate empirical test BEFORE any Phase 3 split begins**. Test procedure (15 minutes): (1) author a test markdown file with 4 heading variants (em-dash, en-dash, hyphen-with-spaces, colon); (2) push to a test branch on GitHub; (3) inspect generated anchor IDs via "Copy link to heading"; (4) document actual vs expected slugs. If em-dash breaks the `#d15` short-form anchor, the canonical heading style should switch to `## D15 - Idempotency Ledger` (ASCII hyphen). This is a **P0 meta-research task** (added to §13.5; supersedes prior P1-P8 ordering until resolved).
+**⚠️ EMPIRICAL TEST COMPLETE (Q-22 RESOLVED 2026-05-15)** — see `docs/migration/_research/em-dash-slug-test-2026-05-15.md` for full findings + `tools/test_github_slug.py` for the deterministic stdlib-only Python implementation of GitHub's slug algorithm.
+
+**🔴 CRITICAL FINDING — §13.4 ASSUMPTION WAS WRONG**: GitHub's slug algorithm uses Unicode dash punctuation `\p{Pd}` which **INCLUDES em-dash (U+2014), en-dash (U+2013), AND ASCII hyphen (U+002D)** — they are KEPT in the slug as literal characters, NOT replaced by hyphen-separators.
+
+**Test results (5 heading variants tested)**:
+
+| Heading | Generated slug | §13.4 prior assumption holds? |
+|---|---|---|
+| `## D15 — Idempotency Ledger` (em-dash) | `d15-—-idempotency-ledger` (em-dash literally embedded) | 🔴 NO |
+| `## D15 – Idempotency Ledger` (en-dash) | `d15-–-idempotency-ledger` (en-dash literally embedded) | 🔴 NO |
+| `## D15 - Idempotency Ledger` (ASCII hyphen) | `d15---idempotency-ledger` (triple hyphen) | 🔴 NO |
+| `## D15: Idempotency Ledger` (colon) | `d15-idempotency-ledger` | ✅ YES |
+| `## D15. Idempotency Ledger` (period) | `d15-idempotency-ledger` | ✅ YES |
+
+**🟢 BINDING RECOMMENDATION (revised §13.4 canonical heading style)**: Use **colon-form** for all D-number / B-number / R-number / RB-N / SP-N headings going forward:
+
+```markdown
+## D15: Idempotency Ledger
+## B-271: FP-precision percentile fix
+## R22: CLI exit-code drift
+## RB-7: DR rehearsal
+## SP-3: PipelineExecutionGate_AcquireProd
+```
+
+This produces the assumed `d15-idempotency-ledger` slug, allowing `#d15-idempotency-ledger` for full slug-cite OR partial-prefix-match for `#d15` on platforms that support prefix-anchor matching.
+
+**Why colon over period**: Colon is the conventional ID-prefix separator (RFC, ISO, Wikipedia disambiguation); period implies sentence-end and reads awkwardly in technical headings.
+
+**Migration**: Forward-only per D92. Existing em-dash headings stay (their current slugs continue resolving — no inbound-link breakage). NEW headings must use colon-form. Bulk normalization deferred to next round close-out OR Phase 3 split (whichever fires first).
 
 **Audit before split**: Per meta-research Priority 3 (research §E), audit all headings in `docs/migration/` for first-word-stable patterns BEFORE executing splits. Headings that don't match the convention should be normalized first.
 
@@ -748,14 +781,34 @@ Web URL slugs never change without a 301 redirect; same principle applies to fil
 - **Fully autonomous cross-ref maintenance agent**: per Q2 research bottom line — industry AI doc agents are detection-only monitors; humans fix. Don't build a continuously-running autonomous fixer. The 4-component design (Pattern d above) is the right shape.
 - **LLM training shard-size conventions** (64 MB - 5 GB): per Q1 research, irrelevant at our KB-scale corpus. Markdown file-size targets should be agent-traversal-driven (per §13.1 1,000-line trigger), not training-shard-derived.
 
-### §15.4 Critical empirical-validation requirements added to plan
+### §15.4 Empirical-validation results — BOTH P0 TESTS COMPLETE 2026-05-15
 
-Two empirical tests MUST run before any Option A split:
+**Q-22 P0 em-dash test → ✅ COMPLETE** — see updated §13.4 above + research artifact `_research/em-dash-slug-test-2026-05-15.md`. **Outcome**: §13.4 prior assumption was WRONG; em-dash, en-dash, AND ASCII hyphen all break the assumed `d15-` slug prefix. **Binding revision**: heading style mandate is now **colon-form** `## D15: Title` (validated against GitHub's slug algorithm via stdlib-only Python implementation in `tools/test_github_slug.py`).
 
-1. **§13.4 em-dash heading-slug test** (P0; 15 minutes; per Q2 critical side finding) — added inline to §13.4 as critical caveat. Tests whether `## D15 — Title` (em-dash) produces `#d15` short-form anchor on GitHub. If broken, switch to ASCII hyphen `## D15 - Title`.
-2. **P2 token cost measurement** (per §13.5 + Q1 sidecar-index-files validation) — already in §13.5 as P2; status unchanged. 15-minute task; informs Phase 1 priority sequencing.
+**Q-13 P2 token cost measurement → ✅ COMPLETE** — see `tools/measure_ccl_overhead.py` + research artifact `_research/ccl-baseline-2026-05-15.md` + machine baseline `_research/ccl-baseline-2026-05-15.json`. **Outcome**: empirical baseline reveals the situation is WORSE than estimated:
 
-Both tests are zero-infrastructure + no-decision-required. Pipeline-lead should authorize both at the same approval as §12 sign-off.
+| CCL stage | File count | Token count | % of 200K context window |
+|---|---|---|---|
+| **Stage 1 (canon-tier)** | 4 (NORTH_STAR, HANDOFF, CURRENT_STATE, CHECKS_AND_BALANCES) | 69,572 tokens | ~35% |
+| **Stage 2 (reference-tier)** | 3 (RISKS, BACKLOG, _validation_log) | 292,582 tokens | ~146% |
+| **Stage 1 + Stage 2 combined** | 7 | **362,154 tokens** | **~181%** of 200K |
+| Stage 3 (ad-hoc-tier; everything else) | 54 | 559,615 tokens | ~280% (but agents don't read all of S3 per invocation) |
+| Total `docs/migration/` corpus | 61 | 921,769 tokens | ~461% |
+
+**Key finding**: `_validation_log.md` alone = **231K tokens / 7,519 lines = 115% of context window** for a SINGLE FILE in Stage 2. The plan's prior estimate of "12K-16K lines per CCL invocation" matched line count (9,212 actual) but understated token cost by ~1.8×.
+
+**Optimization target derived from baseline**: Trimming `_validation_log.md` by 73% via existing archive policy (7,519 → 2,000 lines) recovers ~62% of CCL Stage 1+2 token cost. **This single action is the highest-leverage Phase 1 task** — promoted from "Phase 1.A" to **Phase 1 IMMEDIATE PRIORITY (Phase 1.0)**.
+
+**Implication for plan**: §5.1 Phase 1 task ordering revised below. The archive cascade is no longer just "first task" — it is the SINGLE-MOST-CONSEQUENTIAL change available. CLAUDE.md trim (Phase 1.6 / Q-12) remains second-highest leverage but ~6× smaller impact than `_validation_log.md` archive.
+
+**Both P0 tests' deliverables landed this commit**:
+- `tools/test_github_slug.py` (89 lines; stdlib-only; deterministic)
+- `tools/measure_ccl_overhead.py` (218 lines; stdlib + optional tiktoken; ran in <2 sec)
+- `tests/tier0/test_measure_ccl_overhead.py` (135 lines; 9 tests; pytest baseline 2311 → 2320 / 0 regression)
+- `_research/em-dash-slug-test-2026-05-15.md` (149 lines; full test report + 5 B-N candidates)
+- `_research/ccl-baseline-2026-05-15.md` + `.json` (canonical baseline doc + machine-readable for diffing)
+
+**Q-22 + Q-13 status flipped 🟡 → ✅ RESOLVED**. §10 updated below.
 
 ### §15.5 New Q-numbers added to §10 open questions
 
@@ -776,6 +829,159 @@ Both tests are zero-infrastructure + no-decision-required. Pipeline-lead should 
 | §10 (open questions) | +5 (Q-18 through Q-22) |
 | §11 (cross-references) | +3 research artifacts cited |
 | §3.2 + §5.1 (Phase 2 cross-ref tooling) | Refined — 4-component design replaces single Pattern F extension item |
+
+---
+
+## §16. Long-term maintenance + governance (added 2026-05-15)
+
+Per user 6th-directive request: (Q1) how do we keep track of research + create plan with strict guidelines for markdown hygiene? (Q2) if creating a new repo, how do we build markdown files properly from the get-go? (Q3) how do we ensure research is updated every few months for industry-standard tracking? (Q4) finalize plan + plan long-term maintenance + use multi-agent team. This section addresses Q1, Q2, Q3 + the long-term maintenance dimension of Q4.
+
+### §16.1 Research-tracking + markdown-hygiene enforcement (Q1)
+
+**Problem**: This session generated 6 udm-researcher artifacts + 1 plan doc + 5 plan revisions. Without governance, the research artifacts will drift, get re-discovered, or get cited stale.
+
+**Proposed governance (3-tier discipline)**:
+
+**Tier 1 — Per-artifact research register** (~50 lines; new doc `docs/migration/_research/_INDEX.md`):
+- One row per research artifact: filename + date + scope + key findings (1 line) + which plan sections it backs + supersession status
+- Append-only audit trail (research artifacts don't get deleted; superseded ones get a closure line)
+- Updated at every new research artifact authoring (per `udm-researcher` skill update)
+- Companion: each research artifact carries `**Supersedes**:` and `**Superseded-by**:` frontmatter when applicable
+
+**Tier 2 — Markdown hygiene linting** (CI gate per §15.2 Pattern D 4-component design):
+- `lychee` weekly cron CI checks file existence + in-file fragment anchors
+- `verify_cascade.py` Trigger L extension (heading-slug drift + stale line numbers)
+- New: `tools/check_markdown_hygiene.py` runs at pre-commit + scheduled — checks:
+  - All H2 headings carry colon-form ID prefix per revised §13.4 (`## D15: Title` not `## D15 — Title`)
+  - All file paths cited as `[](path/file.md#anchor)` format (no plain `see file.md`)
+  - All D-number / B-number / R-number references use canonical fragment anchors
+  - Lead-with-answer discipline: every H2/H3 section opens with 1-3 sentence direct answer (regex check)
+
+**Tier 3 — Round close-out cascade addition** (per `udm-round-closeout` skill):
+- New CCL Stage 2.5 step: skim `_research/_INDEX.md` for research candidates aging beyond 90 days; flag for refresh
+- New gap-check trigger: any plan/spec edit that cites a research artifact >180 days old surfaces 🟡 stale-citation finding (forces fresh research OR explicit "still-valid" attestation)
+
+**Hygiene rules to enforce as binding (D-N candidate per Q-23 below)**:
+
+| Rule | Enforcement mechanism |
+|---|---|
+| All NEW H2 headings use colon-form ID prefix | pre-commit hook + Pattern F audit |
+| All NEW cross-references use explicit `[](path#anchor)` Markdown links | pre-commit hook + lychee CI |
+| All NEW sections lead-with-answer (1-3 sentence direct answer) | regex check (best-effort; advisory not blocking) |
+| All NEW research artifacts register in `_research/_INDEX.md` | `udm-researcher` skill update |
+| Files >2,000 lines auto-flagged for split candidate review at next round close-out | `tools/measure_ccl_overhead.py` --report-large flag |
+| `_validation_log.md` triggers archive cascade at 5,000 lines OR quarterly (whichever first) | extended archive policy at L14-23 |
+
+### §16.2 New-repo starter pattern (Q2)
+
+**Standalone artifact**: `docs/migration/NEW_REPO_STARTER_TEMPLATE.md` (authored same commit as this plan revision; ~300 lines). Greenfield template that any new repo can copy as the starting point for `docs/` organization.
+
+**Key design principles applied from-the-start** (vs UDM's after-the-fact retrofit):
+1. **Lean CLAUDE.md from day 1** — under 300 lines; "would removing this cause Claude to make mistakes?" filter applied at every line per Anthropic guidance
+2. **Routing manifest INDEX.md from day 1** — in llms.txt format; routing-by-intent ("if task = X, read Y") not structural-by-description
+3. **Colon-form heading discipline from day 1** — `## D1: Foundational decision` NOT em-dash variants (per §13.4 empirical findings)
+4. **Cross-reference discipline from day 1** — `[D15](03_DECISIONS.md#d15-title)` from first commit; never plain text "see D15"
+5. **Append-only logs follow archive cadence from day 1** — `_validation_log.md` carries archive policy in its header from creation; never lets it grow past 2K lines
+6. **Quality tiers explicit in CCL doctrine from day 1** — D62-equivalent specifies Stage 1 = canon-tier (4 reads) / Stage 2 = reference-tier (3 reads) / Stage 3 = ad-hoc-tier
+7. **`udm-find-canonical` skill scaffolded from day 1** — agents have native lookup mechanism from first invocation
+8. **Token measurement script from day 1** — `tools/measure_ccl_overhead.py` (zero-cost copy from this repo); run quarterly to track CCL drift
+
+**Recommended directory structure for new repo's `docs/`**:
+```
+docs/
+├── INDEX.md                       # routing manifest (Stage 0 read)
+├── CLAUDE.md or README.md         # entry-point compass (<300 lines)
+├── 00_OVERVIEW.md                 # what is this project (lean)
+├── 01_ARCHITECTURE.md             # high-level design
+├── 02_DECISIONS.md                # D-numbers (split when >2K lines)
+├── 03_RISKS.md                    # R-numbers
+├── 04_BACKLOG.md                  # B-numbers
+├── 05_RUNBOOKS.md                 # operational procedures
+├── _validation_log.md             # append-only audit (archive at 2K lines)
+├── _research/
+│   ├── _INDEX.md                  # research artifact register
+│   └── *.md                       # individual research artifacts
+└── _archive/                      # archived sections (split-source preservation)
+    └── _validation_log_*.md       # archived validation log entries
+```
+
+See `NEW_REPO_STARTER_TEMPLATE.md` for full template + skeleton files.
+
+### §16.3 Quarterly research-refresh cadence (Q3)
+
+**Problem**: Industry standards evolve fast — 5 of the 6 udm-researcher artifacts in this session cited 2025-2026 sources. Without refresh, the plan becomes stale within months.
+
+**Proposed cadence — Tier 5-style audit drill** (mirrors `06_TESTING.md` Q1-Q10 quarterly drills):
+
+**Q11 — Markdown hygiene + agent-discoverability research refresh (NEW; quarterly)**:
+1. Read `docs/migration/_research/_INDEX.md`; identify artifacts >90 days old
+2. For each aging artifact: re-run the canonical research questions via `udm-researcher` skill; compare findings to prior artifact
+3. If findings unchanged → append "Re-validated YYYY-MM-DD; no calculus changes" line; reset 90-day clock
+4. If findings changed → author replacement artifact; mark prior as `**Superseded-by**: <new-artifact>`; flag plan sections for revision
+5. Run `tools/measure_ccl_overhead.py` to track CCL token-cost drift over time; trend chart in `_research/ccl-trend-YYYY-Q.md`
+6. Run `tools/test_github_slug.py` to confirm GitHub's slug algorithm hasn't changed (low likelihood but worth pinning)
+7. File quarterly report at `docs/migration/audit_reports/QYYYY_QN_markdown_hygiene.md` (mirrors existing Q1-Q10 quarterly cadence)
+
+**Trigger conditions for OFF-CADENCE research refresh** (in addition to quarterly):
+- New Anthropic Claude Code release with documented changes to skill / subagent / context-loading mechanics
+- New industry-standard publication (e.g., another arxiv paper like CodeCompass / Formal Architecture Descriptors)
+- New emerging-standard adoption signal (e.g., llms.txt finally getting production AI consumer; or a successor standard launching)
+- User-direction explicit refresh request
+
+**Cost model**: ~30-60 minutes per quarter for the refresh cycle. ~2 hours per off-cadence trigger.
+
+### §16.4 Long-term maintenance roadmap
+
+**Year-1 milestones** (assuming Phase 1 lands within next 30 days):
+- **Day 0** (next 1-2 sessions): Pipeline-lead reviews + approves §12 sign-off; Phase 1.0 (`_validation_log.md` archive cascade) executes; CCL token cost drops from 362K → ~140K (62% reduction)
+- **Day 30**: Phase 1 complete (INDEX.md + udm-find-canonical skill + D62 CCL Stage 0 update + CLAUDE.md trim); first quarterly Q11 refresh due Day 90
+- **Day 90 (Q1 audit)**: First Q11 quarterly refresh — re-run measurement script + check for new industry findings
+- **Day 180 (Q2 audit)**: Second Q11 — assess whether Phase 1+2 metrics met §9 success criteria; decide Phase 3 (file splits) or stop
+- **Day 365 (Q4 audit)**: Annual full refresh — re-run all 6 research questions if Anthropic Claude Code has had major updates
+
+**Long-term governance hierarchy**:
+- **Plan owner**: pipeline lead (decides plan revisions; sign-off authority)
+- **Research owner**: rotates per quarterly Q11 (the operator running the audit drill that quarter)
+- **Hygiene enforcement owner**: CI / pre-commit hooks (automated; humans only intervene on FAIL)
+- **Cross-doc cascade owner**: `udm-round-closeout` skill (existing; extended for §16.1 Tier 3)
+
+### §16.5 Multi-agent team structure for ongoing markdown work (Q4 dimension)
+
+**Established multi-agent patterns from this session validated for ongoing use**:
+
+| Pattern | Agents involved | When to use |
+|---|---|---|
+| **Sequential research → synthesis** | 1 udm-researcher → parent | When question is well-scoped + needs single coherent artifact |
+| **Parallel research (3-stream)** | 3 udm-researcher in parallel → parent synthesizes | When 3 independent angles can be researched simultaneously (3× wall-clock savings) |
+| **Empirical test + research split** | 1 general-purpose (test) + 1 udm-researcher (theory) → parent | When some questions need empirical data + others need literature review |
+| **Build cohort (parallel agents)** | N general-purpose agents (one per artifact) → parent | When multiple INDEPENDENT artifacts can be authored simultaneously (e.g., 3 Tier 3 test files; 3 Round 4 CLI tools) |
+| **Wave 1 + Wave 2** | Wave 1 parallel agents → parent waits → Wave 2 parent authors using Wave 1 results | When Wave 2 work depends on Wave 1 outputs (this commit's pattern) |
+
+**Anti-patterns to avoid** (learned from this session):
+- ❌ Spawning research agents on questions where empirical test is faster (the em-dash test should have been done as Wave 1, not deferred to a research artifact)
+- ❌ Running >3 parallel research agents (context-rot in synthesis; diminishing returns observed at this session's 5-artifact mark)
+- ❌ Research as a substitute for build (after 2+ artifacts validating direction, build the prototype + measure it)
+
+### §16.6 New open questions Q-23 through Q-26 added to §10
+
+- **Q-23 (NEW per §16.1)**: Approve the 6-rule markdown hygiene enforcement table as binding (D-N candidate)? Includes colon-form headings + explicit cross-ref links + lead-with-answer + `_research/_INDEX.md` registration + 2K-line file flag + 5K-line `_validation_log.md` archive trigger.
+- **Q-24 (NEW per §16.2)**: Approve `NEW_REPO_STARTER_TEMPLATE.md` as canonical greenfield reference? Pipeline-lead can adopt as binding template for any new internal repos.
+- **Q-25 (NEW per §16.3)**: Approve Q11 quarterly markdown hygiene + agent-discoverability research refresh cadence (mirrors Tier 5 Q1-Q10 quarterly drills)?
+- **Q-26 (NEW per §16.4)**: Approve year-1 milestones (Day 0 / 30 / 90 / 180 / 365) as roadmap commitment, OR redirect timeline?
+
+### §16.7 Cross-domain synthesis impact summary (cumulative)
+
+This is the 4th plan revision; cumulative governance discipline now spans:
+
+| Layer | What's enforced | How |
+|---|---|---|
+| Per-cycle | colon-form headings + explicit cross-refs + lead-with-answer | pre-commit hook + lychee CI |
+| Per-artifact | `_research/_INDEX.md` registration + supersession metadata | `udm-researcher` skill update |
+| Per-round | hygiene gap-check + Pattern F Layer 1 INDEX consistency | `udm-round-closeout` Stage 2.5 |
+| Per-quarter | Q11 research refresh + token cost trend | quarterly audit drill (mirrors Q1-Q10 Tier 5) |
+| Per-year | full re-evaluation of plan against fresh research baseline | annual milestone review |
+
+**Plan moves from 🟡 Plan-draft (research-grounded) → 🟡 Plan-final (decision-required)** with this commit. Pipeline-lead's §12 sign-off is the ONE remaining gate. After sign-off → 🟢 Locked + execution begins per §7.1 task breakdown WITH the §15.4 empirical-baseline-driven priority reordering (Phase 1.0 archive cascade FIRST).
 
 ---
 

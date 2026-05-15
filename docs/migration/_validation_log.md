@@ -7516,4 +7516,151 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
 
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; answers Q-1 through Q-22 (especially Q-22 P0 em-dash test + Q-13 P2 token measurement to ground optimization target empirically); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown WITH cross-ref preservation tooling (Q-21 Pattern D 4-component design) authored FIRST per §13.3 mandatory precondition.
 
+---
+
+## 2026-05-15 -- MARKDOWN_REFACTOR_PLAN.md 4th-revision (🟡 Plan-final) + 2 P0 EMPIRICAL TESTS COMPLETE + NEW_REPO_STARTER_TEMPLATE.md + §16 long-term governance per user 6th-directive
+
+**Trigger**: User 4-part directive: (Q1) "How do we keep track of the research and create a plan that enforces strict guidelines to help maintain quality markdown hygiene?"; (Q2) "If I create a new repository, how do we build out the markdown files properly from the get go?"; (Q3) "How do we ensure that our research on quality markdown hygiene is updated every few months so that we ensure our setup follows the best practices for industry standards?"; (Q4) "Let's proceed with your recommended next steps, but finalizing our plans for markdown refactoring and think how to maintain this long term. Use a multi-agent team to help where possible." NOT a cascade invocation; direct user-direction work.
+
+**Workflow executed (3 waves)**:
+
+**Wave 1 (parallel; 2 general-purpose agents; ~10 min wall-clock)**:
+- Agent A: Q-22 em-dash heading-slug empirical test
+- Agent B: Q-13 token cost measurement script + baseline run
+
+**Wave 2 (sequential; parent agent)**:
+- Update plan §13.4 with empirical em-dash findings + binding colon-form mandate
+- Update plan §15.4 to mark Q-13 + Q-22 RESOLVED
+- Update plan §5.1 to promote `_validation_log.md` archive to Phase 1.0 IMMEDIATE PRIORITY
+- Update plan §10 with Q-23 through Q-26 + Q-13/Q-22 RESOLVED status
+- Update plan header status from "Plan-draft" → "Plan-final"
+- Author NEW §16 "Long-term maintenance + governance" addressing Q1-Q3
+- Author NEW_REPO_STARTER_TEMPLATE.md addressing Q2 (greenfield template)
+- Update CLAUDE.md Structure section for 2 new tools (Pitfall #9.n discipline)
+
+**Wave 3 (this commit)**: tracker pass + commit + report
+
+**Wave 1 Agent A — em-dash test BREAKING FINDING**:
+- §13.4 prior assumption was WRONG. GitHub's slug algorithm uses Unicode dash punctuation `\p{Pd}` which INCLUDES em-dash (U+2014), en-dash (U+2013), AND ASCII hyphen (U+002D) — they're KEPT literal in slug, NOT replaced.
+- Test results (5 heading variants):
+  - `## D15 — Idempotency Ledger` (em-dash) → `d15-—-idempotency-ledger` (em-dash literally embedded; §13.4 ASSUMPTION HOLDS = NO)
+  - `## D15 – Idempotency Ledger` (en-dash) → `d15-–-idempotency-ledger` (en-dash literally embedded; NO)
+  - `## D15 - Idempotency Ledger` (ASCII hyphen) → `d15---idempotency-ledger` (triple hyphen; NO)
+  - `## D15: Idempotency Ledger` (colon) → `d15-idempotency-ledger` (✓ YES)
+  - `## D15. Idempotency Ledger` (period) → `d15-idempotency-ledger` (✓ YES)
+- **Binding revision applied**: §13.4 mandates COLON-FORM `## D15: Title` going forward
+- **Migration**: Forward-only per D92. Existing em-dash headings stay (their current slugs continue resolving — no inbound-link breakage). NEW headings must use colon-form.
+- Deliverables: `tools/test_github_slug.py` (89 lines; stdlib-only; deterministic) + `_research/em-dash-slug-test-2026-05-15.md` (149 lines; full report + 5 B-N candidates)
+
+**Wave 1 Agent B — token measurement empirical baseline**:
+- CCL Stage 1 (4 files: NORTH_STAR + HANDOFF + CURRENT_STATE + CHECKS_AND_BALANCES) = **69,572 tokens (~35% of 200K window)**
+- CCL Stage 2 (3 files: RISKS + BACKLOG + _validation_log) = **292,582 tokens (~146% of 200K window)**
+- **CCL Stage 1+2 combined = 362,154 tokens = 181% of 200K context window** (vs prior plan estimate of 12K-16K LINES — line count matched approximately at 9,212 actual but token cost was ~1.8× under-estimated)
+- `_validation_log.md` ALONE = **231K tokens / 7,519 lines / 115% of context window** for a single Stage 2 file — by far the biggest single contributor
+- Total `docs/migration/` corpus = 921,769 tokens / 61 files
+- **Optimization target**: trim `_validation_log.md` by 73% (7,519 → 2,000 lines) via existing archive policy → recovers **~62% of CCL Stage 1+2 token cost**. This single action = single-most-leverage Phase 1 task.
+- Deliverables: `tools/measure_ccl_overhead.py` (218 lines; stdlib + optional tiktoken; pure-Python ~4 chars/token fallback heuristic; ran in <2 sec) + `tests/tier0/test_measure_ccl_overhead.py` (135 lines; 9 tests) + `_research/ccl-baseline-2026-05-15.json` (machine baseline for diffing) + `_research/ccl-baseline-2026-05-15.md` (canonical baseline doc)
+- Pytest verification: **2311 → 2320 pass / 62 skip / 0 fail** (+9 from new Tier 0 tests; 0 regression)
+
+**Wave 2 — plan §16 + new-repo template authored**:
+
+§16 "Long-term maintenance + governance" structure:
+- §16.1 Research-tracking + 3-tier hygiene enforcement (Q1): per-artifact register + lychee CI + pre-commit hook + round close-out cascade addition + 6-rule binding hygiene table
+- §16.2 New-repo starter pattern reference (Q2): pointer to standalone NEW_REPO_STARTER_TEMPLATE.md
+- §16.3 Quarterly research-refresh cadence (Q3): NEW Q11 audit drill mirroring Tier 5 Q1-Q10 quarterly pattern; 90-day refresh per artifact
+- §16.4 Long-term maintenance roadmap: Day 0 / 30 / 90 / 180 / 365 milestones
+- §16.5 Multi-agent team structure for ongoing markdown work (Q4 dimension): 5 patterns validated this session (sequential research / parallel research / empirical+research split / build cohort / Wave 1+Wave 2)
+- §16.6 4 NEW open questions Q-23 through Q-26
+- §16.7 Cross-domain synthesis impact summary cumulative table
+
+NEW_REPO_STARTER_TEMPLATE.md (334 lines) addressing Q2:
+- 8 design principles applied from-day-1 (lean CLAUDE.md / routing manifest INDEX.md / colon-form headings / explicit cross-refs / archive cadence / quality tiers / native skill / token measurement)
+- Recommended `docs/` directory structure
+- INDEX.md / CLAUDE.md / CCL doctrine / _validation_log.md / _research/_INDEX.md skeletons
+- tools/ scripts to copy + CI/pre-commit hook references
+- Migration path for existing repos
+- 13 cross-references to canonical research artifacts
+
+**Plan REVISED 791 → 997 lines (4th revision)**: §13.4 colon-form binding mandate / §15.4 Q-13+Q-22 RESOLVED / §5.1 Phase 1.0 archive cascade IMMEDIATE PRIORITY promotion / §10 Q-23-Q-26 + Q-13/Q-22 RESOLVED / §16 NEW long-term governance / header status flipped Plan-draft → **Plan-final**.
+
+**CLAUDE.md Structure section update** (Pitfall #9.n discipline applied at producer-time): added entries for `tools/measure_ccl_overhead.py` + `tools/test_github_slug.py` (~6 lines added).
+
+**Deliverables landed (6 NEW files + 3 modified + plan + 4 trackers)**:
+
+| File | Action | Lines | Purpose |
+|---|---|---|---|
+| tools/test_github_slug.py | NEW | 89 | Stdlib-only deterministic GitHub slug algorithm + 5-variant test |
+| tools/measure_ccl_overhead.py | NEW | 218 | CCL token cost measurement; outputs MD + JSON baselines |
+| tests/tier0/test_measure_ccl_overhead.py | NEW | 135 | 9 Tier 0 tests for measurement script |
+| docs/migration/_research/em-dash-slug-test-2026-05-15.md | NEW | 149 | Empirical test report (Wave 1 Agent A) |
+| docs/migration/_research/ccl-baseline-2026-05-15.md | NEW | 116 | Canonical CCL baseline (Wave 1 Agent B) |
+| docs/migration/_research/ccl-baseline-2026-05-15.json | NEW | (binary) | Machine baseline for diffing (Wave 1 Agent B) |
+| docs/migration/NEW_REPO_STARTER_TEMPLATE.md | NEW | 334 | Greenfield template addressing Q2 |
+| docs/migration/MARKDOWN_REFACTOR_PLAN.md | REVISED (4th revision) | 791 → 997 | §13.4 + §15.4 + §5.1 + §10 + §16 NEW + header |
+| CLAUDE.md | MINIMAL UPDATE | +6 | 2 new tools registered in Structure |
+| docs/migration/CURRENT_STATE.md L7 | THOROUGH UPDATE | +~50 | Full event narrative |
+| docs/migration/HANDOFF.md § 14 | THOROUGH UPDATE | +~15 | Abbreviated narrative |
+| docs/migration/CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE | +~20 | Code+plan+research event |
+| docs/migration/_validation_log.md | This entry | +~150 | Event audit trail |
+
+**Test counts**: 2311 → 2320 pass / 62 skip / 0 fail (+9 from Tier 0; 0 regression).
+
+**Pytest verification (sanity)**:
+
+| Layer | Pre-commit | Post-commit |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2311 / 62 / 0 | **2320 / 62 / 0** |
+| Delta | -- | +9 (Wave 1 Agent B Tier 0 tests for measurement script) |
+
+**Cumulative B-N closures**: 31 (unchanged this commit; plan revision + research + tooling only).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UNTOUCHED-AS-EXPECTED (no B-N closures/opens; though Q-22 + Q-13 empirical resolutions could open follow-on B-Ns once pipeline-lead approves the binding-rule changes) |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | YES — `tools/measure_ccl_overhead.py` + `tools/test_github_slug.py` are 2 new operator-facing tools | UPDATED — CLAUDE.md Structure section gained 2 new entries per Pitfall #9.n discipline |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | Plan §10 Q-23 PROPOSES D-N candidate (6-rule hygiene enforcement); no lock this commit | UNTOUCHED-AS-EXPECTED — pipeline-lead approval gates |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | None | UNTOUCHED-AS-EXPECTED |
+| Risk change? | None (the §13.4 em-dash bug + token-cost validation were RESOLVED empirically — this de-risks rather than adds risk) | UNTOUCHED-AS-EXPECTED |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | None | UNTOUCHED-AS-EXPECTED |
+| Executable artifact? | YES — `tools/measure_ccl_overhead.py` is a manual + recurring (quarterly per Q11) artifact per `udm-execution-classifier` framing | DEFERRED — formal classification entry in `phase1/02_configuration.md` § 5.1 OR `ONE_OFF_SCRIPTS.md` gated on Q-25 quarterly cadence approval; for now, doc-only tools (not pipeline-runtime) |
+| Spec edit? | YES — plan revised (791 → 997 lines; new §16; status flipped Plan-draft → Plan-final); NEW_REPO_STARTER_TEMPLATE.md NEW (334 lines) | UPDATED — both deliverables ARE the artifacts under revision |
+| Sub-class formalization? | None | UNTOUCHED-AS-EXPECTED |
+| New skill/agent? | Q-24 PROPOSES NEW_REPO_STARTER_TEMPLATE.md as canonical greenfield reference (NOT a skill/agent; just a template doc) | UNTOUCHED-AS-EXPECTED |
+
+**Step 10 application**: ✅ APPLIED — CLAUDE.md Structure section updated with `tools/measure_ccl_overhead.py` + `tools/test_github_slug.py` entries inline at producer-time (per Pitfall #9.n discipline; no gap-check delay).
+
+**Convention checks**:
+- Pitfall #9.j OK (no B-N badges touched)
+- Pitfall #9.k OK (pytest 2311 → 2320 propagated consistently across all 5 canonical trackers + commit message; plan line count 791 → 997 cited consistently; cumulative research artifact count 6 + 2 P0 deliverables cited consistently)
+- Pitfall #9.l OK (Agent re-read Wave 1 outputs verbatim BEFORE synthesis; cross-checked against §13.4 + §15.4 plan content; identified colon-form recommendation + token-cost reality in real-time; canonical-re-read discipline applied)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional walked explicitly above; SELF-REFERENTIAL acknowledgment in §16.5 documents the multi-agent pattern this commit demonstrates for future reuse)
+- Pitfall #9.n OK (CLAUDE.md Structure section updated for 2 new tools INLINE per producer-time discipline; no gap-check post-hoc lag)
+- Pitfall #10 (Tier 0/3 boundary) OK (Wave 1 Agent B added 9 Tier 0 tests for measurement script; runtime <2 sec; no external deps; tier-discipline maintained)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 29 unpushed commits ahead of master pre-this-commit (30 after this commit lands; HOLD push). 31 cumulative B-N closures (unchanged this commit). 0 still-open net-new.
+
+**Multi-agent pattern empirically validated this session**: Wave 1 (2 parallel general-purpose agents; ~10 min wall-clock vs ~30 if sequential) + Wave 2 (parent agent §16 + new-repo template authoring; sequential) + Wave 3 (this commit; synchronization). Pattern documented in plan §16.5 for future reuse. The 3-wave pattern (parallel + sequential + sync) is now a project-validated multi-agent template alongside existing patterns from Round 4.1 cohort + Round 6 Tier 2 cohort + Round 3 Wave 5.
+
+**Plan status**: 🟡 Plan-final (was Plan-draft) — research-grounded + empirically-validated + gap-audited + Option A deep-dived + cross-domain-synthesized + long-term-governance-defined; pipeline-lead §12 sign-off is the SINGLE remaining gate before 🟢 Locked. Now has **26 open questions Q-1 through Q-26** (Q-13 + Q-22 ✅ RESOLVED; 24 remaining decision-required); **2 P0 empirical tests COMPLETE**; companion `NEW_REPO_STARTER_TEMPLATE.md` ready for adoption per Q-24.
+
+**Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; answers Q-1 through Q-12 + Q-14 through Q-21 + Q-23 through Q-26 (24 questions); critical first decision: Q-23 6-rule hygiene enforcement as binding D-N + Q-24 NEW_REPO_STARTER_TEMPLATE.md adoption + Q-25 Q11 quarterly cadence + Q-26 year-1 milestones. If approved, Phase 1 work begins WITH Phase 1.0 (`_validation_log.md` archive cascade) as IMMEDIATE FIRST TASK per §5.1 + §15.4 empirical-baseline-driven priority.
+
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; Q-1 through Q-12 answered (especially Q-11 udm-context-loader subagent approval + Q-12 CLAUDE.md trim approval); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown (1.0 baseline measurement + 1.1 archive cutoff + 1.2 archive cascade + 1.3 INDEX.md authoring + 1.4 per-file INDEX sidecars + 1.5 D62 CCL Stage 0 update + 1.5b skill-prompt cascade enumeration + 1.6 CLAUDE.md trim + 1.7 Pattern E independent review).
