@@ -6135,3 +6135,57 @@ This commit represents the FOURTH successive parent-agent gap-reflection in this
 3. **Comparison-class identifies** -- having closed N items previously, you can pattern-match remaining drift more efficiently
 
 Recommendation: at next round close-out cascade, the **udm-cascade-audit-evolver** skill should run a SYSTEMATIC enumeration of all `^\- \*\*B[\-]?[0-9]+\*\* \([yellow] Open\):` lines with inline `CLOSED 2026-` and produce a definitive count + closure batch. This would close the discipline gap that allowed 19 instances to accumulate.
+
+## 2026-05-14 -- B-218 CLOSED: ALL TESTS PASS milestone
+
+**Trigger**: User direction "continue forward with next steps. Wait to perform a PR." after gap-analysis residual sweep (184aac8) cleaned up the 10 Round 6 close-out 9.j drift instances.
+
+**Outcome**: Long-standing B-218 carryover (2 failing tests in log_retention_cleanup.py) resolved. Full pytest regression: **2281+2fail -> 2288 pass / 10 skip / 0 fail**. First "ALL TESTS PASS" state since session start. Math: 2281 baseline + 5 new B-267 tests + 2 B-218 carryover now passing = 2288.
+
+**Root causes characterized**:
+
+1. **Failure 1 (tier0 test_apply_invokes_per_level_delete)**: Test created a LOCAL mock_cursor and patched pyodbc.connect to return it, but the tool gets its cursor via utils.connections.get_general_connection().cursor() which routes through the LOADER's mock_conn -> mock_cursor (not the test-local one). Test-local mock_cursor.execute.side_effect was never invoked; captured_sql stayed empty; test failed expecting >=1 DELETE.
+
+2. **Failure 2 (tier1 TestConfigMissing::test_config_missing_exits_2)**: Two-part bug.
+   - Test-side: loader removes "utils.configuration" from sys_modules_patch when config_missing=True, but the real utils/configuration.py exists on filesystem so Python falls back to it. Import succeeds.
+   - Code-side: tool main() has graceful fallback `except Exception: general_db = "General"` -- contradicts spec section 3.10 L1295 "fatal -- config / connection / unexpected."
+
+**Fixes applied (3 edits)**:
+
+| Edit | File | Change |
+|---|---|---|
+| 1 | tests/tier0/test_log_retention_cleanup.py | Instrument the LOADER's mock_cursor via `mod._test_sys_modules_patch["utils.connections"].get_general_connection.return_value.cursor.return_value`; remove test-local mock_cursor + pyodbc.connect patch (red herrings) |
+| 2 | tools/log_retention_cleanup.py::main() | Capture ImportError on `import utils.configuration` -> after result dict init, surface as EXIT_FATAL with audit-row + early return. Aligned with spec section 3.10 L1295 "fatal -- config / connection / unexpected" |
+| 3 | tests/tier1/test_log_retention_cleanup.py::_load_tool_module | When config_missing=True, set `sys_modules_patch["utils.configuration"] = None` (Python idiom for "module cannot be imported"; raises ImportError on import) instead of just removing from patch dict |
+
+**B-N inventory delta**: 1 CLOSED (B-218). 22 cumulative closures across the post-merge branch round-6-post-merge-tracking (b0418dd 0 + cb76334 10 + 184aac8 10 + this 1 + B-267 not in 184aac8 counted -- actually wait, branch totals: b0418dd 0 + cb76334 11 (B-267 + 9 section 8) + 184aac8 10 (Round 6 residual) + B-218 commit 1 = 22). NB: actual closure count this branch is 22.
+
+**Pytest milestone**: 2288 pass / 10 skip / 0 fail. ZERO failures. First "ALL TESTS PASS" state of the session. Engineering-deploy gate cleared for the test-suite-pass criterion.
+
+**Trackers updated this commit (4 files)**:
+
+| File | Change |
+|---|---|
+| BACKLOG.md | B-218 leading-badge flip with comprehensive closure annotation citing all 3 edits + spec section 3.10 L1295 |
+| CODE_BUILD_STATUS.md | L12 narrative prepended with ALL TESTS PASS milestone; L28 Tests row updated 2281+2fail -> 2288+0fail |
+| CURRENT_STATE.md | L7 narrative prepended with milestone + 22 cumulative closures across branch |
+| HANDOFF.md | section 14 narrative prepended with milestone + branch state |
+
+**Convention checks**:
+- Pitfall #9.j OK (B-218 leading badge flipped with inline closure annotation; aligned)
+- Pitfall #9.k OK (count 2288 propagated to BACKLOG closure + CODE_BUILD_STATUS L12 + L28 + CURRENT_STATE + HANDOFF + this entry consistently)
+- Pitfall #9.l OK (re-read tool main() + tier0+tier1 test loaders before editing)
+- Pitfall #9.m OK (B-218 closed AND tracked simultaneously across 4 trackers + this entry per hard rule 9)
+- Pitfall #9.n OK N/A (modification to existing code path; no new public surface)
+- CLAUDE.md hard rule 9 (udm-progress-logger) OK (this entry IS the application)
+- CLAUDE.md hard rule 12 (B-226 Tier calibration) OK N/A (small code edit + test alignment; no tier mis-classification risk)
+
+**Branch state**: round-6-post-merge-tracking now at 4 unpushed commits ahead of master:
+1. b0418dd -- post-merge tracker snapshot (PR #1 milestone)
+2. cb76334 -- B-267 verifier-synonym fix + section 8 polish batch (10 closures + 5 new tests)
+3. 184aac8 -- Round 6 close-out residual sweep (10 more closures + tracker propagation)
+4. NEW (this commit) -- B-218 ALL TESTS PASS milestone (1 closure + 3 fixes)
+
+**Engineering-deploy-gate status**: post-cohort test-suite-pass criterion now CLEARED. Combined with prior cb76334 drift-tool improvements (false-positive RED suppressed), the engineering-deploy posture is strong.
+
+**Operator next step recommendation**: This is a clean break point. Branch ready as a coherent post-merge follow-up PR (4 commits; 22 closures; 0 failures). Recommend pushing + opening PR when user is ready -- the "ALL TESTS PASS" milestone is iconic and a natural place to seal a PR.

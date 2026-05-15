@@ -365,28 +365,31 @@ def test_apply_invokes_per_level_delete():
     """
     mod = _load_tool_module()
 
+    # B-218 fix: instrument the LOADER's mock_cursor (the one the tool actually uses
+    # via utils.connections.get_general_connection().cursor()), NOT a test-local mock.
+    # Prior test-local mock was never invoked -- tool resolves cursor via loader's
+    # sys.modules patch on utils.connections.
+    loader_cursor = mod._test_sys_modules_patch["utils.connections"].get_general_connection.return_value.cursor.return_value
     captured_sql: list[str] = []
+    loader_cursor.execute.side_effect = lambda sql, *a, **kw: captured_sql.append(str(sql))
+    loader_cursor.fetchone.return_value = (0,)  # applock: acquired
+    loader_cursor.fetchall.return_value = []
+    loader_cursor.rowcount = 0  # batched-delete exits after 1 iteration per cohort
 
-    mock_cursor = MagicMock()
-    mock_cursor.execute.side_effect = lambda sql, *a, **kw: captured_sql.append(str(sql))
-    mock_cursor.fetchone.return_value = (0,)  # applock: acquired
-    mock_cursor.fetchall.return_value = []
-
-    with patch("pyodbc.connect", return_value=mock_cursor):
-        try:
-            result = _invoke_main(mod,
-                actor=_ACTOR,
-                dry_run=False,
-                apply=True,
+    try:
+        result = _invoke_main(mod,
+            actor=_ACTOR,
+            dry_run=False,
+            apply=True,
                 debug_info_days=_DEBUG_INFO_DAYS_DEFAULT,
                 warning_days=_WARNING_DAYS_DEFAULT,
                 batch_size=_BATCH_SIZE_DEFAULT,
-            )
-        except SystemExit as exc:
-            assert exc.code == EXIT_SUCCESS, (
-                f"--apply must exit 0 per D74. Got: {exc.code!r}"
-            )
-            result = {"exit_code": EXIT_SUCCESS, "dry_run": False}
+        )
+    except SystemExit as exc:
+        assert exc.code == EXIT_SUCCESS, (
+            f"--apply must exit 0 per D74. Got: {exc.code!r}"
+        )
+        result = {"exit_code": EXIT_SUCCESS, "dry_run": False}
 
     delete_calls = [s for s in captured_sql if "DELETE" in s.upper()]
     assert len(delete_calls) >= 1, (

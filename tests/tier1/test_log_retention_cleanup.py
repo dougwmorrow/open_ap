@@ -245,7 +245,13 @@ def _load_tool_module(
     if config_import_side_effect is None:
         sys_modules_patch["config"] = mock_config
         sys_modules_patch["utils.configuration"] = mock_config
-    # If config_missing, we do NOT add config to sys.modules; import will fail
+    else:
+        # B-218 fix: setting to None is the Python idiom for "module cannot
+        # be imported" -- import statement raises ImportError. Without this,
+        # Python falls back to filesystem and the real utils.configuration
+        # module loads, defeating config_missing=True semantics.
+        sys_modules_patch["config"] = None
+        sys_modules_patch["utils.configuration"] = None
 
     with patch.dict("sys.modules", sys_modules_patch):
         spec = importlib.util.spec_from_file_location(_TOOL_MODULE_KEY, _TOOL_PATH)
