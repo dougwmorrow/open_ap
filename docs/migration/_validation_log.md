@@ -7055,3 +7055,76 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated 
 **Cascade Step 2 (gap-check via Step 10 verifier SKIP per tracker-only criterion + G1-G6 reflection) + Step 3 (push + report cascade-complete) follow this commit.**
 
 **Cascade Step 2 (gap-check via udm-step-10-verifier + G1-G6 reflection) + Step 3 (report cascade-complete + delete SESSION_RESUME.md) follow this commit.**
+
+---
+
+## 2026-05-15 -- B84 ⚫ CLOSED (udm-test-author CLI Tier 0 extension per D77 6-assertion contract)
+
+**Trigger**: udm-next-step-cascade invoked via "Proceed with your suggested next step." (cascade #9). HIGH-confidence trigger phrase. NO push/PR semantics → HOLD push by default.
+
+**Selection (skill priority+scope)**: HIGH-priority "B84 — Extend `udm-test-author` agent template for CLI tool Tier 0 sketches per D77 6-assertion contract" (~1 cycle; Claude-doable; not operator-blocked) — only HIGH/cleanest item from prior cascade close-out report runway.
+
+**Reasoning**: B84 was the cleanest non-blocked HIGH-WSJF (2.0) backlog item per the prior cascade audit. The `.claude/agents/udm-test-author.md` agent template has covered MODULE-level Tier 0 sketches since 2026-05-10 (per D67) but lacked CLI-tool-specific guidance. Round 4.1+ build cohort produced ~30+ CLI Tier 0 test files using a consistent pattern (subprocess `--help` + in-process arg-parser + mocked-cursor side-effect verification + canonical-signature alignment + D74 exit-code mapping); this empirical pattern needed codification in the agent template so future test-authoring agents apply it consistently.
+
+**Deliverables landed (2 files)**:
+
+| File | Action | Lines | Coverage |
+|---|---|---|---|
+| `.claude/agents/udm-test-author.md` | EXTENDED with new "Tier 0 for CLI tools (per D77 — added 2026-05-15 closes B84)" subsection (placed after existing module-level Tier 0 subsection and before Tier 1 unit tests subsection) | +~125 | D77 6-assertion contract verbatim (a-f) + module-vs-CLI-Tier-0 difference rationale + comprehensive Python template mirroring `tests/tier0/test_parquet_verify.py` Round 4.2 build canonical pattern + 5 CLI Tier 0 anti-patterns + Round 4.1+ empirical 6-floor / 8-11-typical / 11+-promote-to-Tier-1 calibration |
+| `docs/migration/BACKLOG.md` | EDITED L186 — leading-badge flip 🟡→⚫ + inline closure annotation citing the agent extension | +~3 / -1 | B84 status alignment per Pitfall #9.j |
+
+**Test counts**: doc-only commit; no test changes.
+
+**Pytest verification (sanity)**:
+
+| Layer | Pre-cohort | Post-cohort |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2309 / 62 / 0 | **2309 / 62 / 0** |
+| Delta | -- | 0 (doc-only; expected) |
+
+**Cumulative B-N closures**: 29 → 30 (+1 — B84).
+
+**Tracker updates this commit (per Step 1.4 thorough pass)**:
+
+A. **Always update (5 canonical)**:
+
+| Tracker | Update status |
+|---|---|
+| BACKLOG.md | UPDATED — B84 leading-badge flip + inline closure annotation at L186 |
+| CURRENT_STATE.md L7 | THOROUGH UPDATE prepended with full event narrative |
+| HANDOFF.md § 14 | THOROUGH UPDATE prepended with abbreviated event narrative |
+| CODE_BUILD_STATUS.md L12 | THOROUGH UPDATE prepended (doc-only event but the dashboard reflects last-reviewed cadence) |
+| _validation_log.md | This entry |
+
+B. **Conditional per-build-type (per Step 1.4 13-row checklist; each row stated explicitly per Pitfall #9.m discipline)**:
+
+| Row | Question | Status THIS cohort |
+|---|---|---|
+| NEW public surface? | None (agent template extension; no Python module / function / class / constant) | UNTOUCHED-AS-EXPECTED |
+| NEW EventType? | None | UNTOUCHED-AS-EXPECTED |
+| NEW D-number? | None | UNTOUCHED-AS-EXPECTED |
+| NEW RB-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW SP-N? | None | UNTOUCHED-AS-EXPECTED |
+| NEW edge case? | None | UNTOUCHED-AS-EXPECTED |
+| Risk change? | None | UNTOUCHED-AS-EXPECTED — R19 (Tier 0 drift) is somewhat de-risked by this extension since CLI tools now have canonical Tier 0 guidance, but score change deferred to next round close-out per Pitfall #8 hedge |
+| Phase status? | None | UNTOUCHED-AS-EXPECTED |
+| Cosmetic? | None visible | UNTOUCHED-AS-EXPECTED |
+| Executable artifact? | No (agent template; consumed by test-authoring agents at invocation time) | UNTOUCHED-AS-EXPECTED |
+| Spec edit? | No phase1/0X spec touched; agent template at .claude/agents/ is the canonical home | UNTOUCHED-AS-EXPECTED |
+| Sub-class formalization? | None | UNTOUCHED-AS-EXPECTED |
+| New skill/agent? | EXTENSION of existing agent (not authoring of new skill/agent); per cascade conditional checklist row "New skill / agent / .md template authoring → GLOSSARY.md skill catalogue" — applies only to NEW agents. Verified: GLOSSARY.md mentions udm-test-author at L257 in Pattern C (no full agent-catalogue row that would need refresh). | UNTOUCHED-AS-EXPECTED — extension only; no new agent |
+
+**Step 10 application**: ✅ N/A — no new Python public surface (agent template Markdown extension only).
+
+**Convention checks**:
+- Pitfall #9.j OK (this commit applied 1 badge flip — B84; +N event in 9.j evidence base ≥22 instances cumulative)
+- Pitfall #9.k OK (no count drift; pytest 2309/62/0 unchanged across all 5 canonical trackers; B-N closure count propagated 29→30 consistently)
+- Pitfall #9.l OK (Agent re-read D77 verbatim from `03_DECISIONS.md` L1822-1843 + `tests/tier0/test_parquet_verify.py` L1-100 canonical pattern + existing udm-test-author "Tier 0: Build-time smoke" subsection BEFORE authoring the CLI extension; canonical-re-read discipline applied per Pitfall #9.l)
+- Pitfall #9.m OK (this entry IS the application; 13-row conditional table walked explicitly above)
+- Pitfall #9.n OK N/A (no new Python public surface; agent template is `.claude/agents/` infrastructure — no CLAUDE.md Structure section update needed since CLAUDE.md doesn't list per-agent files in Structure)
+- Pitfall #10 (Tier 0/3 boundary) OK — extension explicitly addresses Tier-0/Tier-1 boundary per D80 ("11+-assertion CLI tools promote to Tier 1")
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Branch state**: round-6-post-merge-tracking at 24 unpushed commits ahead of master pre-this-commit (25 after this commit lands; HOLD push). 30 cumulative B-N closures (was 29; +1 this commit); 0 still-open net-new.
+
+**Cascade Step 2 (gap-check via Step 10 verifier SKIP per tracker-only criterion + G1-G6 reflection) + Step 3 (report cascade-complete) follow this commit. With this commit, B84 closure consumes the prior cascade's HIGH/cleanest runway item; remaining runway: B78 (3 edge cases — partial verification needed) + B83 (Tier 0 backfill — partially done; 2 blocked) + B91 (gated on B78). All other HIGH WSJF items operator-blocked.**

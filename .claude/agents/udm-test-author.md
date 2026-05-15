@@ -89,6 +89,151 @@ def test_documented_error_modes_raised():
 
 Tier 0 vs Tier 1: Tier 0 is the immediate "does it run?" check at build time. Tier 1 (below) is comprehensive — happy path + edge cases + boundaries.
 
+### Tier 0 for CLI tools (per D77 — added 2026-05-15 closes B84)
+
+For every Round 4+ CLI tool (anything under `tools/<name>.py` that wraps a Round 3+ module function with operator-facing argparse + exit-code contract), author a companion `tests/tier0/test_<name>.py` per the **D77 6-assertion contract**. Differs from the module Tier 0 above by adding CLI-specific concerns (subprocess `--help` invocation; arg-parser canonical-set acceptance; `--dry-run` no-side-effect verification; `--apply` wrapped-call verification; `D74 exception → exit-code` mapping).
+
+- **Runtime ceiling**: < 5 seconds per tool (same as module Tier 0)
+- **External dependencies**: NONE — `--help` runs in subprocess but invokes only argparse; all module-side effects mocked via `unittest.mock.patch`; no real DB / network / filesystem
+- **Coverage** (6 mandatory assertions per D77 verbatim):
+  1. **(a)** Module imports without error (no missing dependencies; no top-level side effects)
+  2. **(b)** `python3 tools/<name>.py --help` returns exit 0 with non-empty stdout (subprocess invocation; canonical operator-discoverability check)
+  3. **(c)** Arg parser accepts the canonical argument set without raising (per the spec's documented arg list at `phase1/04_tools.md` § 3.<N>)
+  4. **(d)** `--dry-run` (or default-dry-run mode) does NOT call any side-effecting cursor (mocked `cursor_for` factory; assert mock NOT called OR called only for read-only SELECTs per the tool's spec)
+  5. **(e)** `--apply` invokes the wrapped Round 3 module function (mocked) with expected positional + keyword args (canonical-signature alignment per Pitfall #9.l)
+  6. **(f)** Exception → expected exit code mapping per D74:
+     - `PipelineFatalError` (or canonical subclass) → exit 2 (`EXIT_FATAL`)
+     - `PipelineRetryableError` (or canonical subclass) → exit 1 (`EXIT_OPERATIONAL_FAILURE`)
+     - Success → exit 0 (`EXIT_SUCCESS`)
+- **Failure consequence**: blocks any further build step; tool is NOT considered "built" until Tier 0 passes
+
+D74-canonical exit-code constants live alongside the tool (e.g. `EXIT_SUCCESS = 0`, `EXIT_OPERATIONAL_FAILURE = 1`, `EXIT_FATAL = 2`); test file imports them rather than hardcoding integers (per Pitfall #9.k arithmetic-propagation discipline). Some tools use spec-aligned aliases (`EXIT_WARNING` / `EXIT_OPERATIONAL` per § 3.<N>); test mirrors the tool's chosen names.
+
+D76 audit-row contract is verified at Tier 1 (one `EventType='CLI_<NAME>'` row per invocation; Metadata JSON shape) — Tier 0 is too tight to verify the full audit-row write path against a mocked cursor without becoming brittle. Tier 0 ASSUMES the wrapped module function writes the audit row when called; Tier 1 + Tier 3 verify the actual row.
+
+Template (mirrors the canonical pattern established at `tests/tier0/test_parquet_verify.py` from the Round 4.2 build cohort 2026-05-14):
+
+```python
+"""Tier 0 build-time smoke test for tools/<name>.py.
+
+Per D67 + D77 — runs at build time + every commit. Runtime ceiling < 5 s.
+All external dependencies (pyodbc cursors, PipelineEventLog, wrapped
+M<N> module function) are mocked. No live DB, no live network required.
+
+D77-canonical 6-assertion scaffold per phase1/04_tools.md § 3.<N>:
+  (a) Module imports without error (tools/<name>.py).
+  (b) ``--help`` exits 0 per D77 Tier 0 scaffold assertion 2.
+  (c) Canonical arg set parses without error.
+  (d) ``--dry-run`` does NOT call side-effecting cursor.
+  (e) ``--apply`` invokes wrapped M<N> function with expected args.
+  (f) Exception -> exit-code mapping per D74:
+        PipelineFatalError -> EXIT_FATAL (2)
+        PipelineRetryableError -> EXIT_OPERATIONAL_FAILURE (1)
+        success -> EXIT_SUCCESS (0).
+"""
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+
+def test_a_module_imports():
+    """(a) Module imports without error."""
+    import tools.my_tool  # noqa: F401
+
+
+def test_b_help_exits_zero():
+    """(b) `--help` returns exit 0 with non-empty stdout."""
+    result = subprocess.run(
+        [sys.executable, "-m", "tools.my_tool", "--help"],
+        capture_output=True,
+        timeout=5,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert result.stdout, "--help must produce non-empty stdout"
+
+
+def test_c_canonical_arg_set_parses():
+    """(c) Canonical arg set parses without raising."""
+    from tools.my_tool import cli_main
+    # Build canonical arg list per phase1/04_tools.md § 3.<N>
+    argv = ["--source", "DNA", "--table", "ACCT", "--dry-run"]
+    # Most tools have a parse-only entrypoint OR cli_main with mocked side effects;
+    # use the path that doesn't trigger real I/O. Here we assume cli_main accepts
+    # an argv list and returns an exit code.
+    with patch("tools.my_tool._get_cursor_factory") as mock_factory:
+        mock_factory.return_value = lambda *_, **__: MagicMock()
+        exit_code = cli_main(argv)
+    assert exit_code in {0, 1, 2}, "exit code must be in D74-canonical {0,1,2}"
+
+
+def test_d_dry_run_no_side_effects():
+    """(d) `--dry-run` does NOT call side-effecting cursor."""
+    from tools.my_tool import cli_main
+    mock_cursor = MagicMock()
+    mock_cursor_factory = MagicMock(return_value=mock_cursor)
+    with patch("tools.my_tool._get_cursor_factory", return_value=mock_cursor_factory):
+        cli_main(["--source", "DNA", "--table", "ACCT", "--dry-run"])
+    # Assert no INSERT / UPDATE / DELETE / EXEC of side-effecting SP issued.
+    # The exact assertion shape depends on the tool's spec — adjust to match.
+    side_effecting_calls = [
+        c for c in mock_cursor.execute.call_args_list
+        if any(kw in str(c).upper() for kw in ("INSERT", "UPDATE", "DELETE", "EXEC PROC"))
+    ]
+    assert side_effecting_calls == [], (
+        f"--dry-run must not issue side-effecting SQL; got {side_effecting_calls}"
+    )
+
+
+def test_e_apply_invokes_wrapped_function():
+    """(e) `--apply` invokes wrapped M<N> module function with expected args."""
+    from tools.my_tool import cli_main
+    with patch("tools.my_tool._wrapped_module_function") as mock_fn:
+        mock_fn.return_value = MagicMock()  # canonical return shape
+        cli_main(["--source", "DNA", "--table", "ACCT", "--apply"])
+    # Per Pitfall #9.l: assert canonical signature alignment.
+    mock_fn.assert_called_once()
+    call_kwargs = mock_fn.call_args.kwargs
+    assert call_kwargs.get("source_name") == "DNA"
+    assert call_kwargs.get("table_name") == "ACCT"
+
+
+def test_f_exception_to_exit_code_mapping():
+    """(f) Exception -> exit-code mapping per D74."""
+    from tools.my_tool import cli_main, EXIT_FATAL, EXIT_OPERATIONAL_FAILURE
+    from utils.errors import PipelineFatalError, PipelineRetryableError
+
+    # PipelineFatalError -> EXIT_FATAL (2)
+    with patch("tools.my_tool._wrapped_module_function") as mock_fn:
+        mock_fn.side_effect = PipelineFatalError("synthetic fatal")
+        exit_code = cli_main(["--source", "DNA", "--table", "ACCT", "--apply"])
+    assert exit_code == EXIT_FATAL
+
+    # PipelineRetryableError -> EXIT_OPERATIONAL_FAILURE (1)
+    with patch("tools.my_tool._wrapped_module_function") as mock_fn:
+        mock_fn.side_effect = PipelineRetryableError("synthetic retryable")
+        exit_code = cli_main(["--source", "DNA", "--table", "ACCT", "--apply"])
+    assert exit_code == EXIT_OPERATIONAL_FAILURE
+```
+
+**CLI Tier 0 anti-patterns to avoid**:
+- ❌ Invoking `subprocess.run([sys.executable, "tools/<name>.py", ...])` with arguments OTHER than `--help` — slow + brittle (subprocess startup overhead pushes Tier 0 above the 5s ceiling). For arg-parser tests, import `cli_main` directly and pass an `argv` list.
+- ❌ Mocking the cursor at the wrong layer — tools that use lazy-import getters (`_get_cursor_for()` per the M3/M4/M17 pattern from Round 3 Wave 2-3) require `patch.object` against the getter, NOT `sys.modules` mutation (B214 lesson — sys.modules patches require careful cleanup; the getter pattern avoids it).
+- ❌ Asserting on `Metadata` JSON shape at Tier 0 — the audit-row contract verification belongs at Tier 1 (where mocked cursor's `execute()` calls can be inspected for the `INSERT INTO PipelineEventLog` shape). Tier 0 only verifies the wrapped function was CALLED.
+- ❌ Hardcoding `0`, `1`, `2` integers for exit codes in assertions — import the tool's `EXIT_*` constants so future contract refactors update tests transitively (Pitfall #9.k discipline).
+- ❌ Skipping the `--help` subprocess test — it's the only test that verifies the tool is operator-discoverable from a fresh shell (the "import + invoke argparse" path in-process can pass while a real `python -m tools.<name>` fails on, e.g., a missing `__main__` block).
+
+Per the established Round 4.1+ build cohort empirical evidence (each tool's Tier 0 averaged 6-11 tests after expansion beyond the bare 6-assertion contract — see `tests/tier0/test_parquet_verify.py` 9 tests, `test_lateness_profile.py` 8 tests, `test_decrypt_pii.py` 10 tests), the 6-assertion contract is the FLOOR; tools with mutual-exclusion arg-parser logic OR multi-verdict exit-code mapping (e.g. `EXIT_WARNING` separate from `EXIT_FATAL`) typically need 8-11 assertions. Promote anything > 11 assertions to Tier 1 per D80 boundary discipline.
+
 ### Tier 1: Unit tests (every commit)
 
 For pure functions (hashers, sanitizers, validators):
