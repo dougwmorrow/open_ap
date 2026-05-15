@@ -6414,3 +6414,46 @@ The skill is a producer-side application-mechanism for the Step 10 directive (Pi
 7. NEW (this commit) -- B-261 mechanism-evolution (udm-step-10-verifier skill authored)
 
 24 cumulative B-Ns closed across the branch. 0 introduced. Engineering-deploy-gate status: ALL TESTS PASS still CLEARED.
+
+## 2026-05-14 -- Gap check on d99395b (B-261 closure) + GLOSSARY fix
+
+**Trigger**: User standing instruction "1. Proceed. 2. Check for any gaps." after B-261 closure commit d99395b.
+
+**Gap probes (5 surfaces)**:
+
+| # | Surface | Result |
+|---|---|---|
+| G1 | Pytest count 2288 propagation across 4 trackers | OK (consistent across BACKLOG / CURRENT_STATE / CODE_BUILD_STATUS / HANDOFF) |
+| G2 | Step 10 application for new udm-step-10-verifier skill | OK (HANDOFF section 8 Step 12 + CLAUDE.md L681 reference both present; skill discoverable in system-reminder; CLAUDE.md Structure N/A for skill files) |
+| G3 | B-261 closure annotation integrity | OK (leading badge struck through + inline closure annotation; initial probe false-positive due to anchor pattern mismatch) |
+| G4 | 24 cumulative branch closures math (0+11+10+1+1+0+1) | OK (matches CURRENT_STATE claim; single mention) |
+| G5 | GLOSSARY skill catalogue includes udm-step-10-verifier | **MISSING -- fixed this turn** |
+
+**G5 fix (GLOSSARY row added)**:
+
+Inserted new row in GLOSSARY skill table after udm-progress-logger row (L611): `| udm-step-10-verifier (per-cohort producer-side Step 10 verifier skill) | .claude/skills/udm-step-10-verifier/SKILL.md <- introduced 2026-05-14 via B-261 mechanism-evolution closure; ... |`. Mirrors udm-progress-logger row format. +725 chars.
+
+**Meta-validation observation**:
+
+This gap-check found exactly what the new udm-step-10-verifier skill is designed to catch (missing GLOSSARY entry for a newly-authored public surface). The skill itself, had it been operational at d99395b commit-time, would have emitted IN-FLIGHT-DRIFT verdict with the same finding. **Empirical validation of the skill's value proposition** -- the post-commit gap-check workflow (parent-agent reflection) is producing the SAME signal that the in-flight verifier would produce, just at a 1-commit lag instead of 0-commit lag. This is the canonical lag B-261 was designed to close.
+
+Future workflow: when a build cohort lands a new public surface, parent agent should invoke udm-step-10-verifier BEFORE udm-gap-check. The skill is now both authored AND empirically motivated by its own first miss-by-non-invocation event.
+
+**Edit this turn (1 file)**:
+
+| File | Change | Delta |
+|---|---|---|
+| docs/migration/GLOSSARY.md | +1 row in skill table for udm-step-10-verifier (after L611 udm-progress-logger row) | +725 chars |
+| docs/migration/_validation_log.md | This entry | +this entry chars |
+
+**Branch state**: round-6-post-merge-tracking now at 8 unpushed commits ahead of master (will be 8 after this commit lands).
+
+**Convention checks**:
+- Pitfall #9.j OK (3 false-positive open-with-CLOSED-inline are pre-verified as genuinely-open meta-text: B144 / B-221 / B-223)
+- Pitfall #9.k OK (no counts touched; tracker-only fix)
+- Pitfall #9.l OK (re-read GLOSSARY skill table format before authoring new row)
+- Pitfall #9.m OK (gap found + fixed AND tracked simultaneously per hard rule 9)
+- Pitfall #9.n OK post-fix (GLOSSARY entry added per Step 10 application for the new skill)
+- CLAUDE.md hard rule 9 (udm-progress-logger) OK (this entry IS the application)
+
+**Closure**: d99395b commit + this gap-check fix yield ✅ CLEAN verdict.
