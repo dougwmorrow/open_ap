@@ -797,6 +797,87 @@ class TestB266ToolsPrefixStrip:
         assert result is None
 
 
+class TestB267VerifierSynonym:
+    """B-267 fix: _resolve_test_file recognizes <X>_verifier <-> verify_<X> synonym."""
+
+    def test_resolves_x_verifier_to_verify_x(self):
+        """server_parity_verifier in spec maps to test_verify_server_parity.py."""
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        def file_exists(p):
+            return p.name == "test_verify_server_parity.py"
+        result = mod._resolve_test_file(
+            "server_parity_verifier",
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_exists=file_exists,
+        )
+        assert result is not None
+        assert result.name == "test_verify_server_parity.py"
+
+    def test_prefers_canonical_verifier_name_when_both_exist(self):
+        """If both test_<X>_verifier.py and test_verify_<X>.py exist, prefer canonical."""
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        def file_exists(p):
+            return p.name in ("test_server_parity_verifier.py", "test_verify_server_parity.py")
+        result = mod._resolve_test_file(
+            "server_parity_verifier",
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_exists=file_exists,
+        )
+        assert result.name == "test_server_parity_verifier.py"
+
+    def test_no_synonym_if_module_lacks_verifier_suffix(self):
+        """Modules NOT ending in _verifier don't get the verify_ rewrite."""
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        def file_exists(p):
+            return p.name == "test_credentials_loader.py"
+        result = mod._resolve_test_file(
+            "credentials_loader",
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_exists=file_exists,
+        )
+        assert result.name == "test_credentials_loader.py"
+
+    def test_b266_b267_stack_for_tools_x_verifier(self):
+        """tools_X_verifier -> tries tools_X_verifier / X_verifier (B-266) / verify_X (B-267)."""
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        def file_exists(p):
+            # Only the doubly-translated form exists.
+            return p.name == "test_verify_server_parity.py"
+        result = mod._resolve_test_file(
+            "tools_server_parity_verifier",
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_exists=file_exists,
+        )
+        assert result is not None
+        assert result.name == "test_verify_server_parity.py"
+
+    def test_empty_base_after_verifier_strip_skipped(self):
+        """Module name == '_verifier' (degenerate) does not produce candidate 'verify_'."""
+        mod = _load_tool_module()
+        from pathlib import Path as P
+        seen = []
+        def file_exists(p):
+            seen.append(p.name)
+            return False
+        result = mod._resolve_test_file(
+            "_verifier",
+            project_root=P("/root"),
+            tier0_dirs=("tests/tier0",),
+            file_exists=file_exists,
+        )
+        assert result is None
+        # Should NOT have probed 'test_verify_.py' (empty base)
+        assert "test_verify_.py" not in seen
+
+
 class TestB266DescriptiveMatching:
     """B-266 fix: descriptive test names match spec via keyword overlap."""
 

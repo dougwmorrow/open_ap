@@ -6057,3 +6057,20 @@ Per `docs/migration/PHASE_1_TESTING_BLUEPRINT.md`:
 **Meta-observation — session arc shape**:
 
 This 17-commit campaign followed a build → gap-check → fix → commit pattern with high fidelity. Every build cohort produced its own gap-check pass, which surfaced fresh discipline recurrences, which got tracked as B-Ns or fixed inline. The pattern produced 1-3 fresh signal items per commit across the entire arc. Strong empirical anchor for B-261 mechanism-evolution priority (Step-10-application-verifier sub-agent BEFORE gap-check would shift the lag from post-commit reflection to producer-time validation; would reduce gap-check-cycle count from ~7 per major cohort to ~3).
+## 2026-05-14 -- B-267 fix + section 8 polish batch (10 B-N closures)
+
+**Trigger**: User direction "B-267 + section 8 polish batch" post-merge.
+
+**Workstream 1 -- B-267 code fix**: extended tools/verify_tier0_drift.py::_resolve_test_file (+569 chars) to recognize <X>_verifier -> verify_<X> synonym pairs. Stacks additively with B-266 tools_ prefix strip. 5 new Tier 1 tests in TestB267VerifierSynonym; 5/5 pass; pytest 2127 -> 2132 (+5 new) / 10 skip / 2 fail (B218 carryover; 0 new regression). Drift report: missing_test_files 3 -> 2 (server_parity_verifier resolved). 2 new missing_assertion entries = GENUINE coverage signal NOT regression.
+
+**Workstream 2 -- section 8 polish batch**: 9 B-Ns (B89/B96/B97/B100/B101/B102/B106/B116/B119) had fixes already applied at Round 5 close-out 2026-05-10 (registered at BACKLOG L499-L513) but upper-table leading badges never flipped. Classic Pitfall #9.j drift. Batch closure adds strikethrough + closure annotation; no code changes.
+
+**B-N inventory delta**: 10 B-Ns CLOSED in single commit (B-267 + 9 section 8 polish). 0 introduced. Pitfall #9.j render-drift inventory: 9 fewer open instances.
+
+**Encoding lessons (for future PowerShell heredoc ops)**: [char]128993 fails for emoji (16-bit char; needs surrogate pair via [System.Char]::ConvertFromUtf32(0x1F7E1)). Section sign in PS source creates Latin-1-vs-UTF-8 mojibake -- use [char]167 explicitly. Original B-267 entry from 9b3007c had corrupted backticks (literal tab chars + missing v prefix); closure rewrites entry cleanly.
+
+**Files modified**: tools/verify_tier0_drift.py (+569 chars) + tests/tier1/test_verify_tier0_drift.py (+3,311 chars; 5 tests) + docs/migration/BACKLOG.md (B-267 + 9 closures) + tests/audit_reports/tier0_drift_2026-05-14.md (regenerated) + this entry.
+
+**Convention checks**: Pitfall #9.j OK post-fix / #9.k OK (count consistent) / #9.l OK (post-B-266 state re-read) / #9.m OK (closures landed + tracked) / #9.n OK N/A / CLAUDE.md hard rule 12 OK N/A (Tier alpha) / hard rule 9 OK (this entry).
+
+**Meta-observation**: 9 B-Ns sat with stale leading badges for 4 days (Round 5 close-out 2026-05-10 -> this commit 2026-05-14). Pitfall #9.j was formalized at Round 8 close-out 2026-05-11 (one day AFTER Round 5 close-out); temporal gap explains why these 9 werent caught at fix-time. This batch represents the first systematic sweep of pre-9.j-formalization render-drift. Worth tracking: pre-9.j-formalization drift rate = ~9 instances per round close-out timing.
