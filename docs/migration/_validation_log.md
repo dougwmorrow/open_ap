@@ -6682,3 +6682,74 @@ User message "Ok push the PR. Next, proceed with your recommended next steps." m
 **Branch state**: round-6-post-merge-tracking now at 14 unpushed commits ahead of master (will become 15 after this commit lands + push); 26 cumulative B-N closures + 1 still-open net-new (B-270).
 
 **Cascade Step 2 (gap-check) follows this commit; auto-push at end per Step 1.7.1**.
+
+## 2026-05-15 -- B-270 CLOSED (3 crash-injection harness hooks in production modules)
+
+**Trigger**: udm-next-step-cascade invoked via "If you need to submit a PR then do so. After that, proceed with your suggested next steps." Per cascade Step 1.7.1, message matched BOTH "proceed with your suggested next steps" (cascade trigger) + "submit a PR" (PR/push semantics) -- auto-push at cascade end qualifies.
+
+**Selection (skill tie-breaker)**: B-270 selected from prior runway (2 MEDIUM + 1 LOW). B-270 had defined scope (3 specific modules + Tier 1 unit tests) vs More Tier 3 tests (variable scope = 6 more test files). Per smallest-scope tie-breaker, B-270 wins (3 defined edits + ~450 test lines vs 6 new test files at ~1200-1500 lines).
+
+**Delegated to general-purpose Agent** with comprehensive brief: 3 canonical crash boundaries (C2/C7/C11) + hook contract (env-var-gated; barrier-token emit + sleep; no-op + never-raise; private API) + Tier 1 test scaffold + verification protocol.
+
+**Deliverables landed (4 files; +642 total lines)**:
+
+| File | Hook def line | Call site line | LOC delta |
+|---|---|---|---|
+| data_load/parquet_writer.py | L269 (`_crash_test_harness_c2`) | L755 (between df.write_parquet and _atomic_rename) | +55 |
+| scd2/engine.py | L178 (`_crash_test_harness_c7`) | L591 (run_scd2 between _close_old_versions and _activate_new_versions) | +62 |
+| tools/parquet_tier_review.py | L885 (`_crash_test_harness_c11`) | L1257 (main apply-loop after each _apply_transition; per-N variable) | +75 |
+| tests/tier1/test_crash_test_harness_hooks.py | NEW | NEW | +450 |
+
+**Tier 1 tests (21 across 4 classes)**:
+
+- TestCrashHarnessC2: 6 tests (env-absent / match / mismatch / no-raise / __all__-exclusion / lazy-imports)
+- TestCrashHarnessC7: 5 tests
+- TestCrashHarnessC11: 7 tests (includes per-N gating + distinct-tokens)
+- TestCrossContract: 3 tests (defends contract uniformity across hooks)
+
+**Pytest verification (authoritative full-scope)**:
+
+| Layer | Pre-B-270 | Post-B-270 |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration + crash | 2288 / 30 / 0 | **2309 / 30 / 0** |
+| Delta | -- | +21 pass (exact math: 2288 + 21 = 2309) |
+
+**Engineering-deploy-gate status**: ALL TESTS PASS criterion remains CLEARED. Zero failures.
+
+**Tier 4 scaffold activation status**: The 9 Tier 4 scaffold tests committed in 323c30a reference these harness hooks. With hooks now landed, the Tier 4 tests are READY to execute end-to-end when Docker + Linux SIGKILL semantics available. Operator activation path:
+1. Install Docker Desktop on Linux container OR enable Docker WSL2 backend
+2. .venv/Scripts/pip install testcontainers
+3. docker pull mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04
+4. .venv/Scripts/python.exe -m pytest tests/crash -v
+5. Expected: 9 tests pass against ephemeral testcontainers SQL Server with schema.sql applied + crash injection via SIGKILL
+
+**Step 10 application**: N/A. All 3 hooks are underscore-prefixed (`_crash_test_harness_c<N>`) per private-API convention. Not exported in module `__all__`. No CLAUDE.md Structure changes needed (production module Structure rows already cover the modules).
+
+**Agent algorithm refinement**: For C11, the per-N value is incorporated into BOTH the checkpoint string (`"after_n_transitions_" + str(n)`) and the barrier token (`"TRANSITIONS_DONE_" + str(n)`) using string concatenation instead of f-strings to avoid shell-quoting friction during heredoc-based patching. Functionally identical.
+
+**Files modified this commit (7)**:
+
+| File | Change | Delta |
+|---|---|---|
+| data_load/parquet_writer.py | +_crash_test_harness_c2 def + call | +55 lines |
+| scd2/engine.py | +_crash_test_harness_c7 def + call | +62 lines |
+| tools/parquet_tier_review.py | +_crash_test_harness_c11 def + call | +75 lines |
+| tests/tier1/test_crash_test_harness_hooks.py | NEW; 21 tests | +450 lines |
+| BACKLOG.md | B-270 leading-badge flip + comprehensive closure annotation | +1,477 chars |
+| CURRENT_STATE.md L7 | B-270 closure milestone narrative; 27 cumulative branch closures; 0 still-open net-new (B-270 was the last opened) | +1,160 chars |
+| HANDOFF.md section 14 | Same milestone narrative | +409 chars |
+| CODE_BUILD_STATUS.md L12 | B-270 closure event with hook locations + Tier 4 activation status | +884 chars |
+| _validation_log.md | This entry | +this entry chars |
+
+**Convention checks**:
+- Pitfall #9.j OK (B-270 leading-badge flipped with closure annotation)
+- Pitfall #9.k OK (pytest count 2288 -> 2309 propagated to BACKLOG closure + CURRENT_STATE + HANDOFF + CODE_BUILD_STATUS + this entry; 27 cumulative closures consistent)
+- Pitfall #9.l OK (Agent re-read 06_TESTING.md Tier 4 + Round 5 section 7 + each module canonical boundary before authoring)
+- Pitfall #9.m OK (B-270 closed AND tracked simultaneously)
+- Pitfall #9.n OK N/A (hooks underscore-prefixed; no new public surface)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+- CLAUDE.md hard rule 12 (B-226 Tier calibration) OK (Tier alpha; small env-var-gated hooks; no mis-classification risk)
+
+**Branch state**: round-6-post-merge-tracking now at 16 unpushed commits ahead of master (will become 17 after this commit lands + auto-push per Step 1.7.1); 27 cumulative B-N closures + 0 still-open net-new (B-270 was the last opened; now closed).
+
+**Cascade Step 2 (gap-check) + Step 1.7.1 (auto-push) follow this commit**.
