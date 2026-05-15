@@ -6533,3 +6533,51 @@ Future workflow: when a build cohort lands a new public surface, parent agent sh
 10. NEW (this commit) -- Tier 4 crash-injection test scaffold (first udm-next-step-cascade invocation)
 
 24 cumulative B-Ns closed across branch. 0 introduced this commit.
+
+## 2026-05-14 -- Gap-check on 323c30a (Tier 4 scaffold) + B-270 opened
+
+**Trigger**: udm-next-step-cascade Step 2 -- automatic gap-check after cascade Step 1 (Tier 4 scaffold) lands.
+
+**Layer 2a -- udm-step-10-verifier**: ✅ CLEAN N/A. Tier 4 introduces a new test directory tests/crash/ but no new public module/tool surface (per skill edge cases: test files don't go in CLAUDE.md Structure as individual entries; only the tier-level directory row goes in). CLAUDE.md Structure row was added inline at Step 1 per Step 10 application.
+
+**Layer 2b -- parent-agent reflection (6 probes)**:
+
+| # | Surface | Result |
+|---|---|---|
+| G1 | Pitfall #9.j stale-leading-badge | ✅ 3 known false positives (B144 meta-text / B-221 supersession-cascade / B-223 Metadata-column-absence) all pre-verified genuinely-open across multiple prior gap-checks |
+| G2 | Pitfall #9.k arithmetic-propagation | ✅ pytest count 2288/30/0 present in all 4 trackers (slash format in CODE_BUILD_STATUS + HANDOFF; "X pass / Y skip / Z fail" format in CURRENT_STATE; BACKLOG doesn't carry test counts in narrative). Probe regex initially too narrow; manual verification confirms data IS propagated. Minor style-drift not worth fixing (both formats are precedented). |
+| G3 | Pitfall #9.l canonical re-read | ✅ Agent cited 06_TESTING.md Tier 4 + 05_tests.md section 7 + Tier 3 conftest.py pattern in module docstrings. |
+| G4 | Pitfall #9.m discipline-applied-to-tracker | ✅ _validation_log entry landed in same commit as Step 1 per hard rule 9. |
+| G5 | Pitfall #9.n convention-registration | ✅ CLAUDE.md Structure row for tests/crash/ added at Step 1; GLOSSARY N/A. |
+| G6 | New B-N opportunities | 🟡 **B-270 opened** for Tier 4 production-module crash-injection harness hooks |
+
+**G6 fix -- B-270 opened**:
+
+Tier 4 scaffold tests reference yet-to-exist callables `_crash_test_harness_c2` (data_load/parquet_writer.py) + `_crash_test_harness_c7` (scd2/engine.py) + `_crash_test_harness_c11` (tools/parquet_tier_review.py). These production-module hooks need to be authored to make the 9 Tier 4 tests executable when Docker + Linux container available.
+
+Mirrors B-115 follow-up pattern (Tier 3 scaffold authored 2026-05-14 without schema.sql; schema.sql added in 1df6e2b follow-up).
+
+Hook design contract documented in B-270 body: each hook reads env var (e.g. `CRASH_INJECT_POINT=after_inflight_write`) at canonical crash boundary; if env var present, emits barrier token to stdout + sleeps for N seconds so parent test process can SIGKILL deterministically. No-op when env var absent (zero production cost; clean test-only contract).
+
+WSJF 1.5 (COD 3; JS 2). Closure target: next bug-fix cycle OR Tier 4 deep-integration B-N cohort.
+
+**Edit this turn (2 files)**:
+
+| File | Change | Delta |
+|---|---|---|
+| docs/migration/BACKLOG.md | +1 line: B-270 entry inserted after B-269 | +1,723 chars |
+| docs/migration/_validation_log.md | This entry | +this entry chars |
+
+**Pytest baseline**: Unchanged at 2288 pass / 30 skip / 0 fail (tracker-only commit; no code touched).
+
+**Convention checks**:
+- Pitfall #9.j OK (B-270 uses leading 🟡 Open badge with no inline closure -- newly-opened)
+- Pitfall #9.k OK (no test counts touched)
+- Pitfall #9.l OK (re-read Tier 3 B-115 follow-up pattern before authoring B-270 to mirror the convention)
+- Pitfall #9.m OK (this commit IS the discipline application -- G6 finding properly opened as B-N rather than left as "noted but not opened")
+- Pitfall #9.n OK N/A (no new public surface)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+
+**Cascade complete**. udm-next-step-cascade Step 1 (Tier 4 scaffold build at 323c30a) + Step 2 (this gap-check at next commit) executed cleanly. Branch round-6-post-merge-tracking now at 11 unpushed commits ahead of master; 24 cumulative B-N closures + 1 new B-N opened (B-270).
+
+**Awaiting user direction** per udm-next-step-cascade output contract -- do NOT auto-proceed to next runway item.
