@@ -251,6 +251,9 @@ Per `MULTI_AGENT_GUIDE.md`. Six orchestration patterns:
 |---|---|---|
 | **Pattern A** | Parallel research | Multi-faceted question; agents in parallel; results return together |
 | **Pattern B** | Specialized review | One custom subagent + one artifact (e.g., `udm-design-reviewer` on a stored proc) |
+| **Pattern B1** | Build cohort — single-agent | One author agent builds + tests one tool / module end-to-end; smallest unblocked cohort pattern (e.g. § 3.10 `log_retention_cleanup.py` 2026-05-12) |
+| **Pattern B2** | Build cohort — paired (author + test-author) | Two parallel agents read the canonical spec independently per D55 producer ≠ reviewer; design-reviewer agent NOT spawned (small-scope + low-risk; e.g. § 3.10 + § 3.8 + § 3.6 2026-05-12) |
+| **Pattern B3** | Build cohort — triad (author + test-author + design-reviewer) | Three parallel agents per D55 + D56 full discipline; reviewer issues blocking 🔴 findings before 🟢 build-state (e.g. Wave 1 cohort 2026-05-12; Wave 2 cohort 2026-05-13) |
 | **Pattern C** | Test-first via specialist | TDD-style: spec → `udm-test-author` → fail → impl → pass → `udm-design-reviewer` |
 | **Pattern D** | Reflection / progress check | Spawn reflection agent to assess phase progress |
 | **Pattern E** | 5-agent deep validation | Spec docs >50 KB; 4 blocking reviewers + 1 advisory researcher in one cycle |
@@ -422,9 +425,9 @@ Per `HANDOFF.md` §8. Lessons learned from actual project mistakes.
 | #11 | Cascade-level self-attestation without independent verification | Pattern F discipline mitigates (D89-D91) |
 | #12 | Naming-standard locked late | Grandfather cost is permanent — lock conventions in 30-min kickoff BEFORE output begins (Phase 0 prep 2026-05-11; D105) |
 
-### Pitfall #9 sub-classes (9.a through 9.j)
+### Pitfall #9 sub-classes (9.a through 9.m)
 
-When a 🔴 fix introduces a NEW reference to a canonical source, the validator MUST re-verify EVERY new reference. 10 sub-classes formalized (one per recurring bug pattern):
+When a 🔴 fix introduces a NEW reference to a canonical source, the validator MUST re-verify EVERY new reference. 13 sub-classes formalized (one per recurring bug pattern):
 
 | Sub-class | Name | First evidence |
 |---|---|---|
@@ -438,6 +441,9 @@ When a 🔴 fix introduces a NEW reference to a canonical source, the validator 
 | **9.h** | Wrong section number with invented description | Round 4 cycle 8 |
 | **9.i** | Process-discipline-claim drift (false-closure, stale B-range, silent omission, invented forward-reference) | Round 5/6 (formalized Round 6 close-out) |
 | **9.j** | B-item status-render discipline (leading `🟡 Open` badge + inline `**CLOSED**` annotation mismatch) | Round 6 unscoped + Round 7 first-production Pattern F (formalized Round 8 close-out) |
+| **9.k** | Arithmetic-propagation drift (count / row-index updated in one location, mirrors not propagated) | 5-event evidence base 2026-05-12 (CLAUDE.md L634 stale-summary propagation + Phase 2 R1 cycle 1 cascade); formalized 2026-05-12 per B198 + producer self-check Step 7 (regex-sweep + enumerate when counts change) |
+| **9.l** | Canonical-schema-detail working-memory drift (fix references canonical schema object but producer skipped re-read of canonical DDL) | 5-event evidence base from Phase 2 R1 spec doc Pattern E cycles 2-6 2026-05-12; formalized 2026-05-12 per B201 + producer self-check Step 8 (re-read canonical DDL before fixing schema-referencing procedures) |
+| **9.m** | Discipline-not-applied-to-its-own-tracker (new tracker / skill / discipline authored without immediately applying its rule to itself) | 2-event evidence base 2026-05-12 (D113 POLISH_QUEUE.md + udm-progress-logger); formalized 2026-05-12 per B196 + producer self-check Step 9 (apply new discipline to its own authoring artifact + verify pass) |
 
 Producer self-check: walk each sub-class against the artifact before Gate 2.
 
@@ -458,6 +464,8 @@ Per `phase1/08_sub_agent_self_improvement.md`. 7 skills + 1 meta-doc + governanc
 | 8.G | `udm-cascade-audit-evolver` | Pattern F trigger evolution (B143 implementation) |
 
 Cascade order: 8.A → (8.B/C/D/E/G in parallel) → user-review session → 8.F applies approved batch.
+
+- **DELTA-A1..A4 / DELTA-B1..B3** — convention for tracking individual user-approval deltas surfaced at round close-out cascades per D95 umbrella + D98 semver discipline. A-series for Round N close-out; B-series for Round N+1 close-out; etc. Each delta is reviewed YES/NO per D95 before `udm-agent-prompt-versioner` (8.F) applies. Example: DELTA-A2 = Round 3 close-out 9.l extension (PATCH semver); DELTA-B2 = Round 4 close-out Step 11 → Gate 2 elevation (MINOR semver on udm-design-reviewer v1.0.0 → v1.1.0).
 
 ---
 
@@ -598,6 +606,9 @@ When introducing a new code family during a round:
 | R-numbers (risks) | `RISKS.md` |
 | B-numbers (backlog) | `BACKLOG.md` |
 | P-numbers (polish queue) | `POLISH_QUEUE.md` ← introduced 2026-05-12; cosmetic / readability / status-render / supersession-crumb / stale-date items; distinct from B-numbers |
+| CODE_BUILD_STATUS (build-state dashboard) | `CODE_BUILD_STATUS.md` ← introduced 2026-05-12; single-pane view of which CODE artifacts are built / tested / deployed; ⬜ / 🟡 / 🟢 / ✅ / ⚫ legend; per-unit row state transition required at moment of state-flip (NOT batched to round close-out) per `udm-progress-logger` Hard Rule 7 |
+| ONE_OFF_SCRIPTS (per-script operational tracker) | `ONE_OFF_SCRIPTS.md` ← canonical destination for Manual × One-time executable artifacts per `udm-execution-classifier` matrix (introduced 2026-05-12); distinct from `phase1/02_configuration.md` § 5.1 (Scheduled-recurring jobs) |
+| `udm-progress-logger` (per-completion tracker-discipline skill) | `.claude/skills/udm-progress-logger/SKILL.md` ← introduced 2026-05-12; fills mid-round tracker-drift gap; 5-step checklist + tracker-routing matrix; invoked AFTER any agent / sub-agent / multi-agent team finishes substantive work |
 | Round R<N> (Phase 1) | `PHASE_1_DEEP_DIVE_PLAN.md` + `phase1/0<N>_*.md` |
 | Reviewer R<N>C<M>-<K> / PF-INST<K> | `_reviewer_effectiveness.md` + `_validation_log.md` |
 | Pattern A-F | `MULTI_AGENT_GUIDE.md` |
@@ -608,7 +619,7 @@ When introducing a new code family during a round:
 | CLAUDE.md code-level (B-N / E-N / V-N / W-N / OBS-N / SCD2-*) | `CLAUDE.md` (project root) |
 | Tier 0-5 (test pyramid) | `06_TESTING.md` |
 | Tier α/β/γ/δ (artifact complexity) | `phase1/08_sub_agent_self_improvement.md` § 6.3 |
-| Pitfall #1-#12 + 9.a-9.j | `HANDOFF.md` §8 |
+| Pitfall #1-#12 + 9.a-9.m | `HANDOFF.md` §8 |
 | SQL naming standards (D105: Proc/Vw + grandfather clause) | `CLAUDE.md` § SQL Naming Standards + `03_DECISIONS.md` D105 |
 | Claude Code security model (D103: 13-layer + `/debi` boundary) | `SECURITY_MODEL.md` (canonical) + `CLAUDE.md` § Claude Code Security Model + `03_DECISIONS.md` D103 |
 | Round 8 skill codes 8.A-8.G | `phase1/08_sub_agent_self_improvement.md` + `.claude/skills/udm-*/SKILL.md` |
@@ -617,6 +628,165 @@ When introducing a new code family during a round:
 | EventType families | `CLAUDE.md` (project root) |
 
 ---
+## Round 3 build — module public surfaces
+
+Public-API surface of newly-authored Round 3 modules (Wave 0 + Waves 1-2; build cohort 2026-05-13). All module locations under `utils/`, `data_load/`, `cdc/`, `orchestration/`, `observability/` per CLAUDE.md "Structure" section. Each entry: identifier → module path → 1-line purpose. Authoritative source for module-level surfaces.
+
+### Exception classes (per D68 two-tier hierarchy)
+
+| Identifier | Module | Inheritance | Purpose |
+|---|---|---|---|
+| **PipelineError** | `utils/errors.py` | `Exception` | Root of the canonical two-tier hierarchy; carries `metadata: dict` kwarg for D76 audit-row forwarding |
+| **PipelineFatalError** | `utils/errors.py` | `PipelineError` | Non-retryable failures — config / contract / single-source-of-truth violations |
+| **PipelineRetryableError** | `utils/errors.py` | `PipelineError` | Retryable failures — transient network / lock / source-side issues |
+| **RegistryStatusInvalid / RegistryFileNotFound / RegistryHashMismatch / RegistryInsertConflict / RegistryNotFound** | `utils/errors.py` | Mix of Fatal / Retryable | Parquet registry transition failures (per M3 `data_load/parquet_registry_client.py`) |
+| **VaultUnavailable / VaultConfigError** | `utils/errors.py` | Retryable / Fatal | Vault SP-call failures (per M6 `data_load/vault_client.py`); naming-collision-reconciliation with `data_load/_exceptions.py` tracked at B222 |
+| **LedgerStepFailed / LedgerStuck / LedgerConfigError** | `utils/errors.py` | Fatal / Retryable / Fatal | IdempotencyLedger failure modes (per M9 `utils/idempotency_ledger.py`) |
+| **FilterConfigError** | `utils/errors.py` | Fatal | Sensitive-data-filter config errors (per M14 `observability/sensitive_data_filter.py`) |
+| **ParityFatalError** | `utils/errors.py` | Fatal | Cross-server parity check failures |
+| **InvalidTrustGate** | `utils/errors.py` | Fatal | Extraction-state trust-gate config error (per M10 `cdc/extraction_state.py`) |
+
+### Module classes
+
+| Identifier | Module | Purpose |
+|---|---|---|
+| **LedgerStep** | `utils/idempotency_ledger.py` | Context manager for D15 idempotency-step bracket; carries `was_short_circuited` + `prior_result` (the latter is always `None` until B63 lands — see B63 carryover) |
+| **SensitiveDataFilter** | `observability/sensitive_data_filter.py` | `logging.Filter` subclass; redacts P5 PII patterns from `record.msg` + `record.args` before emission |
+| **CredentialsDict** | `data_load/credentials_loader.py` | TypedDict for credential payload returned by `load_credentials()` |
+| **PassphraseSource** | `data_load/credentials_loader.py` | Enum / sentinel for credential passphrase provenance (TPM2 / keyring / env / GPG-cached) |
+| **ExtractionState** | `cdc/extraction_state.py` | Per-table extraction-attempt state dataclass |
+| **ExtractionPlan** | `orchestration/range_scheduler.py` | Ordered date-list + trust-gate verdict for windowed-CDC per-day processing |
+| **SqlServerLogHandler** (v2) | `observability/log_handler.py` | `logging.Handler` subclass; PRESERVES v1 API per drop-in v2 cutover (Wave 2.4 build 2026-05-13); writes to `General.ops.PipelineLog` |
+| **ParquetVerifyResult** | `data_load/parquet_registry_client.py` | Result dataclass for `verify_parquet_snapshot()` — registry status + verification outcome |
+| **ParquetWriteResult** | `data_load/parquet_writer.py` | Result dataclass for `write_parquet_snapshot()` — final path / SHA-256 / file size / registry id (M1 / Wave 3.2) |
+| **ReplayResult** | `data_load/parquet_replay.py` | Result dataclass for `replay_parquet_snapshot()` — registry row / file path / SHA verify outcome / ledger short-circuit flag (M2 / Wave 3.3) |
+| **PipelineEvent** (v2-extended) | `observability/event_tracker.py` | v2-extended event dataclass; PRESERVES all v1 attrs (rows_*, status, error_message, metadata, event_detail, table_created); v2 adds `cancellation_requested` flag exposed to caller for D33 cooperative-cancellation handoff (M16 / Wave 3.1) |
+| **SnowflakeCopyResult** | `data_load/snowflake_uploader.py` | Result dataclass for `copy_parquet_to_snowflake()` — rows_loaded / copy_history_id / registry_id / status_transition outcome (M17 / Wave 4) |
+| **ParityCheck** | `tools/verify_server_parity.py` | Per-check parity dataclass — name / severity / status / message / metadata for D65 severity-tiered RPM / SP / job inventory comparison (M8 / Wave 5.1) |
+| **ParityReport** | `tools/verify_server_parity.py` | Aggregate report dataclass — list[ParityCheck] + overall verdict + exit code per D65; consumed by `tools/promote_test_to_prod.py` pre-flight (M8 / Wave 5.1) |
+| **LatenessReport** | `cdc/lateness_profiler.py` | Per-table lateness report dataclass — L_50 / L_95 / L_99 quantiles + sample count + table identifier per D11 empirical extraction-window sizing (M12 / Wave 5.2) |
+| **GapReport** | `tools/gap_detector.py` | Per-table gap report dataclass — `(expected_range, missing_dates, recommended_action)` interface per canonical spec § 5.3 + D22; consumed by Round 4 § 3.5 `tools/detect_extraction_gaps.py` CLI shim (M13 / Wave 5.3) |
+
+### Module functions
+
+| Identifier | Module | Purpose |
+|---|---|---|
+| **ledger_step** | `utils/idempotency_ledger.py` | Factory for `LedgerStep` context manager; primary D15 entry point |
+| **startup_recovery_sweep** | `utils/idempotency_ledger.py` | Pipeline-startup sweep that resolves stuck IN_PROGRESS rows per D85 stage 4 |
+| **register_pii_pattern** | `observability/sensitive_data_filter.py` | Module-import-time pattern registration helper (mutates `SENSITIVE_PATTERNS`) |
+| **load_credentials** | `data_load/credentials_loader.py` | Loads `/etc/pipeline/.env` via GPG/TPM2 path (D64 + D71 + D103) |
+| **release_snowflake_key / clear_cache** | `data_load/credentials_loader.py` | Cleanup helpers for ephemeral Snowflake RSA key + module-level credential cache |
+| **is_date_trusted / most_recent_success / is_reextraction** | `cdc/extraction_state.py` | Read-side predicates for trust-gate + re-extraction detection per D11 / D13 / D14 |
+| **get_extraction_attempt / record_extraction_attempt** | `cdc/extraction_state.py` | Per-date extraction-attempt CRUD (INSERT-or-UPDATE state machine) |
+| **plan_extraction_range** | `orchestration/range_scheduler.py` | Computes ordered date plan from `FirstLoadDate` + `LookbackDays` + checkpoint state |
+| **call_vault_sp** | `data_load/vault_client.py` | Generic SP-call wrapper for PiiVault stored procedures (SP-1/SP-2/SP-10/SP-12) |
+| **configure_vault_connection_pool / release_vault_connection_pool** | `data_load/vault_client.py` | Connection-pool lifecycle for vault SP calls |
+| **set_log_context / clear_log_context** | `observability/log_handler.py` | v2 context-vars helpers (per D85 startup-stage routing) |
+| **mark_replicated / mark_archived / mark_purged / mark_missing / mark_replication_failed** | `data_load/parquet_registry_client.py` | State-machine transitions (created→verified→replicated→archived→purged); 5 of the 6 mutating ops |
+| **query_snapshot / is_legal_transition** | `data_load/parquet_registry_client.py` | Read-side + state-machine-validity helpers |
+| **write_parquet_snapshot** | `data_load/parquet_writer.py` | Writes Polars DataFrame to canonical Hive-partitioned Parquet path via inflight-rename + computes full SHA-256 + INSERTs `ParquetSnapshotRegistry` row with `Status='created'` (M1 / Wave 3.2) |
+| **replay_parquet_snapshot** | `data_load/parquet_replay.py` | Replays a registry-tracked Parquet snapshot back into pipeline state with SHA-256 verify against registry digest + ledger composition for replay idempotency (M2 / Wave 3.3) |
+| **tokenize_pii_columns** | `data_load/pii_tokenizer.py` | Per-row PII tokenization via SP-1 `PiiVault_GetOrCreateToken` per column + provenance INSERT + batch-summary audit row (M4 / Wave 3.4) |
+| **decrypt_token** | `data_load/pii_decryptor.py` | Operator-justified decrypt via SP-2 `PiiVault_DecryptForOperator` with justification enforcement + audit row (M5 / Wave 3.5) |
+| **set_event_context / clear_event_context** | `observability/event_tracker.py` | v2 contextvars helpers parallel to `set_log_context` / `clear_log_context` per M15 layout — set `BatchId` / `TableName` / `SourceName` at pipeline-step boundary so both `PipelineEventLog` and `PipelineLog` rows carry consistent context (M16 / Wave 3.1) |
+| **skip** (event_tracker helper) | `observability/event_tracker.py` | OBS-3 short-circuit helper — emit a `TABLE_TOTAL` event with `Status='SKIPPED'` + `EventDetail` reason (lock-blocked tables, cancellation acks etc.); preserved v1 contract (M16 / Wave 3.1) |
+| **track** (preserved v1 method) | `observability/event_tracker.py` | Public `PipelineEventTracker.track(event_type, table_config)` context manager — yields a mutable `PipelineEvent` for per-step audit row capture. v1 API preserved unchanged for drop-in v2 cutover (M16 / Wave 3.1) |
+| **copy_parquet_to_snowflake** | `data_load/snowflake_uploader.py` | M17 main entry point per spec § 7.1 — mirrors a `Status='verified'` Parquet snapshot from the network drive into Snowflake-managed Iceberg via `COPY INTO`; composes `mark_replicated()` post-COPY for registry `verified → replicated` transition; writes `SNOWFLAKE_COPY_INTO` audit row via M16 v2 (M17 / Wave 4) |
+| **verify_server_parity** | `tools/verify_server_parity.py` | M8 main entry point per spec § 3.2 — runs D65 severity-tiered parity checks (FATAL / WARN / INFO) against baseline-vs-live RPM packages + SPs + Automic jobs + .env paths + TPM2 probe; returns ParityReport with exit-code semantics per D65 (M8 / Wave 5.1) |
+| **profile_lateness** | `cdc/lateness_profiler.py` | M12 main entry point per spec § 5.2 — reads source `LastModifiedColumn` deltas via SQL query, computes empirical L_50/L_95/L_99 quantiles via `statistics.quantiles()` per D11; returns `LatenessReport`; **read-only** (no DB writes) — pair with `persist_lateness_report()` helper (M12 / Wave 5.2) |
+| **persist_lateness_report** | `cdc/lateness_profiler.py` | Separate persister helper writing `LatenessReport` to `General.ops.LatenessProfile` table per D11 — split from `profile_lateness()` to keep the profiler read-only (M12 / Wave 5.2; see B-251 producer/persister split spec clarification) |
+| **detect_extraction_gaps** | `tools/gap_detector.py` | M13 main entry point per spec § 5.3 — walks `cdc/extraction_state.py` ledger over expected date range, identifies missing dates, returns `GapReport(expected_range, missing_dates, recommended_action)` per canonical interface + D22; writes GAP_DETECT audit row (M13 / Wave 5.3) |
+
+### Module constants
+
+| Identifier | Module | Purpose |
+|---|---|---|
+| **REPLAY_ELIGIBLE_STATUSES** | `data_load/parquet_replay.py` | `frozenset({"verified", "replicated", "archived"})` — registry statuses for which replay is permitted; pinned per § 1.2 (replay against `created` / `missing` / `purged` / `replication_failed` is forbidden) (M2 / Wave 3.3) |
+| **EVENT_TYPE_REPLAY** | `data_load/parquet_replay.py` | Canonical `IdempotencyLedger.EventType` value (`"REPLAY"`) for replay ledger rows; aligns with `utils/idempotency_ledger.py` § 4.1 canonical-value list; M3 by contrast uses `PARQUET_*` prefix family — harmonization tracked at B-231 |
+| **EVENT_TYPE_SNOWFLAKE_COPY_INTO** | `data_load/snowflake_uploader.py` | Canonical `PipelineEventLog.EventType` value (`"SNOWFLAKE_COPY_INTO"`) for M17 audit rows; one row per COPY INTO attempt; M3's `PARQUET_REPLICATE` ledger row is the sibling audit signal per B-241 duality (M17 / Wave 4) |
+| **COPY_REQUIRED_STATUS** | `data_load/snowflake_uploader.py` | `"verified"` — registry `Status` precondition for COPY INTO; any other status raises `RegistryStatusInvalid` (M17 / Wave 4) |
+| **DEFAULT_COPY_TIMEOUT_SECONDS** | `data_load/snowflake_uploader.py` | `300` — default Snowflake COPY INTO timeout; overridable per-call; timeout exhaustion raises `SnowflakeCopyTimeout` (retryable per D69) (M17 / Wave 4) |
+| **DEFAULT_BASELINE_PATH** | `tools/verify_server_parity.py` | Default baseline manifest path resolution per D103 — `/etc/pipeline/baseline_manifest.json`; CLI `--baseline-path` override supported (M8 / Wave 5.1) |
+| **WINDOWS_SENTINEL** | `tools/verify_server_parity.py` | Sentinel value for Windows dev workstation parity-check probes that should not be considered FATAL on a non-RHEL host (M8 / Wave 5.1) |
+| **PROBE_FAILED_SENTINEL** | `tools/verify_server_parity.py` | Sentinel value for parity-check probes that failed to execute (e.g. TPM2 probe failure on non-TPM2-equipped host); reported as WARN rather than FATAL per D65 severity discipline (M8 / Wave 5.1) |
+| **UNAVAILABLE_SENTINEL** | `tools/verify_server_parity.py` | Sentinel value for unavailable probe data (e.g. `rpm -q` returns "not installed"); routed to severity check per D65 tier mapping (M8 / Wave 5.1) |
+| **ACTION_BACKFILL** | `tools/gap_detector.py` | Recommended action constant — operator should run `tools/backfill.py` for the missing date range per LT-3 / R-13 (M13 / Wave 5.3) |
+| **ACTION_INVESTIGATE** | `tools/gap_detector.py` | Recommended action constant — gap exceeds heuristic auto-backfill threshold OR cross-day discontinuity detected; operator review required (M13 / Wave 5.3) |
+| **ACTION_NO_ACTION** | `tools/gap_detector.py` | Recommended action constant — no gaps detected OR gaps within tolerable LookbackDays band; informational only (M13 / Wave 5.3) |
+
+
+## Round 4 CLI tool public surfaces
+
+Public-API surface of newly-authored Round 4 CLI tool modules (5-tool parallel cohort 2026-05-14 — Round 4.1-4.5 builds). All under `tools/`. Each entry: identifier -> module path -> 1-line purpose. Authoritative source for CLI-shim module-level surfaces.
+
+### Module entry-point functions
+
+| Identifier | Module | Purpose |
+|---|---|---|
+| **main** | `tools/parquet_tier_review.py` | Round 4 § 3.1 entry point — D2/D4/D45.3 operator review of Parquet snapshots by Status; accepts `(args, *, cursor_factory, audit_writer, transition_fns, ...)` kwargs for test injection; returns exit code (Round 4.1 / 2026-05-14) |
+| **cli_main** | `tools/parquet_tier_review.py` | argv parser + `main()` dispatcher; the `python -m tools.parquet_tier_review` entry; per D74 exit-code contract (Round 4.1 / 2026-05-14) |
+| **main** | `tools/parquet_verify.py` | Round 4 § 3.2 entry point — D2/D4 operator-driven SHA-256 verification + registry Status `created -> verified` flip; wraps M3 `verify_parquet_snapshot()`; returns exit code per D74 (Round 4.2 / 2026-05-14) |
+| **cli_main** | `tools/parquet_verify.py` | argv parser + `main()` dispatcher; per D74 exit-code contract (Round 4.2 / 2026-05-14) |
+| **main** | `tools/lateness_profile.py` | Round 4 § 3.3 entry point — D11 empirical L_99 lateness percentile CLI; wraps M12 `profile_lateness()`; returns exit code per D74 (Round 4.3 / 2026-05-14) |
+| **cli_main** | `tools/lateness_profile.py` | argv parser + `main()` dispatcher; per D74 exit-code contract (Round 4.3 / 2026-05-14) |
+| **main** | `tools/detect_extraction_gaps.py` | Round 4 § 3.5 entry point — D22 hourly gap detector CLI; wraps M13 `detect_extraction_gaps()`; routes to backfill / investigate per recommended_action; returns exit code per D74 (Round 4.4 / 2026-05-14) |
+| **cli_main** | `tools/detect_extraction_gaps.py` | argv parser + `main()` dispatcher; per D74 exit-code contract (Round 4.4 / 2026-05-14) |
+| **main** | `tools/verify_server_parity_cli.py` | Round 4 § 3.7 entry point — D65 severity-tiered parity CLI shim wrapping M8 `verify_server_parity()` per D74/D75/D76; returns exit code per D74 severity-tier mapping (Round 4.5 / 2026-05-14) |
+| **cli_main** | `tools/verify_server_parity_cli.py` | argv parser + `main()` dispatcher; per D74 exit-code contract (Round 4.5 / 2026-05-14) |
+| **main** | `tools/decrypt_pii.py` | Round 4 § 3.4 entry point — D6/D30/D103 operator-authorized PII decryption per-token loop; accepts `(*, actor, tokens, token_file, justification, request_id, mask_output, json_output, verbose, quiet, no_audit_event, decrypt_fn, audit_cursor_factory, general_db)` kwargs; returns dict matching D76 audit-row Metadata shape; plaintext NEVER in logs / audit Metadata per D6 + D103 security-model contract (Wave 4.6 / 2026-05-14) |
+| **cli_main** | `tools/decrypt_pii.py` | argv parser + `main()` dispatcher; mutually-exclusive `--tokens` vs `--token-file` per spec § 3.4 L724; auto-generates `request_id` via `uuid.uuid4()` if not provided (one UUID per CLI invocation per RB-4 audit-row convention); per D74 exit-code contract (Wave 4.6 / 2026-05-14) |
+| **main** | `tools/snowflake_copy_smoke.py` | Smoke script entry point — wraps M17 `copy_parquet_to_snowflake()` with operator UX + audit row; accepts `(args, *, copy_fn, audit_cursor_factory, general_db)` kwargs for test injection; returns exit code per D74 (2026-05-14 / Round 6 follow-up) |
+| **cli_main** | `tools/snowflake_copy_smoke.py` | argv parser + `main()` dispatcher; mutually-exclusive `--dry-run` (default) vs `--apply` per B88 pattern; per D74 exit-code contract (2026-05-14) |
+| **main** | `tools/scd2_replay_smoke.py` | Smoke script entry point — end-to-end SCD2-from-Parquet replay testing; wraps M2 `replay_parquet_snapshot()` + scd2/engine `run_scd2()`; accepts `(*, source, table, business_date, original_batch_id, actor, apply, dry_run, json_output, quiet, verbose, no_audit_event, replay_fn, scd2_fn, table_config_loader, batch_seq_fn, audit_cursor_factory, bronze_count_cursor_factory, general_db, output_dir)` kwargs for B214 test injection; returns dict matching D76 audit-row Metadata shape (2026-05-14) |
+| **cli_main** | `tools/scd2_replay_smoke.py` | argv parser + `main()` dispatcher; mutually-exclusive `--dry-run` (default) vs `--apply` per B88 pattern; required `--source` / `--table` / `--business-date` / `--original-batch-id`; per D74 exit-code contract (2026-05-14) |
+
+| **main** | `tools/diagnose_stage_bronze_gap.py` | Diagnostic entry point — identifies PKs in Stage CDC current rows but missing from Bronze active rows; characterizes each missing PK's gap state via 5 theory categories; READ-ONLY (no Stage/Bronze writes; only PipelineEventLog audit row); accepts `(*, source, table, limit, include_state, json_output, output_file, actor, no_audit_event, verbose, quiet, cursor_factory, table_config_loader, audit_cursor_factory, general_db, stage_db, bronze_db)` kwargs for test injection per B214; returns dict matching D76 audit-row Metadata shape (2026-05-14 / Round 6 follow-up) |
+| **cli_main** | `tools/diagnose_stage_bronze_gap.py` | argv parser + `main()` dispatcher; required `--source` / `--table`; per D74 exit-code contract (2026-05-14) |
+### Module dataclasses / exception classes
+
+| Identifier | Module | Purpose |
+|---|---|---|
+| **TierReviewConfigError** | `tools/parquet_tier_review.py` | Tool-side argv-validation error (distinct from `utils.errors.RegistryStatusInvalid` which covers state-machine edges); mapped to exit 2 by `main()` (Round 4.1 / 2026-05-14) |
+
+Note: the other 4 Round 4 CLI tools (`parquet_verify.py` / `lateness_profile.py` / `detect_extraction_gaps.py` / `verify_server_parity_cli.py`) are pure-functional shim CLIs that compose existing M-module dataclasses (`ParquetVerifyResult` / `LatenessReport` / `GapReport` / `ParityReport`) — no new tool-level dataclasses introduced. CLI-side result dicts are constructed inline per emit path.
+
+### Module constants
+
+| Identifier | Module | Purpose |
+|---|---|---|
+| **EVENT_TYPE** (`= "CLI_PARQUET_TIER_REVIEW"`) | `tools/parquet_tier_review.py` | Canonical D76 `PipelineEventLog.EventType` value for tier-review audit rows; one of 11 R4 CLI_* family values per CLAUDE.md `EventType families registered per Round 4 D76 + Round 6 § 6.4` (Round 4.1 / 2026-05-14) |
+| **EXIT_SUCCESS / EXIT_WARNING / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/parquet_tier_review.py` | D74 canonical exit-code contract; FATAL routed via `TierReviewConfigError` (Round 4.1 / 2026-05-14) |
+| **STATUS_CREATED / STATUS_VERIFIED / STATUS_REPLICATED / STATUS_ARCHIVED / STATUS_MISSING / STATUS_PURGED / STATUS_REPLICATION_FAILED** | `tools/parquet_tier_review.py` | Canonical Status values mirroring `CK_ParquetSnapshotRegistry_Status` constraint per `phase1/01_database_schema.md` § 8; re-declared so this tool does not need to import the registry-client module to validate args (Round 4.1 / 2026-05-14) |
+| **ALL_STATUSES** (`frozenset`) | `tools/parquet_tier_review.py` | Full set of valid Status values for argv validation (Round 4.1 / 2026-05-14) |
+| **SUPPORTED_TO_STATUSES** (`frozenset({"replicated", "archived", "purged"})`) | `tools/parquet_tier_review.py` | Sub-set of legal target Status values for `--to-status`; the only transitions this tool drives; `created` / `verified` / `missing` / `replication_failed` reached via other tools / pipeline (Round 4.1 / 2026-05-14) |
+| **RECOMMENDED_NEXT** (`dict[str, str]`) | `tools/parquet_tier_review.py` | Canonical recommended next-action per current Status; drives stdout RecommendedAction column when `--to-status` not provided (Round 4.1 / 2026-05-14) |
+| **EVENT_TYPE** (`= "CLI_PARQUET_VERIFY"`) | `tools/parquet_verify.py` | Canonical D76 `PipelineEventLog.EventType` value for verify audit rows (Round 4.2 / 2026-05-14) |
+| **EXIT_SUCCESS / EXIT_OPERATIONAL_FAILURE / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/parquet_verify.py` | D74 canonical exit-code contract; OPERATIONAL_FAILURE distinguishes per-row verify failure from FATAL (config / connection) per D68 retryable-vs-fatal tier separation (Round 4.2 / 2026-05-14) |
+| **EVENT_TYPE** (`= "CLI_LATENESS_PROFILE"`) | `tools/lateness_profile.py` | Canonical D76 `PipelineEventLog.EventType` value for lateness-profile audit rows (Round 4.3 / 2026-05-14) |
+| **EXIT_SUCCESS / EXIT_WARNING / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/lateness_profile.py` | D74 canonical exit-code contract (Round 4.3 / 2026-05-14) |
+| **EVENT_TYPE** (`= "CLI_DETECT_EXTRACTION_GAPS"`) | `tools/detect_extraction_gaps.py` | Canonical D76 `PipelineEventLog.EventType` value for gap-detect audit rows (Round 4.4 / 2026-05-14) |
+| **EXIT_SUCCESS / EXIT_OPERATIONAL / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/detect_extraction_gaps.py` | D74 canonical exit-code contract; OPERATIONAL = gaps detected OR retryable error per D68 (Round 4.4 / 2026-05-14) |
+| **ACTION_BACKFILL / ACTION_INVESTIGATE / ACTION_NO_ACTION** | `tools/detect_extraction_gaps.py` | Recommended-action constants mirroring M13 `tools/gap_detector.py` surface (re-declared at the CLI shim for argv-validation independence) (Round 4.4 / 2026-05-14) |
+| **EVENT_TYPE** (`= "CLI_VERIFY_SERVER_PARITY"`) | `tools/verify_server_parity_cli.py` | Canonical D76 `PipelineEventLog.EventType` value for parity-CLI audit rows; D76-compliant (M8 spec used `PARITY_VERIFY` — naming reconciliation candidate per Round 4.5 build entry in `_validation_log.md`) (Round 4.5 / 2026-05-14) |
+| **DEFAULT_BASELINE_PATH** (`= "/etc/pipeline/parity_baseline.json"`) | `tools/verify_server_parity_cli.py` | Default baseline manifest path per D103; `--baseline-path` override supported (Round 4.5 / 2026-05-14) |
+| **EXIT_SUCCESS / EXIT_WARNING / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/verify_server_parity_cli.py` | D74 canonical exit-code contract per D65 severity-tier mapping (Round 4.5 / 2026-05-14) |
+| **EVENT_TYPE** (`= "CLI_DECRYPT_PII"`) | `tools/decrypt_pii.py` | Canonical D76 `PipelineEventLog.EventType` value for PII-decrypt audit rows — the **11th and final** R4 CLI_* family value per CLAUDE.md `EventType families registered per Round 4 D76 + Round 6 § 6.4` 11-tool registry; closes the R4 CLI_* family inventory (Wave 4.6 / 2026-05-14) |
+| **EXIT_SUCCESS / EXIT_OPERATIONAL_FAILURE / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/decrypt_pii.py` | D74 canonical exit-code contract; OPERATIONAL_FAILURE = VaultUnavailable (retryable per D68); FATAL = TokenNotFound OR config error OR missing justification OR mutex argv violation; CCPA-deleted classified as SUCCESS (exit 0) per spec § 3.4 L737-740 — the decryption attempt succeeded in identifying the token; right-to-deletion is the canonical no-plaintext outcome (Wave 4.6 / 2026-05-14) |
+| **VERDICT_DECRYPTED / VERDICT_CCPA_DELETED / VERDICT_NOT_FOUND / VERDICT_VAULT_UNAVAILABLE / VERDICT_ERROR** | `tools/decrypt_pii.py` | Per-token verdict-tag pentad per spec § 3.4 L686-689 + L734; populates per-token rows in audit-row Metadata + human-line emit + JSON emit. Plaintext NEVER appears alongside verdict tag in logs / audit Metadata (per D6 + D103 security-model contract) — only `_token_hint()` (last-4-chars + redaction prefix) appears in audit context (Wave 4.6 / 2026-05-14) |
+| **EVENT_TYPE** (`= "CLI_SNOWFLAKE_COPY_SMOKE"`) | `tools/snowflake_copy_smoke.py` | Canonical D76 `PipelineEventLog.EventType` value for Snowflake smoke audit rows; **NEW CLI_* family value** beyond the 11 R4 originals — extends per Round 6 follow-up (2026-05-14) |
+| **EXIT_SUCCESS / EXIT_OPERATIONAL_FAILURE / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/snowflake_copy_smoke.py` | D74 canonical exit-code contract; OPERATIONAL_FAILURE = retryable (VaultUnavailable / SnowflakeCopyTimeout); FATAL = config error / RegistryNotFound / RegistryStatusInvalid / SnowflakeAuthFailed / SnowflakeBudgetAlert / CredentialsLoadError / generic Exception (2026-05-14) |
+| **verify_tier0_drift** | `tools/verify_tier0_drift.py` | Round 6 § 4.7 main entry point per spec — D67/D77/D80 Tier 0 spec-vs-test drift auditor; AST-walks tier 0 tests, regex-extracts spec sketches from `phase1/03_core_modules.md` + `phase1/04_tools.md`, returns `TierZeroDriftReport` with per-file findings; writes `tests/audit_reports/tier0_drift_<date>.md`; accepts `(*, project_root, spec_doc_paths, tier0_dirs, file_reader, file_exists, file_writer, audit_cursor_factory)` kwargs for test injection per B214 (Round 6 § 4.7 / 2026-05-14 / closes B58 stub→full impl) |
+| **TierZeroDriftReport** | `tools/verify_tier0_drift.py` | Aggregate report dataclass — list[DriftFinding] + overall verdict + counts (files_red / files_yellow / files_clean / missing_assertions / extra_assertions / type_mismatches / missing_test_files) + exit code per D74; rendered to Markdown via internal `_render_report()` helper; the load-bearing public surface preserved from the Round 3 stub per D92 forward-only additive (Round 6 § 4.7 / 2026-05-14) |
+| **DriftFinding** | `tools/verify_tier0_drift.py` | Per-file drift finding dataclass — module_name / spec_doc / spec_line / test_file / drift_type / verdict / description / assertion_letter; richer surface than the Round 3 stub's `TierZeroDriftCheck` (which had only 4 fields and no external callers per `git grep`); the structural-detail public surface replaces `TierZeroDriftCheck` per D92 forward-only additive (no external callers to break) (Round 6 § 4.7 / 2026-05-14) |
+| **DEFAULT_TIER0_DIRS** (`= ("tests/tier0", "tests/smoke")`) | `tools/verify_tier0_drift.py` | Default search dirs for `_resolve_test_file()` — tier0 (canonical project layout) + smoke (deprecated spec text); tool searches both transparently per spec § 4.7 step 2 backward-compat (Round 6 § 4.7 / 2026-05-14) |
+| **EVENT_TYPE** (`= "CLI_VERIFY_TIER0_DRIFT"`) | `tools/verify_tier0_drift.py` | Canonical D76 `PipelineEventLog.EventType` value for tier0-drift audit rows; one row per CLI invocation per D76 contract; Metadata JSON carries `event_kind / actor / overall / counts / exit_code / started_at / completed_at` (Round 6 § 4.7 / 2026-05-14) |
+| **EXIT_SUCCESS / EXIT_WARNING / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/verify_tier0_drift.py` | D74 canonical exit-code contract; SUCCESS = no drift OR YELLOW (extra tests are Tier 1 promotion candidates per D80; FATAL = RED missing assertion OR missing test file OR exception-class mismatch per D77 (Round 6 § 4.7 / 2026-05-14) |
+| **EVENT_TYPE** (`= "CLI_SCD2_REPLAY_SMOKE"`) | `tools/scd2_replay_smoke.py` | Canonical D76 `PipelineEventLog.EventType` value for SCD2-replay-smoke audit rows; one row per CLI invocation per D76 contract; Metadata JSON carries `event_kind / actor / source_name / table_name / business_date / original_batch_id / replay_batch_id / dry_run / registry_id / rows_replayed / rows_inserted / rows_new_versions / rows_closed / rows_unchanged / bronze_rows_before / bronze_rows_after / sha256_verified / exit_code / error_class / started_at / completed_at / duration_ms` (2026-05-14) |
+| **EXIT_SUCCESS / EXIT_OPERATIONAL_FAILURE / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/scd2_replay_smoke.py` | D74 canonical exit-code contract; OPERATIONAL_FAILURE = PipelineRetryableError (e.g. `LedgerLockTimeout`); FATAL = PipelineFatalError (`RegistryNotFound` / `RegistryStatusInvalid` / `ParquetReplayError` / `MissingPrimaryKey` / `TableConfigNotFound`) OR config / connection failure OR B88 mutex violation (2026-05-14) |
+
+| **EVENT_TYPE** (`= "CLI_DIAGNOSE_STAGE_BRONZE_GAP"`) | `tools/diagnose_stage_bronze_gap.py` | Canonical D76 `PipelineEventLog.EventType` value for diagnostic audit rows; NEW CLI_* family value extending the Round 4 11-tool registry (2026-05-14 / Round 6 follow-up) |
+| **EXIT_SUCCESS / EXIT_OPERATIONAL / EXIT_FATAL** (`= 0 / 1 / 2`) | `tools/diagnose_stage_bronze_gap.py` | D74 canonical exit-code contract; SUCCESS = no gap found (Stage current == Bronze active in PK space; HEALTHY); OPERATIONAL = gap found (operator must investigate via per-PK recommendations); FATAL = config error (unresolvable PK columns / missing args / no UdmTablesList row) (2026-05-14) |
+| **THEORY_T1_IN_FLIGHT_ORPHAN / THEORY_T2_DELETED_FROM_SOURCE / THEORY_T3_NEVER_INSERTED / THEORY_T4_ALL_CLOSED / THEORY_T5_RESURRECTED_AS_INACTIVE / THEORY_UNKNOWN** | `tools/diagnose_stage_bronze_gap.py` | Per-PK gap-state classification constants per CLAUDE.md SCD2-P1-e (in-flight orphan predicate — BOTH `UdmEndDateTime IS NULL` AND `UdmSourceEndDate IS NULL` required plus `UdmActiveFlag = 0 AND UdmScd2Operation IN ('U','R')`) + SCD2-R4 (UdmActiveFlag tri-valued 1=active / 2=deleted / 0=closed-or-in-flight) + DIAG-1 (CDC source-delete flips `_cdc_is_current` to 0; Stage current=1 with no Bronze active is NOT the normal delete path) (2026-05-14) |
 
 ## Owner
 
@@ -624,4 +794,4 @@ Pipeline lead. Glossary is maintained per round close-out (extended whenever a n
 
 ## Last reviewed
 
-2026-05-12 (**Phase 0 user-sign-off batch + R01 de-escalation**: extended D-range to D108 (D106 schedule + D107 dual offsite paths + D108 ops-channel email); extended B-range to B190 (B188/B189/B190 added for Round 4.5b tools; B187 closed via D107; B156 closed via D108). R01 DE-ESCALATED 9 → 6 per ≥10/20 strict-closure threshold trigger. Earlier 2026-05-12: **Phase 0 sweep residuals**: extended B-range to B187; added B185 / B186 / B187 to Recent B-items list (PII inventory data-side / Phase 3-6 deep-dive plans / offsite Parquet target). Earlier 2026-05-11: **Phase 2 plan-draft authored**: extended Round codes section to include 4 proposed Phase 2 rounds (P2R1-P2R4) with `P2R<N>` disambiguation prefix; Phase 1 rounds R1-R8 marked complete. Earlier 2026-05-11: **Phase 0 prep close-out**: extended D-number range to D105; added R32 (Claude credential-access risk); added Pitfall #12 (naming-standard locked late); added two new where-each-code-family-lives index rows for D105 SQL naming standards + D103 Claude Code security model. Earlier 2026-05-11: authored at Round 8 close-out per user-driven onboarding-clarity requirement — Pattern F INSTANCE 2 catch of B155 false-closure surfaced cascade-discipline gap; user observed code density would be opaque to fresh engineers + AI agents and requested human-readable reference; this glossary is the single-source-of-truth response).
+2026-05-14 (**Wave 4.6 § 3.4 `tools/decrypt_pii.py` build (closes B-255 9.i scope-drift carry-over)** — extended `Round 4 CLI tool public surfaces` sub-section with § 3.4 entries: 2 entry-point functions (`main` + `cli_main`) + 3 constant-group rows (EVENT_TYPE = `CLI_DECRYPT_PII` — 11th and final R4 CLI_* family value; EXIT_SUCCESS/EXIT_OPERATIONAL_FAILURE/EXIT_FATAL triplet; VERDICT_DECRYPTED/VERDICT_CCPA_DELETED/VERDICT_NOT_FOUND/VERDICT_VAULT_UNAVAILABLE/VERDICT_ERROR pentad). Step 10 ACTIVELY APPLIED this turn at producer time (first such turn — Round 4.1 cohort missed it; corrected at gap-check via B-256 + B-257). Round 4 status: 8/11 → 9/11 BUILT (82%). Step 11 6-of-6 cohort scorecard finalized. Earlier 2026-05-14: **Wave 5 cohort + Round 3 17/17 COMPLETE gap-check inline closure** — extended "Round 3 build — module public surfaces" with 4 classes (`ParityCheck` / `ParityReport` / `LatenessReport` / `GapReport`), 4 functions (`verify_server_parity` / `profile_lateness` / `persist_lateness_report` / `detect_extraction_gaps`), 7 constants (`DEFAULT_BASELINE_PATH` / `WINDOWS_SENTINEL` / `PROBE_FAILED_SENTINEL` / `UNAVAILABLE_SENTINEL` / `ACTION_BACKFILL` / `ACTION_INVESTIGATE` / `ACTION_NO_ACTION`) for the 3 Wave 5 modules (M8 verify_server_parity + M12 lateness_profiler + M13 gap_detector); F-4/F-6 BLOCKER (CLAUDE.md "Structure" section M8/M12/M13 absence + no `tools/` section at all) reduced 🔴 → ⚫ via parallel CLAUDE.md extension (new `tools/` subsection authored + lateness_profiler entry added under cdc/). Round 3 build campaign now TRUE 17/17 BUILT 100% ✅ MILESTONE — both task-brief campaign framing AND canonical § 1-7 numbering converged. Earlier 2026-05-13 (**Wave 4 M17 + Round 3 14/17 reality gap-check inline closure**: extended "Round 3 build — module public surfaces" with 1 class (`SnowflakeCopyResult`), 1 function (`copy_parquet_to_snowflake`), 3 constants (`EVENT_TYPE_SNOWFLAKE_COPY_INTO` / `COPY_REQUIRED_STATUS` / `DEFAULT_COPY_TIMEOUT_SECONDS`) for the Wave 4 M17 `data_load/snowflake_uploader.py` module; F-4 BLOCKER (CLAUDE.md "Structure" section M17 absence) reduced 🔴 → ⚫ via parallel CLAUDE.md extension; F-1a/b/c sub-findings (convention-registration drift on M17) reduced 🟡 → ⚫. Earlier 2026-05-13 (**Wave 3 cohort gap-check inline closure**: extended "Round 3 build — module public surfaces" with 3 classes (`ParquetWriteResult` / `ReplayResult` / `PipelineEvent` v2-extended), 8 functions (`write_parquet_snapshot` / `replay_parquet_snapshot` / `tokenize_pii_columns` / `decrypt_token` / `set_event_context` / `clear_event_context` / `skip` event_tracker helper / `track` preserved v1 method), 2 constants (`REPLAY_ELIGIBLE_STATUSES` / `EVENT_TYPE_REPLAY`) for the 5 Wave 3 modules (M16 event_tracker v2 cutover + M1 parquet_writer + M2 parquet_replay + M4 pii_tokenizer + M5 pii_decryptor); F-6 convention-registration gap reduced 🔴 → ⚫ post-fix; new "Module constants" sub-section authored. Earlier 2026-05-13 (**B220 inline closure — cross-tracker registration sweep**: added new "Round 3 build — module public surfaces" section enumerating Wave 0 + Wave 1 + Wave 2 module public APIs (exception classes per D68 two-tier hierarchy + module classes + module functions); extended Pitfall #9 sub-classes table from 9.a-9.j to 9.a-9.m (9.k arithmetic-propagation / 9.l canonical-schema-detail / 9.m discipline-not-applied-to-its-own-tracker) per HANDOFF §8 formalization 2026-05-12; extended Pattern codes table with Pattern B1/B2/B3 build-cohort variants (single-agent / paired / triad); extended "Where each code family lives" table with CODE_BUILD_STATUS / ONE_OFF_SCRIPTS / udm-progress-logger rows; Pitfall family marker updated from "9.a-9.j" to "9.a-9.m". Earlier 2026-05-12 (**Phase 0 user-sign-off batch + R01 de-escalation**: extended D-range to D108 (D106 schedule + D107 dual offsite paths + D108 ops-channel email); extended B-range to B190 (B188/B189/B190 added for Round 4.5b tools; B187 closed via D107; B156 closed via D108). R01 DE-ESCALATED 9 → 6 per ≥10/20 strict-closure threshold trigger. Earlier 2026-05-12: **Phase 0 sweep residuals**: extended B-range to B187; added B185 / B186 / B187 to Recent B-items list (PII inventory data-side / Phase 3-6 deep-dive plans / offsite Parquet target). Earlier 2026-05-11: **Phase 2 plan-draft authored**: extended Round codes section to include 4 proposed Phase 2 rounds (P2R1-P2R4) with `P2R<N>` disambiguation prefix; Phase 1 rounds R1-R8 marked complete. Earlier 2026-05-11: **Phase 0 prep close-out**: extended D-number range to D105; added R32 (Claude credential-access risk); added Pitfall #12 (naming-standard locked late); added two new where-each-code-family-lives index rows for D105 SQL naming standards + D103 Claude Code security model. Earlier 2026-05-11: authored at Round 8 close-out per user-driven onboarding-clarity requirement — Pattern F INSTANCE 2 catch of B155 false-closure surfaced cascade-discipline gap; user observed code density would be opaque to fresh engineers + AI agents and requested human-readable reference; this glossary is the single-source-of-truth response).

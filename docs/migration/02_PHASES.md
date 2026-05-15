@@ -67,6 +67,12 @@ Written go/no-go from stakeholder list, including compliance sign-off on tokeniz
 
 **Status: 🟢 Complete** — All 8 rounds Locked + Round 1.5 documentation supplements. R1 v3 schema; R2 Configuration with D63-D66; R3 Core Modules with D67-D71 via D73 architectural-review acceptance; R4 Tools with D74-D77 via D78; R5 Tests with D79-D82 via D83 convergence-confirmed acceptance; R6 Deployment with D84-D87 via D88; R7 Schema Evolution Governance with D92-D94 via D94 math-infeasibility; **R8 Sub-Agent Self-Improvement Discipline with D95-D99 via D99 convergence-confirmed acceptance 2026-05-11 (LAST Phase 1 round)**. **Round 1.5 Documentation Supplements (G1-G6; 5 supplement docs) with D100-D101 via D101 math-infeasibility acceptance 2026-05-11** — closes schema-story gaps for new engineers + dashboard authors; carryover B166-B175 + I24 + deferred B173 comprehensive ER canonical sweep. Pattern F discipline (D89/D90/D91) 🟢 Locked at Round 7 first-production close-out 2026-05-11. **Phase 2 (Pilot Cutover) is next.** Round 0.5 spike (D47) authorized awaiting engineer assignment — proceeds in parallel.
 
+**Code-build sub-status** (as of 2026-05-14; tracked at per-artifact granularity in `CODE_BUILD_STATUS.md`; consolidating session record at `SESSION_2026-05-13_BUILD_LOG.md`):
+- Round 3 (Core Modules): 17/17 🟢 BUILT
+- Round 4 (Operator Tools): 9/11 🟢 BUILT; 2 🔴 blocked on external prereqs (B81 SP-12 schema evo + B82 ops-channel Phase 0 deliv)
+- Round 6 (Deployment): partial — Tier 2 property tests 🟢 (53 properties across 8 files; 1 production bug surfaced + fixed via Hypothesis = B-262); Tier 3/4 + B-item closures + RHEL deploy pending
+- Phase 1 implementation: ~75% complete
+
 **Goal**: build infrastructure that doesn't change pipeline behavior. Code lands; no table is using it yet.
 
 ### Deliverables

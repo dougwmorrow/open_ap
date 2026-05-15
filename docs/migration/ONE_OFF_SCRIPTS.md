@@ -85,6 +85,82 @@ Tools that operators invoke as needed when conditions warrant (drift detection, 
 
 ---
 
+## Execution Sequence (manual-run order per server) — added 2026-05-12
+
+Per user-direction "be sure to track which tools or utils need a manual run and in what order they should be run." This section documents the canonical per-server deployment ordering. Each step runs ONCE per server in the cadence dev → test → prod (full validation at each before advancing).
+
+### Step 0 — Pre-flight (sysadmin; one-time per server)
+
+| Order | Unit | Type | Depends on | Notes |
+|---|---|---|---|---|
+| 0.1 | **B197** SELinux `semanage fcontext` for `/etc/pipeline/` | Runbook step (sysadmin) | RHEL canonical service-account exists | 🔴 BLOCKER for RB-14; sysadmin coordination on canonical SELinux type required before RB-14 can complete |
+| 0.2 | **RB-14** `.env` migration `/debi/.env` → `/etc/pipeline/.env` | Runbook (sysadmin) | Step 0.1 | Mode 0400; owned `pipeline:pipeline`; SELinux context restored; D103 layer 6 |
+
+### Step 1 — DB-side migrations (run on SQL Server hosting `General`; idempotent per D92)
+
+Run in this exact order via `python3 migrations/<script>.py --actor <name> --apply` after pre-flight. All scripts are idempotent (`IF NOT EXISTS` guards); re-runs are safe and write FAILED audit row with `idempotency_path = 'no-op'`.
+
+| Order | Script | Adds | Gates which tools | Notes |
+|---|---|---|---|---|
+| 1.1 | `migrations/lateness_columns.py` (**B193**) | `UdmTablesList.LatenessL99Minutes INT NULL` + `LatenessL99UpdatedAt DATETIME2(3) NULL` | Tool 14 `measure_lateness.py` (**B188**) | 2 SchemaContract rows; audit `MIGRATION_LATENESS_COLUMNS` |
+| 1.2 | `migrations/pii_inventory_audit_log.py` (**B194**) | `General.ops.PiiInventoryAuditLog` table | Tool 15 `import_pii_inventory.py` (**B189**) | 11-col table + CHECK on DataClassification 5-value enum; audit `MIGRATION_PII_INVENTORY_AUDIT_LOG` |
+| 1.3 | `migrations/capacity_baseline_log.py` (**B195**) | `General.ops.CapacityBaselineLog` table | Tool 16 `measure_capacity_and_partition.py` (**B190**) | 13-col table + `IX_CapacityBaselineLog_Table` NONCLUSTERED; audit `MIGRATION_CAPACITY_BASELINE_LOG` |
+
+**No inter-migration ordering dependency** within Step 1 — B193 / B194 / B195 are independent; the listed order is convenient but not load-bearing.
+
+### Step 2 — Operator-tool initial baselines (run once per server during R1 acceptance)
+
+| Order | Tool | Depends on | Purpose | Cadence after first run |
+|---|---|---|---|---|
+| 2.1 | `tools/verify_credentials_load.py` (**B184** / Tool 12) | Step 0.2 (RB-14) | Validate credentials envelope unsealed correctly on this server | On-demand re-validation when env changes |
+| 2.2 | `tools/capture_parity_baseline.py` (**B183** / Tool 13) | Step 0.2 | Capture OS/library/env/systemd baseline JSON for cross-server parity | On-demand re-capture when drift detected |
+| 2.3 | `tools/import_pii_inventory.py` (**B189** / Tool 15) | Step 1.2 + compliance CSV | One-time per source per CSV revision | 1-3 times per source over project lifetime |
+| 2.4 | `tools/measure_lateness.py` (**B188** / Tool 14) | Step 1.1 + Bronze tables populated | Compute initial `LatenessL99Minutes` baseline per table | Weekly via Automic `JOB_LATENESS_MEASURE` after baseline |
+| 2.5 | `tools/measure_capacity_and_partition.py` (**B190** / Tool 16) | Step 1.3 + Bronze populated | Compute initial capacity baseline per table | Monthly via Automic `JOB_CAPACITY_BASELINE` after baseline |
+
+Step 2 tools have **no inter-tool ordering dependency** — they read independent sources. The order listed reflects deployment-friendliness (credentials → parity → PII inventory → analytics).
+
+### Step 3 — SQL Agent job setup (DBA-side; one-time per server)
+
+| Order | Action | Depends on | Notes |
+|---|---|---|---|
+| 3.1 | Execute SQL Agent DDL block per `phase1/01_database_schema.md:1921-1942` (**B02**) | Step 1 migrations (PipelineEventLog must exist) | Creates `UDM_PipelineLog_ExtendPartition_Monthly` job |
+| 3.2 | **B217** — DBA replaces `@owner_login_name = N'sa'` with canonical service-account login via `msdb.dbo.sp_update_job` | Step 3.1 | Per-server choice; security-policy-dependent; pending RB-N authoring per B217 |
+
+### Step 4 — Operator-on-demand tools (no first-run requirement; invoke as needed)
+
+These are operator-driven; no automatic first-run gating. Invoke when conditions warrant.
+
+| Tool | Purpose | When to invoke |
+|---|---|---|
+| `tools/log_retention_cleanup.py` (**Round 4 § 3.10**) | Purge old `PipelineLog` rows per CLAUDE.md retention policy | Operator dry-run when PipelineLog grows; Automic `JOB_LOG_CLEANUP` (B80 — not yet in frozen-11) on a daily/weekly cadence once approved |
+| `tools/promote_test_to_prod.py` (**Round 4 § 3.6**) | Failover acknowledgment per D29 + D33 — operator acknowledges within gate-table contract when prod server unhealthy; test server takes over cycle | Operator-initiated (primary) — typically from RB-7 DR drill or RB-9 operations response. Secondary: Automic auto-trigger on prod heartbeat absence per § 3.6 L857. Requires `--cycle`, `--justification`, `--actor` |
+| `tools/repair_scd2.py` | SCD2 chain repair per SCD2-R6 | Operator-detected anomaly via `tools/validate_scd2.py` |
+| `tools/backfill.py` | R-13 large-table backfill | Operator-detected gap |
+| `tools/sweep_modified.py` | LT-2 modified-date sweep | Operator-detected drift OR scheduled wrapper |
+| `tools/inspect_cdc_pk.py` | DIAG-1 PK investigation | Operator investigating missing-current-row complaint |
+| `tools/validate_cdc.py` / `tools/validate_scd2.py` | CDC + SCD2 structural validation | Pre-validation or post-incident |
+
+### Per-server cadence (dev → test → prod)
+
+Each step runs in full on dev, is validated, then promoted to test, validated, then to prod. Promotion criteria per server:
+
+- **Dev server**: all Step 1 migrations complete + Step 2 tools produce expected baselines (no FATAL exits; audit rows in PipelineEventLog).
+- **Test server**: dev acceptance passes + 24h soak with no FAILED audit rows + B188/B190/etc. baselines stable across two consecutive runs.
+- **Prod server**: test acceptance passes + change-management approval + maintenance window scheduled + RB-rollback plan in hand.
+
+This cadence does NOT short-circuit even if dev/test reveal zero drift — the per-server idempotency guarantees of D92 forward-only schema discipline depend on each server being explicitly stamped with the same migration history.
+
+### Cross-tracker references
+
+The Execution Sequence above is the canonical ordering. Per-unit detail (test counts, build status, residual issues) lives in:
+- **CODE_BUILD_STATUS.md** — per-unit build / deploy state
+- **BACKLOG.md** — B-N item history (B183/B184/B188/B189/B190/B193/B194/B195/B197/B217)
+- **05_RUNBOOKS.md** — RB-14 procedure detail
+- **CLAUDE.md** "Validation discipline" — D92 forward-only schema evolution; D103 security model
+
+---
+
 ## Completed items (preserved for audit-trail)
 
 ### Migration scripts already run (from prior project work per CLAUDE.md migrations/)

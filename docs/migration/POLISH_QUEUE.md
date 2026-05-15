@@ -187,6 +187,46 @@ A P-item closes when EITHER:
 - **Closure target**: Next CLAUDE.md edit cycle
 - **Why P not B**: cosmetic wording drift.
 
+### P-15 (🟡 Open): Retroactive backport of bound-param + SCOPE_IDENTITY patterns to earlier tool tests
+
+- **Affected**: `tests/tier{0,1}/test_measure_lateness.py`, `test_capture_parity_baseline.py`, `test_verify_credentials_load.py`, `test_import_pii_inventory.py`, `test_lateness_columns.py`, `test_pii_inventory_audit_log.py`, `test_capacity_baseline_log.py` (7 test files from prior 8-unit cohort B183/B184/B188/B189/B190/B193/B194/B195)
+- **Issue**: Two patterns demonstrated effective in § 3.8 build (2026-05-12) — (1) **bound-param inspection** (test inspects `executed_params` AND `executed_sql`, mirroring B218 retroactive fix); (2) **SCOPE_IDENTITY for audit_event_id** (audit-row writer returns IDENTITY value as int, populating `audit_event_id` key per spec). The 7 earlier test files do NOT use these patterns; they may have similar latent issues OR be silently passing only because their author code uses literal SQL (not parameterized).
+- **Polish item**: Audit each of the 7 test files. Where author code uses parameterized SQL → add `executed_params` capture + bound-param inspection. Where audit_event_id is part of the JSON output spec → audit the author's `_write_audit_row` return semantics.
+- **Closure target**: Phase 2 R1 close-out polish-sweep OR engineer-side iteration during R1c deployment when test-infrastructure consistency becomes load-bearing.
+- **Why P not B**: doesn't change tool behavior; defends test files against latent flakiness if engineer modifies author code in the future. Cosmetic + defensive only.
+
+### P-16 (🟡 Open): CODE_BUILD_STATUS Round 4 section header arithmetic propagation cleanup
+
+- **Affected**: `docs/migration/CODE_BUILD_STATUS.md` L33 (was `"0/11 built"` header) — FIXED INLINE 2026-05-12 to `"2/11 built"` after gap-check 9.k finding.
+- **Issue**: Section header didn't propagate when at-a-glance count was updated post-§ 3.10 + § 3.8 builds (Pitfall #9.k arithmetic-propagation drift instance). Fixed inline.
+- **Polish item (forward-looking)**: When CODE_BUILD_STATUS Round 4 OR Round 3 count next changes, verify BOTH at-a-glance summary table (L22 region) AND per-section header (L33 + L48 region for Round 3) update in lockstep. Add a producer self-check note in the file's "How units move through state" section reminding of dual-location update.
+- **Closure target**: Next CODE_BUILD_STATUS edit cycle (organic; not blocking).
+- **Why P not B**: cosmetic propagation discipline; no procedural change required.
+
+### P-17 (🟡 Open): Round 5 § 5.6 strict `<=` needs ULP-tolerance note for percentile monotonicity
+
+- **Affected**: `docs/migration/phase1/05_tests.md` § 5.6 ("Lateness percentile monotonicity")
+- **Issue**: Canonical § 5.6 wording asserts strict `<=` (`p50 <= p90 <= p95 <= p99 <= max`). Tier 2 property test cohort 2026-05-14 Agent D found that `statistics.quantiles()` with `method="inclusive"` on floats can produce a p_high value that is bit-equal to p_low under specific Hypothesis-generated sample distributions (e.g. all samples within 1 ULP of each other). Strict `<=` still holds in practice because the two floats compare equal, but the spec wording reads as if strict `<` were expected. Agent D worked around it via deduplicated-sample strategies in `test_lateness_monotonicity.py`.
+- **Polish item**: Add a 1-line note to § 5.6: "Strict `<=` semantics — for sample distributions where consecutive percentiles round to bit-equal floats (within 1 ULP), `p_low == p_high` is permitted under the inclusive-quantile algorithm; tests use `<=` not `<`." No behavior change.
+- **Closure target**: Next `phase1/05_tests.md` edit cycle (likely Round 5 close-out OR Phase 2 R1 spec re-read pass).
+- **Why P not B**: cosmetic spec clarification; behavior under `statistics.quantiles()` is correct; spec wording is the only drift.
+
+### P-18 (🟡 Open): § 5.3 NFC/NFD plaintext normalization upstream of SP-1 — future enhancement candidate
+
+- **Affected**: `docs/migration/phase1/05_tests.md` § 5.3 (tokenization determinism) + Round 1 § SP-1 contract docs
+- **Issue**: Tier 2 property test cohort 2026-05-14 Agent C's `test_unicode_nfc_nfd_distinct_tokens` documents SP-1's current contract: NFC-form `"é"` and NFD-form `"é"` produce DIFFERENT tokens because SP-1 hashes the byte sequence. This matches production behavior. Some sources may emit either form depending on the OS / driver / locale, which means the SAME logical user identifier could produce two tokens across a database migration. A future enhancement could normalize plaintext to NFC upstream of SP-1 (in `pii_tokenizer.tokenize_pii_columns`) to make tokenization Unicode-form-agnostic.
+- **Polish item**: Add a future-enhancement bullet to § 5.3 (or open a separate B-N once the operational impact is observed). For now, document the current contract more explicitly: "SP-1 is byte-form sensitive by design; callers wanting NFC-equivalent tokenization should normalize plaintext upstream."
+- **Closure target**: Spec-clarification at next round close-out; promotion to B-N if/when an operational incident surfaces NFC/NFD divergence in production.
+- **Why P not B**: documents existing behavior; behavior is correct per current SP-1 contract; no procedural / code change required unless an incident occurs.
+
+### P-19 (🟡 Open): § 5.3 empty-string vs NULL plaintext semantics
+
+- **Affected**: `docs/migration/phase1/05_tests.md` § 5.3 + Round 1 § PiiVault DDL (`Plaintext NVARCHAR(MAX) NOT NULL`)
+- **Issue**: Tier 2 property test cohort 2026-05-14 — § 5.3 example tokenization test uses `st.text(min_size=1, max_size=200)`, skipping empty strings. But Round 1 § PiiVault DDL admits empty string (`NOT NULL` only excludes NULL; `''` is valid). Agent C's `test_empty_string_handling` added a regression guard documenting that the mock vault DOES mint a token for `''`; the M4 module's NULL pass-through contract leaves None alone (not empty string). Spec § 5.3 example wording would be clearer if it explicitly stated the empty-string-is-non-NULL contract.
+- **Polish item**: Add a 1-line clarification to § 5.3: "Empty string is a valid plaintext per `PiiVault.Plaintext NVARCHAR(MAX) NOT NULL`; `min_size=1` in the example strategy is a property-test heuristic, not a contract restriction. NULL plaintext is pass-through in `tokenize_pii_columns` per the M4 module contract."
+- **Closure target**: Next `phase1/05_tests.md` edit cycle.
+- **Why P not B**: cosmetic spec clarification; the property test (Agent C) already pins the correct behavior via regression guard.
+
 ### ~~P-5~~ (⚫ CLOSED 2026-05-12): GLOSSARY P-number entry
 
 - ~~**Affected**: `docs/migration/GLOSSARY.md`~~
@@ -248,3 +288,35 @@ Pattern F + sub-class 9.j FORMALIZED status-render discipline at HANDOFF §8: an
 ---
 
 Owner: pipeline lead (delegated to round close-out cascade authoring).
+
+
+### P-20 (🟡 Open): B-number hyphenation inconsistency — `B265` vs `B-263/B-264/B-266`
+
+**Surfaced**: 2026-05-14 reflection-gap audit on commit `9444f12`.
+
+**Detail**: `BACKLOG.md:228` uses `B265` (no hyphen); contemporaneous entries `B-263` / `B-264` / `B-266` use the hyphenated form. The hyphenated form is canonical per `GLOSSARY.md` "B-number" entry and matches B-243 / B-244 / B-245 / B-248 / B-251 / B-252 / B-254 / B-255 / B-256 / B-257 / B-258 / B-259 / B-260 / B-261 / B-262 prefix style introduced in late R3/R4 build campaign cohort.
+
+**Fix**: rename `B265` → `B-265` at `BACKLOG.md:228` (one cell edit). Also propagate to any subsequent cross-references (currently zero per `git grep B265`).
+
+**Why P-N not B-N**: Cosmetic only — won't break tooling, won't change a decision body, runbook, or pipeline code. Distinguishing test per D113 — no substantive impact.
+
+**Closure target**: Next POLISH_QUEUE sweep OR next round close-out cascade.
+
+---
+
+### P-21 (🟡 Open): `CODE_BUILD_STATUS.md` L12 `Last reviewed` narrative restructure — mega-paragraph readability
+
+**Surfaced**: 2026-05-14 reflection-gap audit on commit `9444f12`.
+
+**Detail**: `CODE_BUILD_STATUS.md:12` is a single bullet-line "Last reviewed" narrative that has grown reverse-chronologically with every code-build event. After commit `9444f12` it is ~102 KB of running prose inside one Markdown line. Scanning for "what changed on date X" requires reading the entire paragraph; the structure is implicit-chronological-via-"Earlier 2026-05-14:" interjections.
+
+**Fix proposal** (one of):
+- (a) Restructure as a proper dated event list — one section header per date + bullets per event under each date; chronologically descending. Touches only the L12 narrative; no semantic content lost.
+- (b) Move historical events older than 7 days to an archive section at end of file; keep L12 narrative scoped to the current week.
+- (c) Convert L12 to a table — date / event / artifact / pytest delta / 🟢 status; one row per event.
+
+Recommend **option (a)** for symmetry with `_validation_log.md` event-list structure.
+
+**Why P-N not B-N**: Pure readability / maintenance ergonomics; no behavioral change. Distinguishing test per D113 — content stays identical, only formatting changes.
+
+**Closure target**: Next POLISH_QUEUE sweep OR next round close-out cascade — but recommend doing sooner-rather-than-later because the narrative continues to grow with every code-build commit (5K-10K char delta per event).
