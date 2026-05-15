@@ -53,12 +53,39 @@ When in doubt: **ASK the user to clarify** rather than invoking. Cost of asking 
 2. **Execute the work** (build / fix / authoring / scaffold / etc.)
 3. **Verify pytest** if code changed; update test count tracking if test changes landed
    - **3.1 — Parallel-agent re-verification (B-268 closure 2026-05-14)**: If Step 1.2 spawned MULTIPLE parallel sub-agents (e.g. `run_in_background=true` Agent invocations OR multiple sequential Agents touching different files), the parent agent MUST re-run pytest authoritatively AFTER all sibling agents complete. **Never trust** a sub-agent's reported pytest count from inside the cohort — each sub-agent runs pytest at a SNAPSHOT moment that may not include sibling agents' files. Empirical evidence (commit 9b3007c): 3 parallel build agents each reported "2127 pass" but the authoritative post-cohort count was 2281 (math: 2083 + 69 + 61 + 68 = 2281). Each agent ran pytest before sibling files landed. **Mechanism**: invoke `udm-post-build-verify` skill OR run `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression tests/integration tests/crash -q --no-header` directly after the LAST sub-agent reports completion. Document the authoritative count in the commit message + tracker narratives. **Anti-pattern**: copy-pasting a sub-agent's reported count into the commit message without re-verification = Pitfall #9.k arithmetic-propagation drift via sub-agent-stale-snapshot. Sequential single-agent work is NOT subject to this re-verification (single agent's pytest count is authoritative since no sibling work is in flight); only multi-agent parallel cohorts.
-4. **Apply `udm-progress-logger`** per CLAUDE.md hard rule 9 — update canonical trackers:
-   - BACKLOG.md (close any B-N affected; open B-Ns surfaced)
-   - CURRENT_STATE.md (L7 narrative prepended)
-   - HANDOFF.md (§14 narrative prepended)
-   - CODE_BUILD_STATUS.md (L12 if code changed)
-   - _validation_log.md (event entry)
+4. **Apply `udm-progress-logger`** per CLAUDE.md hard rule 9 -- update canonical trackers + RELATED markdown files based on build type. Per user-direction 2026-05-15 ("Update the skill so it includes updating markdown files related to the build that just took place"), the cascade now walks a per-build-type checklist:
+
+   **Always update (5 canonical trackers — universal regardless of build type)**:
+   - `docs/migration/BACKLOG.md` — close any B-N affected (leading-badge flip + inline closure annotation per Pitfall #9.j); open B-Ns surfaced (with WSJF + closure target)
+   - `docs/migration/CURRENT_STATE.md` (L7 narrative prepended) — most-recent event at top; "Earlier <date>:" backfill for prior events
+   - `docs/migration/HANDOFF.md` (section 14 narrative prepended) — mirror of CURRENT_STATE for fresh-agent onboarding
+   - `docs/migration/CODE_BUILD_STATUS.md` (L12 narrative prepended) — code-build state dashboard; per-unit row state transitions if applicable
+   - `docs/migration/_validation_log.md` (event entry appended) — full audit-trail entry per hard rule 9
+
+   **Conditional updates (per-build-type)**:
+
+   | Build type | Additional markdown files to update |
+   |---|---|
+   | NEW public surface (function / class / module-level constant; NOT underscore-prefixed) | `CLAUDE.md` Structure section (per Step 10 / Pitfall #9.n) + `docs/migration/GLOSSARY.md` public-surface tables |
+   | NEW EventType constant (CLI_* family) | `CLAUDE.md` L325 CLI_* family registry (per B-269 closure via udm-step-10-verifier Step 3) |
+   | NEW D-number locked | `docs/migration/03_DECISIONS.md` (D-number body + status + rationale) per udm-decision-recorder |
+   | NEW RB-N runbook | `docs/migration/05_RUNBOOKS.md` (When/Pre-flight/Procedure/Validation/Rollback structure) per udm-runbook-author |
+   | NEW SP-N stored procedure | `docs/migration/phase1/01_database_schema.md` SP section + SchemaContract row per D40 / D92 forward-only |
+   | NEW edge case (M/S/I/N/P/G/D/F/V series) | `docs/migration/04_EDGE_CASES.md` (relevant series section) |
+   | Risk change (new R-N OR escalation/de-escalation) | `docs/migration/RISKS.md` (R-N row update OR new row) |
+   | Phase status change (phase / round transitioning) | `docs/migration/02_PHASES.md` (status flip) |
+   | Cosmetic / render-discipline / status-render / supersession-crumb / stale-date fix | `docs/migration/POLISH_QUEUE.md` (open P-N OR close P-N per D113) |
+   | Executable artifact (one-time vs scheduled per udm-execution-classifier) | `docs/migration/ONE_OFF_SCRIPTS.md` (one-time + manual) OR `docs/migration/phase1/02_configuration.md` section 5.1 (scheduled + Automic) |
+   | Spec doc edit (touched phase1/0X_*.md) | The relevant `docs/migration/phase1/0X_*.md` is the canonical edit; cross-doc cascade per D93 may also touch related specs |
+   | Sub-class formalization / Pitfall sub-class new entry | `docs/migration/HANDOFF.md` section 8 Pitfall #9 sub-class accumulator (9.a, 9.b, ..., 9.n, 9.o, ...) |
+   | New skill / agent / .md template authoring | `docs/migration/GLOSSARY.md` skill catalogue (mirrors udm-progress-logger row format) |
+
+   **Verification procedure** (mandatory; surface in commit message + _validation_log entry):
+   For each tracker in the universal-5 list: state "UPDATED" or "UNTOUCHED-AS-EXPECTED (reason)".
+   For each conditional row that applies to the current build: state "UPDATED" or explicitly justify the "UNTOUCHED" decision.
+   Anti-pattern: silent skip without justification = Pitfall #9.m (discipline-not-applied-to-own-tracker) class drift. The "UNTOUCHED-AS-EXPECTED" justification is the discipline application.
+
+   **Empirical anchor** (this directive surfaced 2026-05-15 per user-direction "After proceeding, update any markdown files that are used for tracking purposes. ... Update the skill so it includes updating markdown files related to the build that just took place"): user noticed multiple commits across the session had slim tracker updates focused on the canonical 5; some build types (e.g. POLISH_QUEUE for cosmetic items; RISKS for risk-touching builds) were inconsistently updated. The per-build-type checklist closes that gap by forcing explicit walk-and-justify per build cohort.
 5. **Apply Step 10** per HANDOFF §8 Pitfall #9.n if new public surface added (CLAUDE.md Structure + GLOSSARY)
 6. **Commit** on the current branch
 7. **Hold push by default**; auto-push ONLY when user trigger phrase includes explicit PR-submission semantics (see Step 1.7.1 below).
