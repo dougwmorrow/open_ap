@@ -6189,3 +6189,75 @@ Recommendation: at next round close-out cascade, the **udm-cascade-audit-evolver
 **Engineering-deploy-gate status**: post-cohort test-suite-pass criterion now CLEARED. Combined with prior cb76334 drift-tool improvements (false-positive RED suppressed), the engineering-deploy posture is strong.
 
 **Operator next step recommendation**: This is a clean break point. Branch ready as a coherent post-merge follow-up PR (4 commits; 22 closures; 0 failures). Recommend pushing + opening PR when user is ready -- the "ALL TESTS PASS" milestone is iconic and a natural place to seal a PR.
+
+## 2026-05-14 -- Tier 3 integration test scaffold BUILT (B-115 scaffold-milestone)
+
+**Trigger**: User direction "Tier 3 integration test scaffolds" (highest-runway item after ALL TESTS PASS milestone).
+
+**Spawned Agent** (general-purpose, foreground) with comprehensive brief: canonical spec sections (phase1/05_tests.md section 1.3 fixture inventory + section 6.2 Round 3 module integration scenarios + section 1.6 Tier 0/1 boundary discipline) + DO/DO NOT list + 6 file specs (__init__ / conftest / 3 test files / fixtures-package __init__) + module-level-skip pattern to make tests discoverable AT collection time but not failing on dev workstations without Docker.
+
+**Deliverables landed (6 files; 1,574 lines)**:
+
+| File | Lines | Content |
+|---|---|---|
+| tests/integration/__init__.py | 22 | Tier 3 package marker; section 1.3 + section 6.2 + section 1.6 spec citations in module docstring |
+| tests/integration/conftest.py | 535 | Canonical fixture set: _docker_available (session subprocess probe) + mssql_container (session testcontainers.mssql.SqlServerContainer pinned to mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04 per Round 6 section 7.10) + mssql_connection (function pyodbc) + mssql_cursor (function) + test_db_transaction (function BEGIN-ROLLBACK per section 1.3 state-leakage mitigation) + canonical_schema_loaded (session; skips when schema.sql absent) + docker_skip_marker() factory (module-level skipif decorator). All imports gated via try/except ImportError + pytest.skip(allow_module_level=True) so testcontainers package absence does not break collection. |
+| tests/integration/test_idempotency_ledger_concurrency.py | 292 | 3 tests for spec section 6.2 "Two workers attempt same step concurrently; exactly one succeeds": test_two_workers_same_step_exactly_one_succeeds / test_clean_exit_updates_to_completed / test_exception_inside_with_block_updates_to_failed |
+| tests/integration/test_parquet_write_verify_replay_chain.py | 374 | 4 tests for spec section 6.2 "Write -> verify -> replay through full module chain": test_write_then_verify_then_replay_bytes_identical / test_replay_eligible_statuses / test_replay_rejects_created_status / test_replay_rejects_missing_file |
+| tests/integration/test_extraction_state_machine.py | 330 | 4 tests for spec section 6.2 "Per-day extraction state lifecycle IN_PROGRESS -> SUCCESS/FAILED -> re-extraction": test_record_attempt_then_query_returns_attempt / test_two_attempts_same_day_second_is_reextraction / test_trust_gate_blocks_future_dates / test_most_recent_success_walks_history |
+| tests/fixtures/udm_test_fixtures/__init__.py | 21 | Shared fixture package marker per section 1.3 (schema.sql + seed_data.sql land at follow-up B-N) |
+
+**Test counts**: 11 Tier 3 tests (3 + 4 + 4) all module-level skipped at scaffold-landing.
+
+**Pytest verification (authoritative full-scope)**:
+
+| Layer | Pre-scaffold | Post-scaffold |
+|---|---|---|
+| tier0 + tier1 + unit + property + regression + integration | 2288 pass / 10 skip / 0 fail | **2288 pass / 21 skip / 0 fail** |
+| Delta | -- | +11 skip (all 11 new Tier 3 tests module-level skipped) |
+
+**Engineering-deploy-gate status**: ALL TESTS PASS criterion still CLEARED (0 failures; +11 skip from intentional scaffold gating).
+
+**B-115 scaffold-milestone closure**: B-115 originally tracked "Add fixture state-leakage mitigation guidance" (WSJF 2.0); the scaffold-milestone closure landed the canonical conftest.py implementing the transactional-rollback pattern per section 1.3. Follow-up B-N (TBD next session) wires schema.sql + seed_data.sql + activates skip-decorator so tests actually exercise the fixture against real Docker SQL Server.
+
+**Step 10 application** (CLAUDE.md Structure + GLOSSARY):
+
+- CLAUDE.md Structure row added for tests/integration/ inline before the tests/property/ row -- full canonical-spec citation + fixture inventory + 11-test count
+- GLOSSARY.md NOT updated -- the new files do not add public surface (Tier 3 tests consume existing module surfaces only). No new public symbols.
+
+**Trackers updated this commit (5 files)**:
+
+| File | Change |
+|---|---|
+| CLAUDE.md | +1 Structure row for tests/integration/ (1,216 chars) |
+| BACKLOG.md | B-115 leading-badge flip with scaffold-milestone closure annotation |
+| CURRENT_STATE.md L7 | Tier 3 scaffold milestone narrative prepended; 23 cumulative branch closures noted |
+| HANDOFF.md section 14 | Same Tier 3 milestone narrative |
+| CODE_BUILD_STATUS.md L12 | Tier 3 scaffold event prepended; engineering-deploy-gate status reaffirmed |
+
+**Convention checks**:
+- Pitfall #9.j OK (B-115 leading badge flipped with inline closure annotation)
+- Pitfall #9.k OK (pytest count 2288 pass / 21 skip / 0 fail propagated consistently across 5 trackers + this entry; +11 skip delta explicit)
+- Pitfall #9.l OK (re-read section 1.3 + section 6.2 + section 1.6 spec sections + existing tests/conftest.py pattern before authoring)
+- Pitfall #9.m OK (B-115 closed AND tracked simultaneously)
+- Pitfall #9.n OK (Step 10 applied: CLAUDE.md Structure row landed; GLOSSARY N/A no new public surface)
+- Pitfall #10 (Tier 0 vs Tier 3 boundary discipline) OK (module-level skip prevents Tier 3 from running on dev workstations without Docker -- preserves Tier 0 fast feedback gate)
+- CLAUDE.md hard rule 9 OK (this entry IS the application)
+- CLAUDE.md hard rule 12 (B-226 Tier calibration) OK N/A (scaffold-only; no module-build tier-mis-classification risk)
+
+**Agent algorithm refinements during implementation** (per Agent final report):
+- Container image pinned via CANONICAL_MSSQL_IMAGE constant (Round 6 section 7.10) -- canonical-spec citation in conftest
+- SQL Server GO batch separator handled via private _split_sql_batches() regex (line-anchored case-insensitive) so a future schema.sql can use SSMS convention
+- Connection string uses ODBC Driver 18 + TrustServerCertificate=yes (container self-signed cert) per CLAUDE.md Environment & Dependencies
+- Agent verified 17 canonical-surface imports resolve: ledger_step / write_parquet_snapshot / verify_parquet_snapshot / mark_replicated / mark_archived / replay_parquet_snapshot / REPLAY_ELIGIBLE_STATUSES / record_extraction_attempt / get_extraction_attempt / is_date_trusted / is_reextraction / most_recent_success / ExtractionState / LedgerStepFailed / RegistryStatusInvalid / ParquetReplayError / InvalidTrustGate (latter 4 from utils.errors per D68/B-228)
+
+**Branch state**: round-6-post-merge-tracking now at 5 unpushed commits ahead of master:
+1. b0418dd -- post-merge tracker snapshot (PR #1 milestone)
+2. cb76334 -- B-267 verifier-synonym fix + section 8 polish batch (10 closures + 5 new tests)
+3. 184aac8 -- Round 6 close-out residual sweep (10 more closures + tracker propagation)
+4. 088ac28 -- B-218 ALL TESTS PASS milestone (1 closure + 3 fixes)
+5. NEW (this commit) -- Tier 3 integration test scaffold + B-115 scaffold-milestone closure (1 closure + 11 new tests + Step 10 application)
+
+23 cumulative B-Ns closed across the branch. 0 introduced. Engineering-deploy-gate status remains CLEARED.
+
+**Operator next step recommendation**: This is another clean break point. Branch is in excellent shape -- 5 commits / 23 closures / ALL TESTS PASS + 11 new Tier 3 scaffolds. Recommend pushing + opening PR when ready -- the "ALL TESTS PASS + Tier 3 scaffold" milestone is a natural place to seal a follow-up PR for the post-merge work.
