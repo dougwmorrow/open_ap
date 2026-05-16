@@ -8093,4 +8093,110 @@ Spawned general-purpose agent per CLAUDE.md hard rule 11. Reviewer walked canoni
 
 **Next-natural-action**: pipeline-lead reviews + chooses next action (per the 4-option runway in the original cascade-complete report: D.5 CLAUDE.md trim / D.3 design-only / F9.1 relaxation per B-273 / Q-23 D-N lock per B-274). Note: B-273 approval would unblock D.2 + D.3 + D.4 standalone tasks (substantially expands what can proceed without B-272 resolution).
 
+---
+
+## 2026-05-15 — Planning-discipline intervention authored (`udm-planning-session-startup` skill + `PLANNING_DISCIPLINE.md` matrix + CLAUDE.md hard rule 13) per user-direction "What skills should agents use when planning?"
+
+**Trigger**: User-direction 2026-05-15: "There is another gap to plan for. 1. What skills should agents use when planning? 2. How do we ensure agents, sub-agents, multi-agent teams use those skills from the start? Those questions of what skills to use and how to enable them need to be part of the planning session."
+
+User chose Option "A+B+C full intervention (Recommended)" via AskUserQuestion.
+
+**Inputs**:
+- 1-event evidence base: markdown refactor planning session 2026-05-15 missed 4 skills (`udm-design-reviewer` / `udm-checks-and-balances` / `udm-execution-classifier` / `udm-decision-recorder`)
+- Existing skill catalogue (20+ skills + 7 agents in `.claude/`)
+- Existing process-discipline meta-docs (`SELF_IMPROVEMENT_DISCIPLINE.md` / `CHECKS_AND_BALANCES.md`) as analogous patterns
+- CodeCompass Navigation Paradox (arxiv 2602.20048) cited as supporting motivation
+
+**Deliverables (3-component intervention per user-approved Option A+B+C)**:
+
+**Component A — New skill `.claude/skills/udm-planning-session-startup/SKILL.md`** (~270 lines):
+- 9 PS-N scope categories (ARCH / DOC / TOOL / SP / RUNBOOK / COHORT / CLOSEOUT / D-N / SELF)
+- 5-step procedure (identify scope / matrix lookup / surface to user / apply throughout / emit §0 provenance)
+- Trigger-phrase matcher + anti-trigger matcher (case-insensitive natural-language)
+- Sub-agent skill inheritance contract section
+- Tier 0 stub spec
+- Composition table with 17 related skills
+- Edge cases (8 distinct scenarios)
+
+**Component B — New meta-doc `docs/migration/PLANNING_DISCIPLINE.md`** (~310 lines):
+- §1: Why this exists (gap evidence + structural intervention rationale + CodeCompass Navigation Paradox)
+- §2: Skill-selection matrix (9 PS-N codes × mandatory + conditional + timing columns)
+- §3: Sub-agent inheritance contract (3 anti-patterns; inheritance scope; verification mechanism)
+- §4: Plan-deliverable §0 provenance section template
+- §5: Exemptions (when discipline N/A)
+- §6: Cross-references
+- §7: Empirical evidence base + evolution mechanism
+- §8: Self-application (this doc's own provenance with transparent exemption disclosure)
+
+**Component C — CLAUDE.md hard rule 13** (~15 lines): binding directive for planning-session skill activation + sub-agent inheritance contract. Empirical evidence base + Hard rule statement.
+
+**Plus**:
+- `.claude/skills/udm-next-step-cascade/SKILL.md` Composition table + Sub-agent inheritance subsection (~20 lines)
+- `docs/migration/GLOSSARY.md` 2 new skill-catalogue rows + extended udm-next-step-cascade row
+- CLAUDE.md Read order updated (new item 7 PLANNING_DISCIPLINE.md; old item 7 Phase-specific docs renumbered to 8)
+
+**Step 10 verifier procedure walked** (formal invocation per CLAUDE.md hard rule 9 Step 12):
+- New public surface = `udm-planning-session-startup` skill + `PLANNING_DISCIPLINE.md` meta-doc + CLAUDE.md hard rule 13
+- Registration verified: GLOSSARY skill catalogue (2 rows added) + CLAUDE.md Read order (new item 7) + CLAUDE.md hard rule 13 (at L678)
+- Verdict: ✅ CLEAN
+
+**udm-gap-check independent reviewer spawned** (formal invocation per CLAUDE.md hard rule 11):
+- Reviewer applied `udm-gap-check` + `udm-design-reviewer` lens + `udm-checks-and-balances` lens per planning-session inherited skill list
+- G1 (Pitfall #9.j leading-badge): ✅ CLEAN
+- G2 (Pitfall #9.k arithmetic): ✅ CLEAN (9 PS-N consistent; 4-skill evidence consistent)
+- G3 (Pitfall #9.l canonical re-read): 🔴 CRITICAL — matrix cited 2 non-existent skills (`udm-context-loader` PS-6 mandatory + `udm-find-canonical` §2.4). Inline fix applied THIS COMMIT: replaced with explicit doc-discipline / Grep references; added agent vs skill disambiguation note; **B-275 + B-276 opened** to track skill authoring.
+- G4 (Pitfall #9.m discipline-applied-to-its-own-tracker): 🟡 transparent (§8 self-application acknowledges 4 deferred skills)
+- G5 (Pitfall #9.n convention-registration): ✅ CLEAN
+- G6 (new B-N opportunities): 🟡 3 candidates → **B-275 + B-276 + B-277 + B-278 opened** (G7 sub-agent-inheritance-audit category for udm-gap-check; Pitfall #9.o 3-event tracker; the 2 non-existent-skill authorings already counted in G3 inline fix)
+- Reviewer final verdict: 🔴 escalate (BEFORE inline fix); after inline fix → 🟡 fixable-inline COMPLETE
+- Inline fix verification: matrix no longer references non-existent skills; agent/skill disambiguation note added
+
+**Pytest authoritative**: 2320 pass / 58 skip / 0 fail (unchanged; doc-only commit + new SKILL.md is markdown not code)
+
+**Pytest re-verification** (authoritative — NOT carried verbatim per Pitfall #9.k stale-narrative-quotation discipline applied per 521b68c remediation lesson): `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression tests/integration tests/crash -q --no-header` → `2320 passed, 58 skipped in 57.61s` ✅
+
+**Files modified (this commit)**:
+- NEW `.claude/skills/udm-planning-session-startup/SKILL.md` (~270 lines)
+- NEW `docs/migration/PLANNING_DISCIPLINE.md` (~310 lines)
+- MOD `CLAUDE.md` (hard rule 13 added at L678; Read order updated)
+- MOD `.claude/skills/udm-next-step-cascade/SKILL.md` (Composition table + Sub-agent inheritance subsection)
+- MOD `docs/migration/GLOSSARY.md` (2 skill-catalogue rows + 1 extended row)
+- MOD `docs/migration/BACKLOG.md` (5 new B-N entries: B-275 + B-276 + B-277 + B-278 + B-279)
+- MOD `docs/migration/_validation_log.md` (this entry)
+
+**Conditional updates per CLAUDE.md hard rule 9 (per-build-type checklist)**:
+- BACKLOG.md ✅ UPDATED (5 new B-N rows)
+- CURRENT_STATE.md ✅ UPDATED (narrative prepend per separate Edit)
+- HANDOFF.md ✅ UPDATED (narrative prepend per separate Edit)
+- CODE_BUILD_STATUS.md UNTOUCHED-AS-EXPECTED (no code build state changed)
+- _validation_log.md ✅ UPDATED (this entry)
+- POLISH_QUEUE.md UNTOUCHED-AS-EXPECTED (no cosmetic P-N candidate)
+- ONE_OFF_SCRIPTS.md UNTOUCHED-AS-EXPECTED (no executable artifact)
+- phase1/02_configuration.md § 5.1 UNTOUCHED-AS-EXPECTED (no scheduled job)
+- 03_DECISIONS.md UNTOUCHED-AS-EXPECTED (D-N candidate for hard rule 13 deferred to next round close-out per D111 process-infra exemption precedent)
+- 05_RUNBOOKS.md UNTOUCHED-AS-EXPECTED (no new RB-N)
+- 04_EDGE_CASES.md UNTOUCHED-AS-EXPECTED (no new edge case)
+- RISKS.md UNTOUCHED-AS-EXPECTED (no risk state change)
+- 02_PHASES.md UNTOUCHED-AS-EXPECTED (no phase transition)
+- GLOSSARY.md ✅ UPDATED (skill-catalogue extension)
+- CLAUDE.md Structure section UNTOUCHED-AS-EXPECTED (skill SKILL.md files don't go in Structure; that's for source code only)
+- CLAUDE.md L325 CLI_* family registry UNTOUCHED-AS-EXPECTED (no new EventType)
+- HANDOFF §8 Pitfall sub-class UNTOUCHED — 9.o sub-class candidate documented at PLANNING_DISCIPLINE.md L219 + L233 with 1-event evidence; formalization deferred to 3-event recurrence per B-278
+
+**Net delta**:
+- B-N: 0 closures + 5 opened (B-275 + B-276 + B-277 + B-278 + B-279)
+- D-N: 0 locked (D-N for hard rule 13 deferred to next round close-out per D111 process-infra exemption)
+- Pytest: 0 delta (2320/58/0 unchanged authoritative)
+- Files modified: 7 (5 modifications + 2 new)
+- Lines: ~+700 / -10
+
+**Verdict**: 🟢 intervention authored + Step 10 verified + udm-gap-check spawned + 🔴 G3 inline-fixed + 5 B-Ns opened for follow-up. Discipline operationalized; FIRST production application = this commit's own authoring (per PLANNING_DISCIPLINE.md §8 self-application disclosure).
+
+**Honest disclosure of remaining gaps** (per user's question post-authoring "Is it based on any research?"):
+- B-279 (NEW): the skill + matrix are NOT research-grounded. Pipeline-lead may authorize `udm-researcher` invocation to gather industry standards (Cursor agent modes / Aider modes / continue.dev / Devin templates / GitHub Copilot agentic modes) + academic papers + empirical benchmarks. Skill would then be revised as v0.2 per `udm-agent-prompt-versioner` semver discipline (MINOR delta for directive additions).
+- B-277: `udm-gap-check` G7 sub-agent-inheritance-audit category not yet added (referenced as "to land at next round close-out").
+- B-278: Pitfall #9.o sub-class not yet formalized (1-event evidence base; needs 3-event recurrence per HANDOFF §8 convention).
+
+**Next-natural-action**: pipeline-lead reviews this intervention + chooses (per user-question response): (a) commit-as-is + authorize `udm-researcher` invocation (B-279); (b) hold commit + spawn `udm-researcher` first; (c) defer research-grounding indefinitely.
+
 **Next-natural-action**: pipeline-lead chooses B-272 option (A defer / C aggressive retention / E pivot focus); OR proceeds with D.3+D.4+D.5 standalone tasks NOW since they're 🟢 AUTHORIZED without B-272 resolution.

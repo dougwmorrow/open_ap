@@ -219,7 +219,18 @@ After both steps complete, parent agent emits:
 | `udm-progress-logger` | Invoked at Step 1.4 to update canonical trackers |
 | `udm-step-10-verifier` | Invoked at Step 2a as the in-flight verification layer (per B-261 closure) |
 | `udm-gap-check` | Step 2b broader-scope reflection; this cascade IS a wrapper that includes gap-check semantics; standalone udm-gap-check still invocable by user direction without invoking this cascade |
+| `udm-planning-session-startup` | Paired skill — invoked at PLANNING-SESSION start (this cascade is the POST-COMMIT analog at forward-motion timescale; planning-session-startup is the PRE-WORK analog at session-start timescale). When a planning session is active, this cascade inherits the active skill list per CLAUDE.md hard rule 13 sub-agent inheritance contract |
 | HANDOFF §8 producer self-check Steps 1-12 | Each step's directive applies; this skill is the orchestration layer |
+
+## Sub-agent skill inheritance (when planning session is active)
+
+When this cascade runs WITHIN an active planning session (parent agent earlier invoked `udm-planning-session-startup`), AND Step 1 of this cascade spawns a sub-agent via the Agent tool (e.g., for parallel build, gap-audit, research), the sub-agent prompt MUST include the planning-discipline skill inheritance section per `docs/migration/PLANNING_DISCIPLINE.md` §3 + CLAUDE.md hard rule 13.
+
+This ensures the sub-agent operates with the same skill list the parent activated. Without this, sub-agents fall back to skill-discovery from memory + intuition (the discoverability gap that motivated the planning-session-startup skill).
+
+**Anti-pattern**: spawning a sub-agent with terse prompt during an active planning session; skill discipline drops at the sub-agent boundary; sub-agent output deviates from parent's plan discipline. Caught post-cohort by `udm-gap-check` G7 sub-agent inheritance audit category (per `PLANNING_DISCIPLINE.md` §3.4) but better caught at spawn time.
+
+**When this DOESN'T apply**: tactical edits, status questions, mid-plan redirects, fix-only commits — these don't run within a planning-session-active context. The inheritance contract is null for non-planning work.
 
 ## Confidence calibration
 
