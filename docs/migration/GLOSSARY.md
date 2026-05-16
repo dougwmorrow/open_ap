@@ -109,7 +109,7 @@ Citing style: `D93` (no leading zero). When referencing for status: `D89 (🟢 L
 
 Active delivery risks (NOT edge cases — risks are about delivering the project; edge cases are about technical correctness in production).
 
-Range to date: **R1 through R32**.
+Range to date: **R1 through R33** (R33 = blindspot-ledger false-positive fatigue per D114 + Pitfall #9.o instance-6 follow-up 2026-05-16).
 
 Score: `Likelihood × Impact` on a 1-9 scale. Thresholds:
 - Score 6-9 → 🔴 Active mitigation required; review weekly
