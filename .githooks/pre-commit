@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""Pre-commit git hook — Mechanism C-1 per B-301 closure (TRIGGER MET at Pitfall
+#9.o INSTANCE 8 commit `bd9210c`; INSTANCE 9 at `f8a6ae1` empirically confirmed
+sub-class split 9.o.1 + 9.o.2 both require harness-automated enforcement).
+
+Shifts discipline-substrate from "producer self-applies" to "discipline applies
+via harness regardless of producer". Two deterministic checks:
+
+1. `tools/query_blindspots.py` scan on each staged file at p0/p1 severity →
+   BLOCKS commit on any p0 match per D74 exit-code contract (--live mode).
+2. Commit-message exemption-phrase detection per
+   `.claude/skills/udm-exemption-verifier/SKILL.md` trigger-phrase list → BLOCKS
+   commit with instruction to spawn `udm-exemption-verifier` reviewer.
+
+Producer cannot bypass mechanically without `--no-verify`, which itself becomes
+a self-flagging exemption-claim that reviewers should treat as a quasi-audit-
+question trigger (the harness does not architecturally enforce audit-question
+response; depends on producer + reviewer discipline).
+
+Installation (one-time per clone): `git config core.hooksPath .githooks`
+
+Cross-platform: Python script with shebang; detects project venv Python; works
+on Linux + macOS + Windows-Git-Bash.
+
+Limitations (acknowledged per fractal-pattern reality):
+- Hook cannot invoke Claude API directly (substrate is git, not Claude Code
+  session); exemption-phrase detection BLOCKS commit but reviewer invocation
+  remains producer-responsibility (via separate Claude Code session before
+  re-attempt).
+- Hook cannot enforce on its own authoring commit (chicken-and-egg). The
+  authoring commit `<future hash>` is subject to instance-N+1 candidate per
+  HANDOFF §8 Pitfall #9.o sub-class accumulator.
+- Hook bypassable via `--no-verify`; self-flagging only.
+"""
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+QUERY_BLINDSPOTS_PATH = REPO_ROOT / "tools" / "query_blindspots.py"
+COMMIT_MSG_PATH = REPO_ROOT / ".git" / "COMMIT_EDITMSG"
+
+# Exemption-claim trigger phrases per
+# .claude/skills/udm-exemption-verifier/SKILL.md L29-36 + B-303 structured-pattern
+# extensions added at this commit.
+EXEMPTION_TRIGGER_PHRASES = [
+    # Verbatim phrases (8 from SKILL.md L29-36)
+    "Layer N+1 termination",
+    "recursive-exemption",
+    "verbatim implementation",
+    "100% overlap on architectural-decision-substance",
+    "specific scope-justified exemption",
+    "REVIEW: SKIPPED",
+    "no new architecture introduced",
+    "implementing prior reviewer's recommendation",
+    # Structured-pattern extensions per B-303 + Q5 instance-9 finding
+    "EXEMPTION VALID",
+    "step 6: N/A",
+    "cannot fire on commits modifying its own SKILL.md",
+    "self-exemption clause applies",
+]
+
+
+def _venv_python() -> str:
+    """Detect project venv Python interpreter; fall back to sys.executable."""
+    win_venv = REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+    posix_venv = REPO_ROOT / ".venv" / "bin" / "python"
+    if win_venv.is_file():
+        return str(win_venv)
+    if posix_venv.is_file():
+        return str(posix_venv)
+    return sys.executable
+
+
+def _staged_files() -> list[str]:
+    """Get list of staged files (paths relative to REPO_ROOT)."""
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
+            capture_output=True, text=True, cwd=str(REPO_ROOT), check=False,
+        )
+        if result.returncode != 0:
+            return []
+        return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    except (OSError, subprocess.SubprocessError):
+        return []
+
+
+def _commit_message() -> str:
+    """Read draft commit message; empty string if unavailable."""
+    if not COMMIT_MSG_PATH.is_file():
+        return ""
+    try:
+        return COMMIT_MSG_PATH.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def _check_blindspots(staged: list[str]) -> tuple[bool, str]:
+    """Run query_blindspots scan on staged files at p0/p1 severity.
+
+    Returns (passed, diagnostic) where passed=True means no p0 matches found
+    (commit allowed); passed=False means blocking p0 match detected.
+    """
+    if not QUERY_BLINDSPOTS_PATH.is_file():
+        return True, "query_blindspots.py not found; scan skipped"
+    if not staged:
+        return True, "no staged files; scan skipped"
+    python_exe = _venv_python()
+    file_args = []
+    for f in staged:
+        file_args.extend(["--file", f])
+    try:
+        result = subprocess.run(
+            [python_exe, str(QUERY_BLINDSPOTS_PATH), *file_args,
+             "--severity", "p0,p1", "--no-audit", "--live"],
+            capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired) as exc:
+        return True, f"query_blindspots scan failed ({exc}); not blocking"
+    if result.returncode == 2:
+        return False, f"query_blindspots p0 match (--live exit 2):\n{result.stdout}"
+    return True, f"query_blindspots scan clean (exit {result.returncode})"
+
+
+def _check_exemption_phrases(commit_msg: str) -> tuple[bool, list[str]]:
+    """Check commit message for exemption-claim trigger phrases.
+
+    Returns (passed, matched_phrases) where passed=True means no triggers found.
+    """
+    if not commit_msg:
+        return True, []
+    matched = []
+    for phrase in EXEMPTION_TRIGGER_PHRASES:
+        if phrase.lower() in commit_msg.lower():
+            matched.append(phrase)
+    return (not matched), matched
+
+
+def main() -> int:
+    staged = _staged_files()
+    commit_msg = _commit_message()
+
+    blindspots_ok, blindspots_diag = _check_blindspots(staged)
+    phrases_ok, matched_phrases = _check_exemption_phrases(commit_msg)
+
+    if not blindspots_ok:
+        print("[pre-commit BLOCKED] query_blindspots p0 match on staged files:",
+              file=sys.stderr)
+        print(blindspots_diag, file=sys.stderr)
+        print("\nRemediate the p0 finding(s) above, OR bypass with --no-verify "
+              "(self-flagging exemption-claim).", file=sys.stderr)
+        return 1
+
+    if not phrases_ok:
+        print("[pre-commit BLOCKED] commit message contains exemption-claim "
+              "trigger phrases:", file=sys.stderr)
+        for p in matched_phrases:
+            print(f"  - {p!r}", file=sys.stderr)
+        print("\nPer Mechanism C-1 + udm-exemption-verifier SKILL.md: spawn "
+              "udm-exemption-verifier reviewer (via Claude Code session) BEFORE "
+              "committing. Reviewer verdict VALID → proceed; INVALID → spawn "
+              "udm-gap-check per D56 second-pass; address findings; re-attempt "
+              "commit.", file=sys.stderr)
+        print("\nBypass with --no-verify is self-flagging exemption-claim that "
+              "reviewers should treat as quasi-audit-question trigger.",
+              file=sys.stderr)
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

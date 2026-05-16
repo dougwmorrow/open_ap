@@ -45,8 +45,9 @@ def test_description_cites_b296_and_instance_7(skill_content: str):
 
 
 def test_trigger_phrases_enumerated(skill_content: str):
-    """Assertion 4: skill enumerates all 8 mandatory trigger phrases (per G1.2 instance-8 gap-check)."""
+    """Assertion 4: skill enumerates all 12 mandatory trigger phrases (8 original + 4 B-303 structured extensions)."""
     trigger_phrases = [
+        # Original 8 from SKILL.md L29-36
         "Layer N+1 termination",
         "recursive-exemption",
         "verbatim implementation",
@@ -55,10 +56,15 @@ def test_trigger_phrases_enumerated(skill_content: str):
         "REVIEW: SKIPPED",
         "no new architecture introduced",
         "implementing prior reviewer's recommendation",
+        # B-303 structured-pattern extensions per Q5 instance-9 finding
+        "EXEMPTION VALID",
+        "step 6: N/A",
+        "cannot fire on commits modifying its own SKILL.md",
+        "self-exemption clause applies",
     ]
     for phrase in trigger_phrases:
         assert phrase in skill_content, f"trigger phrase missing: {phrase}"
-    assert len(trigger_phrases) == 8, "expected exactly 8 trigger phrases per SKILL.md L29-36"
+    assert len(trigger_phrases) == 12, "expected exactly 12 trigger phrases per SKILL.md + B-303 extension"
 
 
 def test_5_step_procedure_present(skill_content: str):

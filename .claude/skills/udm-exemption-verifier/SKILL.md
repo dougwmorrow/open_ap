@@ -34,6 +34,13 @@ Per-commit independent verifier of hard-rule-14 cascade exemption claims. Trigge
    - "REVIEW: SKIPPED"
    - "no new architecture introduced"
    - "implementing prior reviewer's recommendation"
+   - **(B-303 structured-pattern extensions; added 2026-05-16 per Q5 instance-9 finding + B-303 closure)**:
+   - "EXEMPTION VALID"
+   - "step 6: N/A"
+   - "cannot fire on commits modifying its own SKILL.md"
+   - "self-exemption clause applies"
+
+   The B-303 extensions catch structured exemption-claim patterns (e.g., numbered "Pre-commit verification per anti-rationalization clause" sections concluding "EXEMPTION VALID") that the original verbatim-phrase list missed. These patterns are mechanically detected by `.githooks/pre-commit` (Mechanism C-1; per B-301 closure).
 2. **Post-commit audit-question**: user asks "was a gap analysis review or test run on the recent enhancement?" → if parent's answer would be NO or PARTIAL based on exemption-claim, invoke this skill to formally classify the claim as VALID or INVALID
 3. **Cascade Step 2.5 (per udm-post-edit-verification SKILL.md)**: between Step 2.1 self-application and Step 3 REVIEW, when commit-message draft contains exemption-claim phrasing
 

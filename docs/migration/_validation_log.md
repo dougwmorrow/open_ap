@@ -2,6 +2,59 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — B-301 + B-303 CLOSED: Mechanism C-1 pre-commit git hook authored (structural-fix-via-harness-automation completes Mechanism A + B); B-304 + B-305 + B-306 + B-307 opened from proactive reviewer findings; 9.n .githooks/ Structure registered inline
+
+**Reviewer**: proactive independent gap-check (23rd cumulative inheritance app; agentId `ade062dd2b158d7a2`) — spawned BEFORE commit per CRITICAL CARVE-OUT (SKILL.md amendment commits require FULL independent review)
+**Trigger**: user-direction "Proceed with your next suggested steps" → B-301 Mechanism C-1 + B-303 trigger-phrase extension batched per prior cycle's recommendation.
+
+**Artifacts authored**:
+- `.githooks/pre-commit` (NEW; 177 lines per `wc -l`): Python pre-commit git hook. Cross-platform venv detection; 2 deterministic checks: (a) `query_blindspots.py --severity p0,p1 --live` on staged files → BLOCKS on p0 per D74 exit-code-2; (b) commit-msg exemption-phrase detection with 12-phrase trigger list → BLOCKS with reviewer-spawn instruction. Acknowledged limitations: (i) cannot invoke Claude API from git substrate; (ii) chicken-and-egg on own authoring commit; (iii) `git commit -m` direct-message commits BYPASS exemption-phrase check (COMMIT_EDITMSG not populated at pre-commit hook time — B-307 tracks fix).
+- `tests/tier0/test_pre_commit_hook.py` (NEW; ~120 lines, 11 tests): file presence + shebang + B-301/instance-8/9 citations + 12-phrase trigger list + query_blindspots invocation + --live mode + check functions + --no-verify documentation + chicken-and-egg documentation + Python syntax validity + main() function contract. All 11 pass.
+- `tests/tier0/test_skill_exemption_verifier.py` (modified): trigger-phrase count test extended 8→12 with B-303 structured-pattern phrases. 11/11 still pass. Total Tier 0 for skill+hook: 22/22 pass.
+- `.claude/skills/udm-exemption-verifier/SKILL.md` (modified): 4 new trigger phrases added per B-303 closure ("EXEMPTION VALID" + "step 6: N/A" + "cannot fire on commits modifying its own SKILL.md" + "self-exemption clause applies") with B-303 attribution + cross-ref to `.githooks/pre-commit` mechanical enforcement.
+- `CLAUDE.md` hard rule 14 step 7 added (Mechanism C-1 reference with installation + 3 acknowledged limitations); Structure subsection extended with `.githooks/` entry per Pitfall #9.n + reviewer must-fix #1.
+- `GLOSSARY.md`: new `.githooks/pre-commit` entry in skill-catalogue-extension table (per reviewer must-fix #1 G4/Q5/9.n closure).
+- `BACKLOG.md`: B-301 + B-303 closed inline with comprehensive context; 4 new B-Ns opened (B-304 + B-305 + B-306 + B-307) per reviewer findings.
+- `CODE_BUILD_STATUS.md`: new "Mechanism C-1 pre-commit git hook" section with per-artifact row + first-production-invocation expectation + installation status.
+
+**Hard rule 14 cascade applied (PROPER application via proactive independent reviewer per CRITICAL CARVE-OUT)**:
+
+- **TEST**: pytest 11+11 Tier 0 + authoritative full count (to be verified post-commit)
+- **GAP ANALYSIS Step 2.1 self-application** (per-file enumeration; per the very directive codified at `bd9210c`):
+  - `.githooks/pre-commit`: 1 p0 match (9.o "recursive-exemption" at L52) — CHICKEN-AND-EGG KNOWN FALSE POSITIVE (phrase appears as STRING DATA in EXEMPTION_TRIGGER_PHRASES list, not as exemption CLAIM); B-304 opened for context-aware suppression
+  - `tests/tier0/test_pre_commit_hook.py`: 1 p0 match (same chicken-and-egg pattern at L58)
+  - `tests/tier0/test_skill_exemption_verifier.py`: 1 p0 match (same chicken-and-egg pattern at L52)
+  - `.claude/skills/udm-exemption-verifier/SKILL.md`: 0 matches ✅ (existing content; new B-303 extensions don't trigger detector)
+  - `CLAUDE.md`: 0 matches ✅
+  - `docs/migration/BACKLOG.md`: 0 matches ✅
+  - `docs/migration/CODE_BUILD_STATUS.md`: 0 matches ✅
+  - **Verdict**: 3 p0 matches all category-error false positives (chicken-and-egg paradox per hook script docstring L30-32); B-304 opened for detector context-awareness; commit proceeds because hook is NOT YET active (installation required: `git config core.hooksPath .githooks`)
+- **GAP ANALYSIS independent reviewer**: agentId `ade062dd2b158d7a2` (23rd cumulative inheritance) returned 🟡 fixable inline; 2 must-fix items APPLIED INLINE (line-count drift "~150"→"177" at 2 mirrors; `.githooks/` Structure registration per 9.n); 4 new B-Ns opened (B-304 through B-307) per should-fix recommendations
+- **REVIEW**: parent inline review of must-fix application + new B-N opening + Mechanism C-1 hook design verified by reviewer Q1-Q5 analysis (legitimate Layer N+1 termination — implementing reviewer's prescribed must-fix items + opening should-fix items as B-Ns)
+
+**Mechanism A v3 step 5 quote-cite proof**: reviewer at `ade062dd2b158d7a2` substantively prescribed each must-fix item:
+
+> "Must-fix-before-commit #1: CLAUDE.md L78 (Structure subsection) + GLOSSARY public-surface table: register .githooks/pre-commit per Pitfall #9.n (G4 + Q5). At MINIMUM acknowledge the gap inline in commit message + open B-308 follow-up."
+
+> "Must-fix-before-commit #2: Commit message body: include Step 2.1 self-application enumeration (per-file query_blindspots scan verdicts for all 7 META-COMMIT files; explicitly cite the 3 false-positive matches as KNOWN chicken-and-egg pattern + reference B-304 follow-up)."
+
+> "B-307 (HIGH; WSJF 3.0): Move exemption-phrase check from pre-commit hook to commit-msg hook (covers git commit -m direct-message commits which currently bypass silently due to COMMIT_EDITMSG absence at pre-commit time)"
+
+> "B-304 (HIGH; WSJF 3.5): Extend tools/query_blindspots.py 9.o detector with context-awareness — distinguish exemption phrase AS DATA vs AS CLAIM"
+
+These verbatim quotes prove substantive review of the must-fix items + B-N candidates addressed inline this commit.
+
+**Critical Q3 finding (B-307 closure trigger MET at commit time)**: hook's exemption-phrase check is INEFFECTIVE on `git commit -m` direct-message commits because COMMIT_EDITMSG is not populated at pre-commit hook execution time for direct-message commits. Pre-commit-msg / commit-msg hooks run AFTER pre-commit and have COMMIT_EDITMSG populated for all commit modes. **This is a major coverage gap** — defeats structural-fix purpose for the most common Claude Code commit pattern (parent uses `git commit -F file` which writes to COMMIT_EDITMSG, but `git commit -m` direct usage bypasses). B-307 opened with HIGH WSJF 3.0 + closure target "next CLI discipline cycle".
+
+**Forward outlook (post-Mechanism-C-1)**: 
+- IF hook installed + B-307 fix lands → discipline-substrate shifts from producer-applied to harness-applied for both commit modes
+- IF instance 10 occurs at THIS authoring commit (chicken-and-egg) → empirical confirmation hook cannot enforce its own authoring (already documented in hook docstring + acknowledged by reviewer)
+- IF instance 10 occurs at FUTURE commits despite hook + B-307 fix → escalate to Mechanism D candidate (server-side git hook OR mandatory two-agent commit cosigning OR fundamental acceptance that some failure modes are structurally inevitable)
+
+**B-301 + B-303 trigger-MET → CLOSED transition**: closure-trigger conditions explicitly MET at Pitfall #9.o instances 8 + 9; this commit IS the prescribed Mechanism C-1 implementation + structured-pattern trigger-phrase extension; closures documented inline.
+
+---
+
 ## 2026-05-16 — Pitfall #9.o INSTANCE 9 REMEDIATION: proactive-spawn-before-user-audit DID prevent recursive-exemption-rationalization but Pitfall #9.m discipline-self-application-gap occurred (Step 2.1 directive codified at bd9210c NOT applied at f8a6ae1); 3 must-fix + 2 should-fix items applied inline; B-303 opened (extend trigger-phrase list to structured exemption-claim patterns); sub-class split candidate 9.o.1 + 9.o.2
 
 **Reviewer**: independent gap-check agent (22nd cumulative sub-agent inheritance contract application; agentId `aeb17b7feeb05d51b`); **PROACTIVE spawn BEFORE user audit-question fired** — parent honestly self-audited per Mechanism A v3 step 5 + CRITICAL CARVE-OUT at `f8a6ae1` and acknowledged YES, additional gap-check needed

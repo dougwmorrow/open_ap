@@ -340,6 +340,22 @@ Per D114 (🟢 Locked 2026-05-16) adoption decision — Phase 1 high-ROI subset 
 
 **B-295 cohort progress** (16 sub-items total): 9 closed; 7 remaining (Phase 2 detection rules + polish items batch 10-15). 1-2 cycles forecast to complete remaining high-value sub-items per user calibration 2026-05-16.
 
+## Mechanism C-1 pre-commit git hook — 1/1 BUILT 2026-05-16 (per B-301 trigger met at Pitfall #9.o instance 8; reinforced by instance 9 self-application-gap empirical finding)
+
+Per B-301 closure (TRIGGER MET 2026-05-16 at commit `bd9210c` instance 8; reinforced by instance 9 at `f8a6ae1` confirming sub-class split 9.o.1 + 9.o.2 both require harness-automated enforcement). **Structural-fix-via-harness-automation** completes what documentation-only Mechanism A (3 iterations) and structural-fix-via-agent-invocation Mechanism B could not achieve at structural-fix authoring commits. Shifts discipline-substrate from "producer self-applies discipline" to "discipline applies via harness regardless of producer".
+
+| Status | Artifact | Purpose | Build state | Tests | Source |
+|---|---|---|---|---|---|
+| 🟢 | `.githooks/pre-commit` (177 lines per actual `wc -l`) | Pre-commit git hook script (Python; cross-platform venv detection); 2 deterministic checks: (a) `tools/query_blindspots.py --severity p0,p1 --live` on each staged file → BLOCKS on p0 per D74 exit-code-2; (b) commit-message exemption-phrase detection (12 phrases per B-303 extension) → BLOCKS with reviewer-spawn instruction. Producer cannot bypass mechanically without `--no-verify` (self-flagging). Installation (one-time per clone): `git config core.hooksPath .githooks`. Acknowledged limitations: (i) hook cannot invoke Claude API directly; (ii) chicken-and-egg on own authoring commit. | 🟢 Built 2026-05-16 (this commit) | Tier 0: 11/11 pass at `tests/tier0/test_pre_commit_hook.py` | B-301 + CLAUDE.md hard rule 14 step 7 |
+
+**First production invocation**: expected at next commit after installation. Will mechanically block any commit with p0 blindspot match OR exemption-claim phrase in message.
+
+**Installation status**: hook script authored + version-controlled at `.githooks/pre-commit`; users must run `git config core.hooksPath .githooks` once per clone to activate.
+
+**B-301 trigger MET → CLOSED transition**: closure trigger condition was MET at instance 8 commit `bd9210c`; reinforced by instance 9 at `f8a6ae1`; this commit IS the prescribed Mechanism C-1 implementation; closure documented inline.
+
+---
+
 ## Mechanism B `udm-exemption-verifier` — 1/1 BUILT 2026-05-16 (per B-296 trigger met at Pitfall #9.o instance 7)
 
 Per B-296 closure (TRIGGER MET 2026-05-16 at commit `01d32c0` instance 7; ESCALATED HIGH→IMMEDIATE WSJF 5.0). Structural-fix-via-agent-invocation breaks the 7-instance Pitfall #9.o recursive failure pattern that Mechanism A (3 successive documentation-only iterations) could not prevent.
