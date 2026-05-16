@@ -41,6 +41,14 @@ The three trackers are intentionally narrow — knowing which one to use matters
 
 **Why a separate file**: B-numbers are scarce signal — every B-item is real backlog the project owes. Polishing items (especially the trail of D107 / D106 supersession crumbs across N docs) would flood the BACKLOG WSJF view if numbered as B-items. Validation log entries are append-only history, not a live worklist. POLISH_QUEUE is the live worklist for cosmetic carryover.
 
+## P-N entries opened during 2026-05-15 → 2026-05-16 markdown refactor session
+
+- **P-21** (🟡 Open; LOW): **GLOSSARY entry for "hard rule N" code class** — Surfaced by udm-gap-check on D.2 INDEX.md (Auditor #1 G5). 14 hard rules currently; agents grepping GLOSSARY for "hard rule 13" or "hard rule 14" get zero hits. Cosmetic improvement; doesn't change discipline. Closure target: next round close-out via udm-cascade-audit-evolver. Source: D.2 + post-hoc gap-check 2026-05-15.
+
+- **P-22** (🟡 Open; LOW): **CLAUDE.md Read order at 9 items exceeds prior 8-item canonical cap** — Surfaced by udm-gap-check on D.2 (Auditor #2 G6). Per CodeCompass empirical: longer lists at end-of-prompt have higher cross-ref-skipping risk. Proposed fix: consider moving item 8 (CLAUDE_GOTCHAS.md) to "see INDEX.md item 0 for routing" reference. Cosmetic ergonomic. Closure target: opportunistic at next CLAUDE.md edit. Source: D.2 gap-check 2026-05-15.
+
+- **P-23** (🟡 Open; LOW): **D62 amendment numerical drift acknowledgment without formal B-N tracker** — Surfaced by D.2 gap-check + B-285 post-hoc reviewer pass. D62 §Affects "8 skills → 25+; 3 agents → 5-7" drift noted but no tracker. Cosmetic count-update at next round close-out via udm-cascade-audit-evolver count-refresh. Source: 2 gap-check findings 2026-05-15/16.
+
 ---
 
 ## Status legend

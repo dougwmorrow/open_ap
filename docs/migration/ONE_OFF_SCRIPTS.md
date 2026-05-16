@@ -4,7 +4,22 @@
 
 **Purpose**: tracker for scripts/tools that run ONCE (per-server, per-migration, per-spike, per-cleanup, per-CSV-import), not on a schedule. Separate from scheduled tools registry per phase1/02_configuration.md § 5.1 frozen-11 Automic inventory.
 
-**Last reviewed**: 2026-05-12 (initial authoring at build-mode pivot)
+**Last reviewed**: 2026-05-16 (2-day markdown refactor session 2026-05-15→2026-05-16; ~5 one-shot Python scripts authored + deleted after one-shot execution per ONE_OFF_SCRIPTS.md convention; entries appended below for audit trail of "what scripts were run once on this codebase during the markdown refactor work"; per CLAUDE.md hard rule 9 udm-progress-logger per-build-type checklist + B-280 verbatim-extraction-safety discipline)
+
+## Markdown refactor session one-shots (2026-05-15 → 2026-05-16)
+
+All scripts below were authored ad-hoc, executed once, and DELETED post-run per ONE_OFF_SCRIPTS.md convention. Retained here for audit trail; not in git history (created + deleted within same commit context).
+
+- **`_d5_trim.py`** (D.5 CLAUDE.md trim execution; commit `7e2c606` 2026-05-15) — Python one-shot script implementing Approach A conservative trim: bottom-to-top section replacement of CLAUDE.md L538-600 (Security Model) + L410-497 (Gotchas) + L292-405 (Observability) + L214-291 (Architecture) + L151-213 (Data Flow); pre-trim line count verification (720) + per-section anchor verification; replacement content embedded as Python multiline strings. Idempotent via anchor-check.
+
+- **`_sp_import.py`** (Superpowers SKILL.md import; commit `bd7e6e5` 2026-05-15) — Python one-shot script implementing partial-adoption Option B per B-279 closure: curled 3 SKILL.md files from `obra/superpowers` v5.1.0 GitHub raw (per B-280 verbatim-extraction-safety + WebFetch summarization avoidance) into `.tmp_sp/` project-local; renamed YAML `name:` field per `superpowers-*` namespace convention; injected provenance section; saved to `.claude/skills/superpowers-systematic-debugging/SKILL.md` + `superpowers-verification-before-completion/SKILL.md` + `superpowers-tdd/SKILL.md`. Idempotent via pre-check.
+
+- **Retroactive archive extraction script** (D.5 Option B belt-and-suspenders; commit `395d22d` 2026-05-15) — Python one-shot embedded inline: `git show c189432:CLAUDE.md` → in-memory pre-trim content → per-section slice + 20-line provenance header → save 4 files to `docs/migration/_archive/CLAUDE_data_flow_archive_2026-05-15.md` + `CLAUDE_architecture_decisions_archive_2026-05-15.md` + `CLAUDE_observability_archive_2026-05-15.md` + `CLAUDE_security_model_archive_2026-05-15.md`. Per B-280: used `git show` for byte-exact extraction.
+
+- **D.4 SKILL.md cascade Stage 0 insertion — Run 1** (long-form pattern; commit `a03a35c` 2026-05-15) — Python one-shot for 10 SKILL.md files matching `- **Stage 1 — Orientation** (mandatory, 4 reads):` long-form pattern; inserted Stage 0 line (recommended-not-mandatory INDEX.md routing manifest per D62 amendment + D.2 INDEX.md authoring) BEFORE Stage 1 line. Idempotent via pre-check for "Stage 0".
+
+- **D.4 SKILL.md cascade Stage 0 insertion — Run 2** (short-form pattern; commit `a03a35c` 2026-05-15) — Python one-shot for the OTHER 10 SKILL.md files matching `- **Stage 1**:` short-form pattern. Flexible regex `r'(- \*\*Stage 1\*\*\s*(?:\(mandatory|:))'`. Combined Run 1+Run 2 = 20 SKILL.md files updated; verified via `grep -l "Stage 0" .claude/skills/udm-*/SKILL.md | wc -l = 20`.
+
 
 ---
 
