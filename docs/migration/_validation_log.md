@@ -2,6 +2,35 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — D114 🟢 Locked: AppLaunchpad blindspot-ledger high-ROI subset adoption (B-295 sub-items 1-6 CLOSED via tracker convention compliance)
+
+**Reviewer**: parent agent (Cycle 1 of forecast 3-cycle path per user calibration question 2026-05-16) + pytest 2354/58/0 unchanged (doc-only edits)
+**Trigger**: user-direction "Proceed with recommended next steps" → executed B-295 sub-items 1-6: GLOSSARY public-surface + INDEX route + CODE_BUILD_STATUS rows + HANDOFF §14 narrative + ONE_OFF_SCRIPTS classification + 03_DECISIONS new D-N lock.
+
+**Artifacts modified**:
+- `docs/migration/GLOSSARY.md`: 10 surface rows appended to `main`/`cli_main` tools table (query_blindspots `main` + `cli_main` + `query_blindspots` + `Match` + `QueryReport` + `CHECKS` + `EVENT_TYPE` + `EXIT_*` + `SEVERITY_RANK` + `LEDGER_PATH`)
+- `docs/migration/INDEX.md`: entry added under "Validation trail + Sidecars + Subdirectories" section L127+ for `blindspots/` subdirectory with read-when guidance + companion cross-refs
+- `docs/migration/CODE_BUILD_STATUS.md`: new section "AppLaunchpad blindspot-ledger adoption — 4/4 BUILT" with per-artifact rows (query_blindspots.py + ledger.yml + protocol.md + 3 hooks combined) + empirical first-production-catch citation
+- `docs/migration/HANDOFF.md`: §14 narrative prepended with D114 lock event + B-295 progress (8 of 16 closed)
+- `docs/migration/ONE_OFF_SCRIPTS.md`: classification entry under "Ad-hoc operator tools (Manual × Recurring; operator-driven; no fixed schedule)" with full rationale for novel hook-driven execution category (NOT Automic-scheduled; NOT one-off; new UDM category as of D114)
+- `docs/migration/03_DECISIONS.md`: NEW D114 locked at end of file with 7 specifically-locked sub-decisions (location / rule-implementation tier / hook scope / classification / substrate / audit row / composition) + 6 trade-offs accepted + reversibility + R33 candidate risk + cross-references
+- `docs/migration/BACKLOG.md`: B-295 leading text annotation updated "2 of 16" → "8 of 16 sub-items CLOSED"; sub-items 1-6 marked ⚫ inline with closure context
+
+**Hard rule 14 cascade applied (THIS commit; valid Layer N+1 termination)**:
+- **TEST**: pytest 2354/58/0 unchanged (doc-only edits; no code modified; full pytest baseline preserved) ✅
+- **GAP ANALYSIS**: parent inline G1-G6 reflection (scope: tracker convention compliance for ALREADY-locked artifact per D114; no new public surface; no architecture change; no spec doc edit). Per anti-rationalization clause 4-step pre-commit checklist: (1) FILES that Layer N (`f699250` Agent A + Agent B paired reviewers) covered = META-COMMIT scope including the architectural substance (ledger.yml schema / CLI / hooks); (2) FILES modified by THIS commit = 7 tracker docs (no architectural artifacts); (3) overlap on architectural-decision-substance = 100% (no new architecture introduced; D114 simply formalizes what Agent A+B already approved as SOUND); (4) recursion-depth = 2 + explicit Layer N+1 termination = VALID exemption.
+- **REVIEW**: SKIPPED via specific scope-justified exemption — D114 body documents verbatim what was already built and approved by Agent A `udm-design-reviewer` at commit `f699250` (18th cumulative inheritance application; verdict 🟡 SOUND WITH IMPROVEMENTS); no new architectural decision introduced; D-N lock is the formal-attestation step, not a new design step.
+
+**Per D62 + D113 + D89-D91 + D95-D99 precedent**: process-infra D-numbers lock same-session as the discipline they formalize (D62 / D113 both locked same-session as POLISH_QUEUE.md / CCL Stage 0 amendment). D111's 🟡-first operational-infra rule explicitly does NOT apply (D111 body scope = paths/schedules/env-keys/credentials/topology; D114 is process-discipline = different class).
+
+**B-295 cohort progress**: 8 of 16 sub-items CLOSED (sub-items 8 + 9 at `d645cee`; sub-items 1-6 this commit). 8 remaining: sub-item 7 (Phase 2 detection rules; LOW priority; ~2-3 sessions); sub-items 10-15 (polish: --actor + --dry-run + ledger non-empty assertion + status field + protocol.md table accuracy flag + cross-platform hooks; MEDIUM priority; ~30 min batch); sub-item 16 (audit + flip 9 stale-leading-badge BACKLOG entries; MEDIUM priority; ~30 min).
+
+**Per Pitfall #9.j**: sub-items 1-6 leading status flipped to ⚫ inline; B-295 itself remains 🟡 Open with "8 of 16 sub-items CLOSED" running tally.
+
+**Forward forecast** (per user calibration question 2026-05-16): 2 more cycles to close remaining 7 high-value sub-items (sub-items 10-15 + 16; deferring sub-item 7 Phase 2 work indefinitely until 4-rule Phase 1 subset proves durable value over ≥1 week operator use).
+
+---
+
 ## 2026-05-16 — B-295 sub-items 8 + 9 CLOSED: check_9j hyphenated B-N + strikethrough-skip; check_9o context-aware suppression (10→1 match reduction on BACKLOG.md)
 
 **Reviewer**: parent agent (implementing pre-existing design-reviewer Q2 recommendations from commit `f699250` paired-reviewer pass) + 34-test pytest validation (Tier 0 + Tier 1)

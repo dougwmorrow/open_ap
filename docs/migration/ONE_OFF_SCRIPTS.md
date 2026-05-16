@@ -76,6 +76,17 @@ Scheduled / recurring tools live in `phase1/02_configuration.md` § 5.1 + Round 
 
 Tools that operators invoke as needed when conditions warrant (drift detection, reconciliation, investigation). Distinct from one-time scripts (run once total) AND from scheduled tools (recurring Automic jobs). Classification routing per `.claude/skills/udm-execution-classifier/SKILL.md`.
 
+**`tools/query_blindspots.py`** (added 2026-05-16 per AppLaunchpad adoption D114 lock):
+
+- **Classification**: Manual × Recurring + Automated-via-Claude-Code-hook (NOT Automic-scheduled)
+- **Trigger 1 (manual)**: operator runs `python tools/query_blindspots.py --file <path>` or `--commit <hash>` or `--since-main` for pre-commit / post-build / cascade-step-2 scanning. Filters by `--severity` / `--tag` / `--class` / `--agent`. `--live` exits 2 on p0 match (pre-commit blocking); `--dry-run` default per D75 (warn only).
+- **Trigger 2 (automated)**: `.claude/hooks/auto-verify-step-10.py` PostToolUse fires on Edit/Write to source files (10 source dirs: `tools/ data_load/ cdc/ scd2/ orchestration/ schema/ extract/ observability/ utils/ migrations/`); invokes the CLI with `--file <relative_path> --no-audit`; warns to stderr only (exit 0; no blocking).
+- **Why not in `phase1/02_configuration.md` §5.1 Automic frozen-N inventory**: this tool is NOT Automic-scheduled; no fixed `*/N` schedule and no daemon/batch-submission home. The hook-driven invocation pattern is novel to UDM (introduced 2026-05-16 by AppLaunchpad adoption D114) and doesn't fit either canonical execution category cleanly. Tracked here under ad-hoc operator tools as the closest fit; D114 body documents the full classification rationale + future-evolution path.
+- **Operational discipline**: per `docs/migration/blindspots/protocol.md`, query MUST run at (1) pre-commit (mandatory; `--live` mode blocks p0); (2) hard rule 14 cascade Step 2 (first check before broader gap-check); (3) round close-out cascade; (4) Pattern F audit Trigger H candidate.
+- **Audit row**: writes `CLI_QUERY_BLINDSPOTS` event to `_session_logs/cli_query_blindspots_<date>.log` (DB-less fallback per D114 dev-workstation scope; future Phase 2 work may add DB-side audit-row when `General.ops.PipelineEventLog` available).
+- **Substrate**: dev-workstation only (Windows 11). Per D103 security model, Claude Code is dev-workstation only; not on test/prod RHEL servers. Mac/Linux dev workstations have known limitation per B-295 sub-item 15 (cross-platform hook documentation deferred).
+- **Empirical first production catch** (validates value-proposition): on commit `f699250` smoke test, surfaced 10 matches on BACKLOG.md including B-293 backfill gap (narrative trackers claimed open+closed but BACKLOG missed the entry — Pitfall #9.k + #9.m drift). After B-295 sub-items 8 + 9 fixes at commit `d645cee` (regex tightening + context-aware suppression), signal-to-noise: 10 → 1 (90% false-positive reduction; remaining 1 = TRUE positive on B144 stale-leading-badge).
+
 | Tool | Purpose | Cadence trigger | Typical frequency |
 |---|---|---|---|
 | `cdc/reconciliation/reconcile_table.py` | Full column-by-column reconciliation per P3-4 | Operator-detected hash collision OR weekly reconciliation gap | Weekly to monthly per table |

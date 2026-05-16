@@ -325,6 +325,23 @@ Cross-section view of which Round 4 operator tools (`phase1/04_tools.md` § 3.1-
 
 ---
 
+## AppLaunchpad blindspot-ledger adoption — 4/4 BUILT (high-ROI subset per D114; commits `f699250` + `d645cee` + this commit)
+
+Per D114 (🟢 Locked 2026-05-16) adoption decision — Phase 1 high-ROI subset of AppLaunchpad agentic-software-factory pattern. Discipline-debt mitigation via executable blindspot-ledger encoding of HANDOFF §8 Pitfall #9 sub-classes (9.a-9.o). Phase 2 work (extend 11 remaining detection rules) deferred per B-295 sub-item 7.
+
+| Status | Artifact | Purpose | Build state | Tests | Source |
+|---|---|---|---|---|---|
+| 🟢 | `tools/query_blindspots.py` (513 lines) | CLI scanner; 4 of 15 detection rules implemented Phase 1; pure stdlib + optional pyyaml; D74/D75/D76 contract; Windows-safe stdout encoding | 🟢 Built `f699250` (initial); refined `d645cee` (regex tightening + context-aware suppression per B-295 sub-items 8+9) | Tier 0: 9 pass; Tier 1: 25 pass (18 initial + 7 added at `d645cee`); total 34 pass | D114 + B-294 + B-295 |
+| 🟢 | `docs/migration/blindspots/ledger.yml` (379 lines) | YAML ledger — 15 entries for Pitfall #9.a-9.o; queryable form of HANDOFF §8 prose; schema: id/class/severity/agents/tags/symptom/detection_rule/remediation/evidence_base/handoff_anchor | 🟢 Built `f699250` | N/A (validated via query_blindspots tests + smoke test) | D114 + AppLaunchpad §12.3 |
+| 🟢 | `docs/migration/blindspots/protocol.md` (220 lines) | Query protocol — when to query (mandatory pre-commit / hard rule 14 cascade Step 2 / round close-out / Pattern F audit), how to query (CLI usage), how to add entries (3-event threshold), severity tiers, relationship to other discipline mechanisms | 🟢 Built `f699250` | N/A (doc) | D114 |
+| 🟢 | `.claude/hooks/{protect-primary-docs.py + auto-verify-step-10.py + session-start-logger.py}` (~213 lines combined) | 3 hook handlers — PreToolUse warn-only on 6 protected primary docs / PostToolUse auto-invoke query_blindspots on source-file edits / SessionStart optional log to _session_logs/. Conservative scope per user D-answer 2026-05-16. All exit 0 (warn-only; no blocking). | 🟢 Built `f699250` (initial); `protect-primary-docs.py` Path-based REPO_ROOT fix + `auto-verify-step-10.py` relative-path fix landed `f699250` after Agent A design-reviewer caught 2 must-fix bugs | N/A (validated via smoke test in cascade) | D114 + AppLaunchpad §12.1 |
+
+**Empirical first production catch** (validates value-proposition): on commit `f699250` smoke test, query_blindspots surfaced 10 matches on BACKLOG.md including B-293 backfill gap (narrative trackers claimed open+closed but BACKLOG missed the entry — Pitfall #9.k + #9.m drift caught by the tool's own first run). After B-295 sub-items 8 + 9 fixes at commit `d645cee` (regex tightening + context-aware suppression), signal-to-noise: 10 → 1 (90% false-positive reduction; remaining 1 = TRUE positive on B144 stale-leading-badge tracked under B-295 sub-item 16).
+
+**B-295 cohort progress** (16 sub-items total): 8 closed; 8 remaining (Phase 2 detection rules + polish items + stale-badge cleanup). 2-3 cycles forecast to complete remaining sub-items per user calibration 2026-05-16.
+
+---
+
 ## Build queue — next recommended targets
 
 Sorted by unblocked-and-small-first:

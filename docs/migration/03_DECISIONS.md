@@ -3279,6 +3279,70 @@ Each plan covers canonical structure: Purpose + Why-this-phase-exists + For-engi
 
 ---
 
+## D114 — AppLaunchpad blindspot-ledger high-ROI subset adoption (🟢 Locked 2026-05-16)
+
+**Status**: 🟢 Locked 2026-05-16
+
+**Pillars served (per D61)**: operationally-stable (catches discipline-drift in-flight rather than post-hoc) + idempotent (executable + queryable discipline encoding) + auditable (every cascade event logged + ledger-validated)
+
+**Driver**: discipline-debt-accumulation pattern surfaced 5x in 2026-05-15→2026-05-16 session (commits `521b68c` / `3eef410` / `aee329c` / `a03a35c` / `4112e92` — see HANDOFF §8 Pitfall #9.o for full evidence base). Prose-only encoding of Pitfall #9 sub-classes in HANDOFF §8 required producer SELF-CHECK at the right moment; the 5-event empirical base proved producer self-check is necessary-but-insufficient. Catch-time lag = 1-4 days (post-hoc gap-check). User-direction "let's create an agentic system that triggers these events rather than relying on skills. Research how to use langchain or related python libraries" → research grounding via `_research/agentic-orchestration-architecture-2026-05-16.md` (35 citations) → user-provided AppLaunchpad source spec at `agentic-architecture.md` → gap analysis at `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` (18-section REUSE/ADAPT/SKIP/DECISION-NEEDED matrix) → user decisions D1-D6 (high-ROI subset only; no orchestrator / no substrate / no Slack).
+
+**Decision**: Adopt the high-ROI subset of AppLaunchpad's agentic-software-factory pattern, scoped to (a) blindspot ledger YAML encoding + protocol + CLI scanner per AppLaunchpad §12.3, and (b) conservative Claude Code hooks per §12.1. Defer full AppLaunchpad replica (orchestrator + event store + ingester + Slack + cockpit + substrate per AppLaunchpad §§ 5-13) unless and until the high-ROI subset proves durable value over ≥1 week of operator use.
+
+**Specifically locked**:
+
+1. **Blindspot ledger location**: `docs/migration/blindspots/{ledger.yml, protocol.md}` (per user D-answer choice "docs/migration/blindspots/ (Recommended)" 2026-05-16). REJECTED alternatives: AppLaunchpad source-spec convention `playbooks/blindspots/` (would split discipline-content from `docs/migration/` canonical tree); `.claude/blindspots/` (would obscure from human readers browsing docs).
+
+2. **Detection-rule implementation tier**: 4 of 15 rules implemented Phase 1 (`check_9j_b_item_status_render` + `check_9o_recursive_exemption` + `check_9n_convention_registration` + `check_9h_off_by_n_line_citation`). 11 remaining rules deferred to Phase 2 per B-295 sub-item 7 (require schema parsing OR multi-doc cross-reference infrastructure beyond pure-stdlib Phase 1 scope). Transparency-via-skipped-checks: CLI reports skipped entries explicitly per query invocation so producers know exactly which rules are not yet enforced.
+
+3. **Hook scope**: conservative (per user D-answer choice "Conservative (Recommended)" 2026-05-16). `PreToolUse` warn-only on 6 protected primary docs (`03_DECISIONS.md` / `NORTH_STAR.md` / `02_PHASES.md` / `CHECKS_AND_BALANCES.md` / `HANDOFF.md` / `CLAUDE.md`); `PostToolUse` auto-invoke `query_blindspots --file <relative_path>` on Edit/Write to source files only (10 source dirs: `tools/ data_load/ cdc/ scd2/ orchestration/ schema/ extract/ observability/ utils/ migrations/`; skips test files + docs + `.claude/`); `SessionStart` optional log to `_session_logs/` if directory exists. ALL hooks exit 0 (no blocking; warn-only per first-deployment safety). REJECTED alternatives: Aggressive (would fire on every Edit/Write to docs/migration/ adding noise to normal doc editing); Opt-in only (would defeat the discipline by making mechanism manual-trigger).
+
+4. **CLI execution classification**: Manual × Recurring + Automated-via-Claude-Code-hook (NEW category; not in existing canonical `ONE_OFF_SCRIPTS.md` / `phase1/02_configuration.md §5.1 Automic frozen-N` taxonomy). Tracked in `ONE_OFF_SCRIPTS.md §"Ad-hoc operator tools"` as closest fit; full classification rationale documented in that entry. Not Automic-scheduled (no fixed `*/N` schedule); not one-off (recurring); hook-driven invocation is novel to UDM as of D114.
+
+5. **Substrate**: dev-workstation only (Windows 11). `.venv\Scripts\python.exe` invocation in `.claude/settings.json` hooks. Mac/Linux dev workstations have known limitation (silent hook failure for `protect-primary-docs.py` and `session-start-logger.py`; `auto-verify-step-10.py` has `sys.executable` fallback). Per D103 security model, Claude Code is dev-workstation only; not on test/prod RHEL servers. Cross-platform hook support deferred per B-295 sub-item 15.
+
+6. **Audit row backing**: `_session_logs/cli_query_blindspots_<date>.log` JSON-line append-only (per `_emit_audit_row` in `tools/query_blindspots.py`). DB-side `General.ops.PipelineEventLog` `CLI_QUERY_BLINDSPOTS` event type registered in CLAUDE.md L197 CLI_* family registry (15 → 16) but NOT YET wired to DB write (Phase 2 work when SQL Server connectivity available outside production pipeline context).
+
+7. **Composition with existing discipline mechanisms**: AUGMENTS, does NOT replace. The ledger is one data source that `udm-gap-check` / `udm-step-10-verifier` / Pattern F audit / hard rule 14 cascade Step 2 can query. Future `udm-gap-check` SKILL.md update (B-295 sub-item not yet enumerated; Phase 2 candidate) will explicitly invoke the ledger as first check; current state = ledger callable but skill not yet wired to invoke it.
+
+**Trade-offs accepted**:
+
+- **NOT building full AppLaunchpad replica**: orchestrator + event store + ingester + vault frontmatter + Slack + cockpit + substrate are all deferred. The high-ROI subset addresses the 5-event Pitfall #9.o pattern via executable detection without the ~10-15-day infrastructure cost of full replica. If subset proves insufficient, full replica remains a clean re-evaluation point (the gap analysis at `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` is the resume-from-here artifact).
+
+- **4-of-15 detection rules implemented (Phase 1)**: 11 remaining rules registered in ledger but report as "skipped" in CLI output. Honest gap disclosure rather than false-completeness pretending. Phase 2 work to extend remaining rules sequenced after ≥1 week empirical use of Phase 1 4-rule subset.
+
+- **Warn-only hooks (no blocking)**: first-deployment safety preferred over enforcement. If false-positive rate proves low + signal proves valuable over time, future D-N could promote hooks from warn to block (e.g., `--live` mode default for pre-commit). Currently dev-workstation only per D103.
+
+- **DB-less audit row (file-based)**: dev-workstation has no `General.ops.PipelineEventLog` connectivity outside pipeline runs. `_session_logs/` JSON-line append serves as audit substrate. When pipeline-environment integration becomes scope-relevant, future D-N can promote audit-row writes to DB-side.
+
+- **Heuristic detection rules** (not semantic): regex + structural checks. Producer review distinguishes true vs false positives. Documented limitation in `protocol.md` §Limitations.
+
+- **Non-Pull-Based**: AppLaunchpad Principle D (Pull-not-Push) explicitly NOT adopted. UDM remains push-based (parent agent invokes skills when user types trigger phrase). Pull-based architecture requires orchestrator + substrate (deferred per #5 + user D-answer D2 SKIP).
+
+**Cross-references**:
+
+- AppLaunchpad source spec: `agentic-architecture.md` at repo root (920 lines; user-provided; §12.3 blindspot ledger pattern is the direct source for this adoption)
+- Research grounding: `_research/agentic-orchestration-architecture-2026-05-16.md` (35 primary-source citations; LangGraph vs CrewAI vs AutoGen vs Anthropic SDK comparison; recommends Claude Code native over LangGraph for this project's scope)
+- Gap analysis: `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` (18-section REUSE/ADAPT/SKIP/DECISION-NEEDED matrix; resume-from-here artifact if full-replica adoption ever resumed)
+- Implementation: `tools/query_blindspots.py` (513 lines) + `docs/migration/blindspots/{ledger.yml, protocol.md}` (379 + 220 lines) + `.claude/hooks/{protect-primary-docs.py, auto-verify-step-10.py, session-start-logger.py}` + `.claude/settings.json` hook handlers
+- Tests: `tests/tier0/test_query_blindspots.py` (9 tests) + `tests/tier1/test_query_blindspots_checks.py` (25 tests including 7 added at commit `d645cee` for B-295 sub-items 8 + 9 fixes)
+- Tracked closures: B-294 (this adoption itself; ⚫ CLOSED `f699250`) + B-293 (backfill from compacted-session gap surfaced by tool's first production run; ⚫ CLOSED `f699250`) + B-295 sub-items 8 + 9 (regex tightening + scope-awareness; ⚫ CLOSED `d645cee`)
+- Forward-tracked open work: B-295 16-item follow-up cohort (10 remaining sub-items as of D114 lock; 4-6 cycles forecast per user calibration question 2026-05-16)
+- Composition: CLAUDE.md hard rules 9 (progress-logger) / 11 (gap-check mandatory) / 13 (planning-discipline sub-agent inheritance) / 14 (post-edit verification cascade + anti-rationalization clause); HANDOFF §8 Pitfall #9.a-9.o canonical prose source; `udm-step-10-verifier` skill (composes with ledger 9.n check); `udm-gap-check` skill (Phase 2 will invoke ledger as first check); Pattern F `udm-cascade-auditor` (proposed Trigger H = ledger queries at round close-out per `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` recommendation)
+- Per D62 + D113 + D89-D91 + D95-D99 precedent: process-infra D-number locks same-session as the discipline it formalizes; D111's 🟡-first operational-infra rule does NOT apply (process-discipline scope per D111 body text)
+
+**Reversibility**: reversible. If the high-ROI subset proves insufficient OR produces false-positive fatigue (R33 candidate per design-reviewer 2026-05-16) OR the operator burden exceeds benefit, future D-N can supersede D114 (retire `tools/query_blindspots.py` + hooks + `blindspots/` ledger; revert to prose-only HANDOFF §8 discipline). Pre-revert escape hatch: ledger remains valuable archival reference even if execution mechanism retired.
+
+**Risk delta (per D61)**:
+
+- **NEW R33 candidate**: blindspot-ledger false-positive fatigue. The 9.o + 9.h checks have inherent over-fire potential (descriptive vs applicative context distinction is heuristic). If operators learn to dismiss matches without review, detector loses credibility. Severity Low × Medium = 2. Mitigated empirically by B-295 sub-items 8 + 9 fix (10→1 match reduction on BACKLOG.md; 90% false-positive reduction); will revisit if pattern recurs after Phase 1 4-rule subset has ≥1 week operator use.
+- **MITIGATED R16 sub-class** (CCL compliance honor-system): `auto-verify-step-10.py` hook mechanically invokes the ledger on every source edit, shifting catch-time from honor-system post-hoc to at-edit-time for the 4 implemented checks. Partial mitigation (11 of 15 rules still unimplemented). R16 score unchanged but sub-class of catch-time concern partially addressed.
+- **DE-ESCALATED R28 sub-class** (cascade self-attestation gap): `protect-primary-docs.py` adds a low-friction reminder whenever a protected primary doc is edited, providing structural defense against unauthorized cascade edits. Not full mitigation of R28; de-escalates the subclass of "cascade edit proceeds without awareness."
+
+**See also**: `BACKLOG.md` B-293 / B-294 / B-295 + `_validation_log.md` 2026-05-16 entries (AppLaunchpad adoption + B-295 sub-items 8 + 9 closure) + HANDOFF §8 Pitfall #9.o + AppLaunchpad source spec `agentic-architecture.md` + research artifacts above + `_session_logs/cli_query_blindspots_<date>.log` (live audit trail).
+
+---
+
 ## How to Add a Decision
 
 1. Increment the next D-number

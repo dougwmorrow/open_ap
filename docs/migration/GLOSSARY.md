@@ -754,6 +754,16 @@ Public-API surface of newly-authored Round 4 CLI tool modules (5-tool parallel c
 
 | **main** | `tools/diagnose_stage_bronze_gap.py` | Diagnostic entry point — identifies PKs in Stage CDC current rows but missing from Bronze active rows; characterizes each missing PK's gap state via 5 theory categories; READ-ONLY (no Stage/Bronze writes; only PipelineEventLog audit row); accepts `(*, source, table, limit, include_state, json_output, output_file, actor, no_audit_event, verbose, quiet, cursor_factory, table_config_loader, audit_cursor_factory, general_db, stage_db, bronze_db)` kwargs for test injection per B214; returns dict matching D76 audit-row Metadata shape (2026-05-14 / Round 6 follow-up) |
 | **cli_main** | `tools/diagnose_stage_bronze_gap.py` | argv parser + `main()` dispatcher; required `--source` / `--table`; per D74 exit-code contract (2026-05-14) |
+| **main** | `tools/query_blindspots.py` | Blindspot-ledger CLI scanner — wraps `query_blindspots()` for argparse + audit-row dispatch; AppLaunchpad §12.3 blindspot ledger pattern; D74/D75/D76 contract (2026-05-16 / AppLaunchpad adoption) |
+| **cli_main** | `tools/query_blindspots.py` | argv parser + `main()` dispatcher; mutually-exclusive `--file` / `--commit` / `--since-main`; filters by `--severity` / `--tag` / `--class` / `--agent`; `--live` mode exits 2 on p0 match; `--dry-run` default per D75; per D74 exit-code contract (2026-05-16) |
+| **query_blindspots** | `tools/query_blindspots.py` | Programmatic entry point — runs `CHECKS` registry against scope; returns `QueryReport` with `Match` list per detection-rule firing; supports `live` / `severity_filter` / `tag_filter` / `class_filter` / `agent_filter` kwargs (2026-05-16) |
+| **Match** | `tools/query_blindspots.py` | Per-finding dataclass — `entry_id / severity / location / snippet / diagnostic`; `to_dict()` for JSON serialization (2026-05-16) |
+| **QueryReport** | `tools/query_blindspots.py` | Aggregate-report dataclass — `scanned_files / entries_checked / matches / skipped_checks / exit_code`; `by_severity(sev)` accessor + `to_dict()` (2026-05-16) |
+| **CHECKS** | `tools/query_blindspots.py` | Registry dict mapping `entry_id` → check function; Phase 1: 4 of 15 rules implemented (`check_9j_b_item_status_render` / `check_9o_recursive_exemption` / `check_9n_convention_registration` / `check_9h_off_by_n_line_citation`); 11 remaining = Phase 2 work per B-295 sub-item 7 (2026-05-16) |
+| **EVENT_TYPE** (`= "CLI_QUERY_BLINDSPOTS"`) | `tools/query_blindspots.py` | Canonical D76 `PipelineEventLog.EventType` value; 16th CLI_* family member per CLAUDE.md L325 (2026-05-16) |
+| **EXIT_SUCCESS / EXIT_WARNING / EXIT_OPERATIONAL_FAILURE / EXIT_FATAL** (`= 0 / 1 / 2 / 3`) | `tools/query_blindspots.py` | D74 canonical exit-code contract; `--live` mode maps p0 → 2; dry-run default maps any match → 1 (2026-05-16) |
+| **SEVERITY_RANK** (`{p0: 3, p1: 2, p2: 1}`) | `tools/query_blindspots.py` | Severity-tier ranking for filter ordering + visual prioritization (2026-05-16) |
+| **LEDGER_PATH** | `tools/query_blindspots.py` | Default `docs/migration/blindspots/ledger.yml` path; overridable via `--ledger` (2026-05-16) |
 ### Module dataclasses / exception classes
 
 | Identifier | Module | Purpose |
