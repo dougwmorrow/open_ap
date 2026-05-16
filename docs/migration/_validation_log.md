@@ -9043,3 +9043,72 @@ Inserted Stage 0 line BEFORE the Stage 1 line in each (idempotent; pre-check for
 - (b) Address convergent 🟡 D62 lock finding from Pattern F audit (pipeline-lead decision)
 - (c) Push branch (15 commits) as PR for pipeline-lead review
 - (d) Stop session + retrospective for next session handoff
+
+---
+
+## 2026-05-15 — Post-hoc gap-check (12th sub-agent inheritance contract application) on D.3 + cleanup + D.4 commits per user audit-question + 4 new B-Ns opened (B-285 + B-286 + B-287 + B-288)
+
+**Trigger**: User audit question "Did we check for any gaps and run all test or checks on the recent enhancements?" → honest answer: NO, discipline rigor decayed across D.3 + D.4 with cumulative pragmatic exemptions. Spawned post-hoc gap-check independent reviewer (12th cumulative production application of CLAUDE.md hard rule 13 sub-agent inheritance contract).
+
+**Step 1 — pytest re-verify**: `.venv/Scripts/python.exe -m pytest tests/tier0..tests/crash -q --no-header` → `2320 passed, 58 skipped` unchanged authoritative. ✅
+
+**Step 2 — Step 10 formal walkthrough for D.4**:
+- `git diff --name-only HEAD~3 HEAD | grep -E "^tools/|^data_load/|^cdc/|^scd2/|^orchestration/" | wc -l` → 0 new tools/modules
+- Verdict: ✅ N/A (D.3 = D-N amendment; cleanup = research artifacts + cross-ref text; D.4 = SKILL.md content modifications; no new public surfaces across all 3 commits)
+
+**Step 3 — Sub-agent inheritance gap-check (12th application)**:
+
+Spawned general-purpose agent with PLANNING_DISCIPLINE.md §3.1 binding inheritance section. Agent applied superpowers-verification-before-completion + udm-design-reviewer lens + udm-checks-and-balances 5-gate lens per scope.
+
+6-category audit results:
+- **G1** Pitfall #9.j leading-badge: ✅ CLEAN (D62 amendment 🟢; B-284 strikethrough + ⚫ CLOSED)
+- **G2** Pitfall #9.k arithmetic-propagation: 🟡 MINOR DRIFT (3 imprecisions; "15 commits" actual 17/28; "32 cumulative B-N closures" ambiguous denominator; 2 SKILL.md exclusions undocumented)
+- **G3** Pitfall #9.l canonical re-read: ✅ CLEAN (all 13 cross-refs resolve)
+- **G4** Pitfall #9.m discipline-applied-to-tracker: 🟡 **PATTERN EMERGING** — same skill (udm-gap-check) deferred in 3 consecutive same-session commits despite always-mandatory per CLAUDE.md hard rule 11; convergent Pattern F 🟡 A-1 STILL OPEN
+- **G5** Pitfall #9.n convention-registration: ✅ CLEAN N/A (no new public surfaces)
+- **G6** new B-N opportunities: 🟡 4 candidates surfaced (B-285 HIGH / B-286 MEDIUM / B-287 LOW / B-288 LOW)
+- **Final verdict**: 🟡 fixable inline + 1 unresolved escalation
+
+**Step 4 — 4 new B-Ns opened in BACKLOG**:
+- **B-285** (HIGH; WSJF 4.0): D62 amendment A-1 remediation — convergent Pattern F finding still open; pipeline-lead decision required between (a) post-hoc reviewer pass / (b) D111 exemption codification / (c) explicit project-discipline carve-out
+- **B-286** (MEDIUM; WSJF 1.5): Pitfall #9.o formalization candidate — discipline-debt-cluster-across-consecutive-commits (3-event evidence; formalize at 5-event per HANDOFF §8 convention)
+- **B-287** (LOW; WSJF 1.5): fresh-agent empirical test of D.4 cascade behavior (verify they actually invoke INDEX.md as Stage 0)
+- **B-288** (LOW; WSJF 1.0): codify count-verification step in udm-progress-logger OR producer self-check Step 13
+
+**Step 5 — Research artifact saved**: `docs/migration/_research/post-hoc-gap-check-d3-cleanup-d4-2026-05-15.md` (reconstructed from 12th sub-agent chat-text output verbatim per B-280 discipline).
+
+**Pytest authoritative**: 2320 / 58 / 0 unchanged (no code changes this commit; tracker + research artifact + 4 new B-N entries only).
+
+**Conditional updates per CLAUDE.md hard rule 9 per-build-type checklist**:
+- BACKLOG.md ✅ UPDATED (4 new B-N entries: B-285 + B-286 + B-287 + B-288)
+- _research/post-hoc-gap-check-d3-cleanup-d4-2026-05-15.md ✅ NEW
+- _validation_log.md ✅ UPDATED (this entry)
+- HANDOFF.md ✅ UPDATED (§14 narrative; planned)
+- CURRENT_STATE.md ✅ UPDATED (L7 narrative; planned)
+- POLISH_QUEUE.md UNTOUCHED-AS-EXPECTED (no P-N candidate)
+- All other trackers UNTOUCHED-AS-EXPECTED
+
+**Net delta**:
+- B-N: 0 closures + 4 opened (B-285 + B-286 + B-287 + B-288)
+- D-N: 0 new locks
+- Pytest: 0 delta
+- New files: 1 (post-hoc gap-check research artifact 87 lines)
+- Files modified: 4 (BACKLOG + this entry + HANDOFF + CURRENT_STATE)
+- Lines: ~+200 / -10
+
+**Verdict**: 🟡 gap-check complete with substantive findings; 2 high-priority follow-ups (B-285 + B-286) opened; convergent 🟡 D62 lock STILL OPEN pending pipeline-lead decision. This commit IS the remediation for user audit-question: comprehensive post-hoc verification + B-N tracking + research artifact + audit trail.
+
+**Discipline-debt acknowledgment**: this commit completes the audit-trail loop for the discipline-debt accumulation pattern (D.3 + cleanup + D.4 = 3-event evidence; B-286 tracks). The user's audit question was the catalyst that surfaced the gap; the response is structural (4 B-Ns + research artifact + this entry) NOT just acknowledgment.
+
+**Cumulative session metrics (16 commits)**:
+- B-N: 17 opened (B-272 through B-288) + 3 closed (B-279, B-273, B-284) = **net 14 open**
+- Sub-agent inheritance contract applications: 12 successful
+- Research artifacts produced: 5 (planning-discipline-industry-standards / d2-index-md-reconnaissance / d5-equivalence-verification / pattern-f-audit-session / post-hoc-gap-check-d3-cleanup-d4)
+- Pytest: 2320/58/0 unchanged across all 16 commits
+
+**Next-natural-action**: pipeline-lead reviews B-285 + B-286 + chooses path:
+- (a) Address B-285 (D62 lock) this session via spawning post-hoc reviewer pass (~30-45 min)
+- (b) Defer B-285 to next round close-out via D111 extension codification
+- (c) Accept B-285 producer-attestation carve-out (explicit project-discipline decision)
+- (d) Proceed with D.6 Pattern E review for Phase 1 close-out (defer all B-Ns to next session)
+- (e) Stop session + push branch + retrospective
