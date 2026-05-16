@@ -1,6 +1,8 @@
 # UDM Planning Discipline — skill-selection matrix + sub-agent inheritance contract
 
-**Status**: 🟢 **Locked 2026-05-15** per D111 process-infra exemption (analogous to D55 / D60 / D89-D91 / D95-D99 / D113 — process-discipline meta-docs don't gate on 🟡-first attestation when the discipline they encode is itself first-event-evidenced and pipeline-lead approved).
+**Version**: v0.2 (research-grounded; revised 2026-05-15 per B-279 closure via `udm-researcher` invocation; semver MINOR delta from v0.1 per `udm-agent-prompt-versioner` discipline)
+
+**Status**: 🟢 **Locked 2026-05-15** per D111 process-infra exemption (analogous to D55 / D60 / D89-D91 / D95-D99 / D113 — process-discipline meta-docs don't gate on 🟡-first attestation when the discipline they encode is itself first-event-evidenced and pipeline-lead approved). v0.2 confidence elevated MEDIUM → HIGH for core premise (sub-agent inheritance contract + structured skill selection); MEDIUM remains for specific 9-PS-N-scope-categories design choice per research counter-evidence noted in §7.
 
 **Owner**: Pipeline lead. Maintainers: `udm-planning-session-startup` skill + `udm-cascade-audit-evolver` (for matrix evolution at round close-out).
 
@@ -9,6 +11,20 @@
 ---
 
 ## §1. Why this exists (gap evidence + structural intervention rationale)
+
+### §1.0 Research-grounded foundation (v0.2 addition per B-279 closure)
+
+The v0.1 of this doc cited 1-event evidence (markdown refactor planning session 2026-05-15 missed 4 skills). v0.2 grounds the discipline in **4 academic + 1 official-vendor primary sources** per `udm-researcher` invocation 2026-05-15 (see `_research/planning-discipline-industry-standards-2026-05-15.md`):
+
+| Source | Finding | Validates |
+|---|---|---|
+| **Anthropic official Claude Code docs** ([code.claude.com/docs/en/sub-agents](https://code.claude.com/docs/en/sub-agents)) | Sub-agents do NOT inherit skills from parent conversations — skills must be explicitly listed in the sub-agent definition's `skills:` field | §3 sub-agent inheritance contract addresses an officially-documented architectural gap, NOT a fabricated concern |
+| **Anthropic Complete Guide to Building Skills** (January 2026; [resources.anthropic.com](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf)) | Activation rates: poor description → 0%; optimized (what + when + trigger phrases) → 50%; optimized + examples → 90% | §2.2 matrix entries require each skill's SKILL.md to reach the "optimized + examples" tier for reliable invocation; non-trivial requirement |
+| **SkillsBench (arxiv 2602.12670)** | Curated human-authored skills: +16.2 percentage points improvement on task completion across 84 tasks / 11 domains / 7 model configs. Self-generated skills: negligible OR negative benefit. 3 skills produced negative deltas up to -10% due to context interference | Curated-skill approach validated; context-interference risk quantified (motivates the "minimum viable skill set" principle in §2.5 v0.2 addition) |
+| **CodeCompass Navigation Paradox (arxiv 2602.20048)** | Agents skip tool invocation 58% of the time even with explicit prompt instructions. Fix: checklist-at-END formatting achieves 100% adoption (vs 85.7% mid-prompt). Lost-in-the-Middle suppression effect | §2.6 v0.2 addition: structural enforcement via end-of-prompt placement |
+| **GoalAct (arxiv 2504.16563, NCIIP 2025 Best Paper)** | +12.22% performance gain from hierarchical skill pre-specification (high-level categories: search / code / write) | 9 PS-N scope categories serve analogous function (constrains planning space; reduces cognitive load) |
+
+**Aggregate empirical confidence**: HIGH for core premise (sub-agent inheritance gap + structured skill selection improves task completion). See §7 + companion research artifact for full citation list (~30 primary sources) + counter-evidence (SWE-Skills-Bench domain-specificity moderation; Aider performs well without skill-matrix; METR algorithmic-vs-holistic measurement bias).
 
 ### §1.1 The empirical gap
 
@@ -86,7 +102,53 @@ These skills apply to EVERY planning session, regardless of PS code:
 
 These are NOT enumerated per-scope above because they apply to ALL scopes (would be N×repetition).
 
-### §2.4 Scope-classification edge cases
+### §2.5 Minimum viable skill set principle (v0.2 addition per Shape Up "appetite" + SkillsBench context-interference data)
+
+**Binding for any planning session**: BEFORE activating ALL skills listed for a PS-N scope, assess the session's context budget + apply minimum-viable-set principle. Activate only skills DIRECTLY needed for the session's specific scope; defer applicable-but-not-immediately-needed skills to on-demand load.
+
+**Rationale**: SkillsBench (arxiv 2602.12670) quantified context interference risk at -10% performance degradation when skills with conflicting conventions are simultaneously active. Shape Up's "appetite" concept (Basecamp's planning framework) explicitly bounds scope before execution rather than estimating; analogous discipline applies here — bound skill activation scope before session execution rather than activating defensively.
+
+**Procedure**: at Step 3 of `udm-planning-session-startup` (surface skill list to user), surface TWO lists:
+- **Active for THIS session** (minimum viable; activated immediately)
+- **Available on-demand** (matrix-applicable but deferred; can be invoked mid-session if needed)
+
+**Anti-pattern**: blanket-activating all 8+ matrix skills "to be safe" — risks context interference + dilutes the parent agent's attention across skills not actually needed.
+
+### §2.6 Structural enforcement at end-of-prompt position (v0.2 addition per CodeCompass arxiv 2602.20048)
+
+The CodeCompass Navigation Paradox study found agents skip tool invocation 58% of the time even with explicit prompt instructions UNLESS the activation checklist is placed at the END of the system prompt (Lost-in-the-Middle suppression effect). End-of-prompt position achieved 100% tool adoption vs 85.7% mid-prompt.
+
+**Binding**: when `udm-planning-session-startup` SKILL.md Step 3 surfaces the skill activation list to the user, the list MUST appear at the END of the message (not buried mid-message). Similarly, when sub-agent prompts include the inheritance contract section per §3, the inheritance section MUST appear near the END of the prompt body (after the task description; before only edge-case notes).
+
+**Implementation note**: this is a low-cost structural improvement with high empirical support. Existing skill prompts can be retrofitted at next round close-out via `udm-cascade-audit-evolver` proposal (B-280 candidate; pending recurrence).
+
+### §2.7 Failure modes documented (v0.2 addition per Pattern E style; closes "why this exists" with multi-source rationale)
+
+The academic literature consistently describes THREE failure modes this discipline addresses:
+
+1. **Agent skips structured tool invocation when perceiving low task difficulty** (CodeCompass arxiv 2602.20048): on tasks where baseline strategies work ~80% of the time, the overhead of structured tool invocation is not justified per the agent's cost-benefit heuristic. Agents cannot distinguish in advance when the heuristic will fail (G3 hidden-dependency case). **Mitigation**: §2.6 end-of-prompt structural enforcement + §3 sub-agent inheritance contract removes the discretion.
+
+2. **Skills with poor descriptions activate only ~20-50% of the time** (Anthropic official data, January 2026 Complete Guide): description quality directly determines activation reliability. **Mitigation**: §2.4 description-quality requirement (each matrix-referenced skill must reach "optimized + examples" tier; SkillReducer arxiv 2603.29919 found 26.4% of public skills lack any routing description = effectively invisible to auto-selection).
+
+3. **Context interference from misapplied skills degrades performance by up to -10%** (SkillsBench arxiv 2602.12670): version-specific conventions conflict with target project framework when skills not designed for the task are simultaneously active. **Mitigation**: §2.5 minimum-viable-set principle + CLAUDE.md "Do NOT" rules as guard rails.
+
+These failure modes REPLACE the 1-event evidence base from v0.1 — v0.2 grounds the discipline in multi-source empirical rationale.
+
+### §2.4 Description-quality requirement (v0.2 addition per Anthropic activation data + SkillReducer arxiv 2603.29919)
+
+Every skill referenced in the §2.2 matrix MUST have a SKILL.md description meeting Anthropic's "optimized + examples" tier (target: ~90% activation reliability). Required elements:
+
+- **What the skill does**: 1-2 sentence functional summary
+- **When to use it**: explicit trigger conditions (scope categories, task types, or natural-language phrases)
+- **Trigger phrases**: at least 3 example phrases that would activate the skill
+- **Anti-trigger guidance**: explicit phrases that should NOT activate the skill (anti-discoverability)
+- **At least 1 example** of the skill's typical invocation pattern
+
+**Audit cadence**: at every round close-out, invoke `udm-cascade-audit-evolver` to verify each matrix-referenced skill meets the description-quality requirement. SkillReducer's empirical finding (26.4% of public skills lack any routing description) suggests this audit is non-trivial; expect 1-3 skills per round needing description tightening.
+
+**Anti-pattern caught**: skills with "Helps with X" -tier descriptions (effectively 0% activation per Anthropic data). The v0.1 of `udm-planning-session-startup` SKILL.md was authored with explicit trigger phrases; verify other matrix-referenced skills meet the same bar.
+
+### §2.4-LEGACY Scope-classification edge cases
 
 - **Plan scope unclear**: invoke `udm-brainstorm` FIRST to surface scope candidates; THEN re-invoke this skill with the brainstormed scope
 - **Plan scope is "research only" (no execution)**: skip mandatory `udm-design-reviewer` + `udm-checks-and-balances`; invoke `udm-researcher` only; defer scope re-classification to when execution planning begins
@@ -96,6 +158,14 @@ These are NOT enumerated per-scope above because they apply to ALL scopes (would
 ---
 
 ## §3. Sub-agent inheritance contract (binding per CLAUDE.md hard rule 13)
+
+### §3.0 Anthropic official confirmation (v0.2 addition per B-279 research-grounding)
+
+> "Subagents don't inherit skills from the parent conversation; you must list them explicitly. You can use the skills field to inject skill content into a subagent's context at startup."
+>
+> — Anthropic official Claude Code documentation, [code.claude.com/docs/en/sub-agents](https://code.claude.com/docs/en/sub-agents) (accessed 2026-05-15)
+
+This sub-agent inheritance contract addresses an **officially-documented architectural gap** in Claude Code. The project's contract operationalizes the discipline at the prompt-template level since the project doesn't yet uniformly populate the `skills:` frontmatter field on sub-agent definitions. Future hardening: cascade-audit-evolver could propose auto-populating `skills:` frontmatter on existing sub-agent definitions at next round close-out (B-281 candidate; pending recurrence evidence).
 
 ### §3.1 The contract
 
@@ -224,6 +294,24 @@ If unsure: ask the user. Cost of asking < cost of wrong invocation.
 - HANDOFF §8 Pitfall #9 sub-class candidate 9.o: "skill-discoverability-not-applied-at-planning-session-start" (1-event evidence base 2026-05-15 + this doc's authoring is the structural fix; 3-event evidence base for formalization pending recurrence)
 
 ---
+
+## §6.5 Counter-evidence + limits (v0.2 addition per research artifact §"Counter-Evidence")
+
+Per the discipline of grounding (per `udm-researcher` invocation): present counter-evidence transparently.
+
+1. **SWE-Skills-Bench moderates the SkillsBench +16.2pp claim** (arxiv 2603.15401): "skill utility is highly domain-specific and context-dependent, favoring targeted skill design over blanket adoption." Real-world SWE tasks may show lower gains than the SkillsBench benchmark suggests. Implication: the project's skill matrix should remain **highly targeted to domain-specific pipeline conventions** (BCP CSV contract, SCD2 patterns, Polars hashing) rather than expanding to general-purpose skills.
+
+2. **Aider has no skill-matrix yet performs well on coding benchmarks**: mode-based selection without explicit skill matrix is a viable alternative architecture. Implication: skill-matrix is NOT universally required; it's most valuable when (a) domain knowledge is deep, (b) sub-agent topology is complex, (c) audit-grade traceability is required. The project meets all 3 conditions.
+
+3. **CodeCompass 100% adoption was on simple task set** (G3 hidden-dependency; 31 trials): on simple tasks where baseline strategies succeed 80%+, structural enforcement may impose unnecessary overhead. Implication: not every planning session needs FULL skill activation; §2.5 minimum-viable-set principle (v0.2 addition) addresses this.
+
+4. **METR algorithmic-vs-holistic measurement bias** (metr.org August 2025 research update): structured skill workflows may appear more effective partly because they're more amenable to algorithmic scoring. Real-world benefit may be harder to measure. The +16.2pp + +12.22% gains from curated skills should be interpreted as **upper bounds**, not guaranteed gains.
+
+## §6.6 What this research does NOT cover (v0.2 addition)
+
+- **Per-project skill effectiveness measurement**: whether the project's specific skills (udm-researcher, udm-design-reviewer, etc.) are achieving target activation rates. Requires internal instrumentation, not external research. **Action**: B-280 candidate (proposed at v0.2 commit) — empirical A/B measurement of PLANNING_DISCIPLINE.md v0.1 vs v0.2 over 5 sessions; compare missed-skill frequency.
+- **Optimal number of PS-N scope categories**: research supports hierarchical categorization but doesn't speak to whether 9 categories is right. GoalAct used 3 high-level skills; Cursor uses 4 activation modes. **Action**: monitor matrix usage over next 5 sessions; if certain PS codes never get invoked, consolidate at next round close-out.
+- **Long-term context interference accumulation**: SkillsBench measured single-session interference. The project's planning discipline applies across multi-day sessions. Drift effects over longer timescales are not studied.
 
 ## §7. Empirical evidence base + evolution
 
