@@ -32,6 +32,7 @@ If preconditions are NOT met, the skill cannot proceed. Surface the missing prec
 
 ## CCL per D62
 
+- **Stage 0**: `docs/migration/INDEX.md` (routing manifest; recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3; read FIRST when uncertain which downstream Stage 1+2+3 docs your task needs; skip when you already know).
 - **Stage 1** (mandatory, 4 reads): `NORTH_STAR.md`, `HANDOFF.md`, `CURRENT_STATE.md`, `CHECKS_AND_BALANCES.md`
 - **Stage 2** (mandatory): `RISKS.md`, `BACKLOG.md`, `_validation_log.md`
 - **Stage 3** (task-specific): `phase1/05_tests.md` (testing discipline — Tier 0 + Tier 1 sections; D67 + D77 canonical assertions); the just-built artifact + its corresponding `tests/tier0/test_<name>.py` + `tests/tier1/test_<name>.py`

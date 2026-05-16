@@ -43,6 +43,7 @@ The trigger is ANY substantive completion; the skill is intentionally cheap so o
 
 Whoever invokes this skill (the completing agent OR the main agent on its behalf) MUST have performed the Canonical Context Load before logging. If the completing agent didn't run a full CCL because it was a narrow-scope worker (e.g., a Pattern B build agent that read only its target spec), the MAIN agent assumes CCL responsibility and logs on the worker's behalf.
 
+- **Stage 0 — Routing manifest** (recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3): `docs/migration/INDEX.md` — read FIRST when uncertain which downstream Stage 1+2+3 docs your task actually needs. Skip when: you already know which Stage 1+2+3 docs to load (typical for recurring task patterns).
 - **Stage 1 — Orientation** (mandatory, 4 reads if not already done this session): `NORTH_STAR.md`, `HANDOFF.md`, `CURRENT_STATE.md`, `CHECKS_AND_BALANCES.md`
 - **Stage 2 — Tracker awareness** (mandatory): `BACKLOG.md`, `_validation_log.md` — the two trackers always touched
 - **Stage 2.5 — Conditional trackers** (read IF the completion touches them): `CODE_BUILD_STATUS.md` (if code module / tool / migration build — required per Hard Rule 7), `ONE_OFF_SCRIPTS.md` (if migration / one-time tool), `POLISH_QUEUE.md` (if cosmetic), `RISKS.md` (if risk delta), `03_DECISIONS.md` (if decision lock)

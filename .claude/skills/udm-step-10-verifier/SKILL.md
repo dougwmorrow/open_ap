@@ -40,6 +40,7 @@ This skill IS the external mechanism. Per B-261 disposition: "after spawning a b
 
 ## Canonical Context Load (CCL) per D62
 
+- **Stage 0**: `docs/migration/INDEX.md` (routing manifest; recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3; read FIRST when uncertain which downstream Stage 1+2+3 docs your task needs; skip when you already know).
 - **Stage 1**: `NORTH_STAR.md` + `HANDOFF.md` (§8 Pitfall #9.n) + `CURRENT_STATE.md` + `CHECKS_AND_BALANCES.md`
 - **Stage 2**: `RISKS.md` + `BACKLOG.md` (B-261 closure context) + `_validation_log.md` (current round)
 - **Stage 3**: `CLAUDE.md` (the actual Structure + EventType-families-registered + hard rules sections being verified) + `GLOSSARY.md` (public-surface tables being verified)

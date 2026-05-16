@@ -40,6 +40,7 @@ Mandatory invocation triggers (one of):
 
 Whoever invokes this skill (the completing agent OR the main agent) MUST have completed CCL before SPAWNING the gap-check reviewer agent. The reviewer agent ITSELF must perform its own CCL (per D62 + B34 self-edit fallback if needed).
 
+- **Stage 0 — Routing manifest** (recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3): `docs/migration/INDEX.md` — read FIRST when uncertain which downstream Stage 1+2+3 docs your task actually needs. Skip when: you already know which Stage 1+2+3 docs to load (typical for recurring task patterns).
 - **Stage 1 — Orientation** (mandatory, 4 reads): `NORTH_STAR.md`, `HANDOFF.md`, `CURRENT_STATE.md`, `CHECKS_AND_BALANCES.md`
 - **Stage 2 — Tracker awareness** (mandatory): `BACKLOG.md`, `_validation_log.md` (last 1-2 entries — they document what producer claims; reviewer verifies), `CODE_BUILD_STATUS.md` (if code-build work in scope)
 - **Stage 3 — The artifacts**: every artifact authored / modified in the scope being gap-checked

@@ -15,6 +15,7 @@ Fourth close-out analysis skill. Closes the producer-side gap by shifting catche
 
 ## Canonical Context Load (CCL) per D62
 
+- **Stage 0**: `docs/migration/INDEX.md` (routing manifest; recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3; read FIRST when uncertain which downstream Stage 1+2+3 docs your task needs; skip when you already know).
 - **Stage 1**: `NORTH_STAR.md` + `HANDOFF.md` (§8 sub-class directives + producer self-check section) + `CURRENT_STATE.md` + `CHECKS_AND_BALANCES.md`
 - **Stage 2**: `RISKS.md` + `BACKLOG.md` + `_validation_log.md` (current round)
 - **Stage 2.5**: `POLISH_QUEUE.md` (added 2026-05-12 per D113) — proposed producer-checklist deltas that ONLY cover cosmetic-discipline (status-render verification, supersession-crumb authoring, stale-date refresh) may land as P-N seed items rather than as B-N items. Distinguishing test: does the proposed checklist delta change WHAT the producer does (substantive) or HOW the producer renders it (cosmetic)? Substantive → B-N candidate per §8 directive evolution; cosmetic-only → P-N candidate per D113.
