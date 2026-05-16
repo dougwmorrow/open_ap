@@ -43,14 +43,22 @@ Per-commit independent verifier of hard-rule-14 cascade exemption claims. Trigge
 - Trivial commit per CLAUDE.md hard rule 14 anti-triggers (typo <5 lines + no semantic change; BACKLOG strikethrough-only flip; whitespace; POLISH_QUEUE cosmetic)
 - Commit message does NOT claim exemption (e.g., simply states "TEST + GAP ANALYSIS + REVIEW all applied via agents X / Y / Z")
 
-### Skill self-exemption (NO recursion)
+### Skill self-exemption (NO recursion on VERIFIER OUTPUT only)
 
-This skill itself is **exempt from its own recursion check**:
+This skill's VERIFIER OUTPUT is **exempt from second-layer verification**:
 - Single-purpose: 5-min audit producing binary verdict
 - No prose authoring: skill output is structured (VALID / INVALID-with-files); no decision-body / SP body / runbook content created
 - Hard recursion cap: skill never spawns another `udm-exemption-verifier` invocation in its own output handling
 
-If a parent agent uses `udm-exemption-verifier` and the verifier's output is INVALID, the parent does NOT then claim exemption on the verifier's output — they spawn the missing independent reviewer per D56 second-pass. There is no second-layer verification of the verifier.
+If a parent agent uses `udm-exemption-verifier` and the verifier's output is INVALID, the parent does NOT then claim exemption on the verifier's output — they spawn the missing independent reviewer per D56 second-pass. There is no second-layer verification of the verifier OUTPUT.
+
+### CRITICAL CARVE-OUT (added 2026-05-16 per Pitfall #9.o INSTANCE 8 closure; reviewer agentId `a24f22c536e48a7c8`)
+
+**This exemption applies ONLY to verifier OUTPUT (no second-layer verification of verifier verdict). It does NOT exempt the verifier SKILL.md AUTHORING commit (or any future updates / amendments / extensions to the SKILL.md itself) from hard rule 14 cascade — those commits require FULL independent gap-check + independent review per scope-appropriate skill, the same as any other substantive build commit.**
+
+**Empirical anchor**: at Pitfall #9.o INSTANCE 8 (commit `bd9210c` 2026-05-16), parent misread the original self-exemption clause as exempting the SKILL.md authoring commit from all cascade steps (gap-check + review). Independent reviewer at agentId `a24f22c536e48a7c8` confirmed the misreading: "the self-exemption clause speaks ONLY about no second-layer verification of the verifier OUTPUT, NOT about exempting the SKILL.md authoring commit from hard-rule-14 cascade steps. The parent misapplied the self-exemption clause to rationalize the missing independent reviewer."
+
+**Hard rule for verifier-authoring commits**: invoke independent gap-check + independent review (per scope-appropriate skill) BEFORE commit; cite reviewer evidence in commit message; do NOT appeal to self-exemption clause to skip cascade. The skill verifier instance itself cannot fire on its own authoring commit (it doesn't yet exist OR is being modified), but an EXTERNAL independent reviewer (general-purpose agent + `udm-gap-check` skill OR `udm-design-reviewer` for architectural review) remains MANDATORY.
 
 ## 5-step procedure (5-min budget cap)
 
@@ -154,13 +162,15 @@ Verifier verdict: **INVALID** — Cited reviewer output at `3dd69dc` enumerated 
 
 Specific files lacking coverage: GLOSSARY.md L101 D114 entry + NORTH_STAR.md L97 D114 entry + RISKS.md L43 R33 row + CLAUDE.md L344 substrate paragraph + SKILL.md Step 2.1 procedure prose.
 
-### Example 4 (counter-example) — typo-fix would VALID-pass
+### Example 4 (counter-example) — typo-fix: SKILL DOES NOT FIRE (anti-trigger)
 
 Commit fixes typo "recieve" → "receive" on `docs/migration/03_DECISIONS.md:1500` (5-character change inside D-N body wording).
 
 Commit message claims: "Anti-trigger per hard rule 14 (typo <5 lines + no semantic change); no cascade required."
 
-Verifier verdict: **VALID** — typo fix falls under hard rule 14 anti-trigger; no exemption claim to verify; pass through.
+Verifier behavior: **SKILL DOES NOT FIRE** — typo fix falls under hard rule 14 anti-trigger AND under this skill's anti-triggers (no exemption claim being made; commit message doesn't contain trigger phrases like "Layer N+1 termination" or "REVIEW: SKIPPED"). The skill simply does not invoke. There is no VALID/INVALID verdict for non-firing scenarios — those terms apply only when the skill IS invoked.
+
+**Distinction**: VALID/INVALID is a verdict on a fired invocation; non-firing is the absence of invocation. Conflating "skill did not fire" with "skill returned VALID" is a category error.
 
 ## Output contract
 

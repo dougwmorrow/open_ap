@@ -45,7 +45,7 @@ def test_description_cites_b296_and_instance_7(skill_content: str):
 
 
 def test_trigger_phrases_enumerated(skill_content: str):
-    """Assertion 4: skill enumerates ≥6 mandatory trigger phrases."""
+    """Assertion 4: skill enumerates all 8 mandatory trigger phrases (per G1.2 instance-8 gap-check)."""
     trigger_phrases = [
         "Layer N+1 termination",
         "recursive-exemption",
@@ -53,9 +53,12 @@ def test_trigger_phrases_enumerated(skill_content: str):
         "100% overlap on architectural-decision-substance",
         "specific scope-justified exemption",
         "REVIEW: SKIPPED",
+        "no new architecture introduced",
+        "implementing prior reviewer's recommendation",
     ]
     for phrase in trigger_phrases:
         assert phrase in skill_content, f"trigger phrase missing: {phrase}"
+    assert len(trigger_phrases) == 8, "expected exactly 8 trigger phrases per SKILL.md L29-36"
 
 
 def test_5_step_procedure_present(skill_content: str):
