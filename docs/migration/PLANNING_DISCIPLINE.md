@@ -56,6 +56,23 @@ This is the **CodeCompass Navigation Paradox** (arxiv 2602.20048) applied to ski
 ### §1.4 Downstream artifacts (per CLAUDE.md hard rule 9 convention-registration; added 2026-05-15 per udm-gap-check G5 finding)
 
 - **`docs/migration/INDEX.md`** (authored 2026-05-15 per D.2 Phase 1 task 1.3 + MARKDOWN_REFACTOR_PLAN.md §13.2) — master routing manifest in llms.txt format; serves as CCL Stage 0 (read FIRST before downstream Stage 1+2+3 docs per CLAUDE.md Read order item 0). Sub-agent inheritance contract per §3.1 was applied during INDEX.md authoring (3-parallel-agent cohort; 4th production application of contract). When PLANNING_DISCIPLINE.md §2.2 matrix routes to a Stage 1+ doc, INDEX.md provides the human-readable routing rationale for WHY that doc is the right destination.
+- **`docs/migration/_refactor_log.md`** (authored 2026-05-15 per user-direction "Archive EVERYTHING verbatim (belt-and-suspenders)" Option B on refactor-strategy AskUserQuestion) — append-only audit trail of every markdown-refactor event (TRIM / SPLIT / EXTRACT / RENAME / DELETE / RELOCATE). Companion to `docs/migration/_archive/` subdir (verbatim archive home per Option B). Every PS-2 DOC scope refactor that removes / extracts / relocates content MUST: (a) archive verbatim to `_archive/` using `git show <pre-commit>:<file>` per B-280; (b) log to `_refactor_log.md` per canonical template; (c) verify destination equivalence per `superpowers-verification-before-completion` BEFORE claiming complete. Forward-trim contract documented at log's §"Future-trim contract" section.
+
+### §1.5 Refactor-strategy contract for PS-2 DOC scope (added 2026-05-15 per user Option B choice)
+
+For any future refactor in PS-2 DOC scope (markdown trim / split / extract / relocate), the binding strategy is **belt-and-suspenders**:
+
+1. **Always archive verbatim** to `_archive/<source>_<section>_archive_<YYYY-MM-DD>.md` using `git show <pre-commit>:<file>` byte-exact extraction (per B-280 verbatim-extraction-safety discipline)
+2. **Always cross-ref** from active file to the canonical destination(s) — verify destination equivalence pre-commit
+3. **Always log** to `_refactor_log.md` with full provenance (source / destination / rationale / commit / equivalence / reversibility)
+4. **Always preserve recovery path** without git archaeology (operators may not be git-savvy; `_archive/` is the human-readable recovery surface)
+
+**Rationale for Option B choice over alternatives**:
+- Option A (hybrid — archive UNIQUE; cross-ref DUPLICATED): rejected because equivalence-verification overhead per trim is comparable to belt-and-suspenders archiving
+- Option C (cross-ref + log only; no archive): rejected because git-archaeology recovery is a barrier for non-git-savvy operators
+- Option D (retroactive D.5 audit only; defer forward strategy): rejected because deferring structural decision means future refactors accumulate undocumented trims
+
+**Cost acknowledged**: ~2-3× file storage overhead; risk of `_archive/` becoming "secondary canonical" with drift if treated as active reference. Mitigation: provenance headers explicitly mark archive files as "recovery + audit only, NOT current information"; INDEX.md routes agents to canonical destinations not archives.
 
 ---
 

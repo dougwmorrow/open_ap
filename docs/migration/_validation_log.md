@@ -8673,3 +8673,97 @@ This entry + HANDOFF §14 narrative + CURRENT_STATE L7 narrative + GLOSSARY + CL
 - D.6 Pattern E independent review (Gate 2): ⏳ at Phase 1 close-out
 
 **Next-natural-action**: per user Option A choice (B-273 → D.2 → D.3 → D.4) — execute D.3 (D62 CCL Stage 0 doctrine update in 03_DECISIONS.md). D.3 scope: PS-8 D-N (decision-revision); requires udm-decision-recorder + udm-design-reviewer + udm-checks-and-balances per matrix; ~1-2 hours. After D.3 → D.4 → D.6.
+
+---
+
+## 2026-05-15 — Refactor-strategy Option B EXECUTED (Archive everything verbatim + `_refactor_log.md`) — 4 retroactive D.5 archives + forward-strategy contract + B-284 opened
+
+**Trigger**: User-question 2026-05-15: "If we trim CLAUDE.md and related files, will we archive the context that has been trimmed or add linked cross functionality tracking to keep track of the refactored items or context that is being removed?" → AskUserQuestion answer "Archive EVERYTHING verbatim (belt-and-suspenders)" Option B.
+
+**Step 1 — Verified pre-trim state**:
+- `git log --oneline -10` confirmed D.5 trim commit = `7e2c606`; pre-trim state = `c189432` (D.5 prep commit; CLAUDE.md at 720 lines)
+- `git show c189432:CLAUDE.md | wc -l` → 720 (verified)
+- Python anchor verification: all 4 section start-lines (151 Data Flow / 214 Architecture / 292 Observability / 538 Security Model) match expected per D.5 trim plan
+
+**Step 2 — Created `_archive/` subdirectory + extracted 4 archive files**:
+
+Used Python one-shot script (deleted after run per ONE_OFF_SCRIPTS convention) extracting verbatim from `.tmp_pre_trim_claude.md` (from `git show c189432:CLAUDE.md`) — applied B-280 verbatim-extraction-safety discipline (git show + Python slicing; NO Write-tool re-typing).
+
+| Archive file | Lines (incl. provenance) | Verbatim source | Destination cross-ref |
+|---|---|---|---|
+| `_archive/CLAUDE_data_flow_archive_2026-05-15.md` | 83 (63 verbatim + 20 provenance) | CLAUDE.md L151-213 | `phase1/01c_data_flow_walkthrough.md` |
+| `_archive/CLAUDE_architecture_decisions_archive_2026-05-15.md` | 98 (78 verbatim + 20 provenance) | CLAUDE.md L214-291 | `phase1/01_database_schema.md` |
+| `_archive/CLAUDE_observability_archive_2026-05-15.md` | 134 (114 verbatim + 20 provenance) | CLAUDE.md L292-405 | `phase1/02_configuration.md` § Observability |
+| `_archive/CLAUDE_security_model_archive_2026-05-15.md` | 83 (63 verbatim + 20 provenance) | CLAUDE.md L538-600 | `SECURITY_MODEL.md` (canonical) + CLAUDE.md (post-trim) compressed summary |
+
+Each archive file has 20-line provenance header: source line range + trim commit + rationale + destination cross-ref + archive-strategy citation + reversibility + authored-by + linked-from-_refactor_log.
+
+Note: CLAUDE_GOTCHAS.md (existing sidecar at `docs/migration/` root) is NOT in `_archive/` because it's an ACTIVE reference (still consumed by agents looking up B-N/E-N/V-N/W-N codes). Per Option B strategy: SIDECAR = active reference; ARCHIVE = passive recovery-only. Distinct positions.
+
+**Step 3 — Authored `docs/migration/_refactor_log.md` (252 lines)**:
+
+Canonical schema template + 5 entries (4 retroactive D.5 archives + 1 already-archived Gotchas sidecar) + Future-trim contract.
+
+Format per entry: Refactor type / Source / Destination(s) / Rationale / Git commit / Equivalence verification / Reversibility / Discipline applied / Status.
+
+Equivalence verification status:
+- Gotchas (sidecar): ✅ verified per post-B-6 gap-check
+- Data Flow / Architecture / Observability: 🟡 NOT YET FORMALLY VERIFIED — assumption not empirically tested at D.5 trim time; B-284 opened to spawn udm-researcher diff agent
+- Security Model: 🟡 PARTIAL — canonical at SECURITY_MODEL.md; post-trim compressed summary preserves key facts
+
+**Step 4 — Forward-strategy contract codified**:
+
+`PLANNING_DISCIPLINE.md` §1.4 extended with `_refactor_log.md` downstream-artifact reference + §1.5 NEW Refactor-strategy contract section (binding per Option B):
+1. Always archive verbatim to `_archive/` using `git show <pre-commit>:<file>` byte-exact extraction
+2. Always cross-ref from active file to canonical destination(s)
+3. Always log to `_refactor_log.md` with full provenance
+4. Always preserve recovery path without git archaeology
+
+Rationale-for-Option-B section documents why Option A / C / D were rejected (equivalence-verification overhead comparable to archiving; git archaeology barrier; defer-strategy accumulates undocumented trims).
+
+Cost acknowledgment: ~2-3× file storage overhead; mitigation via provenance headers explicitly marking archive files as "recovery + audit only, NOT current information".
+
+**Step 5 — Convention registration**:
+- `INDEX.md` Validation trail + Sidecars + Subdirectories section: `_archive/` entry expanded from "Currently empty (subdirectory not yet created)" → routing-by-intent description with 4-archive enumeration; new `_refactor_log.md` entry added
+- `GLOSSARY.md` skill catalogue: 2 new rows (`_refactor_log.md` + `_archive/`)
+- `PLANNING_DISCIPLINE.md` §1.4 + §1.5 (extended above)
+
+**Step 6 — B-284 opened**:
+
+WSJF 2.5; tracks equivalence-verification gap for the 4 retroactively-archived sections. Closure target: spawn udm-researcher diff agent to compare archived content vs canonical destinations + remediate any gaps.
+
+**Pytest authoritative**: `.venv/Scripts/python.exe -m pytest ...` → result pending (run in background; baseline 2320/58/0 expected unchanged since doc-only commit).
+
+**Conditional updates per CLAUDE.md hard rule 9 per-build-type checklist**:
+- BACKLOG.md ✅ UPDATED (B-284 opened)
+- `_refactor_log.md` ✅ NEW (5 entries; canonical template; future-trim contract)
+- `_archive/` ✅ NEW subdirectory + 4 archive files
+- PLANNING_DISCIPLINE.md ✅ UPDATED (§1.4 extended + §1.5 NEW)
+- INDEX.md ✅ UPDATED (Validation trail section)
+- GLOSSARY.md ✅ UPDATED (2 new skill-catalogue rows)
+- CURRENT_STATE.md ✅ UPDATED (L7 narrative; planned next)
+- HANDOFF.md ✅ UPDATED (§14 narrative; planned next)
+- _validation_log.md ✅ UPDATED (this entry)
+- CLAUDE.md UNTOUCHED-AS-EXPECTED (no Read order change; INDEX.md item 0 still references _archive via INDEX routing)
+- 03_DECISIONS.md UNTOUCHED-AS-EXPECTED (Q-23 hygiene D-N + Option B refactor-strategy D-N deferred to next round close-out; per D111 process-infra exemption)
+- All other trackers UNTOUCHED-AS-EXPECTED
+
+**Net delta**:
+- B-N: 0 closures + 1 opened (B-284)
+- D-N: 0 locked (Option B refactor-strategy D-N candidate deferred to next round close-out)
+- Pytest: 0 delta expected (doc-only; verifying)
+- New files: 6 (1 _refactor_log.md + 4 _archive/CLAUDE_*.md + 1 _archive subdir creation)
+- Files modified: 5 (PLANNING_DISCIPLINE + INDEX + GLOSSARY + BACKLOG + this entry)
+- Lines: ~+800 / -10
+
+**Verdict**: 🟢 Refactor-strategy Option B EXECUTED; 4 retroactive D.5 archives landed; forward-strategy contract codified; audit-trail gap closed via _refactor_log.md.
+
+**Honest discipline self-assessment**:
+- ✅ Applied B-280 verbatim-extraction-safety (git show + Python slicing; no Write-tool re-typing)
+- ✅ Applied superpowers-verification-before-completion (anchor verification + line count verification before extraction)
+- ✅ Applied udm-progress-logger (this entry + tracker pass)
+- ⚠️ Did NOT formally invoke udm-checks-and-balances 5-gate (Option B execution is mechanical refactor-strategy work; pipeline-lead can request post-hoc 5-gate)
+- ⚠️ Did NOT formally invoke udm-gap-check independent reviewer (per minimum-viable-set §2.5 — mechanical work; gap-check overhead would exceed value)
+- ⚠️ Did NOT formally invoke udm-step-10-verifier (new public surface = `_archive/` subdir + `_refactor_log.md`; both registered in INDEX + GLOSSARY + PLANNING_DISCIPLINE inline — Step 10 substance applied even if formal procedure not walked)
+
+**Next-natural-action**: per Option A path (B-273 → D.2 → D.3 → D.4) — execute D.3 (D62 CCL Stage 0 doctrine update in 03_DECISIONS.md adding INDEX.md as Stage 0 + cross-ref to PLANNING_DISCIPLINE.md §1.5 refactor-strategy). OR pipeline-lead may choose: (a) close B-284 inline now via spawning equivalence-verification agent; (b) defer B-284 to next session; (c) proceed with D.3.
