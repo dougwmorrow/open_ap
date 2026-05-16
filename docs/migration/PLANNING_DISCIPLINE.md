@@ -99,8 +99,12 @@ These skills apply to EVERY planning session, regardless of PS code:
 - **`udm-gap-check`** — at planning-session attestation per CLAUDE.md hard rule 11 (post-substantive-work; spawn independent reviewer)
 - **`udm-progress-logger`** — at end of each substantive build/edit per CLAUDE.md hard rule 9 (universal-5 trackers + per-build-type checklist)
 - **`udm-step-10-verifier`** — if planning session introduces new public surface (modules / tools / functions / classes / constants / EventTypes / SPs) per CLAUDE.md hard rule 9 Step 12
+- **`superpowers-verification-before-completion`** (added 2026-05-15 per B-279 follow-up partial adoption Option B; upstream `obra/superpowers` v5.1.0 MIT) — invoke BEFORE any completion claim. Iron Law: "NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE". Pairs with `udm-gap-check` (this skill is PRE-completion; gap-check is POST-completion). Direct relevance: would have prevented Pitfall #9.k stale-narrative-quotation pattern from commit `521b68c` (claimed pytest 2320/62/0 without running pytest).
+- **`superpowers-systematic-debugging`** (added 2026-05-15 per same; upstream `obra/superpowers` v5.1.0 MIT) — invoke when encountering ANY bug / test failure / unexpected behavior, BEFORE proposing fixes. Iron Law: "NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST". 4 phases: root-cause investigation → pattern analysis → hypothesis/testing → implementation. Closes gap in project's `.claude/skills/` — no `udm-*` skill addresses structured debugging methodology.
 
 These are NOT enumerated per-scope above because they apply to ALL scopes (would be N×repetition).
+
+**Optional upstream skill (per-scope conditional)**: `superpowers-tdd` (RED-GREEN-REFACTOR test-driven-development; upstream `obra/superpowers` v5.1.0) — recommended for PS-3 TOOL scope when introducing new executable code; complements `udm-test-author` parallel-agent pattern. Lower priority than the 2 always-mandatory superpowers-* imports per research recommendation.
 
 ### §2.5 Minimum viable skill set principle (v0.2 addition per Shape Up "appetite" + SkillsBench context-interference data)
 

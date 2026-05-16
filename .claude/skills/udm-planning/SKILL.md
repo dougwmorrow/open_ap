@@ -1,6 +1,6 @@
 ---
 name: udm-planning
-description: Decomposes a UDM pipeline phase round into 2-5 minute tasks with verification criteria. Use at the start of each round, when scoping a sub-area, or when work feels too big to estimate. Inspired by Superpowers planning discipline; tailored to our six-step deep dive cycle (Plan → Validate → QA → Edge Cases → Validate Edge Cases → Sign-off).
+description: Decomposes a UDM pipeline phase round into 2-5 minute tasks with verification criteria. Use at the start of each round, when scoping a sub-area, or when work feels too big to estimate. Inspired by Superpowers `writing-plans` discipline (`obra/superpowers` v5.1.0 — https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md ; MIT licensed); evolved for UDM with per-task D-number + edge-case citation requirements + 6-step deep dive cycle mapping (Plan → Validate → QA → Edge Cases → Validate Edge Cases → Sign-off) + CCL Stage 1+2 precondition. Upstream version produces saved markdown at `docs/superpowers/plans/<date>.md`; project version produces in-session task tree. See `docs/migration/_research/superpowers-framework-2026-05-15.md` §5 deep-dive comparison.
 ---
 
 # UDM Round Planning

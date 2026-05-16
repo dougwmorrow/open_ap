@@ -1,6 +1,6 @@
 ---
 name: udm-brainstorm
-description: Explores design alternatives for an open architectural question before code or schema is written. Use when a question has more than one defensible answer (e.g. "how should we represent X?", "what's the failure mode for Y?", "is Z the right scope?"). Force-enumerates options, names trade-offs, recommends one. Inspired by Superpowers brainstorm discipline; tailored to our decision/edge-case framework.
+description: Explores design alternatives for an open architectural question before code or schema is written. Use when a question has more than one defensible answer (e.g. "how should we represent X?", "what's the failure mode for Y?", "is Z the right scope?"). Force-enumerates options, names trade-offs, recommends one. Inspired by Superpowers `brainstorming` discipline (`obra/superpowers` v5.1.0 — https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md ; MIT licensed); evolved for UDM with NORTH_STAR pillar scoring + mandatory D-number / edge-case cross-ref + "It depends is not an answer" explicit-recommendation rule. See `docs/migration/_research/superpowers-framework-2026-05-15.md` §5 deep-dive comparison.
 ---
 
 # UDM Design Brainstorm

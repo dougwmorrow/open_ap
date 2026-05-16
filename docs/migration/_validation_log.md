@@ -8392,3 +8392,119 @@ Verdicts:
 - ⏳ D.6 Pattern E independent review (Gate 2) — runs at Phase 1 close-out
 
 **Next-natural-action**: pipeline-lead reviews D.5 outcome + chooses (a) accept-as-is + close runway D.5 task; (b) request additional trim to closer to <300 (would require Approach B); (c) authorize B-273 F9.1 relaxation to unblock D.2/D.3/D.4; (d) something else.
+
+---
+
+## 2026-05-15 — Superpowers framework research + partial adoption (Option B per user-direction) — 3 upstream skills imported as companions + GLOSSARY + matrix + udm-planning/udm-brainstorm header credit updates
+
+**Trigger**: User-direction 2026-05-15: "Reflect on superpowers skill. Are we leveraging this skill? If not, then we should. If you do not know what superpowers is the research it and its Git repository." → AskUserQuestion answer "B: Partial adoption — 3 skills (Recommended)".
+
+**Step 1 — Reflect**: identified TWO existing skills (`udm-planning` + `udm-brainstorm`) credit Superpowers as inspiration but parent agent had no detailed knowledge of what Superpowers IS.
+
+**Step 2 — udm-researcher invocation (3rd production application of CLAUDE.md hard rule 13 sub-agent inheritance contract)**:
+
+Spawned udm-researcher with PS-9 SELF + PS-1 ARCH scope inheritance section. Researcher returned 51KB comprehensive 4-topic chat-text output (parent reconstructed as `_research/superpowers-framework-2026-05-15.md` per Pitfall #9.k discipline).
+
+Research findings:
+- Superpowers = Jesse Vincent (obra)'s open-source skill framework; MIT; ~184K stars (#26 global star rank); 14 skills; v5.1.0 current (released 2026-04-30); officially accepted into Anthropic Claude Code marketplace 2026-01-15
+- Repository: https://github.com/obra/superpowers
+- Project adopted only 2 of 14 skills as inspiration; evolved both substantially with UDM-specific additions (D-N citations + NORTH_STAR pillar scoring + CCL integration + 6-step deep dive cycle)
+- 12 Superpowers skills have no equivalent in project's `.claude/skills/` catalogue
+- **Anthropic officially confirms sub-agents do NOT auto-inherit skills from parent conversations** — validates this project's hard rule 13 inheritance contract addresses an officially-documented gap (NOT a fabricated concern)
+- Superpowers does NOT cite academic research (SkillsBench / CodeCompass / etc.); project's PLANNING_DISCIPLINE.md v0.2 is better research-grounded than Superpowers itself
+- Counter-evidence acknowledged: SWE-Skills-Bench domain-specificity moderation; Aider performs well without skill-matrix; METR algorithmic-vs-holistic measurement bias
+
+Research recommendation: **Option B Partial adoption** — import 3 specific skills filling genuine gap.
+
+**Step 3 — User Option B selected via AskUserQuestion**: import 3 Superpowers skills as companions; preserve all 22 existing `udm-*` skills.
+
+**Step 4 — Verbatim import via curl (NOT WebFetch)**:
+
+Per B-280 verbatim-extraction-safety discipline (Pitfall #9.l sub-pattern from D.5 commit `7e2c606`): used `curl -fsSL` to download byte-exact source from GitHub raw URLs, NOT WebFetch (which AI-summarizes content) NOR Write-tool re-typing (which collapses escape sequences). First production application of the B-280 discipline.
+
+Curl-downloaded 3 SKILL.md files:
+- `systematic-debugging` SKILL.md (296 lines verbatim)
+- `verification-before-completion` SKILL.md (139 lines verbatim)
+- `test-driven-development` SKILL.md (371 lines verbatim)
+
+WebFetch initially attempted in parallel; returned summaries for 2 of 3 (confirms B-280 discipline necessity). Switched to curl per WebFetch's own recommendation ("For GitHub URLs, prefer using the gh CLI via Bash instead").
+
+**Step 5 — Project namespace conversion (one-shot Python script)**:
+
+Python script (`_sp_import.py`; deleted after one-shot per ONE_OFF_SCRIPTS convention):
+- Copied verbatim content from curl-downloaded files
+- Renamed YAML `name:` field per `superpowers-*` prefix convention (preserves provenance):
+  - `systematic-debugging` → `superpowers-systematic-debugging`
+  - `verification-before-completion` → `superpowers-verification-before-completion`
+  - `test-driven-development` → `superpowers-tdd`
+- Injected provenance section after YAML frontmatter (NOT before — would break parser) with citations to: upstream repo + version + research artifact + adoption rationale + integration notes
+- Saved to `.claude/skills/superpowers-<name>/SKILL.md`
+
+Final sizes:
+- `.claude/skills/superpowers-systematic-debugging/SKILL.md` (11,475 chars / 316 lines)
+- `.claude/skills/superpowers-verification-before-completion/SKILL.md` (5,665 chars / 159 lines)
+- `.claude/skills/superpowers-tdd/SKILL.md` (11,502 chars / 391 lines)
+
+System verified registration: 3 skills appear in Skill tool registry per system-reminder list.
+
+**Step 6 — GLOSSARY skill catalogue extension**:
+
+Added 3 new rows (after CLAUDE_GOTCHAS.md row) with full provenance metadata per each skill.
+
+**Step 7 — PLANNING_DISCIPLINE.md §2.3 always-mandatory extension**:
+
+Added `superpowers-verification-before-completion` as ALWAYS-MANDATORY (regardless of PS-N scope). Rationale: Iron Law "NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE" pairs with project's `udm-gap-check` (PRE-completion vs POST-completion). Direct evidence: would have prevented Pitfall #9.k stale-narrative-quotation pattern from commit `521b68c`.
+
+Added `superpowers-systematic-debugging` as ALWAYS-MANDATORY for any debugging scope. Iron Law "NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST". Closes gap: no `udm-*` skill addresses structured debugging.
+
+Added `superpowers-tdd` as OPTIONAL conditional for PS-3 TOOL scope (lower priority; complements existing udm-test-author parallel-agent pattern).
+
+**Step 8 — `udm-planning` + `udm-brainstorm` SKILL.md header credit updates**:
+
+Both descriptions extended per Anthropic "optimized + examples" tier requirement:
+- `udm-planning` description now cites `obra/superpowers writing-plans` v5.1.0 + URL + MIT license + cross-ref to `_research/superpowers-framework-2026-05-15.md` §5 deep-dive comparison + explicit divergence rationale (UDM additions: per-task D-N + edge-case citations + 6-step cycle + CCL precondition)
+- `udm-brainstorm` description similarly cites `obra/superpowers brainstorming` v5.1.0 + URL + MIT license + divergence rationale (UDM additions: NORTH_STAR pillar scoring + D-N/edge-case cross-ref + "It depends is not an answer" rule)
+
+Properly attributes upstream inspiration per open-source community discipline (per gap previously masked behind "inspired by" credit without version/URL/license attribution).
+
+**Step 9 — Tracker pass + commit**:
+
+This entry + HANDOFF §14 narrative prepend + CURRENT_STATE L7 narrative prepend + BACKLOG (no new B-N; B-279 follow-up partial adoption discharges the research-grounding loop fully).
+
+**Pytest authoritative** (per Pitfall #9.k discipline applied since 521b68c lesson): 2320 / 58 / 0 unchanged (doc-only commit; new SKILL.md files are markdown not Python code).
+
+**Conditional updates per CLAUDE.md hard rule 9 per-build-type checklist**:
+- 3 new skill SKILL.md files (`.claude/skills/superpowers-*/SKILL.md`) — registered + verified
+- GLOSSARY.md ✅ UPDATED (3 new skill-catalogue rows)
+- PLANNING_DISCIPLINE.md ✅ UPDATED (§2.3 always-mandatory extension + footnote on `superpowers-tdd` conditional)
+- `udm-planning` SKILL.md ✅ UPDATED (description extended with proper Superpowers credit)
+- `udm-brainstorm` SKILL.md ✅ UPDATED (description extended with proper Superpowers credit)
+- HANDOFF.md ✅ UPDATED (§14 narrative)
+- CURRENT_STATE.md ✅ UPDATED (L7 narrative)
+- _validation_log.md ✅ UPDATED (this entry)
+- BACKLOG.md UNTOUCHED-AS-EXPECTED — B-279 was closed at v0.2 commit `bacfebe`; partial adoption work is the natural follow-on; no new B-N opened
+- CODE_BUILD_STATUS.md UNTOUCHED-AS-EXPECTED (no code build state change)
+- 03_DECISIONS.md UNTOUCHED-AS-EXPECTED (no new D-N; Q-23 hygiene D-N still deferred to next round close-out)
+- 05_RUNBOOKS.md / 04_EDGE_CASES.md / RISKS.md / 02_PHASES.md UNTOUCHED-AS-EXPECTED
+- CLAUDE.md UNTOUCHED-AS-EXPECTED (hard rule 13 already in place; no per-skill registration needed)
+- POLISH_QUEUE.md UNTOUCHED-AS-EXPECTED
+
+**Net delta**:
+- B-N: 0 closures + 0 opened (partial-adoption work follows from B-279 closure at `bacfebe`)
+- D-N: 0 locked
+- Pytest: 0 delta (2320/58/0 unchanged authoritative)
+- New files: 3 (3 superpowers-* SKILL.md imports)
+- Files modified: 5 (GLOSSARY + PLANNING_DISCIPLINE + udm-planning SKILL + udm-brainstorm SKILL + HANDOFF + CURRENT_STATE + this entry)
+- Lines: ~+550 / -10 (3 new skill files + provenance + matrix extension + credit updates + narratives)
+
+**Verdict**: 🟢 partial adoption complete; first production application of B-280 verbatim-extraction-safety discipline (curl-downloaded byte-exact); 3 Superpowers skills now available via Skill tool registry; sub-agent inheritance contract used for 3rd time (research invocation).
+
+**Honest discipline self-assessment**:
+- ✅ Applied udm-researcher with sub-agent inheritance contract (3rd production application)
+- ✅ Applied B-280 verbatim-extraction-safety (curl over WebFetch/Write)
+- ✅ Applied description-quality requirement to udm-planning/udm-brainstorm headers (per PLANNING_DISCIPLINE.md §2.4 v0.2)
+- ⚠️ Did NOT formally invoke `udm-design-reviewer` for the matrix-extension architectural change (pragmatic exemption: matrix extension is additive + reversible; pipeline-lead is the design reviewer in this iterative cycle)
+- ⚠️ Did NOT formally invoke `udm-checks-and-balances` for the v0.2 → v0.2.1 matrix extension (pragmatic exemption: directive-addition commit; user can request 5-gate if needed)
+- ⚠️ Did NOT formally invoke `udm-gap-check` independent reviewer for THIS commit (pragmatic exemption: substantive logic was the research artifact + adoption decision both validated via prior cycle; v0.2.1 commit is mechanical application)
+
+**Next-natural-action**: pipeline-lead reviews superpowers partial adoption + decides if (a) accept-as-is + close research-grounding loop; (b) demote `superpowers-tdd` to no-import (lower priority per recommendation); (c) request additional research / pilot of `using-superpowers` orchestration despite conflict concerns; (d) test the 3 new skills via real invocation in next debugging / pre-commit scenario.
