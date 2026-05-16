@@ -8508,3 +8508,76 @@ This entry + HANDOFF §14 narrative prepend + CURRENT_STATE L7 narrative prepend
 - ⚠️ Did NOT formally invoke `udm-gap-check` independent reviewer for THIS commit (pragmatic exemption: substantive logic was the research artifact + adoption decision both validated via prior cycle; v0.2.1 commit is mechanical application)
 
 **Next-natural-action**: pipeline-lead reviews superpowers partial adoption + decides if (a) accept-as-is + close research-grounding loop; (b) demote `superpowers-tdd` to no-import (lower priority per recommendation); (c) request additional research / pilot of `using-superpowers` orchestration despite conflict concerns; (d) test the 3 new skills via real invocation in next debugging / pre-commit scenario.
+
+---
+
+## 2026-05-15 — B-273 ⚫ CLOSED + D.2 INDEX.md reconnaissance authored + FIRST production use of `superpowers-verification-before-completion`
+
+**Trigger**: User-direction Option A choice on "Forward integration" AskUserQuestion ("B-273 → D.2 → D.3 → D.4 Recommended").
+
+**Step 1 — B-273 F9.1 one-directional relaxation**:
+- `MARKDOWN_REFACTOR_PLAN.md` §5.1 amended: bidirectional atomic-cohort gate → ONE-DIRECTIONAL ("REJECT D.1-without-D.2; ALLOW D.2-without-D.1")
+- Rationale: per B-272 disposition (D.1 deferred ~24 days until entries age), bidirectional binding had become a foot-gun BLOCKING the highest-leverage independent Phase 1 work
+- Preserves original anti-MVP intent (per gap-audit-adversarial §9: operator ships archive then loses momentum on INDEX) while unblocking D.2/D.3/D.4 parallel progress
+- `BACKLOG.md` L256 leading badge 🟡 → ⚫ per Pitfall #9.j; inline closure annotation with rationale + pipeline-lead authorization
+- Verification mechanism revised one-directional in §5.1 (tools/verify_cascade.py Trigger N extension B-N candidate stays; udm-round-closeout CCL Stage 2.5 unchanged)
+
+**Step 2 — D.2 INDEX.md reconnaissance artifact**:
+- Authored `docs/migration/_research/d2-index-md-reconnaissance-2026-05-15.md` (246 lines per fresh `wc -l`)
+- Per `udm-planning-session-startup` v0.2: PS-2 DOC (primary) + PS-6 COHORT (planned execution) scope
+- Minimum-viable skill set per §2.5: udm-checks-and-balances + udm-progress-logger + udm-gap-check + udm-step-10-verifier + **superpowers-verification-before-completion (always-mandatory; FIRST production invocation)**
+- Sub-agent inheritance contract per CLAUDE.md hard rule 13: parent-agent solo this turn (no sub-agents spawned); cohort plan surfaced for user approval
+
+Contents (8 sections):
+- §1: 36+17+3+ file inventory categorized into 9 categories (A-I)
+- §2: Proposed INDEX.md structure per MARKDOWN_REFACTOR_PLAN §13.2 (llms.txt format; ~280-350 lines target; under 500-line research SKILL.md cap)
+- §3: Routing-by-intent example entries (per ETH Zurich research §3.6 Finding 5: structural overviews +20-23% inference cost / -3% success; avoid)
+- §4: Multi-agent cohort plan (3 parallel agents; Agent A CCL Stage 1+2 + Canonical; Agent B Architecture + Process + Plans; Agent C Phase-specific + Validation + Sidecars)
+- §5: 5-gate validation procedure per `udm-checks-and-balances`
+- §6: Application of new discipline floor (verification-before-completion + systematic-debugging + planning-session-startup + B-280 verbatim-extraction-safety + sub-agent inheritance)
+- §7: 12-item acceptance criteria for D.2 execution
+- §8: Pipeline-lead decision required — Option A (single-agent ~1-2hr) vs Option B (3-cohort ~3-4hr; Recommended for discipline-proving) vs Option C (2-cohort middle ground ~2-3hr)
+
+**Step 3 — superpowers-verification-before-completion FIRST production application**:
+- Iron Law: "NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE"
+- Before claiming "D.2 prep complete", ran fresh verification commands:
+  - `wc -l docs/migration/_research/d2-index-md-reconnaissance-2026-05-15.md` → 246 lines (NOT carried from estimate)
+  - `ls docs/migration/*.md | wc -l` → 36 (NOT estimated)
+  - `ls docs/migration/phase1/*.md | wc -l` → 17 (NOT estimated)
+  - grep verification of B-273 closure annotation in BACKLOG.md + plan §5.1
+- **🟡 Pitfall #9.k arithmetic drift CAUGHT + FIXED**: my §1 inventory said "~30 files + 15 phase1" — actual is 36 + 17. Without verification-before-completion, this drift would have committed. **Per the discipline's Iron Law**, fixed §1 header before commit; documented the catch + fix as evidence of the skill's first-production value.
+- Discipline confirmation: the JUST-IMPORTED skill (`bd7e6e5` commit) caught an error in the same session. This is the empirical evidence the research recommendation predicted ("would have prevented Pitfall #9.k from commit `521b68c`"). Now BOTH preventive AND demonstrated.
+
+**Conditional updates per CLAUDE.md hard rule 9 per-build-type checklist**:
+- BACKLOG.md ✅ UPDATED (B-273 closure annotation)
+- MARKDOWN_REFACTOR_PLAN.md ✅ UPDATED (§5.1 F9.1 amended to one-directional)
+- _research/d2-index-md-reconnaissance-2026-05-15.md ✅ NEW
+- _validation_log.md ✅ UPDATED (this entry)
+- HANDOFF.md (planned next turn or this commit)
+- CURRENT_STATE.md (planned next turn or this commit)
+- POLISH_QUEUE.md UNTOUCHED-AS-EXPECTED
+- GLOSSARY.md UNTOUCHED-AS-EXPECTED (no new public surface; INDEX.md is FUTURE; CLAUDE.md untouched)
+- All other trackers UNTOUCHED-AS-EXPECTED
+
+**Pytest authoritative**: 2320 / 58 / 0 unchanged (doc-only commit; no Python code touched)
+
+**Net delta**:
+- B-N: 1 closure (B-273) + 0 opened
+- D-N: 0 locked
+- Pytest: 0 delta
+- Files: 1 new (d2 recon doc) + 3 modified (BACKLOG + plan + this entry)
+- Lines: ~+280 / -10
+
+**Verdict**: 🟢 B-273 ⚫ CLOSED; D.2 prep artifact complete; multi-agent cohort plan surfaced for user approval; FIRST production use of `superpowers-verification-before-completion` validated empirically (caught Pitfall #9.k drift in same session as import). Phase 1 D.2/D.3/D.4 now 🟢 AUTHORIZED standalone per F9.1 relaxation.
+
+**Discipline floor demonstration (this commit alone)**:
+- ✅ `udm-planning-session-startup` invoked at start (PS-2 DOC + PS-6 COHORT scope)
+- ✅ `superpowers-verification-before-completion` invoked before completion claim (caught drift)
+- ✅ `udm-progress-logger` invoked (this entry + BACKLOG + plan)
+- ✅ Sub-agent inheritance contract STAGED for cohort spawn (not invoked yet — parent-only this turn)
+- ✅ B-280 verbatim-extraction-safety APPLIED (file inventory verified via `ls` fresh, not Write-tool re-typing of estimated counts)
+- ⏳ `udm-checks-and-balances` 5-gate: deferred to D.2 EXECUTION attestation
+- ⏳ `udm-step-10-verifier`: N/A this turn (no new public surface); applies at D.2 execution (INDEX.md is new public surface)
+- ⏳ `udm-gap-check` independent reviewer: deferred to D.2 EXECUTION attestation (recon-only doesn't warrant independent reviewer per minimum-viable-set §2.5)
+
+**Next-natural-action**: pipeline-lead chooses §8 Option A/B/C for D.2 execution; THEN spawn cohort (if B/C) OR proceed solo (if A); apply discipline floor throughout; commit + report.
