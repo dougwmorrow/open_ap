@@ -87,7 +87,8 @@ When in doubt: **ASK the user to clarify** rather than invoking. Cost of asking 
 
    **Empirical anchor** (this directive surfaced 2026-05-15 per user-direction "After proceeding, update any markdown files that are used for tracking purposes. ... Update the skill so it includes updating markdown files related to the build that just took place"): user noticed multiple commits across the session had slim tracker updates focused on the canonical 5; some build types (e.g. POLISH_QUEUE for cosmetic items; RISKS for risk-touching builds) were inconsistently updated. The per-build-type checklist closes that gap by forcing explicit walk-and-justify per build cohort.
 5. **Apply Step 10** per HANDOFF §8 Pitfall #9.n if new public surface added (CLAUDE.md Structure + GLOSSARY)
-6. **Commit** on the current branch
+5.5. **Apply `udm-post-edit-verification`** (per CLAUDE.md hard rule 14 added 2026-05-15) — MANDATORY 3-step verification cascade (TEST + GAP ANALYSIS + REVIEW) for any substantive edit; anti-triggers (typo / strikethrough-flip / cosmetic) skip with explicit justification. Cascade output must appear in commit message per hard rule 14 output contract.
+6. **Commit** on the current branch (commit message MUST include hard rule 14 verification cascade section OR anti-trigger claim)
 7. **Hold push by default**; auto-push ONLY when user trigger phrase includes explicit PR-submission semantics (see Step 1.7.1 below).
    - **1.7.1 — Optional PR submission (added 2026-05-14 per user-direction)**: If user's trigger phrase contains BOTH "next steps" AND ("push" OR "submit" OR "PR" OR "open a PR" OR "make a PR" OR "open PR") semantics, the cascade DOES auto-push the branch after the gap-check completes AND reports the PR creation URL. Otherwise default = hold push (per session-established "hold the push" convention).
 
