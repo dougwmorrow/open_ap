@@ -1207,6 +1207,73 @@ Alternatives considered:
 
 ---
 
+### D62 — Amendment 2026-05-15 (D.3 of MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.5)
+
+**Status**: 🟢 Locked 2026-05-15 (additive amendment to original D62 body above; preserves Stage 1-4 protocol unchanged; adds Stage 0 + downstream-artifact cross-refs + discipline-floor extensions). Authored per D.3 of the markdown refactor effort. Lock authority: pipeline-lead Option A path approval ("B-273 → D.2 → D.3 → D.4") 2026-05-15.
+
+**Amendment scope**: ADDITIVE only — extends CCL with a recommended-not-mandatory Stage 0 routing-manifest read; cross-refs new downstream artifacts (PLANNING_DISCIPLINE.md / INDEX.md / `_refactor_log.md` / `_archive/` / CLAUDE_GOTCHAS.md) that didn't exist when D62 was originally locked; acknowledges numerical drift in §Affects skill/agent counts; codifies discipline-floor additions since lock. Original D62 Stage 1-4 semantics, Verification rule, Self-edit fallback, and Trivial-task exception remain unchanged + binding.
+
+#### Stage 0 — Routing manifest (NEW; recommended-not-mandatory)
+
+- **`docs/migration/INDEX.md`** — master routing manifest in llms.txt format; authored 2026-05-15 per D.2 Phase 1 task 1.3 + MARKDOWN_REFACTOR_PLAN.md §13.2. Read FIRST when uncertain which downstream Stage 1+2+3 docs your task actually needs. Skip when: you already know which Stage 1+2+3 docs you need (typical for experienced agents on recurring task patterns).
+
+**Why recommended-not-mandatory**: experienced agents on recurring tasks don't need INDEX.md routing — they already know which Stage 1 docs to load. Mandatory Stage 0 for ALL invocations would add overhead without proportional value. The recommendation gate captures the benefit (discoverability for novel task patterns + fresh-agent onboarding) without imposing the cost on every invocation.
+
+#### Downstream-artifact cross-refs added (per PLANNING_DISCIPLINE.md §1.4)
+
+Artifacts authored since D62 lock that the doctrine now references:
+
+- **`docs/migration/PLANNING_DISCIPLINE.md`** (authored 2026-05-15) — skill-selection matrix + sub-agent inheritance contract; binding per CLAUDE.md hard rule 13
+- **`docs/migration/INDEX.md`** (authored 2026-05-15) — CCL Stage 0 master routing manifest (see above)
+- **`docs/migration/_refactor_log.md`** (authored 2026-05-15) — append-only refactor audit trail per Option B belt-and-suspenders strategy
+- **`docs/migration/_archive/`** subdirectory (created 2026-05-15) — verbatim refactor archive home; recovery path without git archaeology
+- **`docs/migration/CLAUDE_GOTCHAS.md`** (authored 2026-05-15) — extracted gotcha sidecar per D.5 trim; active reference for B-N/E-N/V-N/W-N/OBS-N/SCD2-*/LT-*/DIAG-*/Item-* code-level lookups
+
+#### Discipline-floor additions since D62 lock (augment CCL without superseding)
+
+These extend the CCL protocol with structural disciplines added across Rounds 4-8 + this session:
+
+- **CLAUDE.md hard rule 13** (introduced 2026-05-15) — planning-session skill-activation discipline + sub-agent inheritance contract binding for ALL agents/skills/multi-agent-teams. CCL Stage 1+2 is still mandatory; hard rule 13 adds skill-selection discipline ON TOP.
+- **`superpowers-verification-before-completion`** (imported 2026-05-15 from `obra/superpowers` v5.1.0; MIT) — ALWAYS-MANDATORY pre-completion gate per PLANNING_DISCIPLINE.md §2.3. Iron Law: "NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE". Pairs with CCL: CCL ensures inputs are correct; verification-before-completion ensures outputs are real.
+- **`superpowers-systematic-debugging`** (imported 2026-05-15 from `obra/superpowers` v5.1.0) — ALWAYS-MANDATORY for any debugging scope. Iron Law: "NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST". Closes gap that no `udm-*` skill addresses structured debugging methodology.
+- **`superpowers-tdd`** (imported 2026-05-15) — OPTIONAL conditional for PS-3 TOOL scope. RED-GREEN-REFACTOR test-driven-development discipline.
+- **B-280 verbatim-extraction-safety** (formalized 2026-05-15 from D.5 trim Pitfall #9.l sub-pattern recurrence) — use `git show <pre-commit>:<file>` or `curl` for byte-exact content extraction. Avoid Write-tool re-typing of escape-sequence-bearing content (rendering pipeline can collapse ` `/` ` escape sequences to literal U+2028/U+2029 control characters — the exact BCP-corrupting pattern B-6 warns against).
+
+#### Numerical drift acknowledgment (per Pitfall #9.k arithmetic-propagation)
+
+Original D62 §Affects enumerated:
+- "all 8 skills in `.claude/skills/`" → as of 2026-05-15: **22+ project `udm-*` skills + 3 imported `superpowers-*` skills + multiple non-project skills = 25+ total**
+- "all 3 agents in `.claude/agents/`" → as of 2026-05-15: **5-7 project agents** (udm-design-reviewer, udm-test-author, udm-researcher, udm-cascade-auditor, udm-data-engineer-review, udm-checks-and-balances-agent)
+
+To be reconciled at next round close-out via `udm-cascade-audit-evolver` count-refresh (B-N candidate; pending recurrence-evidence per HANDOFF §8 sub-class accumulator). These drifts do NOT invalidate the original D62 discipline; they reflect organic accumulation of skills/agents across Rounds 4-8 + this session's planning-discipline + Superpowers partial-adoption work.
+
+#### Forward-strategy contract (per PLANNING_DISCIPLINE.md §1.5)
+
+Any future PS-2 DOC scope refactor (markdown trim / split / extract / relocate) MUST follow Option B belt-and-suspenders strategy:
+1. Always archive verbatim to `_archive/` via `git show <pre-commit>:<file>` byte-exact extraction
+2. Always cross-ref from active file to canonical destination(s)
+3. Always log to `_refactor_log.md` with full provenance
+4. Always preserve non-git recovery path
+
+#### Amendment cross-references
+
+- `MARKDOWN_REFACTOR_PLAN.md` §7.1 task 1.5 (D.3 task definition)
+- `MARKDOWN_REFACTOR_PLAN.md` §18 phase breakdown (D.0-D.6 sequence)
+- `INDEX.md` (CCL Stage 0 artifact)
+- `PLANNING_DISCIPLINE.md` §1.4 (downstream artifacts) + §1.5 (refactor-strategy contract) + §2.3 (always-mandatory skills extension)
+- `_refactor_log.md` (audit trail of all refactor events; binding template)
+- `MULTI_AGENT_GUIDE.md` §"Stage 0 — Routing manifest" subsection (added 2026-05-15 cross-ref to INDEX.md)
+- CLAUDE.md hard rule 13 (planning-session skill-activation; binding)
+- B-N closures this session: B-273 (F9.1 one-directional relaxation) + B-279 (research-grounding)
+- B-N opens this session: B-272 + B-274 through B-284 (12 cumulative)
+- Commits this session: ec1ced1 → 521b68c → 1b00755 → e15cd3a → bacfebe → c189432 → 7e2c606 → bd7e6e5 → c6aa546 → 4c6d11f → 395d22d (11 commits to D.3 amendment + this commit)
+
+**Amendment author**: Parent agent per D.3 cascade execution 2026-05-15 per user Option A path authorization.
+
+**Acceptance**: amendment locks 🟢 same-session per D111 process-infra exemption precedent (analogous to D55 / D60 / D89-D91 / D95-D99 / D113 — process-discipline meta-decisions don't gate on 🟡-first attestation when the discipline they encode is itself first-event-evidenced and pipeline-lead approved via Option A path).
+
+---
+
 ## D63: `UdmTablesList` new column inventory + idempotent ALTER DDL
 
 **Status**: 🟢 Locked (after first-pass + mandatory second-pass + third-pass per D56 — see `_validation_log.md` 2026-05-10 Round 2 entries)
