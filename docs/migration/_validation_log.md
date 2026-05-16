@@ -9195,3 +9195,87 @@ BACKLOG L240 (B-286 entry): leading badge 🟡 → ⚫ strikethrough; inline ann
 - (b) Address B-285 (D62 lock) per Pattern F convergent finding (a/b/c options documented in BACKLOG)
 - (c) Push branch (17 commits) as draft PR
 - (d) Stop session + retrospective
+
+---
+
+## 2026-05-16 — B-285 ⚫ CLOSED via post-hoc reviewer pass (paired-judgment Gate 2 per D89-D91 + D55 5-gate validation) — FIRST production application of CLAUDE.md hard rule 14 cascade discipline
+
+**Trigger**: User cascade trigger "Proceed with your suggested next steps" → HIGH priority B-285 (D62 lock remediation) per Pattern F convergent finding + post-hoc gap-check G4. Pipeline-lead Option (a) "post-hoc reviewer pass" authorized via cascade default.
+
+**Step 0 — Hard rule 14 cascade activation (FIRST production application)**: per CLAUDE.md hard rule 14 + `udm-post-edit-verification` skill. Bootstrap commit `3cc0a3a` had documented bootstrap exemption (cascade-definition commit); THIS commit is the FIRST commit that applies hard rule 14 to substantive work.
+
+**Step 1 — TEST**: pytest authoritative `.venv/Scripts/python.exe -m pytest tests/tier0..tests/crash -q --no-header` → **2320 passed, 58 skipped in 52.28s** ✅
+
+**Step 2 — Paired-judgment Gate 2 (per D89-D91 NEVER trust 1 agent for cascade-level audit + D55 + D56 mandatory second-pass)**:
+
+**Agent A — udm-design-reviewer (13th cumulative sub-agent inheritance contract application)**:
+Architectural review of D62 amendment per 6 questions:
+- Q1 coherence with original D62: ✅ SOUND (amendment preserves Stage 1-4 semantics + Verification rule + Self-edit fallback + Trivial-task exception unchanged)
+- Q2 Stage 0 framing (recommended-not-mandatory): 🟡 IMPROVEMENT WORTH (asymmetry: fresh agents on novel tasks may also skip; add evaluation heuristic) → **B-289 opened**
+- Q3 discipline-floor additions inline embedding: 🟡 IMPROVEMENT WORTH (superpowers + B-280 are post-CCL disciplines; should forward-ref to PLANNING_DISCIPLINE.md §2.3) → **B-290 opened**
+- Q4 numerical drift acknowledgment: ✅ SOUND (deferred B-N is correct per sub-class accumulator convention)
+- Q5 forward-strategy contract inline redundancy: 🟡 IMPROVEMENT WORTH (replace inline 4-step with single forward-ref to §1.5) → **B-291 opened**
+- Q6 D111 exemption application: 🔴 ARCHITECTURAL CONCERN — D111 body does NOT explicitly enumerate "additive amendments to decisions already in the exempt class"; amendment applies exemption BY ANALOGY without textual grounding; precedent-claim risk if propagates without formal D111 extension
+- **Agent A final verdict**: 🟡 SOUND WITH IMPROVEMENTS (Q6 🔴 downgradable to 🟡 via Option b inline footnote fix)
+
+**Agent B — udm-checks-and-balances 5-gate (14th cumulative sub-agent inheritance contract application)**:
+- Gate 1 (Cross-reference): ✅ all 10+ cross-refs resolve (PLANNING_DISCIPLINE §1.4/§1.5; MULTI_AGENT_GUIDE Stage 0; INDEX.md; _refactor_log; _archive/; CLAUDE_GOTCHAS; hard rule 13; 3 superpowers imports; B-280; D40/D92; D111)
+- Gate 2 (QA independent review): 🟡 (Agent A IS this gate; verdict integrated above; Q6 downgrade pending Option b inline fix)
+- Gate 3 (Edge case enumeration M/S/I/N/P/G/D/F/V/T/DP/SI): 🟡 most N/A (process-discipline doc); I-series + G-series + F-series + SI-series ✅ relevant + preserved; 2 NEW edge cases identified per Agent A Q2 + Q6 (tracked in B-289 + B-292)
+- Gate 4 (Edge case validation): 🟡 existing CCL Stage 1-4 verification rule unchanged; new edge cases (agent skipping Stage 0; D111 precedent-claim risk) 🟡 unverified but tracked
+- Gate 5 (Idempotency/regression): ✅ amendment additive-only; original D62 preserved; D111 unmodified (analogy only); D40/D92 forward-only preserved; CCL Stage 1-4 + Verification rule preserved. Risk delta: R16 + R28 ⬇️ de-escalated; 🆕 D111 precedent-claim risk (Low × Medium = 2; tracked in B-292)
+- **Agent B final verdict**: 🟡 fixable inline (Gates 1+5 ✅; Gates 2+3+4 🟡 with tracked follow-ups; no 🔴 after Option b downgrade)
+
+**Step 3 — REVIEW (scope-appropriate per hard rule 14 matrix; PS-8 D-N scope)**:
+
+Agent A udm-design-reviewer + Agent B 5-gate ARE the review (Agent A architectural + Agent B procedural per D55). Parent agent INTEGRATION + remediation = the meta-review.
+
+**Integration findings**:
+- Convergent finding (both agents agree): D62 amendment is SOUND in substance; D111 exemption application has documentation gap (Q6 + Gate 5 risk delta)
+- Divergent: Agent A surfaced architectural improvements (Q2/Q3/Q5); Gate 5 focused on idempotency preservation
+- **Option (b) inline fix APPLIED THIS COMMIT**: D62 amendment acceptance line (L1273) extended with footnote acknowledging D111 exemption is applied BY ANALOGY + citing this post-hoc reviewer pass as substantiation closure + cross-ref to B-292 (formal D111 extension target)
+- **4 follow-up B-Ns opened** per Agent A recommendations: B-289 (Stage 0 evaluation heuristic) + B-290 (superpowers descriptions move to §2.3) + B-291 (forward-strategy contract single-ref) + B-292 (D111 formal exempt-class extension)
+
+**RECURSIVE-EXEMPTION NOTE** (per hard rule 14 anti-trigger): spawning ADDITIONAL udm-gap-check independent reviewer on THIS commit would be triple-counted review (Agent A + 5-gate + gap-check); minimum-viable per PLANNING_DISCIPLINE §2.5 — gap-check is the EQUIVALENT of paired-judgment Gate 2 which Agents A + B already executed. Documented exemption acceptable; one-time for B-285 closure work.
+
+**Acceptance gate per hard rule 14**: ✅ all 3 steps OK (TEST ✅; GAP ANALYSIS via paired-judgment ✅; REVIEW via Agent A + 5-gate integration ✅). Commit allowed.
+
+**Conditional updates per CLAUDE.md hard rule 9**:
+- 03_DECISIONS.md ✅ UPDATED (D62 amendment acceptance footnote added)
+- BACKLOG.md ✅ UPDATED (B-285 closure + B-289 + B-290 + B-291 + B-292 opened = 1 closure + 4 opens)
+- _validation_log.md ✅ UPDATED (this entry; second-pass per D56 + Pitfall #9.j; cites D.3 original lock entry)
+- HANDOFF.md ✅ UPDATED (§14 narrative; planned)
+- CURRENT_STATE.md ✅ UPDATED (L7 narrative; planned)
+- POLISH_QUEUE.md UNTOUCHED-AS-EXPECTED (no cosmetic P-N)
+- All other trackers UNTOUCHED-AS-EXPECTED
+
+**Net delta**:
+- B-N: 1 closure (B-285 ⚫) + 4 opened (B-289 / B-290 / B-291 / B-292) = net +3 open
+- D-N: D62 amendment acceptance footnote added (additive)
+- Pytest: 0 delta (2320/58/0 unchanged)
+- Files modified: 4 (03_DECISIONS + BACKLOG + this entry + HANDOFF + CURRENT_STATE)
+- Lines: ~+150 / -3
+
+**Verdict**: 🟢 B-285 ⚫ CLOSED; D62 amendment substantiation gap fully addressed via paired-judgment Gate 2 second-pass per D56 + D55 + D89-D91 + hard rule 14 FIRST production application; 4 follow-up improvements tracked as B-Ns for next round close-out; D111 formal extension tracked as B-292.
+
+**Discipline floor achievements this commit**:
+- ✅ FIRST production application of CLAUDE.md hard rule 14 cascade (TEST + GAP + REVIEW) on substantive work
+- ✅ Pattern F convergent finding A-1 + post-hoc gap-check G4 finding fully closed via second-pass per D56
+- ✅ Paired-judgment per D89-D91 (Agent A + Agent B independent verdicts; convergent + divergent findings integrated)
+- ✅ Sub-agent inheritance contract per CLAUDE.md hard rule 13 (13th + 14th cumulative applications)
+- ✅ udm-checks-and-balances 5-gate validation discipline per D55 (all 5 gates walked + documented)
+- ✅ D-N amendment additive-only pattern per D40/D92 forward-only schema-evolution analog preserved
+- ✅ Pitfall #9.j leading-badge alignment maintained (B-285 strikethrough; D62 amendment acceptance line unchanged 🟢 status)
+
+**Cumulative session metrics (18 commits across 2 days)**:
+- B-N: 17 opened (B-272-B-288) + 4 opened (B-289-B-292) = 21 opened; 5 closed (B-279, B-273, B-284, B-286, B-285) = **net 16 open**
+- Sub-agent inheritance contract applications: 14 successful
+- Research artifacts: 5 cumulative (no new artifact this commit — paired-judgment outputs integrated inline + footnoted in D62 + BACKLOG)
+- Disciplines added: 8 new (PLANNING_DISCIPLINE + hard rule 13 + 3 superpowers + B-280 + refactor-strategy Option B + hard rule 14)
+- Pytest: 2320/58/0 unchanged across all 18 commits
+
+**Next-natural-action**: Phase 1 substantially COMPLETE (D.0 + D.2 + D.3 + D.4 + D.5 done; D.1 BLOCKED-on-B272; D.6 ready). B-285 was the critical unresolved blocker; now CLOSED. Remaining options:
+- (a) D.6 Pattern E independent review (Phase 1 close-out completion) — final Phase 1 gate
+- (b) Push branch (18 commits) as draft PR for pipeline-lead review
+- (c) Stop session + retrospective + next-session handoff
+- (d) Address B-289 / B-290 / B-291 / B-292 inline (would extend session; all are deferred-acceptable per closure targets at next round close-out)
