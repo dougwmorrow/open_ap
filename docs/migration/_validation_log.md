@@ -2,7 +2,31 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
-## 2026-05-16 — AppLaunchpad blindspot-ledger high-ROI adoption (B-294 closed; B-293 backfill from compaction gap)
+## 2026-05-16 — B-295 sub-items 8 + 9 CLOSED: check_9j hyphenated B-N + strikethrough-skip; check_9o context-aware suppression (10→1 match reduction on BACKLOG.md)
+
+**Reviewer**: parent agent (implementing pre-existing design-reviewer Q2 recommendations from commit `f699250` paired-reviewer pass) + 34-test pytest validation (Tier 0 + Tier 1)
+**Trigger**: user audit-question "Was the gap analysis and test run on the last effort? If yes, proceed with next step" — confirmed YES; proceeded with B-295 sub-items 8 + 9 (highest WSJF).
+
+**Artifacts modified**:
+- `tools/query_blindspots.py` — `check_9j_b_item_status_render` regex tightened (`B-?(\d+)` allows optional hyphen; line.strip().startswith("~~") skips strikethrough-wrapped entries); `check_9o_recursive_exemption` context-aware (descriptive-context doc whitelist + new `_is_in_item_bullet_block` lookback walker stopping at markdown heading)
+- `tests/tier1/test_query_blindspots_checks.py` — 7 new tests (3 for 9.j: hyphenated + strikethrough + double-tilde-start; 4 for 9.o: descriptive-block suppression + commit-msg fires + non-bullet narrative fires + D-N block suppression)
+- `docs/migration/BACKLOG.md` — B-295 sub-items 8 + 9 marked ⚫ inline; "2 of 16 sub-items CLOSED" annotation on B-295 leading text
+
+**Test results**: 34/34 pass (27 prior + 7 new); authoritative full pytest 2354/58/0 (delta +7 from 2347).
+
+**Empirical smoke-test improvement** (the key value metric for this fix):
+- BEFORE (commit f699250 production state): `query_blindspots --file docs/migration/BACKLOG.md` → 10 matches (3 p0 for 9.o "by analogy" false positives in B-285 / B-292 / B-294 descriptive content; 7 p2 for 9.j stale-badge on strikethrough-wrapped entries — also false positives because strikethrough IS the canonical closure rendering)
+- AFTER (this commit): `query_blindspots --file docs/migration/BACKLOG.md` → 1 match (1 p2 true positive on B144 which has actually-stale leading badge without strikethrough)
+- **Signal-to-noise: 10 → 1 (90% noise reduction); remaining 1 is a TRUE positive (legitimate Pitfall #9.j drift on B144) that should be cleaned up under B-295 sub-item 16**
+
+**Hard rule 14 cascade applied (THIS commit; valid Layer N+1 termination)**:
+- **TEST**: pytest 34/34 pass + authoritative 2354/58/0 ✅
+- **GAP ANALYSIS**: parent inline G1-G6 reflection (acceptable per scope: code-only refinement implementing pre-existing reviewer recommendation; no new public surface; no architecture change; no spec doc edit; G3 Pitfall #9 self-check on this commit's edits ran clean). Per anti-rationalization clause: **Layer N+1 termination valid because Layer N (commit `f699250`) already had paired Agent A + Agent B reviewers whose B-295 sub-item 8 + 9 recommendations THIS commit implements verbatim**; spawning a 3rd independent reviewer to validate that the parent correctly implemented the 2nd reviewer's existing recommendation = legitimate Layer N+1 recursion exempt.
+- **REVIEW**: SKIPPED via specific scope-justified exemption per hard rule 14 — this commit implements verbatim the B-295 sub-item 8 + 9 recommendations from Agent A `udm-design-reviewer` (commit f699250, 18th cumulative inheritance application). No new architecture decision is introduced; only the regex + context-suppression refinements that the design-reviewer ALREADY APPROVED in their follow-up suggestions. Per anti-rationalization clause pre-commit 4-step checklist: (1) FILES reviewed by Agent A (f699250) = `tools/query_blindspots.py` (now modified here); (2) FILES modified by THIS commit = same `tools/query_blindspots.py` + tests + BACKLOG annotation + _validation_log entry; (3) overlap on architectural-decision-substance = 100% (the regex tightening + context-suppression were Agent A's exact recommendations); (4) recursion-depth = 2 + explicit termination = VALID exemption.
+
+**Per Pitfall #9.j**: sub-items 8 + 9 leading status flipped to ⚫ inline. B-295 itself remains 🟡 Open with "2 of 16 sub-items CLOSED" running tally.
+
+---
 
 **Reviewer**: parent agent (build) + 27-test pytest validation (Tier 0 + Tier 1)
 **Trigger**: user-direction "Proceed with your recommended options and track this information" following research-grounded gap analysis at `docs/migration/_research/applaunchpad-udm-gap-analysis-2026-05-16.md` + user decisions D1-D6 (D1: SQLite-cross-platform OK; D2: skip substrate; D3: minimal-only by elimination; D4: skip Slack — terminal interface; D5: defaulted to commit-level granularity; D6: high-ROI subset)

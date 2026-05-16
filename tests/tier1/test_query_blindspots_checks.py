@@ -50,6 +50,31 @@ def test_9j_no_match_open_without_inline_closed():
     assert matches == []
 
 
+def test_9j_detects_hyphenated_b_n_format():
+    """B-295 sub-item 8: hyphenated `**B-294**` format must be caught."""
+    from tools.query_blindspots import check_9j_b_item_status_render
+    content = "- **B-294** (🟡 Open): Description. **CLOSED 2026-05-16** via X.\n"
+    matches = check_9j_b_item_status_render(content, "BACKLOG.md")
+    assert len(matches) == 1
+    assert "B294" in matches[0].diagnostic
+
+
+def test_9j_skips_strikethrough_wrapped_entries():
+    """B-295 sub-item 8: strikethrough-wrapped lines are already-rendered-closed."""
+    from tools.query_blindspots import check_9j_b_item_status_render
+    content = "- ~~**B-280** (🟡 Open)~~ description. **CLOSED 2026-05-16** via X.\n"
+    matches = check_9j_b_item_status_render(content, "BACKLOG.md")
+    assert matches == []
+
+
+def test_9j_skips_double_tilde_at_start():
+    """Lines beginning with ~~ are skipped regardless of where badge sits."""
+    from tools.query_blindspots import check_9j_b_item_status_render
+    content = "~~- **B999** (🟡 Open) inside strikethrough~~. **CLOSED 2026-05-16**\n"
+    matches = check_9j_b_item_status_render(content, "BACKLOG.md")
+    assert matches == []
+
+
 # ---------------------------------------------------------------------------
 # 9o — Recursive-exemption rationalization
 # ---------------------------------------------------------------------------
@@ -81,6 +106,50 @@ def test_9o_detects_by_analogy_phrase():
     content = "Applying D111 process-infra exemption by analogy without formal extension.\n"
     matches = check_9o_recursive_exemption(content, "COMMIT_MSG")
     assert len(matches) >= 1
+
+
+def test_9o_suppresses_in_b_item_descriptive_block():
+    """B-295 sub-item 9: 9.o phrases inside B-N item bullets in BACKLOG are descriptive."""
+    from tools.query_blindspots import check_9o_recursive_exemption
+    content = (
+        "- **B-292** (🟡 Open; HIGH; WSJF 3.0): **Formally extend D111 exempt-class** — "
+        "D62 amendment applied D111 exemption by analogy — reasonable but undocumented.\n"
+    )
+    matches = check_9o_recursive_exemption(content, "docs/migration/BACKLOG.md")
+    assert matches == []
+
+
+def test_9o_fires_in_commit_message_outside_doc():
+    """9.o phrases in commit messages (non-descriptive-context paths) still fire."""
+    from tools.query_blindspots import check_9o_recursive_exemption
+    content = "Applied D111 exemption by analogy. Cascade exempt per recursive coverage.\n"
+    matches = check_9o_recursive_exemption(content, "COMMIT_MSG")
+    assert len(matches) >= 1
+
+
+def test_9o_fires_outside_item_bullet_even_in_descriptive_doc():
+    """9.o phrase in BACKLOG narrative outside any B-N bullet still fires."""
+    from tools.query_blindspots import check_9o_recursive_exemption
+    content = (
+        "# Backlog\n"
+        "\n"
+        "We're applying D111 by analogy to D62 amendments. This is the methodology.\n"
+        "\n"
+        "## Methodology\n"
+        "Section header.\n"
+    )
+    matches = check_9o_recursive_exemption(content, "docs/migration/BACKLOG.md")
+    assert len(matches) >= 1
+
+
+def test_9o_suppresses_inside_d_item_block():
+    """D-N item bullets in 03_DECISIONS also suppress as descriptive context."""
+    from tools.query_blindspots import check_9o_recursive_exemption
+    content = (
+        "- **D113** Process-infra exemption — applying CCL discipline by analogy is permitted.\n"
+    )
+    matches = check_9o_recursive_exemption(content, "docs/migration/03_DECISIONS.md")
+    assert matches == []
 
 
 # ---------------------------------------------------------------------------

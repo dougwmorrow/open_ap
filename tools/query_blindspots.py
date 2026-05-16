@@ -175,14 +175,23 @@ def _git_staged_files() -> list[str]:
 # ---------------------------------------------------------------------------
 
 def check_9j_b_item_status_render(content: str, file_path: str) -> list[Match]:
-    """Detect B-item rows with stale leading badge vs canonical inline annotation."""
+    """Detect B-item rows with stale leading badge vs canonical inline annotation.
+
+    Per B-295 sub-item 8 (2026-05-16 reviewer recommendation): regex tolerates
+    optional hyphen in B-N format (`**B-294**` newer convention vs `**B270**`
+    older convention); strikethrough-wrapped lines (`~~**B-N**~~`) are skipped
+    as already-rendered-closed entries.
+    """
     matches = []
     badge_open_re = re.compile(
-        r"\*\*B(\d+)\*\*\s*\((?:🟡|🟠|⬜)\s*(?:Open|Noticeable|Deferred)\)",
+        r"\*\*B-?(\d+)\*\*\s*\((?:🟡|🟠|⬜)\s*(?:Open|Noticeable|Deferred)",
         re.IGNORECASE,
     )
     closed_inline_re = re.compile(r"\*\*CLOSED\s+\d{4}-\d{2}-\d{2}\*\*", re.IGNORECASE)
     for lineno, line in enumerate(content.splitlines(), start=1):
+        stripped = line.strip()
+        if stripped.startswith("~~") or stripped.startswith("- ~~"):
+            continue
         badge = badge_open_re.search(line)
         closed = closed_inline_re.search(line)
         if badge and closed:
@@ -200,7 +209,18 @@ def check_9j_b_item_status_render(content: str, file_path: str) -> list[Match]:
 
 
 def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
-    """Detect recursive-exemption rationalization phrases in commit messages."""
+    """Detect recursive-exemption rationalization phrases in commit messages.
+
+    Per B-295 sub-item 9 (2026-05-16 reviewer recommendation): scope check to
+    commit messages + non-descriptive content. The phrases canonically appear
+    in DESCRIPTIVE context within BACKLOG / decisions / handoff docs (documenting
+    the pattern as a known anti-pattern) which produced 3 p0 false-positives on
+    BACKLOG.md in the tool's first production run. The fix: in docs with item-
+    bullet structure (BACKLOG / DECISIONS / HANDOFF / CURRENT_STATE / VALIDATION_LOG
+    / POLISH_QUEUE), suppress matches that fall inside a `**B-N**` / `**D-N**` /
+    `**R-N**` item-bullet block. Commit messages + other content remain fully
+    scanned.
+    """
     matches = []
     suspicious_phrases = [
         r"triple-counted review",
@@ -210,21 +230,39 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
         r"by analogy",
         r"recursive coverage",
     ]
-    for lineno, line in enumerate(content.splitlines(), start=1):
+    norm_path = file_path.replace("\\", "/").lower()
+    is_descriptive_context_doc = any(
+        marker in norm_path for marker in (
+            "backlog.md",
+            "03_decisions.md",
+            "handoff.md",
+            "current_state.md",
+            "_validation_log.md",
+            "polish_queue.md",
+            "checks_and_balances.md",
+            "north_star.md",
+        )
+    )
+    lines = content.splitlines()
+    for lineno, line in enumerate(lines, start=1):
         for phrase_pattern in suspicious_phrases:
-            if re.search(phrase_pattern, line, re.IGNORECASE):
-                if not _has_termination_citation(content):
-                    matches.append(Match(
-                        entry_id="9o-recursive-exemption-rationalization",
-                        severity="p0",
-                        location=f"{file_path}:{lineno}",
-                        snippet=line[:120],
-                        diagnostic=(
-                            f"Suspicious phrase '{phrase_pattern}' found without explicit "
-                            "termination citation (Layer N+1 + 4-step pre-commit checklist). "
-                            "Per CLAUDE.md hard rule 14 anti-rationalization clause."
-                        ),
-                    ))
+            if not re.search(phrase_pattern, line, re.IGNORECASE):
+                continue
+            if is_descriptive_context_doc and _is_in_item_bullet_block(lines, lineno - 1):
+                continue
+            if _has_termination_citation(content):
+                continue
+            matches.append(Match(
+                entry_id="9o-recursive-exemption-rationalization",
+                severity="p0",
+                location=f"{file_path}:{lineno}",
+                snippet=line[:120],
+                diagnostic=(
+                    f"Suspicious phrase '{phrase_pattern}' found without explicit "
+                    "termination citation (Layer N+1 + 4-step pre-commit checklist). "
+                    "Per CLAUDE.md hard rule 14 anti-rationalization clause."
+                ),
+            ))
     return matches
 
 
@@ -233,6 +271,30 @@ def _has_termination_citation(content: str) -> bool:
     layer_re = re.compile(r"Layer\s+N\s*\+\s*1|recursion[ -]depth", re.IGNORECASE)
     checklist_re = re.compile(r"4[ -]step|pre[ -]commit\s+verification", re.IGNORECASE)
     return bool(layer_re.search(content) and checklist_re.search(content))
+
+
+def _is_in_item_bullet_block(lines: list[str], idx: int, lookback: int = 40) -> bool:
+    """Detect whether line at `idx` is inside a `**B-N**` / `**D-N**` / `**R-N**`
+    / `**P-N**` item-bullet block.
+
+    Walks backward from idx looking for an item-bullet marker that begins a
+    bulleted entry. Stops at section boundary (markdown heading at column 0).
+    Returns True if a marker is found before a section boundary.
+    """
+    item_marker_re = re.compile(
+        r"^\s*-\s+(?:~~)?\*\*[BDRP]-?\d+\*\*", re.IGNORECASE,
+    )
+    heading_re = re.compile(r"^#{1,6}\s+", re.MULTILINE)
+    for back in range(min(idx + 1, lookback)):
+        check_idx = idx - back
+        if check_idx < 0:
+            break
+        check_line = lines[check_idx]
+        if item_marker_re.search(check_line):
+            return True
+        if heading_re.match(check_line):
+            return False
+    return False
 
 
 def check_9n_convention_registration(content: str, file_path: str) -> list[Match]:
