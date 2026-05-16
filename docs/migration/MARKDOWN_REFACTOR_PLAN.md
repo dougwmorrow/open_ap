@@ -1,6 +1,6 @@
 # Markdown Refactor + Agent Traversal System — Plan
 
-**Status**: 🟡 **Plan-final-cleanup-complete** (was Plan-final pre-cleanup) — research-grounded + empirical-validation-complete + 3 critical-failure mitigations APPLIED inline + 3 BLOCKERS CLOSED inline (B-3 verify_cascade.py glob fix; B-4 §7.1 task 1.1 literal cutoff date 2026-04-15; B-5 §10.A Q-N classification table 4 🔴 / 8 🟡 / 12 ⚪) + §18 phase breakdown reference; pipeline-lead **4 binary 🔴 BLOCKING question answers** is the SINGLE remaining gate before 🟢 Locked (Q-1 / Q-2 / Q-12 / Q-23 per §10.A). **REVISED 2026-05-15 (4th revision)** with: (a) §3.6 research synthesis #1; (b) §10b independent gap audit; (c) §13 Option A deep-dive (research #2); (d) §15 cross-domain synthesis (research #3-5; 3 parallel artifacts); (e) **§16 long-term maintenance + governance (NEW)** addressing user Q1-Q3 directives; (f) **EMPIRICAL VALIDATION COMPLETE** — Q-22 em-dash test resolved via `tools/test_github_slug.py` + `_research/em-dash-slug-test-2026-05-15.md` (binding revision: colon-form `## D15: Title` mandatory); Q-13 token cost measurement resolved via `tools/measure_ccl_overhead.py` + `_research/ccl-baseline-2026-05-15.md` (CCL Stage 1+2 = 362K tokens = 181% of 200K window; `_validation_log.md` alone = 115% of window; archive cascade promoted to Phase 1.0 immediate priority); (g) 19 cumulative open questions Q-8 through Q-26 (Q-13 + Q-22 RESOLVED; 17 remaining for pipeline-lead). Backing research: **6 udm-researcher artifacts** + **2 empirical-test deliverables** at `_research/` + `tools/` (~50 cumulative findings; ~70 primary sources; medium-high confidence + 2 P0 empirical results). Plan now ~1080 lines — recommend split at next refactor cycle. Companion: `NEW_REPO_STARTER_TEMPLATE.md` (greenfield template per Q-24).
+**Status**: 🟢 **LOCKED 2026-05-15** — pipeline-lead approved all 4 binary 🔴 BLOCKING questions (Q-1 / Q-2 / Q-12 / Q-23) with Recommended defaults; sign-off attestation at §12; Phase 1 execution authorized. **HOWEVER**: D.0 reconnaissance (per §7.1 task 1.1) surfaced an empirical impasse for Phase D.1 (`_validation_log.md` archive cascade) — at 2026-04-15 cutoff, **zero entries qualify for archive** (earliest log entry is 2026-05-09; all 125 entries are within the 30-day retention window). Q-2 approval stands as policy; Phase D.1 execution requires a follow-up pipeline-lead decision (defer until entries age / aggressive-retention override / different split strategy). Tracked as **B-272** in BACKLOG. **Plan-prior history**: research-grounded + empirical-validation-complete + 3 critical-failure mitigations APPLIED inline + 3 BLOCKERS CLOSED inline (B-3 verify_cascade.py glob fix; B-4 §7.1 task 1.1 literal cutoff date 2026-04-15; B-5 §10.A Q-N classification table 4 🔴 / 8 🟡 / 12 ⚪) + §18 phase breakdown reference. **REVISED 2026-05-15 (4th revision)** with: (a) §3.6 research synthesis #1; (b) §10b independent gap audit; (c) §13 Option A deep-dive (research #2); (d) §15 cross-domain synthesis (research #3-5; 3 parallel artifacts); (e) **§16 long-term maintenance + governance (NEW)** addressing user Q1-Q3 directives; (f) **EMPIRICAL VALIDATION COMPLETE** — Q-22 em-dash test resolved via `tools/test_github_slug.py` + `_research/em-dash-slug-test-2026-05-15.md` (binding revision: colon-form `## D15: Title` mandatory); Q-13 token cost measurement resolved via `tools/measure_ccl_overhead.py` + `_research/ccl-baseline-2026-05-15.md` (CCL Stage 1+2 = 362K tokens = 181% of 200K window; `_validation_log.md` alone = 115% of window; archive cascade promoted to Phase 1.0 immediate priority); (g) 19 cumulative open questions Q-8 through Q-26 (Q-13 + Q-22 RESOLVED; 17 remaining for pipeline-lead). Backing research: **6 udm-researcher artifacts** + **2 empirical-test deliverables** at `_research/` + `tools/` (~50 cumulative findings; ~70 primary sources; medium-high confidence + 2 P0 empirical results). Plan now ~1080 lines — recommend split at next refactor cycle. Companion: `NEW_REPO_STARTER_TEMPLATE.md` (greenfield template per Q-24).
 
 **Owner**: Pipeline lead. Contributor: parent-agent authoring this plan; no execution work landed.
 
@@ -376,10 +376,13 @@ Each phase must pass these gates BEFORE merging to master:
 
 ### §7.1 Phase 1 work breakdown (proposed; ~1-2 cycles)
 
+> **2026-05-15 amendment**: Tasks 1.1 + 1.2 are 🟡 BLOCKED pending B-272 resolution. D.0 reconnaissance (`_research/d0-prep-validation-log-survey-2026-05-15.md`) found that at the approved 2026-04-15 cutoff, **zero entries qualify for archive** (earliest log entry is 2026-05-09; all 125 entries are within the 30-day retention window). Q-2 approval stands as policy; Phase D.1 execution path requires a follow-up pipeline-lead decision. See B-272 for the 5 enumerated options. Tasks 1.3-1.6 remain 🟢 AUTHORIZED standalone (see §12.3).
+
 | Task | Owner | Effort | Outputs |
 |---|---|---|---|
-| 1.1 Compute archive cutoff date for `_validation_log.md` per existing policy at L12-19 (B-4 fix 2026-05-15) | Pipeline lead | <10 min | Cutoff date = (today − 30 days) = **2026-04-15**; archive file named `_validation_log_archive_2026-04.md` (per L17 naming convention). Pipeline-lead may override to a different retention window (would require updating `_validation_log.md` L12-19 + `NEW_REPO_STARTER_TEMPLATE.md` L206-217 in lockstep) |
-| 1.2 Execute archive cascade for `_validation_log.md` (TWO-PHASE-COMMIT per F1.1 mitigation; 🔴 CRITICAL) | Parent agent | ~1 hour | `_validation_log_archive_2026-04.md` authored via two-phase-commit; live file truncated; 1-line back-reference added |
+| 1.1 Compute archive cutoff date for `_validation_log.md` per existing policy at L12-19 (B-4 fix 2026-05-15) | Pipeline lead | <10 min | ✅ DONE 2026-05-15: cutoff date = 2026-04-15 (per Q-2 approval) |
+| 1.1b 🆕 D.0 reconnaissance — survey `_validation_log.md` for entries qualifying for archive at cutoff | Parent agent | <10 min | ✅ DONE 2026-05-15: `_research/d0-prep-validation-log-survey-2026-05-15.md`. **Empirical finding: zero entries qualify** at 2026-04-15 cutoff. 5 options surfaced for pipeline-lead resolution. Tracked as **B-272**. |
+| 1.2 Execute archive cascade for `_validation_log.md` (TWO-PHASE-COMMIT per F1.1 mitigation; 🔴 CRITICAL) | Parent agent | ~1 hour | 🟡 **BLOCKED pending B-272 resolution.** When unblocked, output is: `_validation_log_archive_2026-04.md` authored via two-phase-commit; live file truncated; 1-line back-reference added |
 
 **F1.1 mitigation — two-phase-commit procedure (BINDING for task 1.2)**:
 
@@ -476,8 +479,8 @@ Per blocker-evidence-verification artifact + Wave 1 Agent A audit. The 24 unreso
 
 | Q-N | Brief description | Classification | Rationale |
 |---|---|---|---|
-| Q-1 | Approval to proceed with Phase 1? | 🔴 BLOCKING | Definitional — this IS the sign-off |
-| Q-2 | `_validation_log.md` archive cutoff date | 🔴 BLOCKING | Phase 1.0 (immediate-priority task) literally needs this date — see §7.1 task 1.1 (revised: default 2026-04-15 per existing policy) |
+| Q-1 | Approval to proceed with Phase 1? | ✅ RESOLVED 2026-05-15 | Approved — Phase 1 starts now (Recommended); see §12 sign-off |
+| Q-2 | `_validation_log.md` archive cutoff date | ✅ RESOLVED 2026-05-15 | Accepted 2026-04-15 (Recommended); see §12 sign-off. **Empirical impasse caveat**: D.0 prep found zero entries qualify at this cutoff (earliest entry 2026-05-09); Phase D.1 execution requires follow-up decision per B-272 |
 | Q-3 | INDEX scope (canonical-only vs routing-by-intent) | 🟡 DESIGN | Answer when starting Phase 1.3 (INDEX.md authoring); doesn't gate sign-off |
 | Q-4 | Pre-commit hook adoption (auto-add vs fail-if-stale) | 🟡 DESIGN | Phase 2.3 question; Phase 1 doesn't touch hooks |
 | Q-5 | D-N for the refactor decision itself | ⚪ DEFERRABLE | Bookkeeping; per D111 process-infra exemption can land directly when authored |
@@ -487,7 +490,7 @@ Per blocker-evidence-verification artifact + Wave 1 Agent A audit. The 24 unreso
 | Q-9 | GLOSSARY.md merge into INDEX.md? | 🟡 DESIGN | Phase 1.3 INDEX scope question; can decide at execution time |
 | Q-10 | Commission internal benchmark study post-Phase-1+2? | ⚪ DEFERRABLE | Post-Phase-2 question; doesn't gate Phase 1 |
 | Q-11 | Approve `udm-context-loader` subagent at Phase 2? | 🟡 DESIGN | Phase 2 question; doesn't gate Phase 1 sign-off |
-| Q-12 | Approve CLAUDE.md trim to <300 lines at Phase 1.6? | 🔴 BLOCKING | Phase 1.6 is in proposed Phase 1 scope per §7.1; can't ship Phase 1 without yes/no/defer |
+| Q-12 | Approve CLAUDE.md trim to <300 lines at Phase 1.6? | ✅ RESOLVED 2026-05-15 | Approved <300 line target (Recommended); see §12 sign-off |
 | Q-14 | Approve P1 Navigation Paradox UDM topology mapping? | ⚪ DEFERRABLE | Meta-research; doesn't gate Phase 1 execution |
 | Q-15 | Approve P4 intent.lisp investigation? | ⚪ DEFERRABLE | Meta-research; doesn't gate Phase 1 execution |
 | Q-16 | Approve P7 auto-compaction interaction investigation? | ⚪ DEFERRABLE | Meta-research; doesn't gate Phase 1 execution |
@@ -496,12 +499,12 @@ Per blocker-evidence-verification artifact + Wave 1 Agent A audit. The 24 unreso
 | Q-19 | Mandate lead-with-answer writing discipline for all NEW edits? | 🟡 DESIGN | Markdown hygiene rule; relates to Q-23; can pair |
 | Q-20 | Near-duplicate-paragraph audit across canonical trackers? | ⚪ DEFERRABLE | Polish work; can land as B-N post-Phase-1 |
 | Q-21 | 4-component cross-ref maintenance design? | 🟡 DESIGN | Phase 2.4 design question; doesn't gate Phase 1 |
-| Q-23 | 6-rule markdown hygiene as binding (D-N candidate)? | 🔴 BLOCKING | Hygiene rules referenced as binding in §7.1 task 1.4 + §16.1; need pipeline-lead approval before they "bind" |
+| Q-23 | 6-rule markdown hygiene as binding (D-N candidate)? | ✅ RESOLVED 2026-05-15 | Approved all 6 rules as binding (Recommended); see §12 sign-off; D-N lock at next round close-out cascade |
 | Q-24 | NEW_REPO_STARTER_TEMPLATE.md as canonical greenfield ref? | ⚪ DEFERRABLE | Internal-only artifact; binding-or-not doesn't block Phase 1 |
 | Q-25 | Q11 quarterly markdown research-refresh cadence? | ⚪ DEFERRABLE | Quarterly cadence start date doesn't gate Phase 1 |
 | Q-26 | Year-1 milestones (Day 0/30/90/180/365) as roadmap commitment? | ⚪ DEFERRABLE | Roadmap framing; can iterate post-Phase-1 |
 
-**Count**: 4 🔴 BLOCKING / 8 🟡 DESIGN / 12 ⚪ DEFERRABLE = 24 total ✅
+**Count**: 4 ✅ RESOLVED 2026-05-15 (pipeline-lead approved all 4 BLOCKING with Recommended defaults) / 8 🟡 DESIGN (move to Phase 1 design-decision queue) / 12 ⚪ DEFERRABLE (move to post-sign-off candidate list) = 24 total ✅
 
 **Shortest path to sign-off**: Pipeline-lead answers 4 binary 🔴 questions:
 1. **Q-1**: Approve Phase 1? (yes / no / redirect)
@@ -1161,11 +1164,35 @@ Per user 8th-directive sub-question "Break down the effort into phases. Use a mu
 
 ## §12. Sign-off
 
-This is a 🟡 Plan-draft. NO execution work begins until pipeline-lead reviews + approves OR redirects.
+🟢 **APPROVED AS-IS 2026-05-15** by pipeline lead (dougmorrow@protonmail.com).
 
 | Role | Name | Date | Decision |
 |---|---|---|---|
-| Pipeline lead | | | ✅ Approved as-is / 🔄 Redirect (see notes) / ❌ Rejected |
-| Notes | | | |
+| Pipeline lead | dougmorrow | 2026-05-15 | ✅ Approved as-is (4 binary 🔴 BLOCKING questions answered with Recommended defaults) |
+| Notes | Q-1 ✅ Approve — Phase 1 starts now. Q-2 ✅ Accept 2026-04-15. Q-12 ✅ Approve <300 line CLAUDE.md trim. Q-23 ✅ Approve all 6 hygiene rules as binding. | | |
 
-If approved as-is: Phase 1 work begins with task 1.1 (survey `_validation_log.md` cutoff date). If redirected: re-author this plan with the redirect captured. If rejected: archive this plan as `_research/markdown_refactor_plan_<date>.md` and document rejection rationale in `_validation_log.md`.
+### §12.1 Approved questions (4 of 4 🔴 BLOCKING resolved)
+
+| Q-N | Question | Decision | Operational note |
+|---|---|---|---|
+| Q-1 | Approve Phase 1? | ✅ Approved — Phase 1 starts now (Recommended) | Phase D.1+D.2 atomic-cohort gating (F9.1) still binding |
+| Q-2 | Accept 2026-04-15 archive cutoff per existing policy? | ✅ Accept 2026-04-15 (Recommended) | **Empirical impasse**: D.0 prep found zero entries qualify (earliest entry 2026-05-09 = 24 days AFTER cutoff). Q-2 policy stands; Phase D.1 execution path requires follow-up decision — see B-272. |
+| Q-12 | Approve CLAUDE.md trim to <300 lines at Phase 1.6? | ✅ Approve <300 line target (Recommended) | Phase 1.6 in scope; ~10% Stage 1+2 token savings via removal of grandfathered narrative |
+| Q-23 | Approve 6-rule markdown hygiene as binding (D-N candidate)? | ✅ Approve all 6 rules as binding (Recommended) | D-N lock at next round close-out cascade via udm-decision-recorder (per D113 process-infra exemption precedent) |
+
+### §12.2 Deferred questions (20 of 24 non-blocking; per §10.A classification)
+
+8 🟡 DESIGN questions (Q-3, Q-4, Q-6, Q-8, Q-9, Q-11, Q-17, Q-19, Q-21) move to Phase 1 design-decision queue (answer when starting affected task). 12 ⚪ DEFERRABLE questions move to `_research/open_questions_post_sign_off.md` candidate list (answer when needed; not blocking).
+
+### §12.3 Phase 1 execution authorization
+
+Per §18 phase breakdown, Phase 1 work is authorized to begin:
+- Phase D.0 (recon) — ✅ COMPLETE (`_research/d0-prep-validation-log-survey-2026-05-15.md`); surfaced empirical impasse → B-272
+- Phase D.1 (`_validation_log.md` archive cascade) — 🟡 BLOCKED pending B-272 resolution (pipeline-lead choice between Option A/C/E from D.0 prep doc)
+- Phase D.2 (`INDEX.md` authoring) — 🟢 AUTHORIZED but ATOMIC-COHORT GATED with D.1 (per F9.1); can begin scoping but cannot land without D.1
+- Phase D.3 (D62 CCL doctrine update) — 🟢 AUTHORIZED standalone
+- Phase D.4 (Skill SKILL.md cascade updates) — 🟢 AUTHORIZED standalone
+- Phase D.5 (CLAUDE.md trim to <300 lines) — 🟢 AUTHORIZED standalone (Q-12 approved)
+- Phase D.6 (Pattern E independent review) — 🟢 AUTHORIZED once D.1-D.5 land
+
+**Recommended path forward** (per D.0 prep recommendation): resolve B-272 via Option A (defer Phase D.1) OR Option E (pivot Phase 1 focus); proceed with D.3 + D.4 + D.5 standalone tasks; revisit D.1 + D.2 atomic-cohort when entries age OR retention policy is revised.

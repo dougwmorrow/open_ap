@@ -7934,3 +7934,77 @@ B. **Conditional per-build-type (per Step 1.4 13-row checklist)**:
 **Next-natural-action**: pipeline-lead reads plan §10.A Q-N classification table; answers 4 binary 🔴 BLOCKING questions (Q-1 / Q-2 / Q-12 / Q-23); plan flips 🟡 Plan-final-cleanup-complete → 🟢 Locked; Phase 1 begins per §7.1 task breakdown (with F9.1 atomic-cohort gate per §5.1 + F1.1 two-phase-commit per §7.1 task 1.2 + F5.1 verbatim_excerpts per §15.2 Pattern (d) all enforced at task definition time). Phase D execution per §18 phase breakdown — D.0 prep + D.1+D.2 atomic cohort + D.3+D.4+D.5 parallel subagent cohort + D.6 Pattern E independent review.
 
 **Next-natural-action**: pipeline-lead reviews MARKDOWN_REFACTOR_PLAN.md per §12 sign-off table; Q-1 through Q-12 answered (especially Q-11 udm-context-loader subagent approval + Q-12 CLAUDE.md trim approval); approve / redirect / reject decision recorded; if approved, Phase 1 work begins per §7.1 task breakdown (1.0 baseline measurement + 1.1 archive cutoff + 1.2 archive cascade + 1.3 INDEX.md authoring + 1.4 per-file INDEX sidecars + 1.5 D62 CCL Stage 0 update + 1.5b skill-prompt cascade enumeration + 1.6 CLAUDE.md trim + 1.7 Pattern E independent review).
+
+---
+
+## 2026-05-15 — Sign-off ceremony — MARKDOWN_REFACTOR_PLAN flipped to 🟢 LOCKED + D.0 reconnaissance surfaced B-272 empirical impasse
+
+**Trigger**: Pipeline-lead via AskUserQuestion provided 4 binary 🔴 BLOCKING answers (Q-1 / Q-2 / Q-12 / Q-23) with Recommended defaults; user message: "Proceed with your next suggested steps."
+
+**Inputs**:
+- MARKDOWN_REFACTOR_PLAN.md (1135 lines; 🟡 Plan-final-cleanup-complete pre-sign-off)
+- AskUserQuestion answers: Q-1 ✅ Approve — Phase 1 starts now (Recommended) / Q-2 ✅ Accept 2026-04-15 (Recommended) / Q-12 ✅ Approve <300 line target (Recommended) / Q-23 ✅ Approve all 6 rules as binding (Recommended)
+- §18 phase breakdown (D.0 → D.6) authorizing Phase 1 sequencing
+
+**Step 1 — sign-off ceremony**:
+- Plan §12 sign-off attestation authored: formal Approved as-is row + 4 Q-N decision rows + §12.1 approved-questions table + §12.2 deferred-questions note + §12.3 Phase 1 execution authorization map (D.0 ✅ DONE / D.1 🟡 BLOCKED pending B-272 / D.2 🟢 AUTHORIZED but ATOMIC-COHORT gated / D.3 🟢 / D.4 🟢 / D.5 🟢 Q-12 approved / D.6 🟢)
+- Plan §10.A Q-N classification table updated: Q-1 / Q-2 / Q-12 / Q-23 rows flipped 🔴 BLOCKING → ✅ RESOLVED 2026-05-15 with answer references
+- Plan header status: 🟡 **Plan-final-cleanup-complete** → 🟢 **LOCKED 2026-05-15**
+- Note in header: D.0 reconnaissance surfaced empirical impasse for Phase D.1; tracked as B-272
+
+**Step 2 — D.0 reconnaissance (per §7.1 task 1.1b)**:
+- Authored `_research/d0-prep-validation-log-survey-2026-05-15.md` (109 lines)
+- Empirical survey of `_validation_log.md` for archive-qualifying entries at 2026-04-15 cutoff
+- **Finding**: 0 entries qualify; 125 entries dated 2026-05-09 through 2026-05-15; earliest entry is 24 days AFTER cutoff; all entries within 30-day retention window
+- File size: 7,802 lines (~231K tokens; 115% of 200K context window); large because of session-activity density not retention drift
+- **5 options enumerated** for pipeline-lead resolution: (A) Defer until entries age / (B) 3-day retention override / (C) 1-day retention override / (D) milestone-split / (E) pivot Phase 1 focus to D.3-D.5 standalone
+- D.0 prep recommendation: Option A OR E (both preserve approved Q-2 policy without revision)
+
+**Step 3 — B-272 opened**:
+- BACKLOG.md L236 inserted B-272 entry (after B-271; ordering preserved)
+- WSJF 4.0 (COD 4 — blocks highest-leverage Phase 1 task ~62% CCL token recovery target; JS 1 — single pipeline-lead binary decision)
+- Closure target: next pipeline-lead session OR Q-2 follow-up answer
+
+**Step 4 — §7.1 task amendments**:
+- Task 1.1 marked ✅ DONE 2026-05-15 (cutoff date = 2026-04-15 per Q-2 approval)
+- Task 1.1b 🆕 D.0 reconnaissance added (✅ DONE 2026-05-15; cites empirical impasse)
+- Task 1.2 marked 🟡 BLOCKED pending B-272 resolution (output description preserved for when unblocked)
+- Tasks 1.3-1.6 unchanged (remain 🟢 AUTHORIZED; D.2 ATOMIC-COHORT gated with D.1)
+
+**Step 5 — tracker pass**:
+- CURRENT_STATE.md L7 (narrative prepended via PowerShell — L7 too long for Read tool; PowerShell read+replace+write with UTF8 encoding)
+- HANDOFF.md §14 (narrative prepended via Edit)
+- _validation_log.md (this entry appended)
+- BACKLOG.md (B-272 opened)
+- CODE_BUILD_STATUS.md (NOT modified — no code-build state changed)
+
+**Conditional updates per CLAUDE.md hard rule 9 (udm-progress-logger per-build-type checklist)**:
+- 03_DECISIONS.md — UNTOUCHED-AS-EXPECTED (D-N for Q-23 hygiene rules deferred to next round close-out cascade per pipeline-lead intent + D113 process-infra exemption precedent; not blocking)
+- 05_RUNBOOKS.md — UNTOUCHED (no new RB-N this commit)
+- 04_EDGE_CASES.md — UNTOUCHED (no new edge case)
+- RISKS.md — UNTOUCHED (no risk-state change)
+- 02_PHASES.md — UNTOUCHED (no phase/round transition)
+- POLISH_QUEUE.md — UNTOUCHED (no cosmetic/render-discipline item this commit)
+- ONE_OFF_SCRIPTS.md / phase1/02_configuration.md § 5.1 — UNTOUCHED (no executable artifact this commit; D.0 prep produced a research doc not a script)
+- GLOSSARY.md — UNTOUCHED (no new public surface)
+- CLAUDE.md Structure — UNTOUCHED (no new module/tool)
+- CLAUDE.md L325 CLI_* family registry — UNTOUCHED (no new EventType)
+- HANDOFF §8 Pitfall sub-class — UNTOUCHED (no new sub-class candidate this commit)
+
+**Step 10 verification (per HANDOFF §8 Pitfall #9.n; udm-step-10-verifier deferred)**:
+- N/A: this is a sign-off + tracker commit; no new public surface introduced. The D.0 prep doc is a research artifact (private to plan-execution stream); not a module/tool surface.
+
+**Pytest baseline**:
+- 2320 pass / 62 skip / 0 fail (unchanged; doc-only commit; no code touched)
+- ALL TESTS PASS criterion preserved
+
+**Net delta**:
+- B-N: 0 closures + 1 opened (B-272)
+- D-N: 0 locked (Q-23 D-N deferred)
+- Pytest: 0 delta (2320/62/0 unchanged)
+- Files modified: 5 (MARKDOWN_REFACTOR_PLAN.md + BACKLOG.md + CURRENT_STATE.md L7 + HANDOFF.md §14 + this entry) + 1 new (`_research/d0-prep-validation-log-survey-2026-05-15.md`)
+- Lines: ~+250 / -50
+
+**Verdict**: 🟢 Plan locked; Phase 1 partial-authorization complete; pipeline-lead follow-up required on B-272 to unblock D.1+D.2 atomic cohort.
+
+**Next-natural-action**: pipeline-lead chooses B-272 option (A defer / C aggressive retention / E pivot focus); OR proceeds with D.3+D.4+D.5 standalone tasks NOW since they're 🟢 AUTHORIZED without B-272 resolution.
