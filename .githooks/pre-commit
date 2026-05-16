@@ -3,14 +3,18 @@
 #9.o INSTANCE 8 commit `bd9210c`; INSTANCE 9 at `f8a6ae1` empirically confirmed
 sub-class split 9.o.1 + 9.o.2 both require harness-automated enforcement).
 
+**Per B-307 split (2026-05-16)**: this hook now does query_blindspots scan
+ONLY; exemption-phrase check moved to `.githooks/commit-msg` (which reliably
+receives COMMIT_EDITMSG via git plumbing for ALL commit modes including
+`git commit -m`). The pre-commit hook ran BEFORE git populated COMMIT_EDITMSG
+for direct-message commits, defeating the structural-fix purpose for the most
+common Claude Code commit pattern.
+
 Shifts discipline-substrate from "producer self-applies" to "discipline applies
-via harness regardless of producer". Two deterministic checks:
+via harness regardless of producer". One deterministic check:
 
 1. `tools/query_blindspots.py` scan on each staged file at p0/p1 severity →
    BLOCKS commit on any p0 match per D74 exit-code contract (--live mode).
-2. Commit-message exemption-phrase detection per
-   `.claude/skills/udm-exemption-verifier/SKILL.md` trigger-phrase list → BLOCKS
-   commit with instruction to spawn `udm-exemption-verifier` reviewer.
 
 Producer cannot bypass mechanically without `--no-verify`, which itself becomes
 a self-flagging exemption-claim that reviewers should treat as a quasi-audit-
@@ -18,50 +22,37 @@ question trigger (the harness does not architecturally enforce audit-question
 response; depends on producer + reviewer discipline).
 
 Installation (one-time per clone): `git config core.hooksPath .githooks`
+(same git config activates BOTH pre-commit and commit-msg hooks since both
+live in `.githooks/`).
 
 Cross-platform: Python script with shebang; detects project venv Python; works
 on Linux + macOS + Windows-Git-Bash.
 
 Limitations (acknowledged per fractal-pattern reality):
 - Hook cannot invoke Claude API directly (substrate is git, not Claude Code
-  session); exemption-phrase detection BLOCKS commit but reviewer invocation
-  remains producer-responsibility (via separate Claude Code session before
-  re-attempt).
+  session); reviewer invocation remains producer-responsibility (via separate
+  Claude Code session).
 - Hook cannot enforce on its own authoring commit (chicken-and-egg). The
   authoring commit `<future hash>` is subject to instance-N+1 candidate per
   HANDOFF §8 Pitfall #9.o sub-class accumulator.
 - Hook bypassable via `--no-verify`; self-flagging only.
+- `query_blindspots.py` 9.o detector currently fires on string-data references
+  to trigger phrases (chicken-and-egg false positives on this hook + commit-msg
+  hook + test files); B-304 tracks detector context-awareness fix.
 """
 from __future__ import annotations
 
-import re
 import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 QUERY_BLINDSPOTS_PATH = REPO_ROOT / "tools" / "query_blindspots.py"
-COMMIT_MSG_PATH = REPO_ROOT / ".git" / "COMMIT_EDITMSG"
 
-# Exemption-claim trigger phrases per
-# .claude/skills/udm-exemption-verifier/SKILL.md L29-36 + B-303 structured-pattern
-# extensions added at this commit.
-EXEMPTION_TRIGGER_PHRASES = [
-    # Verbatim phrases (8 from SKILL.md L29-36)
-    "Layer N+1 termination",
-    "recursive-exemption",
-    "verbatim implementation",
-    "100% overlap on architectural-decision-substance",
-    "specific scope-justified exemption",
-    "REVIEW: SKIPPED",
-    "no new architecture introduced",
-    "implementing prior reviewer's recommendation",
-    # Structured-pattern extensions per B-303 + Q5 instance-9 finding
-    "EXEMPTION VALID",
-    "step 6: N/A",
-    "cannot fire on commits modifying its own SKILL.md",
-    "self-exemption clause applies",
-]
+# Note: trigger-phrase list MOVED to `.githooks/commit-msg` hook
+# (per B-307 split 2026-05-16). Pre-commit hook now does query_blindspots scan
+# ONLY; commit-msg hook does exemption-phrase check (reliably receives
+# COMMIT_EDITMSG via git plumbing for ALL commit modes including `git commit -m`).
 
 
 def _venv_python() -> str:
@@ -87,16 +78,6 @@ def _staged_files() -> list[str]:
         return [line.strip() for line in result.stdout.splitlines() if line.strip()]
     except (OSError, subprocess.SubprocessError):
         return []
-
-
-def _commit_message() -> str:
-    """Read draft commit message; empty string if unavailable."""
-    if not COMMIT_MSG_PATH.is_file():
-        return ""
-    try:
-        return COMMIT_MSG_PATH.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return ""
 
 
 def _check_blindspots(staged: list[str]) -> tuple[bool, str]:
@@ -126,26 +107,10 @@ def _check_blindspots(staged: list[str]) -> tuple[bool, str]:
     return True, f"query_blindspots scan clean (exit {result.returncode})"
 
 
-def _check_exemption_phrases(commit_msg: str) -> tuple[bool, list[str]]:
-    """Check commit message for exemption-claim trigger phrases.
-
-    Returns (passed, matched_phrases) where passed=True means no triggers found.
-    """
-    if not commit_msg:
-        return True, []
-    matched = []
-    for phrase in EXEMPTION_TRIGGER_PHRASES:
-        if phrase.lower() in commit_msg.lower():
-            matched.append(phrase)
-    return (not matched), matched
-
-
 def main() -> int:
     staged = _staged_files()
-    commit_msg = _commit_message()
 
     blindspots_ok, blindspots_diag = _check_blindspots(staged)
-    phrases_ok, matched_phrases = _check_exemption_phrases(commit_msg)
 
     if not blindspots_ok:
         print("[pre-commit BLOCKED] query_blindspots p0 match on staged files:",
@@ -153,21 +118,6 @@ def main() -> int:
         print(blindspots_diag, file=sys.stderr)
         print("\nRemediate the p0 finding(s) above, OR bypass with --no-verify "
               "(self-flagging exemption-claim).", file=sys.stderr)
-        return 1
-
-    if not phrases_ok:
-        print("[pre-commit BLOCKED] commit message contains exemption-claim "
-              "trigger phrases:", file=sys.stderr)
-        for p in matched_phrases:
-            print(f"  - {p!r}", file=sys.stderr)
-        print("\nPer Mechanism C-1 + udm-exemption-verifier SKILL.md: spawn "
-              "udm-exemption-verifier reviewer (via Claude Code session) BEFORE "
-              "committing. Reviewer verdict VALID → proceed; INVALID → spawn "
-              "udm-gap-check per D56 second-pass; address findings; re-attempt "
-              "commit.", file=sys.stderr)
-        print("\nBypass with --no-verify is self-flagging exemption-claim that "
-              "reviewers should treat as quasi-audit-question trigger.",
-              file=sys.stderr)
         return 1
 
     return 0

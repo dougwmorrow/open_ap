@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Commit-msg git hook — Mechanism C-1 exemption-phrase check (per B-307 closure).
+
+Split out from pre-commit hook at instance-9-cycle B-307 closure because
+COMMIT_EDITMSG is NOT populated at pre-commit hook execution time for
+`git commit -m "msg"` direct-message commits. Commit-msg hook runs AFTER
+pre-commit and receives COMMIT_EDITMSG path as $1 argument — reliable for ALL
+commit modes (interactive editor, `-m`, `-F file`, `--amend`, etc.).
+
+Per `udm-exemption-verifier` SKILL.md L29-46 trigger-phrase list (12 phrases:
+8 verbatim + 4 B-303 structured-pattern extensions), checks the commit message
+file at $1 path for exemption-claim phrasing → BLOCKS commit with reviewer-
+spawn instruction if any phrase matched.
+
+Producer cannot bypass mechanically without `--no-verify`, which itself is a
+self-flagging exemption-claim that reviewers should treat as quasi-audit-
+question trigger.
+
+Installation (one-time per clone): `git config core.hooksPath .githooks`
+(same as pre-commit; commit-msg hook in same directory is auto-discovered by
+git).
+
+Acknowledged limitations:
+- Hook cannot invoke Claude API directly from git substrate; reviewer
+  invocation remains producer-responsibility in Claude Code session
+- Hook cannot enforce on its own authoring commit (chicken-and-egg); the
+  authoring commit is subject to instance-N+1 candidate per HANDOFF §8
+  Pitfall #9.o sub-class accumulator
+- Hook bypassable via `--no-verify`; self-flagging only
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# Exemption-claim trigger phrases per
+# .claude/skills/udm-exemption-verifier/SKILL.md L29-46 (12 phrases:
+# 8 verbatim + 4 B-303 structured-pattern extensions)
+EXEMPTION_TRIGGER_PHRASES = [
+    # Verbatim phrases (8 from SKILL.md L29-36)
+    "Layer N+1 termination",
+    "recursive-exemption",
+    "verbatim implementation",
+    "100% overlap on architectural-decision-substance",
+    "specific scope-justified exemption",
+    "REVIEW: SKIPPED",
+    "no new architecture introduced",
+    "implementing prior reviewer's recommendation",
+    # Structured-pattern extensions per B-303
+    "EXEMPTION VALID",
+    "step 6: N/A",
+    "cannot fire on commits modifying its own SKILL.md",
+    "self-exemption clause applies",
+]
+
+
+def _check_exemption_phrases(commit_msg: str) -> list[str]:
+    """Check commit message for exemption-claim trigger phrases.
+
+    Returns list of matched phrases (empty list = no triggers).
+    """
+    if not commit_msg:
+        return []
+    matched = []
+    for phrase in EXEMPTION_TRIGGER_PHRASES:
+        if phrase.lower() in commit_msg.lower():
+            matched.append(phrase)
+    return matched
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 2:
+        # No COMMIT_EDITMSG path provided; cannot check; pass through
+        return 0
+
+    commit_msg_path = Path(argv[1])
+    if not commit_msg_path.is_file():
+        # COMMIT_EDITMSG file does not exist; cannot check; pass through
+        return 0
+
+    try:
+        commit_msg = commit_msg_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        # Cannot read; pass through (not blocking)
+        return 0
+
+    # Strip git-comment lines (lines starting with #) which are stripped from
+    # final commit message anyway; they should not trigger phrase detection
+    non_comment_lines = [
+        line for line in commit_msg.splitlines()
+        if not line.lstrip().startswith("#")
+    ]
+    actual_msg = "\n".join(non_comment_lines)
+
+    matched_phrases = _check_exemption_phrases(actual_msg)
+    if matched_phrases:
+        print("[commit-msg BLOCKED] commit message contains exemption-claim "
+              "trigger phrases:", file=sys.stderr)
+        for p in matched_phrases:
+            print(f"  - {p!r}", file=sys.stderr)
+        print("\nPer Mechanism C-1 + udm-exemption-verifier SKILL.md: spawn "
+              "udm-exemption-verifier reviewer (via Claude Code session) BEFORE "
+              "committing. Reviewer verdict VALID -> proceed; INVALID -> spawn "
+              "udm-gap-check per D56 second-pass; address findings; re-attempt "
+              "commit.", file=sys.stderr)
+        print("\nBypass with --no-verify is self-flagging exemption-claim that "
+              "reviewers should treat as quasi-audit-question trigger.",
+              file=sys.stderr)
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

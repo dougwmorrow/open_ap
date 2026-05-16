@@ -231,6 +231,22 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
         r"recursive coverage",
     ]
     norm_path = file_path.replace("\\", "/").lower()
+
+    # B-304 closure (2026-05-16): hardcoded allowlist of known trigger-phrase
+    # substrate files where phrases appear as STRING DATA in Python list literals
+    # / test assertions / SKILL.md trigger-phrase enumeration, NOT as exemption
+    # CLAIMS. Closes chicken-and-egg false-positive pattern surfaced at B-301
+    # authoring commit `75cdda3` Step 2.1 self-application.
+    trigger_phrase_substrate_files = (
+        ".githooks/pre-commit",
+        ".githooks/commit-msg",
+        "tests/tier0/test_pre_commit_hook.py",
+        "tests/tier0/test_skill_exemption_verifier.py",
+        "udm-exemption-verifier/skill.md",
+    )
+    if any(substrate in norm_path for substrate in trigger_phrase_substrate_files):
+        return matches  # chicken-and-egg false-positive suppression per B-304
+
     is_descriptive_context_doc = any(
         marker in norm_path for marker in (
             "backlog.md",

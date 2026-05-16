@@ -49,27 +49,16 @@ def test_hook_cites_b301_and_instance_8_and_9(hook_content: str):
     assert "f8a6ae1" in hook_content
 
 
-def test_exemption_trigger_phrases_list_present(hook_content: str):
-    """Assertion 4: hook has exemption-trigger-phrase list with 12+ entries."""
-    assert "EXEMPTION_TRIGGER_PHRASES" in hook_content
-    expected_phrases = [
-        # Original 8 from SKILL.md
-        "Layer N+1 termination",
-        "recursive-exemption",
-        "verbatim implementation",
-        "100% overlap on architectural-decision-substance",
-        "specific scope-justified exemption",
-        "REVIEW: SKIPPED",
-        "no new architecture introduced",
-        "implementing prior reviewer's recommendation",
-        # B-303 structured-pattern extensions
-        "EXEMPTION VALID",
-        "step 6: N/A",
-        "cannot fire on commits modifying its own SKILL.md",
-        "self-exemption clause applies",
-    ]
-    for phrase in expected_phrases:
-        assert phrase in hook_content, f"expected trigger phrase missing: {phrase}"
+def test_exemption_trigger_phrases_moved_to_commit_msg(hook_content: str):
+    """Assertion 4 (per B-307 split 2026-05-16): exemption-phrase check MOVED
+    from pre-commit to commit-msg hook. Pre-commit hook should NOT contain the
+    trigger-phrase list anymore; should reference the commit-msg hook split."""
+    assert "EXEMPTION_TRIGGER_PHRASES" not in hook_content, (
+        "EXEMPTION_TRIGGER_PHRASES should be MOVED to commit-msg hook per B-307 split; "
+        "pre-commit hook should not contain the list"
+    )
+    assert "commit-msg" in hook_content, "pre-commit hook docstring must reference commit-msg companion"
+    assert "B-307" in hook_content, "pre-commit hook docstring must cite B-307 split"
 
 
 def test_hook_runs_query_blindspots(hook_content: str):
@@ -84,10 +73,13 @@ def test_hook_uses_live_mode(hook_content: str):
     assert "--live" in hook_content
 
 
-def test_hook_check_functions_present(hook_content: str):
-    """Assertion 7: hook has 2 check functions per design."""
+def test_hook_check_function_present(hook_content: str):
+    """Assertion 7 (per B-307 split): pre-commit hook now has 1 check function
+    (_check_blindspots only); _check_exemption_phrases MOVED to commit-msg hook."""
     assert "_check_blindspots" in hook_content
-    assert "_check_exemption_phrases" in hook_content
+    assert "_check_exemption_phrases" not in hook_content, (
+        "_check_exemption_phrases should be MOVED to commit-msg hook per B-307 split"
+    )
 
 
 def test_hook_documents_no_verify_bypass(hook_content: str):
