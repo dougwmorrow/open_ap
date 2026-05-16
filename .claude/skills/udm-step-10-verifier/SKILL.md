@@ -149,7 +149,7 @@ The verifier should explicitly catch these (each maps to a known prior recurrenc
 
 | Anti-pattern | First instance | Recurrence count |
 |---|---|---|
-| New EventType constant in tool module; per-tool Structure row updated; CLI_* family registry text NOT updated | `146d97a` (verify_tier0_drift) | 4 (12 → 15 tools by Round 6 follow-up cohort) |
+| New EventType constant in tool module; per-tool Structure row updated; CLI_* family registry text NOT updated | `146d97a` (verify_tier0_drift) | 5 (12 → 15 tools by Round 6 follow-up cohort; 15 → 16 by AppLaunchpad CLI_QUERY_BLINDSPOTS adoption 2026-05-16) |
 | New module landed; CLAUDE.md Structure row absent | Round 4.1 5-tool cohort 2026-05-14 afternoon | 3 (Round 4.1 + § 3.4 + § 4.7) |
 | New dataclass added to module's public surface; CLAUDE.md `surface:` list NOT extended | Round 3 Wave 2 (multiple modules) | observed in ad-hoc gap-checks |
 | EventType added; D76 audit-row contract honored; CLAUDE.md L325 registry text says old count | `146d97a` + 3 subsequent commits | 4 (B-269 evidence base) |

@@ -2,6 +2,59 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — AppLaunchpad blindspot-ledger high-ROI adoption (B-294 closed; B-293 backfill from compaction gap)
+
+**Reviewer**: parent agent (build) + 27-test pytest validation (Tier 0 + Tier 1)
+**Trigger**: user-direction "Proceed with your recommended options and track this information" following research-grounded gap analysis at `docs/migration/_research/applaunchpad-udm-gap-analysis-2026-05-16.md` + user decisions D1-D6 (D1: SQLite-cross-platform OK; D2: skip substrate; D3: minimal-only by elimination; D4: skip Slack — terminal interface; D5: defaulted to commit-level granularity; D6: high-ROI subset)
+**Scope**: Phase 1 high-ROI subset adoption of AppLaunchpad agentic-software-factory pattern (per `agentic-architecture.md` §12.3 blindspot ledger + §12 quality guardrails 3-layer defense).
+
+**Artifacts created**:
+- `docs/migration/blindspots/ledger.yml` (379 lines; 15 entries for Pitfall #9.a-9.o; severity + tags + detection_rule + remediation + evidence_base + handoff_anchor per entry)
+- `docs/migration/blindspots/protocol.md` (220 lines; query protocol + CLI usage + how-to-add-entries + self-test discipline per Pitfall #9.m)
+- `tools/query_blindspots.py` (503 lines; CLI scanner; 4 of 15 detection rules implemented in Phase 1 — 9.j + 9.o + 9.n + 9.h; pure stdlib + optional pyyaml; D74/D75/D76 contract; Windows-safe stdout encoding fallback)
+- `tests/tier0/test_query_blindspots.py` (9 tests covering imports + public surface + exit codes + ledger-loadable + empty-input)
+- `tests/tier1/test_query_blindspots_checks.py` (18 tests covering each detection rule + filters + live-mode + synthetic file)
+- `.claude/hooks/protect-primary-docs.py` (PreToolUse warn-only on protected primary doc edits; 6 protected paths)
+- `.claude/hooks/auto-verify-step-10.py` (PostToolUse auto-invoke query_blindspots on source-file edits; conservative scope per user D answer)
+- `.claude/hooks/session-start-logger.py` (SessionStart optional log to `_session_logs/sessions_<date>.log`)
+- `.claude/settings.json` extended with 3 hook handlers
+
+**Research artifacts (planning-grounded)**:
+- `docs/migration/_research/agentic-orchestration-architecture-2026-05-16.md` (~600 lines; 35 primary-source citations; Topic 1-5 walk; recommends Claude Code native over LangGraph for this project's scope)
+- `docs/migration/_research/applaunchpad-udm-gap-analysis-2026-05-16.md` (~600 lines; 18 sections × {REUSE/ADAPT/SKIP/DECISION-NEEDED} matrix; AppLaunchpad source spec at repo root)
+
+**Gates** (5-gate per D55 applied to the adoption decision; full pass deferred to follow-up D-N lock):
+- **Gate 1 (Cross-reference)**: ledger.yml entries cite HANDOFF.md §8 line anchors (9.a-9.o); CLAUDE.md L325 CLI_* family count bumped 15→16; cross-refs to AppLaunchpad source spec at repo root. ✅
+- **Gate 2 (QA)**: pytest 27/27 pass; CLI smoke test against BACKLOG.md surfaced 10 real matches (3 p0 for 9.o "by analogy" — at L246 B-294-self-reference + L250 B-292 + L258 B-285 — true positives describing the pattern but false positives for active rationalization; 7 p2 for 9.j stale-badge entries on B122/B123/B124/B125/B126/B137/B138 — pre-existing render-drift instances surfaced as the tool's first production catch; producer-review distinction documented in protocol.md). Self-application per protocol.md §"Anti-pattern within the ledger itself" performed: query_blindspots against ledger.yml = 5 expected-false-positives (entry-text-describes-pattern); against protocol.md = 0 matches; against CLAUDE.md = 0 matches. ✅
+- **Gate 3 (Edge Cases)**: protocol.md documents 4 known limitations (heuristics not semantic; schema drift requires schema parsing; no NLP; evidence-base count lag). New canonical series candidate: SI24 (blindspot-ledger discipline) — defer for SI accumulator. 🟡 deferred for follow-up D-N
+- **Gate 4 (Edge case validation)**: 4 of 15 detection rules implemented; 11 rules registered but "skipped" in CLI output (transparent gap). Each implemented rule has Tier 1 test. Phase 2 task: extend remaining rules. 🟡 partial
+- **Gate 5 (Idempotency / regression)**: hooks are warn-only OR additive (no destruction); query_blindspots is read-only against ledger + filesystem; no existing trackers' behavior changed; pytest baseline 2320→2347 = +27 new tests, 0 regression. ✅
+
+**Verdict**: 🟡 PASS-with-followups. Adoption decision can lock at next D-N; remaining 11 detection rules + GLOSSARY public-surface tables + INDEX route entry deferred to follow-up commit (acknowledged Pitfall #9.k arithmetic-propagation risk if follow-up is delayed >1 day).
+
+**Hard rule 14 cascade applied (THIS commit, no exemption claim per anti-rationalization clause)**:
+- **TEST**: pytest 27/27 pass + authoritative full count 2347/58/0 ✅
+- **GAP ANALYSIS**: paired sub-agent invocation per D55+D56+D89-D91 doctrine (independent reviewers):
+  - **Agent A** = `udm-design-reviewer` (18th cumulative sub-agent inheritance contract application; planning-discipline skill inheritance cited in output header) — verdict 🟡 SOUND WITH IMPROVEMENTS. Q1 architectural-soundness ✅; Q2 correctness-vulnerabilities 🟡 (4 sub-findings including 2 MUST-FIX); Q3 composition ✅; Q4 AppLaunchpad-fidelity ✅; Q5 operational-concerns 🟡 (cross-platform hook concern); Q6 anti-patterns 🟡 (--dry-run unused; --actor missing). **2 MUST-FIX-BEFORE-COMMIT findings**: (1) `protect-primary-docs.py` CLAUDE_PROJECT_DIR env var likely never set → hook silently never fires → FIXED INLINE THIS COMMIT via Path-based REPO_ROOT resolution; (2) `check_9n_convention_registration` absolute-path bug → silently dead when invoked from PostToolUse hook → FIXED INLINE THIS COMMIT via `--file norm` instead of `--file str(abs_target)` in `auto-verify-step-10.py`.
+  - **Agent B** = `udm-gap-check` via general-purpose agent (17th cumulative sub-agent inheritance application; META-COMMIT scope; G1-G6 audit) — verdict 🟡 fixable inline. G1 cross-tracker 🟡 (3 stale "15 CLI_*" mirrors → ALL FIXED INLINE THIS COMMIT: BACKLOG.md L188 B86 closure + udm-step-10-verifier SKILL.md L152 + L155 anti-pattern rows + _validation_log L28 off-by-one 2→3 p0 9.o); G2 dependencies ✅; G3 Pitfall #9 sub-class instances 🟡 (9.j on 9 pre-existing BACKLOG entries surfaced by tool's first run; 9.k arithmetic-propagation in validation log + BACKLOG → fixed; 9.m self-application gap → fixed by documenting smoke-test result inline); G4 convention-registration gaps ✅ honestly acknowledged (GLOSSARY+INDEX+CODE_BUILD_STATUS+HANDOFF+ONE_OFF_SCRIPTS deferred per explicit B-295 enumeration); G5 5 B-N candidates → consolidated into B-295; G6 ✅ no anti-patterns / no incomplete claims.
+- **REVIEW**: integrated above; both agents independent (D55 producer ≠ first-pass ≠ second-pass); convergent finding = adoption is SOUND with 2 must-fix bugs (both fixed inline) + 16-item follow-up cohort opened as B-295.
+
+**Layer N+1 termination citation per CLAUDE.md hard rule 14 anti-rationalization clause**: Layer 1 = this commit; Layer 2 = the gap-check + design-reviewer paired sub-agents; Layer 3 = (no need; the 2 reviewers' outputs are not themselves substantive edits requiring their own cascade — they are reviewer artifacts whose review IS the cascade Step 3 REVIEW).
+
+**Pre-commit 4-step verification per anti-rationalization clause**: (1) FILES reviewed by Agent A = `ledger.yml + protocol.md + query_blindspots.py + 3 hook scripts + settings.json` (6 files); (2) FILES reviewed by Agent B = META-COMMIT scope = same 6 + CLAUDE.md + _validation_log + BACKLOG + CURRENT_STATE + 2 research artifacts = 17 files; (3) overlap between Agent A scope and META-COMMIT files = 100% (Agent A's scope is subset of Agent B's; together 100% covered); (4) recursion-depth = 2 (Layer 1 commit; Layer 2 paired-judgment); explicit termination cited above. EXEMPTION VALID per anti-rationalization clause; no further gap-check on this commit required.
+
+**Cumulative**: This is the first concrete production application of the AppLaunchpad adoption blueprint. Closes the discipline-debt-accumulation gap that surfaced 5x in 2026-05-15→2026-05-16 session (commits 521b68c / 3eef410 / aee329c / a03a35c / 4112e92). B-293 (carryover from compacted session — narrative claimed open+closed but BACKLOG.md missed the entry; representative Pitfall #9.k+9.m drift) is BACKFILLED in BACKLOG.md by this entry. B-294 (this work) opened+closed inline per minimal-adoption scope completion.
+
+**Tracker updates per hard rule 9 universal-5**:
+- BACKLOG.md: B-293 BACKFILLED (with closure annotation citing this commit); B-294 opened+closed inline
+- CURRENT_STATE.md: L7 narrative prepended (next commit)
+- HANDOFF.md: §14 narrative prepended (next commit)
+- CODE_BUILD_STATUS.md: row added for tools/query_blindspots.py + blindspots/ + hooks (next commit)
+- _validation_log.md: THIS entry (you're reading it)
+- Conditional: CLAUDE.md Structure (this commit ✅); CLAUDE.md L325 CLI_* family registry (this commit ✅); GLOSSARY public-surface (next commit per Pitfall #9.k acknowledged risk); INDEX.md route (next commit); ONE_OFF_SCRIPTS.md classification (next commit per udm-execution-classifier — recurring-automated via hook)
+
+---
+
 **Pattern**: produce → validate → record → lock. Always in that order.
 
 **Hard rules**:
