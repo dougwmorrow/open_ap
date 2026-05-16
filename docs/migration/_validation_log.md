@@ -2,6 +2,35 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — B-305 CLOSED: tools/install_pre_commit_hook.py one-command installer authored (closes silent-install-failure gap that defeated Mechanism C-1 structural purpose)
+
+**Reviewer**: parent + 11 Tier 0 tests pass + smoke test of `--check` correctly detected NOT-INSTALLED state on current clone (exit 1 WARNING with clear remediation command). Mechanism A v3 step 5 quote-cite: instance-9 proactive reviewer agentId `ade062dd2b158d7a2` Q4 finding substantively prescribed B-305 scope.
+**Trigger**: user-direction "Proceed with your next recommended steps" → executed B-305 (smallest scope; addresses silent-install-failure risk that defeats Mechanism C-1's structural purpose).
+
+**Artifacts**:
+- `tools/install_pre_commit_hook.py` (NEW; 192 lines): one-command installer for Mechanism C-1 git hooks per B-305 closure. `--install` / `--uninstall` / `--check` mutually-exclusive actions; `--apply` flag per D75 dry-run-default; `--no-audit` flag; D74 exit codes (0 SUCCESS / 1 WARNING / 2 OPERATIONAL FAILURE / 3 FATAL); D76 audit-row to `_session_logs/cli_install_hook_<date>.log`. Verifies BOTH `pre-commit` + `commit-msg` files present BEFORE install (refuses incomplete activation). Refuses to unset `core.hooksPath` if pointing elsewhere (avoids clobbering custom config). Public surface: `main`, `cli_main`, `install`, `uninstall`, `check`, `EVENT_TYPE`, `EXIT_*`, `HOOK_FILES`, `TARGET_CONFIG_VALUE`.
+- `tests/tier0/test_install_pre_commit_hook.py` (NEW; 11 tests): imports + public surface + EVENT_TYPE + exit codes + HOOK_FILES + TARGET_CONFIG_VALUE + check() return tuple + --help + --check invocable + --install dry-run + action required. 11/11 PASS.
+- `CLAUDE.md` Structure subsection: new `install_pre_commit_hook.py` row + L197 CLI_* family count bumped 16→17 with `CLI_INSTALL_PRE_COMMIT_HOOK` enumeration.
+- `GLOSSARY.md`: 6 new public-surface rows for install_pre_commit_hook (main + cli_main + install/uninstall/check + EVENT_TYPE + HOOK_FILES + TARGET_CONFIG_VALUE).
+- `CODE_BUILD_STATUS.md`: new install_pre_commit_hook row in Mechanism C-1 section.
+- `BACKLOG.md`: B-305 CLOSED inline with comprehensive context.
+
+**Hard rule 14 cascade applied**:
+- TEST: pytest 11/11 install hook Tier 0 + authoritative full count to be verified post-commit; smoke test `--check` confirmed NOT-INSTALLED state on current clone
+- GAP ANALYSIS Step 2.1 self-application: PENDING (run post-commit to verify); chicken-and-egg note: install_pre_commit_hook.py doesn't contain exemption-trigger phrases, so 9.o false-positive suppression NOT required
+- GAP ANALYSIS independent reviewer: NONE THIS COMMIT (Layer N+1 termination per Mechanism A v3 step 5: instance-9 proactive reviewer at agentId `ade062dd2b158d7a2` substantively prescribed B-305 scope per Q4 finding; implementation faithful to prescription per WSJF 2.0 closure target "opportunistic when adjacent hook-related work occurs")
+- REVIEW: parent inline review of implementation faithful to reviewer prescription
+
+**Mechanism A v3 step 5 quote-cite proof**: instance-9 proactive reviewer at agentId `ade062dd2b158d7a2` substantively prescribed:
+
+> "B-N CANDIDATE 2 — installation automation: Per Q4 below, manual `git config core.hooksPath .githooks` per clone is friction-prone and silent-failure-prone (forgotten install = hook never fires). Recommend opening B-305: 'author tools/install_pre_commit_hook.py for one-command installation + verification (sets core.hooksPath, verifies executable bit on Linux, prints installation status, can also UNINSTALL).' WSJF estimate: 2.0 (COD 2 — closes silent-install-failure gap; JS 1.0)."
+
+This verbatim quote prescribes the exact B-305 scope: install/uninstall/verify automation; closes silent-install-failure gap. Parent's implementation includes all prescribed elements: `--install` + `--uninstall` + `--check` (verification) + executable-bit verification (via os/Path; cross-platform handled). Fresh prose: specific argparse structure + D74 exit-code mapping + D76 audit-row + refuse-to-unset-if-pointing-elsewhere safety guard. Faithful to scope; valid Layer N+1 termination.
+
+**Forward outlook**: with B-305 landed + Mechanism C-1 chain structurally complete (B-301 + B-303 + B-304 + B-307 + B-305 all closed), the AppLaunchpad cohort has cleanly substantive closure. Remaining open items: B-302 (Tier 0 coverage gaps; LOW WSJF 2.0) + B-306 (hook audit-row to _session_logs; LOW WSJF 1.5). Both deferrable. User can activate Mechanism C-1 via `python tools/install_pre_commit_hook.py --install --apply` (one-time per clone) at their discretion.
+
+---
+
 ## 2026-05-16 — B-307 + B-304 CLOSED: pre-commit hook split into pre-commit + commit-msg (covers `git commit -m` direct-message commits); query_blindspots 9.o detector hardcoded-allowlist suppression eliminates chicken-and-egg false positives
 
 **Reviewer**: parent + 67 Tier 0 tests pass (11 pre-commit + 11 commit-msg + 11 udm-exemption-verifier + 9 query_blindspots + 25 query_blindspots-checks); per Mechanism A v3 step 5: reviewer agentId `ade062dd2b158d7a2` (instance-9 proactive gap-check at B-301 commit `75cdda3`) substantively prescribed BOTH B-307 + B-304 closures via specific Q1 + Q3 findings.
