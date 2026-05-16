@@ -504,7 +504,7 @@ Per blocker-evidence-verification artifact + Wave 1 Agent A audit. The 24 unreso
 | Q-25 | Q11 quarterly markdown research-refresh cadence? | ⚪ DEFERRABLE | Quarterly cadence start date doesn't gate Phase 1 |
 | Q-26 | Year-1 milestones (Day 0/30/90/180/365) as roadmap commitment? | ⚪ DEFERRABLE | Roadmap framing; can iterate post-Phase-1 |
 
-**Count**: 4 ✅ RESOLVED 2026-05-15 (pipeline-lead approved all 4 BLOCKING with Recommended defaults) / 8 🟡 DESIGN (move to Phase 1 design-decision queue) / 12 ⚪ DEFERRABLE (move to post-sign-off candidate list) = 24 total ✅
+**Count**: 4 ✅ RESOLVED 2026-05-15 (pipeline-lead approved all 4 BLOCKING with Recommended defaults) / **9** 🟡 DESIGN (move to Phase 1 design-decision queue; Q-3 + Q-4 + Q-6 + Q-8 + Q-9 + Q-11 + Q-17 + Q-19 + Q-21 — note: prior tally said "8" which was an arithmetic-propagation drift caught by udm-gap-check 2026-05-15 G2 finding #2; canonical enumeration shows 9 rows) / 11 ⚪ DEFERRABLE (move to post-sign-off candidate list; Q-5 + Q-7 + Q-10 + Q-14 + Q-15 + Q-16 + Q-18 + Q-20 + Q-24 + Q-25 + Q-26) = 24 total ✅ (4 + 9 + 11 = 24; Q-13 + Q-22 already RESOLVED earlier session per §15.4)
 
 **Shortest path to sign-off**: Pipeline-lead answers 4 binary 🔴 questions:
 1. **Q-1**: Approve Phase 1? (yes / no / redirect)
@@ -1182,7 +1182,7 @@ Per user 8th-directive sub-question "Break down the effort into phases. Use a mu
 
 ### §12.2 Deferred questions (20 of 24 non-blocking; per §10.A classification)
 
-8 🟡 DESIGN questions (Q-3, Q-4, Q-6, Q-8, Q-9, Q-11, Q-17, Q-19, Q-21) move to Phase 1 design-decision queue (answer when starting affected task). 12 ⚪ DEFERRABLE questions move to `_research/open_questions_post_sign_off.md` candidate list (answer when needed; not blocking).
+**9** 🟡 DESIGN questions (Q-3, Q-4, Q-6, Q-8, Q-9, Q-11, Q-17, Q-19, Q-21 — corrected from "8" per udm-gap-check 2026-05-15 G2 finding #2 arithmetic-propagation drift; canonical enumeration shows 9 rows) move to Phase 1 design-decision queue (answer when starting affected task). 11 ⚪ DEFERRABLE questions move to `_research/open_questions_post_sign_off.md` candidate list (answer when needed; not blocking).
 
 ### §12.3 Phase 1 execution authorization
 

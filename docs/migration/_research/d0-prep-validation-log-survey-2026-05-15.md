@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |---|---|
-| File size | 7,802 lines / ~231K tokens (~115% of 200K context window) |
+| File size | 7,802 lines / ~231K tokens (~115% of 200K context window) at moment of D.0 prep authoring; file grew to ~8,009 lines post-sign-off-entry-append in same-commit cohort (drift annotation per udm-gap-check 2026-05-15 G3 finding — citation accurate at authoring moment) |
 | Total `## YYYY-MM-DD` entries | 125 |
 | Earliest entry date | 2026-05-09 |
 | Latest entry date | 2026-05-15 (today) |
