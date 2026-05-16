@@ -1,7 +1,7 @@
 # UDM Blindspot Ledger — Query Protocol
 
 **Date authored**: 2026-05-16
-**Source spec**: AppLaunchpad agentic-architecture.md §12.3 (blindspot ledger pattern)
+**Source spec**: AppLaunchpad agentic-architecture.md §12 Layer 3 (blindspot ledger pattern)
 **Locked by**: D-N (TBD at next commit; tracks adoption decision per applaunchpad-udm-gap-analysis-2026-05-16.md)
 **Canonical source**: `docs/migration/blindspots/ledger.yml`
 **Prose source**: `docs/migration/HANDOFF.md` §8 Pitfall #9 sub-class accumulator (9.a-9.o)

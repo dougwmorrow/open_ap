@@ -3287,7 +3287,7 @@ Each plan covers canonical structure: Purpose + Why-this-phase-exists + For-engi
 
 **Driver**: discipline-debt-accumulation pattern surfaced 5x in 2026-05-15→2026-05-16 session (commits `521b68c` / `3eef410` / `aee329c` / `a03a35c` / `4112e92` — see HANDOFF §8 Pitfall #9.o for full evidence base). Prose-only encoding of Pitfall #9 sub-classes in HANDOFF §8 required producer SELF-CHECK at the right moment; the 5-event empirical base proved producer self-check is necessary-but-insufficient. Catch-time lag = 1-4 days (post-hoc gap-check). User-direction "let's create an agentic system that triggers these events rather than relying on skills. Research how to use langchain or related python libraries" → research grounding via `_research/agentic-orchestration-architecture-2026-05-16.md` (35 citations) → user-provided AppLaunchpad source spec at `agentic-architecture.md` → gap analysis at `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` (18-section REUSE/ADAPT/SKIP/DECISION-NEEDED matrix) → user decisions D1-D6 (high-ROI subset only; no orchestrator / no substrate / no Slack).
 
-**Decision**: Adopt the high-ROI subset of AppLaunchpad's agentic-software-factory pattern, scoped to (a) blindspot ledger YAML encoding + protocol + CLI scanner per AppLaunchpad §12.3, and (b) conservative Claude Code hooks per §12.1. Defer full AppLaunchpad replica (orchestrator + event store + ingester + Slack + cockpit + substrate per AppLaunchpad §§ 5-13) unless and until the high-ROI subset proves durable value over ≥1 week of operator use.
+**Decision**: Adopt the high-ROI subset of AppLaunchpad's agentic-software-factory pattern, scoped to (a) blindspot ledger YAML encoding + protocol + CLI scanner per AppLaunchpad §12 Layer 3, and (b) conservative Claude Code hooks per AppLaunchpad §12 Layer 1. Defer full AppLaunchpad replica (orchestrator + event store + ingester + Slack + cockpit + substrate per AppLaunchpad §§ 5-13) unless and until the high-ROI subset proves durable value over ≥1 week of operator use.
 
 **Specifically locked**:
 
@@ -3321,10 +3321,10 @@ Each plan covers canonical structure: Purpose + Why-this-phase-exists + For-engi
 
 **Cross-references**:
 
-- AppLaunchpad source spec: `agentic-architecture.md` at repo root (920 lines; user-provided; §12.3 blindspot ledger pattern is the direct source for this adoption)
+- AppLaunchpad source spec: `agentic-architecture.md` at repo root (920 lines; user-provided; §12 Layer 3 blindspot ledger pattern is the direct source for this adoption)
 - Research grounding: `_research/agentic-orchestration-architecture-2026-05-16.md` (35 primary-source citations; LangGraph vs CrewAI vs AutoGen vs Anthropic SDK comparison; recommends Claude Code native over LangGraph for this project's scope)
 - Gap analysis: `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` (18-section REUSE/ADAPT/SKIP/DECISION-NEEDED matrix; resume-from-here artifact if full-replica adoption ever resumed)
-- Implementation: `tools/query_blindspots.py` (513 lines) + `docs/migration/blindspots/{ledger.yml, protocol.md}` (379 + 220 lines) + `.claude/hooks/{protect-primary-docs.py, auto-verify-step-10.py, session-start-logger.py}` + `.claude/settings.json` hook handlers
+- Implementation: `tools/query_blindspots.py` (574 lines per actual `wc -l` at 570ac67) + `docs/migration/blindspots/{ledger.yml, protocol.md}` (481 + 244 lines per actual `wc -l` at 570ac67; original D114 narrative had stale 379+220 counts from f699250 build-time per Pitfall #9.k arithmetic-propagation drift caught at instance-6 gap-check 570ac67-post-hoc) + `.claude/hooks/{protect-primary-docs.py, auto-verify-step-10.py, session-start-logger.py}` + `.claude/settings.json` hook handlers
 - Tests: `tests/tier0/test_query_blindspots.py` (9 tests) + `tests/tier1/test_query_blindspots_checks.py` (25 tests including 7 added at commit `d645cee` for B-295 sub-items 8 + 9 fixes)
 - Tracked closures: B-294 (this adoption itself; ⚫ CLOSED `f699250`) + B-293 (backfill from compacted-session gap surfaced by tool's first production run; ⚫ CLOSED `f699250`) + B-295 sub-items 8 + 9 (regex tightening + scope-awareness; ⚫ CLOSED `d645cee`)
 - Forward-tracked open work: B-295 16-item follow-up cohort (10 remaining sub-items as of D114 lock; 4-6 cycles forecast per user calibration question 2026-05-16)

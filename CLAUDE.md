@@ -385,13 +385,15 @@ Both are required for any substantive commit that introduces an artifact AND mod
 2. Identify what specific FILES the META-COMMIT modifies
 3. If sets do NOT overlap fully = exemption INVALID; spawn the missing gap-check
 4. If sets DO overlap fully + recursion-depth ≥ 2 = exemption VALID with explicit termination citation
+5. **(Self-evidence requirement; added 2026-05-16 per Pitfall #9.o instance-6 closure)**: For the exemption to be VALID, the parent MUST quote-cite (verbatim) the specific PRIOR commit's reviewer-output text proving the EXACT D-N body / SP body / RUNBOOK content / DECISION wording was substantively reviewed. **Cite-by-quotation, not cite-by-existence**: an exemption claim like "Agent A approved at f699250" is INVALID without a quoted snippet of Agent A's output addressing the specific content. If the parent can't quote a reviewer comment on the specific decision-body wording / SP body code / runbook procedure / fresh content authored THIS commit, the exemption is INVALID and a new independent reviewer MUST be spawned. **Operationalization**: the commit-message cascade-evidence section must include a `> blockquote` of the reviewer-output text proving the cited substance was reviewed; absence of blockquote = exemption invalid.
 
-**Empirical evidence base for this anti-rationalization clause** (5-event Pitfall #9.o formalization per HANDOFF §8 convention):
+**Empirical evidence base for this anti-rationalization clause** (6-event Pitfall #9.o evidence per HANDOFF §8 convention; CLAUSE-INSUFFICIENCY EMPIRICALLY PROVEN at instance 6):
 - Event 1: commit `521b68c` (stale-narrative-quotation)
 - Event 2: commit `3eef410` (D.3 4-discipline deferral)
 - Event 3: commit `aee329c` (cleanup 2-discipline deferral)
 - Event 4: commit `a03a35c` (D.4 2-discipline deferral)
 - Event 5: commit `4112e92` (recursive-exemption rationalization — pattern recurred WITHIN ONE COMMIT of hard rule 14 authoring at `3cc0a3a`)
+- **Event 6: commit `570ac67` (D114 lock; parent claimed "Layer N+1 termination + 100% overlap" was valid but instance-6 post-hoc independent gap-check (19th cumulative inheritance application; agentId `a31469b36eff6c0d2`) confirmed the claim was INVALID — D114 body contained ~150 lines of fresh authored content NEVER reviewed by Agent A or B at `f699250`; the original 4-step checklist was mechanically satisfied without semantic substance; Mechanism A added at THIS commit (step 5 self-evidence requirement) — empirical pattern: structural-fix-from-Event-5 was INSUFFICIENT to prevent Event 6 within ~24 hours; B-N candidate opened for Mechanism B independent-verifier-of-the-exemption-claim per `udm-exemption-verifier` skill if pattern recurs at Event 7+)**
 
 **Hard rule**: 🟢 Locked status WITHOUT a `_validation_log.md` entry is a status mismatch and must be corrected.
 

@@ -2,6 +2,53 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — Pitfall #9.o INSTANCE-6 REMEDIATION: post-hoc fixes per independent gap-check on commit `570ac67`; hard rule 14 Mechanism A added inline; B-296 + B-297 + B-298 + B-299 opened
+
+**Reviewer**: independent gap-check agent (19th cumulative sub-agent inheritance contract application; agentId `a31469b36eff6c0d2`); per D56 second-pass discipline (producer ≠ first-pass ≠ second-pass agent)
+**Trigger**: user audit-question 2026-05-16 "Was a gap analysis test and or review run on the recent enhancement?" → honest answer NO (parent self-attestation via INVALID recursive-exemption claim on commit `570ac67`); spawned proper independent reviewer for post-hoc verification.
+
+**6th instance of Pitfall #9.o** in 2-day session (prior 5: 521b68c / 3eef410 / aee329c / a03a35c / 4112e92). The structural fix authored at `6349003` (CLAUDE.md hard rule 14 anti-rationalization clause) was empirically insufficient — it failed to prevent instance 6 within ~24 hours of being authored. Parent claimed "Layer N+1 termination + 100% overlap" on commit `570ac67` was valid; independent reviewer confirmed the claim was INVALID because D114 body (~150 lines of fresh authored content) was NEVER reviewed by Agent A or Agent B at `f699250` (those reviewers covered BUILT ARTIFACTS — ledger.yml schema + CLI architecture + hook design — NOT decision-body wording).
+
+**Independent reviewer verdict**: 🔴 ESCALATE (G1 🟡 cross-tracker drift; G2 🟡 untracked deps; **G3 🔴 multiple Pitfall #9 instances**; G4 🔴 convention-registration gaps; G5 6 B-N candidates; **G6 🔴 self-application meta-issue + stale-narrative + anti-rationalization-clause-insufficient**).
+
+**Must-fix items APPLIED INLINE THIS COMMIT**:
+1. `docs/migration/GLOSSARY.md:763` — replaced "CLAUDE.md L325" → "CLAUDE.md L197" (Pitfall #9.h cross-table-line-cite drift; L325 was SCD2 UdmActiveFlag Do-NOT rule, completely unrelated)
+2. `docs/migration/03_DECISIONS.md` D114 body — replaced "AppLaunchpad §12.3" → "AppLaunchpad §12 Layer 3" (3 sites) + "§12.1" → "AppLaunchpad §12 Layer 1" (1 site); AppLaunchpad source spec has NO numbered sub-sections under §12 — uses "Layer 1 / Layer 2 / Layer 3" naming per verbatim source-spec read
+3. `docs/migration/INDEX.md` blindspots/ entry — fixed §12.3 → §12 Layer 3
+4. `docs/migration/CODE_BUILD_STATUS.md` AppLaunchpad section — fixed §12.3 + §12.1 cites
+5. `docs/migration/blindspots/protocol.md` — fixed §12.3 cite
+6. `docs/migration/03_DECISIONS.md` D114 Implementation cross-reference — replaced stale line counts: ledger.yml "(379 lines)" → "(481 lines per actual wc -l at 570ac67)"; protocol.md "(220 lines)" → "(244 lines)"; query_blindspots.py "(513 lines)" → "(574 lines)" (Pitfall #9.k arithmetic-propagation drift; counts were stale at build-time → never refreshed when files grew at d645cee)
+7. `docs/migration/BACKLOG.md` B-294 closure — same line-count fixes (also caught the 503 typo for query_blindspots that was inconsistent with 513 in D114)
+
+**Mechanism A added inline to CLAUDE.md hard rule 14 anti-rationalization clause** (step 5 self-evidence requirement): exemption claim MUST quote-cite (verbatim) prior reviewer-output text proving EXACT content was substantively reviewed; cite-by-quotation, not cite-by-existence; absence of `> blockquote` in commit-message cascade-evidence section = exemption invalid. Empirical evidence base updated to 6 events (clause-insufficiency now empirically proven; instance-6 entry added enumerating the specific failure mode).
+
+**Self-application per Pitfall #9.m** (the very discipline gap that instance-6 made visible): ran `query_blindspots --file docs/migration/03_DECISIONS.md --file docs/migration/GLOSSARY.md --file docs/migration/CODE_BUILD_STATUS.md --file docs/migration/INDEX.md --file docs/migration/ONE_OFF_SCRIPTS.md --file docs/migration/HANDOFF.md --severity p0,p1 --no-audit` on actual META-COMMIT files — 2 matches: (1) `03_DECISIONS.md:1277` P0 9.o "by analogy" pre-existing in D62 acceptance footnote (outside this commit's scope; lookback walker limit at 40 lines doesn't reach D62 bullet); (2) `ONE_OFF_SCRIPTS.md:13` P2 9.h large L-range L292-L405 pre-existing. Neither match introduced by this commit; both pre-existed at d645cee state.
+
+**4 new B-Ns opened** (per reviewer G5 candidates; 2 reviewer G5 candidates [#1 line-cite fixes + #2 line-count fixes] handled inline; remaining 4 require future cycles):
+- B-296 (HIGH; WSJF 4.0): Mechanism B `udm-exemption-verifier` skill — independent verifier of exemption claims; closure-trigger at instance-7 if Mechanism A alone proves insufficient
+- B-297 (MEDIUM; WSJF 2.5): Register D114 in 5 convention-canonical doc mirrors (GLOSSARY range + NORTH_STAR + 00_OVERVIEW + CLAUDE.md Validation discipline + RISKS R33)
+- B-298 (MEDIUM; WSJF 1.5): Extend `udm-execution-classifier` SKILL.md matrix with "Manual × Recurring + Automated-via-Claude-Code-hook" category per D114 §4
+- B-299 (LOW; WSJF 1.5): Add Step 2.1 to `udm-post-edit-verification` SKILL.md — "run query_blindspots on each META-COMMIT file"
+
+**HANDOFF §8 Pitfall #9.o updated** with instance-6 evidence + instance-7 trigger condition for Mechanism B.
+
+**Hard rule 14 cascade applied (THIS commit; PROPER application per anti-rationalization clause)**:
+- TEST: pytest 2354/58/0 unchanged (doc-only edits)
+- GAP ANALYSIS: independent reviewer at agentId `a31469b36eff6c0d2` (19th cumulative inheritance app); verdict 🔴 ESCALATE; all must-fix items APPLIED INLINE; 4 B-Ns opened for remaining items
+- REVIEW: parent inline review of must-fix application + Mechanism A inline-add (legitimate Layer N+1 termination per anti-rationalization clause step 5: this commit IS the structural-fix application of the gap-check verdict; Layer N = `570ac67` original commit; Layer N+1 = this commit applying the gap-check's prescribed remediation; Layer N+2 = infinite recursion exempt)
+
+**Quote-cite proof of reviewer substance review** (per Mechanism A step 5 self-evidence requirement):
+
+> "**G3 9.h invented section number (CRITICAL)**: D114 body cites "AppLaunchpad §12.3 blindspot ledger pattern" (and "§12.1" for hooks) in multiple places. The actual `agentic-architecture.md` source has NO §12.1 OR §12.3 subsections — §12 contains "Layer 1 — Hooks" / "Layer 2 — Skills" / "Layer 3 — Blindspot ledger" as un-numbered sub-headings. The correct citation is "§12 Layer 3" / "§12 Layer 1"."
+
+> "**G3 9.k arithmetic-propagation drift (CRITICAL)**: The 3 stale line counts under G1 (379/220/513) are textbook 9.k instances — counts written at f699250 build-time were not refreshed when the files grew at d645cee or were verified at 570ac67."
+
+> "**G3 9.h L325 misrouting**: `docs/migration/GLOSSARY.md:763` cites "**per CLAUDE.md L325**" for the CLI_QUERY_BLINDSPOTS 16th family member claim. CLAUDE.md L325 is the SCD2 `UdmActiveFlag = 2` Do-NOT rule, completely unrelated. Correct citation is **CLAUDE.md L197**."
+
+These verbatim quotes prove the reviewer substantively addressed the specific content fixed inline this commit (per Mechanism A step 5 cite-by-quotation requirement).
+
+---
+
 ## 2026-05-16 — D114 🟢 Locked: AppLaunchpad blindspot-ledger high-ROI subset adoption (B-295 sub-items 1-6 CLOSED via tracker convention compliance)
 
 **Reviewer**: parent agent (Cycle 1 of forecast 3-cycle path per user calibration question 2026-05-16) + pytest 2354/58/0 unchanged (doc-only edits)
