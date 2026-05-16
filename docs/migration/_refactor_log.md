@@ -57,10 +57,10 @@
 - Active cross-ref: `CLAUDE.md` (post-trim) Data Flow section stub at L151-160 with cross-ref to `phase1/01c_data_flow_walkthrough.md` (canonical 1,146 lines)
 **Rationale**: D.5 Approach A trim; section was DUPLICATE of canonical content at `phase1/01c_data_flow_walkthrough.md`; initial D.5 strategy was cross-ref-only (no archive) → retroactive archive per user Option B choice 2026-05-15 to preserve recovery path without git archaeology
 **Git commit**: `7e2c606` (D.5 trim) + this commit (retroactive archive)
-**Equivalence verification**: 🟡 **NOT YET FORMALLY VERIFIED** — assumption that `phase1/01c_data_flow_walkthrough.md` contains equivalent content was NOT empirically verified at D.5 trim time; archived as safety net per Option B. Future B-N candidate: spawn `udm-researcher` to compare archived content against canonical destination + flag any gaps.
+**Equivalence verification**: ✅ **VERIFIED 2026-05-15 (PARTIAL but acceptable per B-284 closure via udm-researcher diff)** — `phase1/01c_data_flow_walkthrough.md` covers the core mechanics (small/large flow trace + polars-hash + CDC + SCD2 + sp_getapplock at L237) but missing the archive's "Design decisions (resolved)" block + V-7/OVERLAP_MINUTES rationale; 01c §0.4 explicitly cross-refs back to CLAUDE.md so readers ARE directed appropriately. NOT a 🔴 misleading cross-ref. See `_research/d5-equivalence-verification-2026-05-15.md` §1 for full per-claim breakdown.
 **Reversibility**: preferred = read `docs/migration/_archive/CLAUDE_data_flow_archive_2026-05-15.md`; fallback = `git show c189432:CLAUDE.md` (lines 151-213)
 **Discipline applied**: `udm-planning-session-startup` + `superpowers-verification-before-completion` (B-280 verbatim extraction via `git show c189432:CLAUDE.md` — no Write-tool re-typing risk)
-**Status**: 🟢 Complete (archive landed; equivalence verification pending future B-N)
+**Status**: 🟢 Complete (archive landed; equivalence ✅ VERIFIED PARTIAL per B-284 closure 2026-05-15)
 
 ### 2026-05-15 — TRIM: CLAUDE.md Key Architecture Decisions section (D.5 Approach A; retroactive archive)
 
@@ -71,10 +71,10 @@
 - Active cross-ref: `CLAUDE.md` (post-trim) section at L165-178 with cross-ref to `phase1/01_database_schema.md` (canonical 2,167 lines)
 **Rationale**: D.5 Approach A trim; section was DUPLICATE of canonical content at `phase1/01_database_schema.md`; retroactive archive per user Option B choice
 **Git commit**: `7e2c606` + this commit
-**Equivalence verification**: 🟡 NOT YET FORMALLY VERIFIED — same caveat as Data Flow entry
+**Equivalence verification**: 🔴 **INCORRECT CROSS-REF DESTINATION** (caught by B-284 udm-researcher diff 2026-05-15; FIXED inline THIS COMMIT) — `phase1/01_database_schema.md` contains NONE of the archive's content. Correct destinations per `_research/d5-equivalence-verification-2026-05-15.md` §2: (a) UdmTablesList columns + extraction routing → `phase1/02_configuration.md` §1 (35 columns enumerated); (b) Column Tracking / Column Sync / connection strings / CDC+SCD2 in-memory design / BULK_LOGGED → NO spec-doc canonical equivalent; archive is the ONLY non-CLAUDE.md reference path. CLAUDE.md (post-trim) Key Architecture Decisions section UPDATED THIS COMMIT to reflect corrected cross-refs.
 **Reversibility**: preferred = `_archive/CLAUDE_architecture_decisions_archive_2026-05-15.md`; fallback = git show
-**Discipline applied**: same as Data Flow entry
-**Status**: 🟢 Complete (archive landed; equivalence verification pending future B-N)
+**Discipline applied**: same as Data Flow entry + B-284 closure 2026-05-15 (udm-researcher diff agent)
+**Status**: 🟢 Complete (archive landed; equivalence 🔴 INCORRECT-CROSS-REF caught + FIXED inline per B-284 closure 2026-05-15)
 
 ### 2026-05-15 — TRIM: CLAUDE.md Observability detail section (D.5 Approach A; retroactive archive)
 
@@ -85,10 +85,10 @@
 - Active cross-ref: `CLAUDE.md` (post-trim) section at L195-225 with cross-ref to `phase1/02_configuration.md` § Observability + summary of EventType families
 **Rationale**: D.5 Approach A trim; observability detail was DUPLICATE of canonical content at `phase1/02_configuration.md`; CLAUDE.md (post-trim) retains EventType family enumeration as quick-reference; retroactive archive per user Option B choice
 **Git commit**: `7e2c606` + this commit
-**Equivalence verification**: 🟡 NOT YET FORMALLY VERIFIED — same caveat
+**Equivalence verification**: 🔴 **INCORRECT CROSS-REF DESTINATION** (caught by B-284 udm-researcher diff 2026-05-15; FIXED inline THIS COMMIT) — `phase1/02_configuration.md` has NO § Observability section. Correct destinations per `_research/d5-equivalence-verification-2026-05-15.md` §3: (a) EventType families + two-table pattern → `phase1/01c_data_flow_walkthrough.md` §8; (b) PipelineEventLog + PipelineLog column-level DDL → `phase1/01_database_schema.md` (DDL definitions); (c) SqlServerLogHandler design + retention policy + PipelineEventTracker code example + debugging workflow SQL → NO spec-doc canonical equivalent; archive is the ONLY non-CLAUDE.md reference path. CLAUDE.md (post-trim) Observability section UPDATED THIS COMMIT to reflect corrected cross-refs.
 **Reversibility**: preferred = `_archive/CLAUDE_observability_archive_2026-05-15.md`; fallback = git show
-**Discipline applied**: same as Data Flow entry
-**Status**: 🟢 Complete (archive landed; equivalence verification pending future B-N)
+**Discipline applied**: same as Data Flow entry + B-284 closure 2026-05-15 (udm-researcher diff agent)
+**Status**: 🟢 Complete (archive landed; equivalence 🔴 INCORRECT-CROSS-REF caught + FIXED inline per B-284 closure 2026-05-15)
 
 ### 2026-05-15 — TRIM: CLAUDE.md Security Model summary section (D.5 Approach A; retroactive archive)
 
@@ -99,10 +99,10 @@
 - Active cross-ref: `CLAUDE.md` (post-trim) section at L281-296 with compressed 15-line summary + cross-ref to `SECURITY_MODEL.md` (canonical 407 lines)
 **Rationale**: D.5 Approach A trim; original section was a SUMMARY pointing to `SECURITY_MODEL.md` canonical; post-trim version is a TIGHTER summary (15 vs 63 lines) preserving key facts (per-env posture / credential locations / 13-layer naming / PiiVault crypto wire format / operational DO-DO-NOT) + cross-ref. Retroactive archive per Option B preserves the original summary's full context (e.g., RHEL-specific note language; AppArmor-not-used reasoning) that the tighter post-trim summary compressed
 **Git commit**: `7e2c606` + this commit
-**Equivalence verification**: 🟡 PARTIAL — `SECURITY_MODEL.md` is the canonical source; post-trim CLAUDE.md summary covers key facts but is more compressed; archive preserves the original summary's intermediate-level detail
+**Equivalence verification**: ✅ **VERIFIED EQUIVALENT 2026-05-15 per B-284 closure via udm-researcher diff** — SECURITY_MODEL.md is canonical and comprehensive (407 lines); all 13 archive claims verified equivalent or partially-present-with-acceptable-nuance. One trivial procedural gap (archive incident step 5 "File incident note in RISKS.md under R32" not in §6 incident steps; R32 cross-referenced in §7). See `_research/d5-equivalence-verification-2026-05-15.md` §4 for full per-claim breakdown.
 **Reversibility**: preferred = `_archive/CLAUDE_security_model_archive_2026-05-15.md`; canonical detail = `SECURITY_MODEL.md`; fallback = git show
-**Discipline applied**: same as Data Flow entry
-**Status**: 🟢 Complete (archive landed; equivalence verification per SECURITY_MODEL.md canonical)
+**Discipline applied**: same as Data Flow entry + B-284 closure 2026-05-15 (udm-researcher diff agent)
+**Status**: 🟢 Complete (archive landed; equivalence ✅ VERIFIED EQUIVALENT per B-284 closure 2026-05-15)
 
 ---
 

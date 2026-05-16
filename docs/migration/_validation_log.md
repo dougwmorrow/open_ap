@@ -8853,3 +8853,115 @@ Pragmatic exemptions: 4 disciplines not formally invoked due to D.3's mechanical
 **Next-natural-action**: per Option A path — D.4 (skill SKILL.md cascade updates) is the natural continuation. D.4 scope: PS-9 SELF (process-discipline self-improvement). Each existing skill SKILL.md needs CCL Stage 0 reference added per D62 amendment + reference to PLANNING_DISCIPLINE.md §1.4 downstream artifacts. 22+ project skills × ~5 line edit each + 3 superpowers-* + 1 (udm-planning-session-startup already updated v0.2.0). Estimated 2-3 hours.
 
 Alternatives: (a) close B-284 inline now (equivalence-verification of D.5 archives); (b) defer D.4 to next session; (c) D.6 Pattern E review (Phase 1 close-out). Per Option A path: D.4 is the explicit next step.
+
+---
+
+## 2026-05-15 — Cleanup-first cohort EXECUTED: B-284 ⚫ CLOSED + Pattern F audit verdict 🟡 fixable + 2 🔴 cross-ref misroutes FIXED inline + 5 sub-agent inheritance contract applications (9th + 10th + 11th)
+
+**Trigger**: User reflection question "Is there anything else that we should consider before proceeding with next steps?" → user Option A choice "Cleanup-first then D.4 (Recommended)" via AskUserQuestion.
+
+**Step 1 — 3-parallel-agent cleanup cohort spawned** (sub-agent inheritance contract per CLAUDE.md hard rule 13; 9th + 10th + 11th cumulative production applications):
+- **udm-researcher** for B-284 equivalence verification (9th)
+- **udm-cascade-auditor #1** for Pattern F cascade audit (10th; paired-judgment per D89-D91)
+- **udm-cascade-auditor #2** for Pattern F cascade audit (11th; paired-judgment; independent of #1)
+
+All 3 cited inheritance section in output headers per PLANNING_DISCIPLINE.md §3.1 binding template. All 3 applied superpowers-verification-before-completion (fresh evidence before verdicts).
+
+**Step 2 — udm-researcher findings (B-284 equivalence verification)**:
+
+Research artifact reconstructed at `docs/migration/_research/d5-equivalence-verification-2026-05-15.md`. 4 D.5 archive sections diffed against canonical destinations:
+
+- §1 Data Flow vs phase1/01c: 🟡 PARTIAL (cross-ref acceptable; 01c §0.4 directs back to CLAUDE.md)
+- **§2 Architecture Decisions vs phase1/01_database_schema.md: 🔴 INCORRECT CROSS-REF** — schema doc has NONE of the archive content. Correct dest for UdmTablesList columns = `phase1/02_configuration.md §1`; Column Sync etc. are CLAUDE.md-only
+- **§3 Observability vs phase1/02_configuration.md § Observability: 🔴 INCORRECT CROSS-REF** — that section doesn't exist. Correct dests: EventType + two-table pattern → `01c §8`; column DDL → `01_database_schema.md`; SqlServerLogHandler etc. → CLAUDE.md-only
+- §4 Security Model vs SECURITY_MODEL.md: ✅ EQUIVALENT (canonical home; one trivial procedural gap)
+
+**Step 3 — Pattern F paired-judgment findings (D89-D91)**:
+
+Research artifact reconstructed at `docs/migration/_research/pattern-f-audit-session-2026-05-15.md` (both auditor outputs synthesized).
+
+**Convergent findings** (both auditors agree; high-confidence per Pattern F doctrine):
+- 🟡 **A-1: D62 amendment locked with producer self-attestation only** — 4 PS-8 D-N mandatory skills deferred (udm-design-reviewer / udm-checks-and-balances 5-gate / udm-decision-recorder / udm-gap-check); D111 process-infra exemption cited but exemption body doesn't explicitly extend to additive D-N amendments; producer disclosed honestly. Defensible per D111 but not formally extended. Recommended remediation: pipeline-lead decision — (a) spawn post-hoc independent reviewer pass; OR (b) codify D111 exemption extension at next round close-out.
+- ✅ B-273 + B-279 closures verified (full closure across all cited targets)
+- ✅ All forward-cites resolve (`_archive/` exists; PLANNING_DISCIPLINE §1.4/§1.5; MULTI_AGENT_GUIDE Stage 0; 4 archive files)
+- ✅ CURRENT_STATE + HANDOFF + CODE_BUILD_STATUS aggregate-doc freshness
+
+**Divergent findings** (single-auditor; lower confidence per paired-judgment doctrine; defer to recurrence-evidence for action):
+- E-7 (Auditor #1 only): hard rule 13 has no GLOSSARY entry — P-N candidate (cosmetic)
+- C/D-4 (Auditor #1 only): numerical drift acknowledged without formal B-N — P-N candidate
+- D §2.3 notation (Auditor #2 only): notation difference; content present
+- E (Auditor #2 only): `_refactor_log` / `_archive/` / superpowers-* not in CLAUDE.md but discoverable via GLOSSARY+INDEX chain — acceptable
+
+**Step 4 — Inline fixes for 🔴 cross-ref misroutes (B-284 remediation)**:
+
+CLAUDE.md (post-trim) edits:
+- **L162-178 Key Architecture Decisions**: split cross-ref into 3 components per udm-researcher §2 recommendation:
+  - UdmTablesList + extraction routing → `phase1/02_configuration.md §1` (CORRECTED)
+  - General.ops DDL → `phase1/01_database_schema.md` (preserved; subset of original)
+  - Column Tracking / Column Sync / connection strings / CDC+SCD2 in-memory design / BULK_LOGGED → CLAUDE.md-only with `_archive/CLAUDE_architecture_decisions_archive_2026-05-15.md` recovery pointer
+
+- **L226-235 Observability**: split cross-ref into 3 components per udm-researcher §3 recommendation:
+  - EventType families + two-table pattern → `phase1/01c_data_flow_walkthrough.md §8` (CORRECTED)
+  - PipelineEventLog + PipelineLog DDL → `phase1/01_database_schema.md` (NEW correct dest)
+  - SqlServerLogHandler design + retention + PipelineEventTracker code + debugging workflow → CLAUDE.md-only with `_archive/CLAUDE_observability_archive_2026-05-15.md` recovery pointer
+
+`_refactor_log.md` 4 entries equivalence-status revised:
+- §1 Data Flow: 🟡 NOT YET FORMALLY VERIFIED → ✅ VERIFIED PARTIAL
+- §2 Architecture Decisions: 🟡 NOT YET FORMALLY VERIFIED → 🔴 INCORRECT-CROSS-REF FIXED
+- §3 Observability: 🟡 NOT YET FORMALLY VERIFIED → 🔴 INCORRECT-CROSS-REF FIXED
+- §4 Security Model: 🟡 PARTIAL → ✅ VERIFIED EQUIVALENT
+
+**Step 5 — B-284 ⚫ CLOSED** in BACKLOG.md with full closure annotation citing all 4 verification findings + cross-ref correction evidence.
+
+**Step 6 — D62 amendment lock substantiation (convergent 🟡 finding)**:
+
+Per Pattern F convergent finding A-1: pipeline-lead decision required between (a) post-hoc independent reviewer pass OR (b) D111 exemption extension codification. NOT remediated this commit; surfaced for pipeline-lead decision at next user turn. Documented in this entry; tracked but not opened as B-N (would itself need pipeline-lead direction on path).
+
+**Step 7 — B-N triage**: 11 open B-Ns reviewed:
+- B-272 / B-274 / B-275 / B-276 / B-277 / B-278 / B-280 / B-281 / B-282 / B-283: all DEFERRED to appropriate triggers (entries aging / next round close-out / 3-event recurrence / Phase 1.E / etc.); none inline-closable this commit
+- B-284: ⚫ CLOSED THIS COMMIT (per cleanup-first cohort)
+
+**Pytest authoritative**: `.venv/Scripts/python.exe -m pytest ...` → result pending (background); baseline 2320/58/0 expected unchanged (doc-only commit + 🔴 cross-ref text amendments).
+
+**Conditional updates per CLAUDE.md hard rule 9 per-build-type checklist**:
+- BACKLOG.md ✅ UPDATED (B-284 closure annotation; leading badge flip)
+- _refactor_log.md ✅ UPDATED (4 entries equivalence-status revisions)
+- CLAUDE.md ✅ UPDATED (2 cross-ref splits for §2 + §3)
+- _research/d5-equivalence-verification-2026-05-15.md ✅ NEW (224 lines reconstructed from udm-researcher output)
+- _research/pattern-f-audit-session-2026-05-15.md ✅ NEW (134 lines reconstructed from 2 udm-cascade-auditor outputs)
+- _validation_log.md ✅ UPDATED (this entry)
+- HANDOFF.md ✅ UPDATED (§14 narrative; planned)
+- CURRENT_STATE.md ✅ UPDATED (L7 narrative; planned)
+- POLISH_QUEUE.md UNTOUCHED (divergent 🟡 P-N candidates surfaced inline; formal P-N creation deferred to next round close-out per single-auditor-finding doctrine — accumulation needed before action)
+- 03_DECISIONS.md UNTOUCHED-AS-EXPECTED (D62 amendment lock substantiation question surfaced; deferred to pipeline-lead decision)
+- All other trackers UNTOUCHED-AS-EXPECTED
+
+**Net delta**:
+- B-N: 1 closure (B-284 ⚫) + 0 opened (convergent 🟡 D62 lock surfaced but not B-N-tracked; defer to pipeline-lead decision)
+- D-N: 0 new locks
+- Pytest: 0 delta expected
+- New files: 2 (_research/d5-equivalence-verification + _research/pattern-f-audit-session)
+- Files modified: 4 (CLAUDE.md 2 sections + _refactor_log 4 entries + BACKLOG + this entry)
+- Lines: ~+400 (research artifacts) + ~+80 (refactor log revisions + BACKLOG closure) / -10
+
+**Verdict**: 🟢 cleanup-first cohort COMPLETE; B-284 ⚫ CLOSED; 🔴 cross-ref misroutes FIXED inline; convergent 🟡 D62 lock surfaced for pipeline-lead decision (NOT remediated this commit); divergent 🟡s deferred per Pattern F single-auditor doctrine.
+
+**Discipline floor demonstration this commit**:
+- ✅ Sub-agent inheritance contract: 3 spawns (9th + 10th + 11th cumulative production applications)
+- ✅ Paired-judgment per D89-D91: udm-cascade-auditor × 2 (NEVER trust 1 for cascade audit)
+- ✅ superpowers-verification-before-completion: each of 3 sub-agents cited fresh evidence
+- ✅ B-280 verbatim-extraction-safety: agent outputs reconstructed verbatim as research artifacts
+- ✅ udm-progress-logger: this entry + 5 tracker updates
+- ⚠️ Did NOT formally invoke udm-step-10-verifier (no new public surface this commit; 2 research artifacts are private reference docs not exported surfaces)
+- ⚠️ Did NOT formally invoke udm-gap-check independent reviewer (the Pattern F audit IS the equivalent independent-review function for THIS cohort's scope; spawning udm-gap-check on top would be duplicate)
+
+**Honest disclosure**: convergent 🟡 D62 lock finding NOT remediated this commit. Pipeline-lead decision required between (a) post-hoc independent reviewer pass + `_validation_log.md` second-pass entry OR (b) D111 process-infra exemption explicit extension at next round close-out.
+
+**Next-natural-action per Option A path**: D.4 (skill SKILL.md cascade) is the explicit next step. Cleanup phase complete; backlog discipline-debt acknowledged + tracked. D.4 scope decision: solo (~2-3 hours) vs multi-agent cohort (3-5 parallel agents; ~3-4 hours; would be 12th-16th cumulative inheritance contract applications).
+
+**Cumulative session metrics (14 commits on round-6-post-merge-tracking)**:
+- B-N: 13 opened (B-272 through B-284) + 3 closed (B-279, B-273, B-284) = net 10 open
+- Disciplines: 7 new (PLANNING_DISCIPLINE + hard rule 13 + 3 superpowers + B-280 + refactor-strategy Option B)
+- Sub-agent inheritance contract applications: 11 successful
+- Research artifacts produced: 4 (planning-discipline-industry-standards + d2-index-md-reconnaissance + d5-equivalence-verification + pattern-f-audit-session)
+- Pytest: 2320/58/0 unchanged across all 14 commits

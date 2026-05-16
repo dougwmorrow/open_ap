@@ -161,7 +161,10 @@ Default StripSuffix=0 preserves every existing table's behavior. Set per-table w
 
 ## Key Architecture Decisions
 
-**Canonical reference**: `docs/migration/phase1/01_database_schema.md` (2,167 lines covering full DDL + UdmTablesList column semantics + extraction routing per SourceIndexHint / PartitionOn / SourceAggregateColumnName / LookbackDays / FirstLoadDate / MaxRowsPerDay / StripSuffix + ConnectorX vs oracledb routing decision tree + connection-string patterns + UdmTablesColumnsList column-tracking + column-sync auto-population flow + Oracle view PK discovery via `ALL_DEPENDENCIES` / SQL Server view PK discovery via `sys.dm_sql_referenced_entities` + SCD2 promotion 2-step optimization (close batch + insert batch; unchanged rows counted but not touched) + `_bulk_load_recovery_context()` BULK_LOGGED wrap).
+**Canonical references (split per `_research/d5-equivalence-verification-2026-05-15.md` per B-284 closure 2026-05-15)**:
+- **UdmTablesList column semantics + extraction routing** (SourceIndexHint / PartitionOn / SourceAggregateColumnName / LookbackDays / FirstLoadDate / MaxRowsPerDay / StripSuffix / ConnectorX vs oracledb routing): `docs/migration/phase1/02_configuration.md` §1 (35 columns enumerated; corrected destination per B-284 verification; original D.5 cross-ref to `01_database_schema.md` was incorrect — schema doc has no UdmTablesList routing content)
+- **General.ops DDL** (table definitions for PipelineEventLog / PipelineLog / SchemaContract / etc.): `docs/migration/phase1/01_database_schema.md` (2,167 lines)
+- **Column Tracking via UdmTablesColumnsList + Column Sync flow + Oracle/SQL Server PK discovery + connection string patterns + CDC+SCD2 in-memory design + BULK_LOGGED `_bulk_load_recovery_context()`**: NO spec-doc canonical equivalent; this content exists ONLY in CLAUDE.md + verbatim preservation at `docs/migration/_archive/CLAUDE_architecture_decisions_archive_2026-05-15.md` (78-line archive per D.5 trim + Option B refactor-strategy). New equivalent content may be authored to a future `phase1/02_configuration.md` extension OR a new `phase1/02a_*.md` supplement at Phase 2+ work — tracked via `_refactor_log.md` D.5-architecture-decisions equivalence-status revision.
 
 **Quick reference (high-frequency lookups)**:
 - **Stage table naming**: `{target_db}.{SourceName}.{table_name}_cdc` (or custom via `StageTableName`); StripSuffix=1 drops `_cdc`/`_scd2_python` per-table opt-in (SS-1)
@@ -201,7 +204,10 @@ Two complementary tables in `General.ops` answer **"what happened and how fast?"
 
 **SqlServerLogHandler design**: custom `logging.Handler` subclass — every module uses standard `logger.info()`/`warning()`/`error()`. Handler holds current BatchId + TableName in thread-local / context-variable (modules never pass tracking context around). Batches log entries; writes to PipelineLog. Sub-threshold entries (e.g., DEBUG in production) filtered at handler level.
 
-**Canonical detail + typical debugging workflow + full Questions-the-tables-answer reference**: `docs/migration/phase1/02_configuration.md` § Observability.
+**Canonical references (split per `_research/d5-equivalence-verification-2026-05-15.md` per B-284 closure 2026-05-15)**:
+- **EventType families + two-table pattern + dashboard-vs-investigation framing**: `docs/migration/phase1/01c_data_flow_walkthrough.md` §8 (corrected destination per B-284 verification; original D.5 cross-ref to `02_configuration.md § Observability` was incorrect — that section does not exist in `02_configuration.md`)
+- **PipelineEventLog + PipelineLog column-level DDL** (table definitions): `docs/migration/phase1/01_database_schema.md`
+- **SqlServerLogHandler design + retention policy + PipelineEventTracker context-manager code example + typical debugging workflow SQL + Questions-the-tables-answer reference**: NO spec-doc canonical equivalent; this content exists ONLY in CLAUDE.md + verbatim preservation at `docs/migration/_archive/CLAUDE_observability_archive_2026-05-15.md` (114-line archive per D.5 trim + Option B refactor-strategy). Tracked via `_refactor_log.md` D.5-observability equivalence-status revision.
 
 
 ## Deployment Requirements
