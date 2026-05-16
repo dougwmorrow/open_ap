@@ -53,6 +53,10 @@ This is the **CodeCompass Navigation Paradox** (arxiv 2602.20048) applied to ski
 2. **This document (`PLANNING_DISCIPLINE.md`)** — canonical skill-selection matrix + sub-agent inheritance contract + plan-deliverable §0 provenance template
 3. **CLAUDE.md hard rule 13** — binding directive for all agents/sub-agents/multi-agent-teams to invoke the startup skill on planning-intent + apply the inheritance contract
 
+### §1.4 Downstream artifacts (per CLAUDE.md hard rule 9 convention-registration; added 2026-05-15 per udm-gap-check G5 finding)
+
+- **`docs/migration/INDEX.md`** (authored 2026-05-15 per D.2 Phase 1 task 1.3 + MARKDOWN_REFACTOR_PLAN.md §13.2) — master routing manifest in llms.txt format; serves as CCL Stage 0 (read FIRST before downstream Stage 1+2+3 docs per CLAUDE.md Read order item 0). Sub-agent inheritance contract per §3.1 was applied during INDEX.md authoring (3-parallel-agent cohort; 4th production application of contract). When PLANNING_DISCIPLINE.md §2.2 matrix routes to a Stage 1+ doc, INDEX.md provides the human-readable routing rationale for WHY that doc is the right destination.
+
 ---
 
 ## §2. Skill-selection matrix

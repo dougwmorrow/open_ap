@@ -8581,3 +8581,95 @@ Contents (8 sections):
 - ⏳ `udm-gap-check` independent reviewer: deferred to D.2 EXECUTION attestation (recon-only doesn't warrant independent reviewer per minimum-viable-set §2.5)
 
 **Next-natural-action**: pipeline-lead chooses §8 Option A/B/C for D.2 execution; THEN spawn cohort (if B/C) OR proceed solo (if A); apply discipline floor throughout; commit + report.
+
+---
+
+## 2026-05-15 — D.2 INDEX.md EXECUTED via 3-parallel-agent cohort (Option B Recommended; user-authorized via cascade) — 4th production application of CLAUDE.md hard rule 13 sub-agent inheritance contract; udm-gap-check inline-fixed 3 small drifts
+
+**Trigger**: User cascade trigger "Proceed with your suggested next steps" → executes Recommended Option B (3-parallel-agent cohort) for D.2 INDEX.md authoring.
+
+**Step 1 — udm-planning-session-startup activation**: PS-2 DOC (primary) + PS-6 COHORT scope. Minimum-viable-set per §2.5: udm-checks-and-balances + udm-progress-logger + udm-gap-check + udm-step-10-verifier + superpowers-verification-before-completion (always-mandatory) + superpowers-systematic-debugging (always-mandatory; available if confusion).
+
+**Step 2 — 3-agent cohort spawn (parallel) with sub-agent inheritance contract per CLAUDE.md hard rule 13 (4th production application)**:
+
+Each sub-agent prompt included:
+- Planning-discipline skill inheritance section per PLANNING_DISCIPLINE.md §3.1 binding template
+- Mandatory inherited skills (verification-before-completion + systematic-debugging)
+- Scope enumeration (sections to author + sections NOT to author per recon §4.2)
+- Format requirements (routing-by-intent NOT structural; cross-ref preservation per §13.3 Navigation Paradox)
+- Output contract (return raw markdown chat-text for verbatim parent assembly)
+
+Cohort breakdown:
+- **Agent A**: CCL Stage 1+2 + Canonical registers (Categories A+B+D = 12 entries / ~80 lines) → returned cleanly with verification evidence (12 `ls` checks)
+- **Agent B**: Architecture + Process meta-docs + Plans (Categories E+F+G = 16 entries / ~85 lines) → returned cleanly with verification evidence (16 `ls` checks + 30-50 line reads of each cited file)
+- **Agent C**: CCL Stage 3 Reference + Phase-specific + Validation/Sidecars (Categories C+H+I = 27 entries / ~115 lines including phase1/phase2 surveys) → returned cleanly; surfaced extra `phase1/07a_schema_contract_examples.md` not in original recon §1 inventory (caught via fresh `ls`)
+
+All 3 sub-agents cited inheritance section in output headers per contract. All 3 applied superpowers-verification-before-completion (cited fresh `ls` checks). All 3 stayed within scope (no overlap). Sub-agent inheritance contract validated in production for 4th consecutive successful invocation.
+
+**Step 3 — Parent assembly of INDEX.md**:
+
+Wrote `docs/migration/INDEX.md` (126 lines) per Write tool — assembled all 3 sub-agent outputs verbatim into single file with:
+- H1 + blockquote summary + `last_regenerated_at` line (per recon §2)
+- "How to use this index" intro paragraph
+- 9 sections in routing-by-intent format (per ETH Zurich §3.6 Finding 5: avoid structural overviews)
+- 54 real cross-refs (per Python `re.findall(r'\]\(([^)]+)\)')` count post-commit; 57 was parent's initial pre-commit estimate; difference is +1 backtick-literal `[filename](path)` placeholder in intro + 2 other false-positive counts that udm-gap-check resolved to 54 actual)
+
+**Step 4 — superpowers-verification-before-completion (2nd production application)**:
+
+Ran fresh verification commands BEFORE claiming D.2 complete:
+- `wc -l docs/migration/INDEX.md` → 126 lines
+- Python `re.findall` cross-ref resolution → 57 of 58 resolve (1 false-positive on `(path)` backtick-literal)
+- Cited evidence inline in cascade-complete report
+
+**Step 5 — Step 10 convention registration applied**:
+- CLAUDE.md Read order: NEW item 0 = INDEX.md as CCL Stage 0; item 1 = CURRENT_STATE.md unchanged; items 0-9 sequential ✅
+- GLOSSARY skill catalogue: NEW entry for INDEX.md ✅
+- INDEX.md self-registered in MULTI_AGENT_GUIDE.md D62 CCL section as Stage 0 (added after gap-check finding) ✅
+- INDEX.md referenced in PLANNING_DISCIPLINE.md §1.4 downstream artifacts (added after gap-check finding) ✅
+
+**Step 6 — udm-gap-check independent reviewer spawned** (5th production application of inheritance contract):
+
+Verdicts:
+- G1 Pitfall #9.j leading-badge: ✅ CLEAN (no leading badges; intentional for routing manifest; `last_regenerated_at` correctly formatted)
+- G2 Pitfall #9.k arithmetic-propagation: 🟡 INLINE-FIXED (GLOSSARY said "57 cross-refs"; actual 54; fixed inline pre-commit)
+- G3 Pitfall #9.l canonical re-read: ✅ CLEAN (all 28+17+3 cited files verified via `ls`; 10 spot-check description-vs-content reads accurate)
+- G4 Pitfall #9.m discipline-applied-to-tracker: 🟡 partial verifiability (can't directly inspect sub-agent transcripts; indirect evidence of inheritance contract compliance via INDEX.md authoring note + categorization match to recon §4.2)
+- G5 Pitfall #9.n convention-registration: 🟡 INLINE-FIXED (3 small misses; PLANNING_DISCIPLINE missing INDEX.md self-ref → fixed by adding §1.4; MULTI_AGENT_GUIDE D62 CCL missing INDEX.md as Stage 0 → fixed; CLAUDE.md + GLOSSARY ✅ already done)
+- G6 new B-N opportunities: NONE NEW (extends existing B-283 cross-ref staleness audit to cover INDEX.md cross-ref rot; existing scope is sufficient)
+- **Final verdict**: 🟡 fixable inline → fully fixed THIS COMMIT
+
+**Step 7 — Tracker pass + commit**:
+
+This entry + HANDOFF §14 narrative + CURRENT_STATE L7 narrative + GLOSSARY + CLAUDE.md Read order + PLANNING_DISCIPLINE §1.4 + MULTI_AGENT_GUIDE D62 §Stage 0.
+
+**Pytest authoritative**: `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression tests/integration tests/crash -q --no-header` → `2320 passed, 58 skipped in 53.13s` ✅ (doc-only commit; unchanged baseline)
+
+**Net delta**:
+- B-N: 0 closures + 0 opened (4 G6 candidates either existed already or were inline-fixed; no new B-Ns)
+- D-N: 0 locked
+- Pytest: 0 delta (2320/58/0 unchanged authoritative)
+- New files: 1 (INDEX.md 126 lines)
+- Files modified: 6 (CLAUDE.md Read order + GLOSSARY + PLANNING_DISCIPLINE §1.4 + MULTI_AGENT_GUIDE §Stage 0 + HANDOFF + CURRENT_STATE + this entry)
+- Lines: ~+250 / -10
+
+**Verdict**: 🟢 D.2 INDEX.md ✅ COMPLETE; Phase 1 substantially closed (D.0 ✅ DONE, D.1 🟡 BLOCKED-on-B272-deferred, D.2 ✅ DONE, D.3 🟢 next, D.4 🟢 next, D.5 ✅ DONE, D.6 ⏳ at Phase 1 close-out). Sub-agent inheritance contract validated at scale (4th production application; 3 simultaneous sub-agents all complied with contract; gap-check 5th-instance + previous 4 = 5 cumulative successful inheritance-contract applications this session).
+
+**Discipline floor demonstration this commit**:
+- ✅ `udm-planning-session-startup` invoked at start (PS-2 DOC + PS-6 COHORT)
+- ✅ `superpowers-verification-before-completion` invoked TWICE (parent assembly verification + each of 3 sub-agents' fresh `ls` checks)
+- ✅ `udm-progress-logger` applied (this entry + 5 tracker updates)
+- ✅ Sub-agent inheritance contract applied (4 sub-agent spawns: 3 cohort + 1 gap-check reviewer = 4 sub-agents total this commit; 5 cumulative this session)
+- ✅ B-280 verbatim-extraction-safety APPLIED (sub-agents passed routing-by-intent format requirements verbatim; parent assembled chat-text outputs as verbatim markdown blocks)
+- ✅ Step 10 verifier applied (CLAUDE.md + GLOSSARY + MULTI_AGENT_GUIDE + PLANNING_DISCIPLINE all updated for INDEX.md public surface)
+- ✅ `udm-gap-check` independent reviewer spawned (5th production sub-agent inheritance contract application)
+
+**Phase 1 progress (per MARKDOWN_REFACTOR_PLAN.md §7.1 + §18)**:
+- D.0 reconnaissance: ✅ DONE (commit 521b68c)
+- D.1 archive cascade: 🟡 BLOCKED on B-272 (defer until entries age ~24 days)
+- D.2 INDEX.md: ✅ DONE THIS COMMIT
+- D.3 D62 CCL Stage 0 doctrine update: 🟢 AUTHORIZED (next; references INDEX.md which now exists)
+- D.4 Skill SKILL.md cascade: 🟢 AUTHORIZED (next; depends on D.3)
+- D.5 CLAUDE.md trim: ✅ DONE (commit 7e2c606)
+- D.6 Pattern E independent review (Gate 2): ⏳ at Phase 1 close-out
+
+**Next-natural-action**: per user Option A choice (B-273 → D.2 → D.3 → D.4) — execute D.3 (D62 CCL Stage 0 doctrine update in 03_DECISIONS.md). D.3 scope: PS-8 D-N (decision-revision); requires udm-decision-recorder + udm-design-reviewer + udm-checks-and-balances per matrix; ~1-2 hours. After D.3 → D.4 → D.6.

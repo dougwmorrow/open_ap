@@ -378,6 +378,7 @@ No D105 mandate — existing conventions (PascalCase tables like `UdmTablesList`
 **Edge case series**: M/S/I/N/P/G/D/F/V (Rounds 1-5) + **DP** (Round 6 deployment-pipeline series per `04_EDGE_CASES.md:163` — DP1-DP7 added at Round 6 close-out per B121) + **T** (Round 5/6 testing series per `04_EDGE_CASES.md:179` — T1-T4 added at Round 5 + Round 6 close-out per B108 + B121) + **SI** (Round 8 self-improvement-discipline series — SI1-SI23 per `04_EDGE_CASES.md` SI section; tracked at `phase1/08_sub_agent_self_improvement.md` § 10). **12 canonical series total** (M/S/I/N/P/G/D/F/V/DP/T/SI). Pattern E R1C1-3 caught the L634-stale-summary canonical-source drift 2026-05-12; tracked in POLISH_QUEUE for future P-N cosmetic cleanup of summary references that lag the register.
 
 **Read order for AI agents working on the migration / planning project**:
+0. **`docs/migration/INDEX.md`** — **CCL Stage 0** master routing manifest (per D62 + D.2 Phase 1 task 1.3 + `MARKDOWN_REFACTOR_PLAN.md` §13.2; llms.txt format; ~126 lines; routing-by-intent NOT structural; read FIRST to identify which downstream Stage 1+2+3 docs your task needs)
 1. `docs/migration/CURRENT_STATE.md` — where we are now
 2. `docs/migration/HANDOFF.md` — continuity context (per D60)
 3. `docs/migration/GLOSSARY.md` — code/acronym reference (D-numbers, R-numbers, B-numbers, RB-N, SP-N, Pitfall #N, Pattern A-F, Tier α/β/γ/δ, etc. — if you see a short-form identifier and don't recognize it, look here)
@@ -386,7 +387,7 @@ No D105 mandate — existing conventions (PascalCase tables like `UdmTablesList`
 6. This file (CLAUDE.md) — technical history, gotchas, Do-NOT rules
 7. **`docs/migration/PLANNING_DISCIPLINE.md`** — planning-session skill-selection matrix + sub-agent inheritance contract (per hard rule 13 + `udm-planning-session-startup` skill; read this BEFORE invoking any planning skill OR spawning a sub-agent during a planning session)
 8. **`docs/migration/CLAUDE_GOTCHAS.md`** — extracted gotcha reference (B-N / E-N / V-N / W-N / OBS-N / SCD2-* / LT-* / DIAG-* / Item-* code-level entries; cross-ref from CLAUDE.md Gotchas section per D.5 Approach A trim 2026-05-15; read this when investigating any gotcha code identifier)
-9. Phase-specific docs as needed
+9. Phase-specific docs as needed (see INDEX.md item 0 for routing)
 
 ## Error Recovery
 - BCP row count mismatch -> investigate string sanitization, check for new control characters in source data
