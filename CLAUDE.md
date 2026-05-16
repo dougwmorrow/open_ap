@@ -339,7 +339,10 @@ No D105 mandate — existing conventions (PascalCase tables like `UdmTablesList`
 - Always verify BCP CSV format compatibility after ANY change to write functions
 - Test with --table <single_table> --source DNA before running full pipeline
 
-## Validation discipline (per D55 + D56 + D60 + D61 + D89-D91 in `docs/migration/03_DECISIONS.md`)
+## Validation discipline (per D55 + D56 + D60 + D61 + D89-D91 + D114 in `docs/migration/03_DECISIONS.md`)
+
+**D114 blindspot-ledger substrate (added 2026-05-16; AppLaunchpad pattern)**: HANDOFF §8 Pitfall #9 sub-classes 9.a-9.o are now encoded EXECUTABLY at `docs/migration/blindspots/ledger.yml` (15 entries with `detection_rule` per entry). `tools/query_blindspots.py` CLI scans candidate artifacts / commits / cohorts against the ledger. Phase 1 implements 4 of 15 rules (9.j badge render + 9.o recursive-exemption + 9.n new-public-surface reminder + 9.h L-range citation); 11 Phase 2 deferred per B-295 sub-item 7. `.claude/hooks/auto-verify-step-10.py` PostToolUse hook auto-invokes the scanner on source-file edits (warn-only; conservative scope per user direction). Composition: ledger AUGMENTS udm-gap-check / udm-step-10-verifier / Pattern F audit / hard rule 14 cascade Step 2 — does NOT replace. Self-test discipline per Pitfall #9.m: after editing the ledger or related artifacts, run `query_blindspots --file <each-edited-file>` and cite each scan's verdict in commit-message cascade-evidence section (operationalized at `udm-post-edit-verification` SKILL.md Step 2.1).
+
 
 **Mandatory for all artifacts in the migration / planning project**:
 

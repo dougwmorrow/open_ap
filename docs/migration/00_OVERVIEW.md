@@ -81,6 +81,7 @@ These items still need explicit sign-off before code lands. See `03_DECISIONS.md
 | `_validation_log.md` | Append-only audit trail for validation gate runs |
 | `BACKLOG.md` | WSJF-prioritized follow-up items |
 | `POLISH_QUEUE.md` | Cosmetic / readability tracker (P-numbers; added 2026-05-12 per D113); distinct from BACKLOG (substantive work) |
+| `blindspots/` | Executable encoding of HANDOFF §8 Pitfall #9 sub-classes 9.a-9.o (added 2026-05-16 per D114). Contains `ledger.yml` (15 entries with detection_rule per entry) + `protocol.md` (query protocol). Companion CLI: `tools/query_blindspots.py` (16th CLI_* family member per CLAUDE.md L197); companion hook: `.claude/hooks/auto-verify-step-10.py` PostToolUse auto-invocation |
 | `RISKS.md` | Active delivery risk register |
 
 ### Tier 4 — Operations and testing

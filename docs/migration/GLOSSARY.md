@@ -10,7 +10,7 @@ If you're new to the project, read `00_OVERVIEW.md` for the high-level picture a
 
 | Code prefix | Family | Meaning | Source doc | Example |
 |---|---|---|---|---|
-| `D<N>` | Decisions | Architectural decisions (1-113 to date) | `03_DECISIONS.md` | `D93` = Cross-doc cascade propagation requirement; `D113` = POLISH_QUEUE.md cosmetic-tracker discipline |
+| `D<N>` | Decisions | Architectural decisions (1-114 to date) | `03_DECISIONS.md` | `D93` = Cross-doc cascade propagation requirement; `D113` = POLISH_QUEUE.md cosmetic-tracker discipline; `D114` = AppLaunchpad blindspot-ledger high-ROI subset adoption |
 | `R<N>` | Risks | Delivery risks (1-31 to date) | `RISKS.md` | `R28` = Round-level cascade self-attestation gap |
 | `B<N>` | Backlog | WSJF-prioritized follow-up items (1-165 to date) | `BACKLOG.md` | `B144` = Pitfall #9 sub-class 9.j candidate |
 | `P-<N>` | Polish queue | Cosmetic / readability / status-render / supersession-crumb / stale-date items (P-1+; introduced 2026-05-12) — **distinct from B-numbers** (substantive backlog); items here don't change behavior, decisions, runbooks, SP bodies, or code | `POLISH_QUEUE.md` | `P-1` = D109 supersession crumb refresh in Round 4.5b § 6 |
@@ -62,7 +62,7 @@ These appear on decisions, risks, backlog items, edge cases, gate verdicts, and 
 
 Architectural decisions recorded in `03_DECISIONS.md`. Each entry includes: status, driver, decision text, rationale, trade-offs, affects, reversibility, risk delta. Decisions are **append-only**; supersession is by ⚫ marking + forward-link to the new decision.
 
-Range to date: **D1 through D113** (Multi-agent cascade 2026-05-12: D109 schedule revision + D110 DC-loss-no-DR acceptance + D111 operational-infra discipline + D112 just-in-time plan timing; D106 ⚫ Superseded by D109. D113 POLISH_QUEUE.md cosmetic-tracker discipline locked 2026-05-12 post-cascade).
+Range to date: **D1 through D114** (Multi-agent cascade 2026-05-12: D109 schedule revision + D110 DC-loss-no-DR acceptance + D111 operational-infra discipline + D112 just-in-time plan timing; D106 ⚫ Superseded by D109. D113 POLISH_QUEUE.md cosmetic-tracker discipline locked 2026-05-12 post-cascade. **D114 AppLaunchpad blindspot-ledger high-ROI subset adoption locked 2026-05-16** per process-infra exemption analogous to D62/D113).
 
 Notable ones:
 - **D2** — Drop the Stage layer; Parquet snapshots replace it
@@ -99,6 +99,7 @@ Notable ones:
 - **D111** — 🟡 Proposed: operational-infra D-number discipline — decisions touching paths/schedules/env-keys/credentials start 🟡 Proposed; flip 🟢 only after user-attestation + ≥4h pause or session boundary. Surfaced from D107 + D106→D109 churn (3 revisions in one session each)
 - **D112** — Round-N.5 deep-dive plan timing = just-in-time at prior-phase close-out (formalizes B186); Phase 3 plan at P2R4 close-out; Phase 5 plan additionally gated by B191 Snowflake-test-conclusion
 - **D113** — POLISH_QUEUE.md cosmetic-tracker discipline (P-N scheme). Canonical home for cosmetic / readability / status-render / supersession-crumb / stale-date items; distinct from B-numbers (substantive backlog); distinguishing test = does fix change behavior? Status legend 🟡 / 🟠 / ⚫ / ⬜ matches BACKLOG.md per Pitfall #9.j. Round-close-out skim via `udm-round-closeout/SKILL.md` CCL Stage 2.5; Pattern F audit coverage via `udm-cascade-audit-evolver/SKILL.md` Trigger B + E extensions. 🟢 Locked directly per D111 process-infra exemption (analogous to D55 / D60 / D89-D91 / D95-D99). ⬇️ DE-ESCALATES sub-class of R28
+- **D114** — AppLaunchpad blindspot-ledger high-ROI subset adoption (executable form of HANDOFF §8 Pitfall #9 sub-classes 9.a-9.o). 7 specifically-locked sub-decisions: ledger location (`docs/migration/blindspots/`); 4-of-15 detection-rule Phase 1 scope; conservative hook scope; new "Manual × Recurring + Automated-via-Claude-Code-hook" execution category; dev-workstation-only substrate; `_session_logs/` DB-less audit row; AUGMENTS-not-REPLACES composition with existing discipline mechanisms. Companion artifacts: `tools/query_blindspots.py` CLI scanner + `docs/migration/blindspots/{ledger.yml, protocol.md}` + 3 `.claude/hooks/` handlers. NEW R33 candidate risk: blindspot-ledger false-positive fatigue. ⬇️ partial mitigation of R16 sub-class (CCL compliance honor-system); ⬇️ DE-ESCALATES sub-class of R28 (cascade self-attestation gap). 🟢 Locked directly per D111 process-infra exemption (analogous to D62 / D113 / D55 / D60 / D89-D91 / D95-D99). **Pitfall #9.o INSTANCE-6 caught at D114 lock commit** (`570ac67`) — empirical evidence that hard rule 14 anti-rationalization clause alone is INSUFFICIENT; Mechanism A self-evidence requirement added inline at commit `3dd69dc`; Mechanism B `udm-exemption-verifier` deferred per B-296 with closure-trigger at instance-7.
 
 Citing style: `D93` (no leading zero). When referencing for status: `D89 (🟢 Locked 2026-05-11)`.
 

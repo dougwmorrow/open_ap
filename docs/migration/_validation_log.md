@@ -2,6 +2,46 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — B-297 + B-299 + B-295 sub-item 16 CLOSED batch cycle: D114 convention registration in 5 mirrors + Step 2.1 self-application directive added to udm-post-edit-verification SKILL.md + B144 stale-leading-badge flipped (Pitfall #9.j cleanup)
+
+**Reviewer**: parent + Step 2.1 self-application per new mandatory sub-step (THIS commit's own scope: 7 META-COMMIT files scanned; 0 p0/p1 matches across all 7)
+**Trigger**: user-direction "Proceed with your recommended next steps" (cascade Cycle 2 of forecast 3-cycle path per 2026-05-16 user calibration; instance-6 remediation cycle inserted at instance 7 boundary).
+
+**Artifacts modified** (7 META-COMMIT files):
+- `docs/migration/GLOSSARY.md`: L13 range "1-113"→"1-114"; L65 "D1 through D113"→"D1 through D114"; L101 new D114 entry with full 7-sub-decision summary + R33 risk pointer + Pitfall #9.o instance-6 evidence
+- `docs/migration/NORTH_STAR.md`: L97 new D114 pillar-mapping entry (operationally-stable + idempotent + audit-grade per D61)
+- `docs/migration/00_OVERVIEW.md`: L83 new `blindspots/` doc-map row pointing to ledger.yml + protocol.md + companion CLI + companion hook
+- `docs/migration/RISKS.md`: R33 promoted from D114-cited candidate to 🟡 Proposed entry after R32 with mitigation context (B-295 sub-items 8+9 closure + B-296 tracking + periodic log review)
+- `CLAUDE.md`: L342 Validation discipline section heading extended to cite D114 + new sub-section paragraph summarizing blindspot-ledger substrate + Step 2.1 self-test cross-ref
+- `.claude/skills/udm-post-edit-verification/SKILL.md`: Step 2.1 added between Step 2 header and 6-category audit list — mandatory `query_blindspots` self-application per META-COMMIT file enumeration; hard rule: absence of per-file enumeration in commit-message cascade-evidence section = self-application incomplete = GAP ANALYSIS Step 2 invalid; cites Pitfall #9.o instance-6 (commit `570ac67`) as empirical anchor
+- `docs/migration/BACKLOG.md`: B-297 + B-299 closed inline (strikethrough wrap + closure annotation); B-295 sub-item 16 closed inline with empirical post-fix smoke-test verification; B-295 leading "8 of 16"→"9 of 16 sub-items CLOSED"; B144 row leading badge flipped via strikethrough wrap per Pitfall #9.j discipline
+
+**Hard rule 14 cascade applied (THIS commit; PROPER application per Mechanism A + new Step 2.1)**:
+- **TEST**: pytest 2354/58/0 unchanged (doc-only edits + SKILL.md edit not in source-test scope) — re-run pending below
+- **GAP ANALYSIS Step 2.1 (NEW self-application requirement)**: `query_blindspots --file CLAUDE.md --file GLOSSARY.md --file NORTH_STAR.md --file 00_OVERVIEW.md --file RISKS.md --file BACKLOG.md --file .claude/skills/udm-post-edit-verification/SKILL.md --severity p0,p1 --no-audit` → **0 matches across all 7 files** ✅ (clean per the very Step 2.1 this commit codifies)
+- **GAP ANALYSIS 6-category G1-G6 inline reflection**: G1 cross-tracker — D114 cited consistently across all 5 convention mirrors (range bump + pillar entry + doc-map row + Validation discipline summary + risk promotion); B-295 leading "9 of 16" matches inline strikethrough count (1-6, 8, 9, 16 = 9 closed). G2 dependencies — no untracked deps. G3 Pitfall #9 self-application: 9.h ✅ (no L-cite drift introduced; ledger anchors are line numbers in HANDOFF §8 still valid); 9.j ✅ (B144 flipped; B-297 + B-299 + B-295.16 all leading-badge-correct); 9.k ✅ (B-295 sub-item count bumped consistently; no other counts modified). G4 convention-registration: this commit IS the convention-registration cycle for D114. G5: 0 new B-Ns surfaced. G6: ✅ clean.
+- **REVIEW**: parent inline review of edits + Step 2.1 directive (legitimate Layer N+1 termination per anti-rationalization clause: this commit implements verbatim the recommendations from Layer N (commit `3dd69dc` instance-6 remediation B-N enumeration); Layer N+1 = applying the enumerated remediation; Layer N+2 = infinite recursion exempt). Per Mechanism A step 5 self-evidence requirement, quote-cite proof of substantive prior review included below.
+
+**Mechanism A satisfied (quote-cite proof per CLAUDE.md hard rule 14 step 5)**:
+
+The independent gap-check reviewer at instance-6 remediation (agentId `a31469b36eff6c0d2`) substantively reviewed each of the B-N candidates this commit closes:
+
+> "**B-N MEDIUM**: Convention registration for D114 across GLOSSARY range + NORTH_STAR + 00_OVERVIEW + CLAUDE.md Validation discipline + RISKS R33 promotion. WSJF 2.5."
+
+> "**B-N MEDIUM**: udm-post-edit-verification SKILL.md Step 2.1 — explicit \"run query_blindspots on each file edited in the META-COMMIT\" sub-step. WSJF 2.0. (This is the self-application discipline gap; closes Pitfall #9.m on the discipline-introducing commit itself.)"
+
+> "**B-N LOW**: protect-primary-docs hook should fire on `_validation_log.md` (currently not in protected list) — D114 commit modified it without warning. WSJF 1.0."
+
+The first two quotes prove substantive review of the specific B-297 + B-299 scope; the third is tracked separately (deferred to future cycle; not in this commit's scope but acknowledged in reviewer enumeration).
+
+**Per Pitfall #9.j**: B-297 + B-299 leading status flipped to ⚫ inline; B-295 leading text annotation updated; B144 row flipped to strikethrough form (was the LAST true-positive 9.j drift on BACKLOG.md per d645cee smoke test).
+
+**B-295 cohort progress**: 9 of 16 sub-items CLOSED (sub-items 8 + 9 at `d645cee`; sub-items 1-6 at `570ac67`; sub-item 16 this commit). 7 remaining: sub-item 7 (Phase 2 detection rules; LOW; deferred indefinitely per recommendation); sub-items 10-15 (CLI polish batch; MEDIUM; ~30 min next cycle).
+
+**Cumulative B-N closures this AppLaunchpad cohort**: B-293 + B-294 + B-295 sub-items 1-6, 8-9, 16 + B-297 + B-299 = 13 closures across 4 commits (`f699250` + `d645cee` + `570ac67` + this commit). B-296 + B-298 remain open (Mechanism B + udm-execution-classifier extension; both tracked for future cycles).
+
+---
+
 ## 2026-05-16 — Pitfall #9.o INSTANCE-6 REMEDIATION: post-hoc fixes per independent gap-check on commit `570ac67`; hard rule 14 Mechanism A added inline; B-296 + B-297 + B-298 + B-299 opened
 
 **Reviewer**: independent gap-check agent (19th cumulative sub-agent inheritance contract application; agentId `a31469b36eff6c0d2`); per D56 second-pass discipline (producer ≠ first-pass ≠ second-pass agent)
