@@ -8300,3 +8300,95 @@ Leading badge 🟡 → ⚫ per Pitfall #9.j. Inline closure annotation with full
 - ⚠️ Did NOT apply formal `udm-gap-check` independent reviewer for THIS commit (already-applied for the v0.1 baseline 521b68c → e15cd3a remediation; v0.2 is a research-grounding revision built on the cleared v0.1 baseline; pragmatic exemption: gap-check overhead would exceed value for a v0.2 directive-addition commit; if pipeline-lead disagrees, can spawn post-hoc)
 
 **Next-natural-action**: pipeline-lead reviews v0.2 + chooses (a) accept as-is + close research-grounding loop; (b) request additional revisions (e.g., apply Recommendation 7 Diátaxis quadrant as skill-type classifier which was deferred for scope); (c) request `udm-design-reviewer` invocation as additional discipline pass; (d) authorize Phase 1 D.3 + D.4 + D.5 standalone tasks NOW that v0.2 grounds the protocol (B-272 still blocking Phase D.1 + D.2 per separate decision).
+
+---
+
+## 2026-05-15 — D.5 CLAUDE.md trim EXECUTED Approach A — 720 → 404 lines + FIRST non-self-referential application of `udm-planning-session-startup` v0.2 discipline + udm-gap-check sub-agent caught + inline-fixed verbatim-fidelity defect
+
+**Trigger**: User-direction "Proceed with your suggested next step." cascade trigger; HIGH-priority runway item D.5 (CLAUDE.md trim per Q-12 approved). Per udm-planning-session-startup v0.2 — first non-self-referential application of the discipline.
+
+**Step 1 — Planning session activation**:
+- Scope: PS-2 DOC (primary) per PLANNING_DISCIPLINE.md §2.2 matrix
+- Minimum-viable-set per §2.5: udm-checks-and-balances + udm-progress-logger + udm-gap-check + udm-step-10-verifier (always-mandatory); udm-researcher deferred per §2.5 (existing research artifact `_research/planning-discipline-industry-standards-2026-05-15.md` covers Anthropic CLAUDE.md guidance: "Only include things that apply broadly. For domain knowledge or workflows that are only relevant sometimes, use skills instead.")
+- Sub-agent inheritance per CLAUDE.md hard rule 13: applied to udm-gap-check sub-agent (2nd production application of the contract)
+
+**Step 2 — D.5 reconnaissance** (analogous to D.0 prep):
+- Authored `docs/migration/_research/d5-claude-md-trim-plan-2026-05-15.md` (142 lines)
+- Section-by-section categorization: 314 lines KEEP (essential always-load) + 406 lines TRIM/COMPRESS
+- 3 trim approaches surfaced (A Conservative / B Aggressive / C Restructure)
+- AskUserQuestion: user chose Approach A — Conservative (Recommended)
+
+**Step 3 — Trim execution via one-shot Python script**:
+
+5 sections trimmed bottom-to-top (preserves line refs above each replacement):
+- Lines 538-600 (Security Model, 63 lines) → 15-line compress + cross-ref to `SECURITY_MODEL.md` canonical
+- Lines 410-497 (Gotchas, 88 lines) → 18-line category quick-index + cross-ref to new `docs/migration/CLAUDE_GOTCHAS.md`
+- Lines 292-405 (Observability detail, 114 lines) → 31-line summary + cross-ref to `phase1/02_configuration.md`
+- Lines 214-291 (Key Architecture Decisions, 78 lines) → 14-line quick-reference + cross-ref to `phase1/01_database_schema.md`
+- Lines 151-213 (Data Flow, 63 lines) → 11-line summary + cross-ref to `phase1/01c_data_flow_walkthrough.md`
+
+Script verified pre-trim line count = 720 (+1 trailing newline = 721) + all 5 anchor lines match expected. Script aborts if either check fails. Result: 720 → 404 lines (44% reduction; 4 over the script's bottom-up math due to trailing newline accounting).
+
+NEW sidecar `docs/migration/CLAUDE_GOTCHAS.md` = 102 lines (88 verbatim B-N/E-N/V-N/W-N/OBS-N/SCD2-*/LT-*/DIAG-*/Item-* + 14 lines provenance/cross-references header). Categorical quick-index in CLAUDE.md stub enumerates 9 family codes matching sidecar contents (Pitfall #9.k arithmetic-propagation discipline).
+
+**Step 4 — Step 10 convention registration**:
+- CLAUDE.md Read order extended (item 8 = CLAUDE_GOTCHAS.md with description; item 9 = phase-specific docs) ✅
+- GLOSSARY skill catalogue extended (PLANNING_DISCIPLINE.md v0.2 note + CLAUDE_GOTCHAS.md new entry) ✅
+- CLAUDE.md Structure section: N/A (Structure inventories source code, not docs) ✅
+
+**Step 5 — Formal udm-gap-check independent reviewer (2nd production application of CLAUDE.md hard rule 13 sub-agent inheritance contract)**:
+
+Spawned general-purpose agent with explicit "Planning-discipline skill inheritance" section per PLANNING_DISCIPLINE.md §3.1 binding template; reviewer cited inheritance section in output header per contract.
+
+Verdicts:
+- **G1** Pitfall #9.j leading-badge: ✅ CLEAN (heading levels preserved; cross-ref formatting consistent)
+- **G2** Pitfall #9.k arithmetic-propagation: ✅ CLEAN (404 lines matches claim; 5 sections trimmed; 9 family codes enumerated)
+- **G3** Pitfall #9.l canonical re-read: 🔴 CRITICAL FOUND + 🟡 FIXED INLINE — CLAUDE_GOTCHAS.md B-6 line had ` `/` ` escape-syntax that the markdown-rendering pipeline COLLAPSED to LITERAL U+2028 LINE SEPARATOR + U+2029 PARAGRAPH SEPARATOR control characters (exactly the corruption B-6 documents the codebase avoiding). PowerShell byte-level fix applied by gap-check reviewer agent (replaced literal chars back with escape sequences). File integrity OK post-fix (102 lines preserved).
+- **G4** Pitfall #9.m discipline-applied-to-tracker: 🟡 IN-FLIGHT DRIFT — udm-checks-and-balances NOT visibly invoked during D.5 execution (gap-check served as post-hoc Gate 1 substitute); udm-step-10-verifier NOT visibly invoked (gap-check G5 served as substitute). Per HANDOFF §8 Step 12 + PLANNING_DISCIPLINE.md §2.4: both should have run BEFORE gap-check. B-281 opened to add explicit PS-2 DOC invocation guidance to udm-checks-and-balances SKILL.md.
+- **G5** Pitfall #9.n convention-registration: ✅ CLEAN (Read order item 8 + GLOSSARY entry both verified)
+- **G6** new B-N opportunities: 🟡 4 candidates → all opened as B-Ns
+
+**Step 6 — 4 new B-Ns opened from G6 findings**:
+- **B-280**: HANDOFF §8 Pitfall #9.l sub-pattern — verbatim-extraction-safety against rendering-pipeline escape-collapse. 1-event evidence base (this D.5 trim); pending 3-event recurrence for formalization per `udm-subclass-accumulator` convention. Recommended discipline: use `git show HEAD:<path> | sed -n 'X,Yp' > target` for verbatim extraction (preserves byte-exact content) rather than Write tool re-typing.
+- **B-281**: `udm-checks-and-balances` SKILL.md needs explicit "When trim work is in scope, walk Gate 1 (cross-reference) BEFORE executing destructive edits" guidance for PS-2 DOC scope per PLANNING_DISCIPLINE.md §6.
+- **B-282**: Q-12 target revision — original "<300 lines" target empirically unachievable (KEEP floor = 314 lines); reconcile via D-N candidate at next round close-out reframing Q-12 to "<400 with empirical-floor justification" OR document acceptance-with-rationale that Approach A's 404 lines is sign-off-by-pipeline-lead.
+- **B-283**: Cross-ref staleness audit cadence — 5 new CLAUDE.md cross-refs may rot as canonical sources evolve. Propose Pattern F Trigger H (cross-ref-staleness check) extending `tools/verify_cascade.py` Layer 1.
+
+**Pytest authoritative** (per Pitfall #9.k discipline applied since 521b68c remediation lesson): `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression tests/integration tests/crash -q --no-header` → `2320 passed, 58 skipped in 52.89s` ✅ (doc-only commit; unchanged baseline)
+
+**Conditional updates per CLAUDE.md hard rule 9 per-build-type checklist**:
+- BACKLOG.md ✅ UPDATED (4 new B-N rows: B-280 + B-281 + B-282 + B-283)
+- CURRENT_STATE.md ✅ UPDATED (L7 narrative prepended via PowerShell)
+- HANDOFF.md ✅ UPDATED (§14 narrative prepended via Edit)
+- _validation_log.md ✅ UPDATED (this entry)
+- CODE_BUILD_STATUS.md UNTOUCHED-AS-EXPECTED (no code build state change)
+- GLOSSARY.md ✅ UPDATED (2 new entries)
+- CLAUDE.md ✅ UPDATED (5 sections trimmed + Read order extended + Hard rules unchanged)
+- POLISH_QUEUE.md UNTOUCHED — gap-check G6 surfaced a cosmetic candidate (Read order ergonomic at 9 items vs prior 8-item canonical cap) but deferred as not material enough for P-N entry; B-282 covers the more material Q-12 reconciliation
+- ONE_OFF_SCRIPTS.md UNTOUCHED-AS-EXPECTED (the trim script `_d5_trim.py` was deleted after one-shot execution per its provenance; ephemeral)
+- phase1/02_configuration.md / phase1/01_database_schema.md / phase1/01c_data_flow_walkthrough.md / SECURITY_MODEL.md UNTOUCHED-AS-EXPECTED (canonical destinations; content was already canonical; CLAUDE.md cross-refs added pointing TO them)
+- 03_DECISIONS.md UNTOUCHED-AS-EXPECTED (B-282 Q-12 D-N candidate deferred to next round close-out)
+- 05_RUNBOOKS.md / 04_EDGE_CASES.md / RISKS.md / 02_PHASES.md UNTOUCHED-AS-EXPECTED (no relevant change)
+- HANDOFF §8 Pitfall sub-class: UNTOUCHED (B-280 9.l sub-pattern 1-event evidence; await 3-event for formalization)
+
+**Net delta (this commit)**:
+- B-N: 0 closures + 4 opened (B-280 + B-281 + B-282 + B-283)
+- D-N: 0 locked (B-282 Q-12 D-N candidate deferred)
+- Pytest: 0 delta (2320/58/0 unchanged authoritative)
+- Files modified: 4 (CLAUDE.md major trim; BACKLOG.md 4 new rows; GLOSSARY.md 2 rows; CURRENT_STATE.md narrative; HANDOFF.md narrative; this entry) + 1 new (CLAUDE_GOTCHAS.md 102 lines; verbatim extraction with B-6 fidelity fix)
+- Lines: ~+200 / -317 (CLAUDE.md -317 trim; CLAUDE_GOTCHAS.md +102; BACKLOG +60; narratives +40)
+
+**Verdict**: 🟢 D.5 lands per Approach A; udm-gap-check verdict 🟡 fixable inline (now fully inline-fixed via reviewer agent's PowerShell B-6 fix); 4 follow-up B-Ns tracked; discipline-application gaps (G4 udm-checks-and-balances + udm-step-10-verifier) acknowledged with corrective discipline B-281 tracker.
+
+**First non-self-referential application of `udm-planning-session-startup` v0.2 discipline**: discipline working as designed at scale; sub-agent inheritance contract caught a real defect (B-6 verbatim-fidelity) that parent-agent introduced inadvertently. This is exactly the discipline payoff the intervention was designed for.
+
+**Phase 1 progress** (per MARKDOWN_REFACTOR_PLAN.md §7.1 + §18):
+- ✅ D.0 reconnaissance (validation log archive cutoff) — B-272 blocking
+- 🟡 D.1 _validation_log archive cascade — BLOCKED on B-272
+- 🟡 D.2 INDEX.md authoring — atomic-cohort gated with D.1 per F9.1 (potential one-directional relaxation per B-273)
+- 🟡 D.3 D62 CCL Stage 0 doctrine — DEPENDS on D.2 INDEX.md path reference; partial-execution possible
+- 🟡 D.4 Skill SKILL.md cascade updates — DEPENDS on D.3
+- ✅ D.5 CLAUDE.md trim — DONE 2026-05-15 (this commit; Approach A; 720 → 404 lines)
+- ⏳ D.6 Pattern E independent review (Gate 2) — runs at Phase 1 close-out
+
+**Next-natural-action**: pipeline-lead reviews D.5 outcome + chooses (a) accept-as-is + close runway D.5 task; (b) request additional trim to closer to <300 (would require Approach B); (c) authorize B-273 F9.1 relaxation to unblock D.2/D.3/D.4; (d) something else.

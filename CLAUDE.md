@@ -150,350 +150,81 @@ Default StripSuffix=0 preserves every existing table's behavior. Set per-table w
 
 ## Data Flow (per table)
 
-### Small Tables (no date column - full extract each run)
-Source (Oracle/SQL Server)
-  -> ConnectorX full extract -> Polars DataFrame
-  -> add _row_hash (polars-hash, deterministic across sessions) + _extracted_at
-  -> Write BCP CSV (per BCP CSV Contract above)
-  -> Ensure stage/bronze tables exist in UDM (auto-create from DataFrame dtypes)
-  -> Schema evolution: detect new/removed/changed columns (P0-2)
-  -> Column sync: auto-populate UdmTablesColumnsList + discover PKs from source
-  -> Empty extraction guard: skip CDC if row count drops >90% vs previous run (P1-1)
-  -> Table lock: sp_getapplock prevents concurrent runs on the same table (P1-2)
-  -> CDC promotion (Polars in-memory comparison with existing CDC table)
-        NULL PK filter (P0-4) -> anti-join inserts, hash compare updates, reverse anti-join deletes
-        Column reorder to match target INFORMATION_SCHEMA ordinal position (P0-1)
-        Staging tables use actual PK types from target (P0-3)
-        columns: _cdc_operation (I/U/D), _cdc_valid_from/to, _cdc_is_current, _cdc_batch_id
-        -> Capture changes via BCP into staging table
-  -> SCD2 promotion (Polars comparison: CDC current vs Bronze active)
-        Staging tables use actual PK types from target (P0-3)
-        columns: UdmHash, UdmEffectiveDateTime, UdmEndDateTime, UdmActiveFlag, UdmScd2Operation
-        -> UPDATEs via BCP staging table + MERGE
-        -> INSERTs via BCP (append-only, never truncate Bronze)
+**Two flow paths**:
+- **Small tables** (no date column): full extract each run → polars-hash → BCP CSV → schema evolution → column sync → empty-extraction guard → table-lock → CDC promotion (full in-memory comparison) → SCD2 promotion (Bronze comparison; UPDATEs via typed staging, INSERTs via BCP)
+- **Large tables** (date-chunked): per-day extraction (single day via SourceAggregateColumnName) → polars-hash → BCP CSV → schema evolution + column sync (first day only) → windowed CDC (date-scoped delete detection per P1-4; PK-scoped Bronze read via staging-table join per P1-3) → targeted SCD2 → checkpoint (PipelineExtractionState per P1-5)
 
-### Large Tables (date-chunked - incremental extraction)
-Per-day processing pipeline: extract one day at a time → windowed CDC → targeted SCD2 → checkpoint → next day.
+**Shared invariants**: BCP CSV Contract (above); column reorder per INFORMATION_SCHEMA ordinal (P0-1); NULL PK filter (P0-4); typed staging tables from target (P0-3); polars-hash deterministic across sessions (P2-1).
 
-Source (Oracle/SQL Server)
-  -> Windowed extract (single day via SourceAggregateColumnName) -> Polars DataFrame
-  -> add _row_hash (polars-hash) + _extracted_at
-  -> Write BCP CSV (per BCP CSV Contract above)
-  -> Ensure stage/bronze tables exist (first day only)
-  -> Schema evolution (P0-2)
-  -> Column sync (first load only)
-  -> Table lock: sp_getapplock prevents concurrent runs (P1-2)
-  -> Windowed CDC (P1-3/P1-4): compare only within extraction date window
-        NULL PK filter (P0-4) -> anti-join inserts, hash compare updates
-        Delete detection scoped to extraction window only (P1-4) — rows outside window untouched
-        Column reorder (P0-1), typed staging tables (P0-3)
-  -> Targeted SCD2 (P1-3): PK-scoped Bronze read via staging table join (not full table load)
-  -> Checkpoint date as SUCCESS in PipelineExtractionState (P1-5)
-  -> CSV cleanup
-  -> Next day...
+**Canonical detailed walkthrough**: `docs/migration/phase1/01c_data_flow_walkthrough.md` (1,146 lines covering small + large flows with all design decisions resolved per V-7 cross-day overlap, P1-3 memory bounding, P1-5 checkpoint discipline, P1-6 partial-extraction recovery, idempotency invariants, delete detection scope, LookbackDays vs OVERLAP_MINUTES semantics, current extraction routing matrix).
 
-**Design decisions (resolved):**
-- **Memory bounding (P1-3/P2-4):** Processing one day at a time keeps memory bounded. A 3B-row table with 3M rows/day fits comfortably in memory per-day.
-- **Checkpoint and gap detection (P1-5):** `orchestration/pipeline_state.py` tracks per-day status in PipelineExtractionState. On restart, the pipeline resumes from the last successful date and fills gaps.
-- **Partial extraction recovery (P1-6):** Each completed day is checkpointed. A failure on day 15 of 30 preserves the first 14 days; the next run picks up from day 15.
-- **Idempotency:** Windowed CDC comparison handles re-runs safely. Re-extracting the same date produces unchanged hashes for untouched rows.
-- **Delete detection (P1-4):** Scoped to extraction window. Rows outside the window are not considered deleted. Pair with periodic full reconciliation for real deletes.
-- **Cross-day transaction overlap (V-7):** Source transactions spanning midnight may split across processing windows. Three mitigations exist: (1) `LookbackDays` provides a rolling re-extraction window as the primary mechanism — a lookback of 3 days means each date is re-processed across 3 runs, catching most split transactions. (2) `OVERLAP_MINUTES` env var (default 0) extends each day's window backward; when >= 1440 minutes (full day), shifts target_date back by 1+ days; sub-day precision requires datetime-level WHERE clauses in extractors (future enhancement). (3) Weekly reconciliation (`cdc/reconciliation.py`) catches any remaining discrepancies as the safety net. CDC comparison is idempotent — overlapping extraction windows produce no phantom changes because unchanged rows hash identically.
-
-**Current extraction routing:**
-- Oracle + SourceIndexHint populated -> oracledb with per-day date chunks, INDEX hints, TRUNC() boundaries (P3-2), distinct-date pre-query to skip empty days (P2-2)
-- Oracle + SourceIndexHint NULL -> ConnectorX windowed with FULL scan hint, TRUNC() boundaries (P3-2)
-- SQL Server -> ConnectorX windowed
-
-**What we know works:**
-- SourceAggregateColumnName is the date column used for WHERE clause filtering
-- LookbackDays provides a rolling window to capture day-over-day changes
-- FirstLoadDate defines the earliest date boundary for initial loads
-- Multiple runs per day provide natural retry coverage for transient failures
 
 ## Key Architecture Decisions
 
-**Extraction routing** is driven by UdmTablesList columns:
-- SourceIndexHint: populated -> oracle_extractor (date-chunked INDEX hint)
-- SourceIndexHint: NULL + Oracle -> connectorx_extractor (bulk FULL scan, 10-20x faster)
-- PartitionOn: If value is not null then use column as ConnectorX partition_on column value else use regular ConnectorX extract. If both SourceIndexHint and PartitionOn are not NULL then proceed with using SourceIndexHint and oracledb for Oracle extracts otherwise proceed with ConnectorX for non-Oracle extracts.
-- SourceObjectName: Table name of the source data.
-- SourceServer: Linked server or server of source data.
-- SourceDatabase: Database of source data.
-- SourceSchemaName: Schema name of the source data.
-- SourceName: The source name (DNA, CCM, EPICOR, etc) from where the data comes.
-- SourceAggregateColumnType: The datatype of the SourceAggregateColumnName.
-- SourceAggregateColumnName: The date column for large tables to incrementally extract data from.
-- FirstLoadDate: Date in which the large table is to have data extracted from.
-- LookbackDays: Number of days from current day which need data extracted for large tables. To capture rolling window and ensure we capture all changes day over day.
-- StageTableName: Custom name of the Stage table (overrides SourceObjectName in naming).
-- BronzeTableName: Custom name of the Bronze table (overrides SourceObjectName in naming).
-- StageLoadTool: If value is Python then extract data. If null then do nothing.
-- MaxRowsPerDay: Per-table override for the P1-13 daily-extraction guard (BIGINT NULL). When set, the growth-guard limit becomes `max(5x * baseline, MaxRowsPerDay)` instead of `5x * baseline` alone. Lets growing tables (e.g. CARDTXN went from ~500 rows/day in 2022 to ~280k rows/day in 2024) bypass the multiplier check while still blocking Cartesian-class spikes above the absolute ceiling. NULL preserves the global default. Migration: `migrations/extraction_guard_per_table.py`.
-- SQL Server source: NULL + SQL Server -> connectorx_sqlserver_extractor (bulk FULL scan, 10-20x faster)
+**Canonical reference**: `docs/migration/phase1/01_database_schema.md` (2,167 lines covering full DDL + UdmTablesList column semantics + extraction routing per SourceIndexHint / PartitionOn / SourceAggregateColumnName / LookbackDays / FirstLoadDate / MaxRowsPerDay / StripSuffix + ConnectorX vs oracledb routing decision tree + connection-string patterns + UdmTablesColumnsList column-tracking + column-sync auto-population flow + Oracle view PK discovery via `ALL_DEPENDENCIES` / SQL Server view PK discovery via `sys.dm_sql_referenced_entities` + SCD2 promotion 2-step optimization (close batch + insert batch; unchanged rows counted but not touched) + `_bulk_load_recovery_context()` BULK_LOGGED wrap).
 
-**Connection string patterns:**
-- Oracle (ConnectorX): `oracle://user:pass@host:port/service`
-- Oracle (oracledb): thick mode via Oracle Instant Client 19c
-- SQL Server (ConnectorX): `mssql://user:pass@host:port/database`
-- SQL Server (pyodbc/BCP): ODBC Driver 18 for SQL Server
-- Further details TBD after connection testing
+**Quick reference (high-frequency lookups)**:
+- **Stage table naming**: `{target_db}.{SourceName}.{table_name}_cdc` (or custom via `StageTableName`); StripSuffix=1 drops `_cdc`/`_scd2_python` per-table opt-in (SS-1)
+- **Bronze table naming**: `{target_db}.{SourceName}.{table_name}_scd2_python` (or custom via `BronzeTableName`)
+- **Hash columns**: `_row_hash` (Stage) + `UdmHash` (Bronze) — both VARCHAR(64) full SHA-256 hex per B-1
+- **SCD2 atomic write**: 3-step INSERT(Flag=0) → close old → activate new per E-2; never `UdmActiveFlag=1` directly on update
+- **CDC + SCD2 in Polars**: in-memory path carries `df_current` and `pk_columns` forward from CDC → SCD2 (no re-extraction from UDM_Stage)
+- **Empty extraction guard**: blocks CDC if row count drops >90% vs previous run (P1-1); `--force` overrides
+- **Table lock**: `sp_getapplock` with `@LockOwner='Session'` (W-8); Session-owned locks auto-release on connection drop
 
-**Column Tracking** via General.dbo.UdmTablesColumnsList — used AFTER UDM tables have been created:
-- SourceName: The source name of where data originates.
-- TableName: Table name in UDM. Similar to SourceObjectName, StageTableName, and BronzeTableName.
-- ColumnName: The column name from the table.
-- OrdinalPosition: Column position in the table.
-- IsPrimaryKey: A boolean flag of 1 or 0. Must be manually set for Oracle views that lack primary keys.
-- Layer: The layer of the medallion architecture ie Stage, Bronze, Silver, Gold.
-- IsIndex: A boolean flag of 1 or 0 specifically if the UDM table should have an index.
-- IndexName: The name of the index.
-- IndexType: The type of SQL Server index.
-
-Primary uses:
-1. CDC: IsPrimaryKey drives which columns are used for row-level comparison and change detection.
-2. SCD2: IsPrimaryKey determines the business key for versioning.
-3. Index optimization: IsIndex/IndexName/IndexType used by index_management.py for disable/rebuild around BCP loads.
-4. Future: Will be used to optimize Stage and Bronze table structures.
-
-Note: Oracle views do NOT expose primary keys — IsPrimaryKey must be manually populated in UdmTablesColumnsList for any Oracle view source.
-
-**Column Sync** (schema/column_sync.py) — auto-populates UdmTablesColumnsList on first load:
-
-When a new table is added to UdmTablesList, the pipeline automatically syncs column metadata and discovers primary keys. This runs once per table (skips if UdmTablesColumnsList already has rows for the source + table).
-
-Flow:
-1. After `ensure_stage_table` / `ensure_bronze_table` create the UDM tables
-2. `sync_columns()` checks if UdmTablesColumnsList has rows — if yes, skip
-3. Reads `INFORMATION_SCHEMA.COLUMNS` from the newly created Stage and Bronze tables
-4. Inserts rows into UdmTablesColumnsList for both Stage and Bronze layers (IsPrimaryKey=0, IsIndex=0)
-5. Discovers PKs from the source system:
-   - Oracle tables: `ALL_CONSTRAINTS` with `CONSTRAINT_TYPE = 'P'`
-   - Oracle views: falls back to `ALL_INDEXES` with `UNIQUENESS = 'UNIQUE'`
-   - SQL Server tables: `sys.indexes` with `is_primary_key = 1`
-   - SQL Server views: falls back to first unique index
-6. Updates `IsPrimaryKey = 1` for discovered columns in both layers
-7. Reloads columns into the in-memory `TableConfig` so CDC/SCD2 work on the first run
-
-Optimistic behavior:
-- Tables with discoverable PKs (PK constraint or eligible unique index): fully automatic, CDC/SCD2 run on the first pipeline execution.
-- Views: discovery walks the source's dependency graph (`ALL_DEPENDENCIES` for Oracle, `sys.dm_sql_referenced_entities` for SQL Server), looks up the PK on each referenced table, and uses the first referenced table whose PK columns ALL appear in the view's column list. Self-healing — no manual config required. Multiple matching candidates log a warning; one wins.
-- Views with no underlying TABLE dependency or no matching PK: columns still sync, PK warning is logged, CDC/SCD2 skip until IsPrimaryKey is set manually in UdmTablesColumnsList.
-- PK discovery failure (connection error, permissions): columns still sync, PK warning logged, non-fatal.
-
-UdmTablesColumnsList metadata columns (`migrations/udm_tables_columns_list_metadata.py`): every sync populates `ObjectType` ('TABLE'/'VIEW' from source `sys.objects` / `ALL_OBJECTS`), `DatabaseName` (the source database name), and `MetadataLastUpdated` (server-side `SYSDATETIME()` at insert). Lookups are non-blocking — failure leaves columns NULL.
-
-**CDC + SCD2 in Polars** — the in-memory path carries df_current and pk_columns forward from CDC to SCD2, eliminating re-extraction from UDM_Stage.
-
-**SCD2 is optimized from 5 steps to 2**: (1) single UPDATE batch for closes/deletes, (2) single INSERT batch for new rows + new versions. Unchanged rows are counted but NOT touched — saves GB of transaction log.
-
-**BULK_LOGGED recovery model** is set on the target DB during the load window, restored to FULL with a log backup after. This is wrapped via '_bulk_load_recovery_context()'.
 
 ## Observability: Event Tracking + Pipeline Logs
 
-The pipeline has two complementary observability tables in `General.ops`. Together they answer "what happened and how fast?" (PipelineEventLog) and "why did it happen that way?" (PipelineLog). The join point is `BatchId + TableName + SourceName`.
+Two complementary tables in `General.ops` answer **"what happened and how fast?"** (PipelineEventLog) and **"why did it happen that way?"** (PipelineLog). Join point: `BatchId + TableName + SourceName`.
 
-### General.ops.PipelineEventLog — Runtime Performance Tracking
+**General.ops.PipelineEventLog** — runtime performance dashboard; ONE row per step per table; all tables in a run share one BatchId from `General.ops.PipelineBatchSequence`. Key columns: BatchId / TableName / SourceName / EventType / EventDetail / StartedAt / CompletedAt / DurationMs / Status / RowsProcessed/Inserted/Updated/Deleted/Unchanged/Before/After / TableCreated / Metadata (JSON) / RowsPerSecond. Use case: dashboard layer ("which tables take longest?" / "is extraction or SCD2 the bottleneck?" / "throughput trends?").
 
-The primary table for identifying bottlenecks and tracking pipeline health. PipelineEventTracker writes exactly one row per step per table. All tables in a run share one BatchId from General.ops.PipelineBatchSequence.
+**General.ops.PipelineLog** — investigation layer; MANY rows per step (DEBUG/INFO/WARNING/ERROR/CRITICAL via standard `logging` handler `SqlServerLogHandler`); narrative + StackTrace for ERROR/CRITICAL. Retention: 30d INFO / 90d WARNING+ / indefinite ERROR+ (cleanup via SQL Agent job or pipeline post-step). Use case: investigation layer ("why did ACCT take 12min today but 2min yesterday?" — filter by BatchId + TableName + time window; correlate with metadata + warnings + stack traces).
 
-PipelineEventLog columns:
-- BatchId: Pipeline run ID, constant for the entire run. Sourced from General.ops.PipelineBatchSequence.
-- TableName: The table being processed (e.g., ACCT).
-- SourceName: The data source (DNA, CCM, EPICOR, etc.).
-- EventType: EXTRACT, BCP_LOAD, CDC_PROMOTION, SCD2_PROMOTION, CSV_CLEANUP, TABLE_TOTAL.
-- EventDetail: Free-text detail about the event. May be removed if not providing value.
-- StartedAt: Timestamp when the step began.
-- CompletedAt: Timestamp when the step finished.
-- DurationMs: Elapsed time in milliseconds (CompletedAt - StartedAt). This is the key metric for bottleneck analysis.
-- Status: Success/failure indicator for the step.
-- ErrorMessage: Error detail when Status indicates failure.
-- RowsProcessed: Total rows handled during the step.
-- RowsInserted: Rows inserted (CDC inserts or SCD2 new versions).
-- RowsUpdated: Rows updated (CDC updates or SCD2 closes).
-- RowsDeleted: Rows marked as deleted (CDC soft deletes).
-- RowsUnchanged: Rows that matched and required no action.
-- RowsBefore: Row count in the target table before the step ran.
-- RowsAfter: Row count in the target table after the step completed.
-- TableCreated: BIT (1/0) — whether the UDM table was auto-created during this run.
-- Metadata: JSON or free-text field for one-off metrics. May be removed unless specific metrics prove worth tracking.
-- RowsPerSecond: Throughput metric derived from RowsProcessed / (DurationMs / 1000).
+**Core EventType definitions** (per-table per-step):
+- EXTRACT: source pull + Polars DataFrame + BCP CSV write
+- BCP_LOAD: BCP subprocess CSV → SQL Server staging/CDC table
+- CDC_PROMOTION: Polars CDC hash comparison + change writes
+- SCD2_PROMOTION: Polars SCD2 comparison vs Bronze + UPDATE + INSERT batches
+- CSV_CLEANUP: temp BCP CSV deletion
+- TABLE_TOTAL: end-to-end wall time (outer context manager around all inner steps). Also Status=SKIPPED for lock-blocked tables (OBS-3)
 
-EventType definitions:
-- EXTRACT: Time to pull data from source (Oracle/SQL Server) into a Polars DataFrame and write the BCP CSV.
-- BCP_LOAD: Time for the BCP subprocess to load the CSV into the SQL Server staging/CDC table.
-- CDC_PROMOTION: Time for the Polars CDC comparison (hash-based insert/update/delete detection) and writing changes.
-- SCD2_PROMOTION: Time for the Polars SCD2 comparison against Bronze and executing the UPDATE + INSERT batches.
-- CSV_CLEANUP: Time to delete temporary BCP CSV files after load completes.
-- TABLE_TOTAL: End-to-end wall time for the entire table pipeline (extract through SCD2), useful for identifying the slowest tables overall. Also used with Status=SKIPPED for lock-blocked tables (OBS-3).
+**EventType families registered per Round 4 D76 + Round 6 § 6.4** (closes B86):
+- **CLI_\*** (15 tools) — one row per CLI invocation per D76 audit-row contract. Round 4: CLI_PARQUET_TIER_REVIEW / CLI_PARQUET_VERIFY / CLI_LATENESS_PROFILE / CLI_DECRYPT_PII / CLI_DETECT_EXTRACTION_GAPS / CLI_PROMOTE_TEST_TO_PROD / CLI_VERIFY_SERVER_PARITY / CLI_ENFORCE_RETENTION / CLI_PROCESS_CCPA_DELETION / CLI_LOG_RETENTION_CLEANUP / CLI_ALERT_DISPATCHER (11 tools). Round 6 follow-up: + CLI_VERIFY_TIER0_DRIFT (B58) + CLI_SNOWFLAKE_COPY_SMOKE + CLI_SCD2_REPLAY_SMOKE + CLI_DIAGNOSE_STAGE_BRONZE_GAP (15 total). Metadata JSON: args / actor / justification / exit_code per D75 + D76.
+- **CYCLE_\*** — pipeline cycle lifecycle per Round 2 § 5.3.6 + Round 4 § 3.6. CYCLE_FAILED_OVER (SP-4 path); CYCLE_CANCELLED (graceful cancellation per D33 via check_cancellation per RB-9).
+- **DEPLOYMENT_\*** — per-environment promotion audit per D87 + Round 6 § 1.6. DEPLOYMENT_DEV/TEST/PROD/ROLLBACK (4 variants). Metadata: tag / prior_tag / actor / justification / pre/post_check_results / soak_duration_minutes.
+- **MIGRATION_\*** — per `migrations/<name>.py` invocation per Round 6 § 4.1. MIGRATION_<NAME> per script (N values). Metadata: applied_at / applied_by / checksum. **Round 7 addition** (per `phase1/07_schema_evolution_governance.md` § 6.2): MIGRATION_AUTOMIC_INVENTORY for frozen-Automic-job inventory amendments (e.g., frozen-8 → frozen-11 per JOB_PARQUET_VERIFY + JOB_LOG_CLEANUP + JOB_PARITY_EXCEPTION_NOTIFY); metadata `added_jobs` / `frozen_count_before` / `frozen_count_after`.
+- **PARQUET_\*** — one row per Parquet snapshot state-machine transition per Round 3 § 1.3 + B-229. PARQUET_VERIFY (post-write SHA verification) / PARQUET_REPLICATE (Snowflake COPY ok) / PARQUET_ARCHIVE (cold-storage transition) / PARQUET_PURGE (retention expiry) / PARQUET_MARK_MISSING / PARQUET_MARK_REPLICATION_FAILED. Metadata: registry_id / source_name / table_name / batch_id / business_date / sha256 per transition.
+- **STARTUP_\*** — module startup sequence stages per D85 + Round 6 § 1.7. CREDS_LOAD (Stage 1) / VAULT_CONFIG (Stage 2) / PARITY_CHECK (Stage 3) / LEDGER_SWEEP (Stage 4) / ORCHESTRATION_START (Stage 5).
 
-EventType families registered per Round 4 D76 + Round 6 § 6.4 (closes B86):
+**PipelineEventTracker design**: context manager wrapping each pipeline step — captures StartedAt on entry; CompletedAt + DurationMs on exit; catches exceptions into ErrorMessage + Status=FAILED; writes row to PipelineEventLog. Pipeline code sets row counts on event object as discovered. TABLE_TOTAL is outer wrapper for nested timing. If anything inside the `with` throws, event still gets recorded — never lose visibility into failures.
 
-- **CLI_\*** family — one row per CLI invocation per D76 audit-row contract. Values: CLI_PARQUET_TIER_REVIEW, CLI_PARQUET_VERIFY, CLI_LATENESS_PROFILE, CLI_DECRYPT_PII, CLI_DETECT_EXTRACTION_GAPS, CLI_PROMOTE_TEST_TO_PROD, CLI_VERIFY_SERVER_PARITY, CLI_ENFORCE_RETENTION, CLI_PROCESS_CCPA_DELETION, CLI_LOG_RETENTION_CLEANUP, CLI_ALERT_DISPATCHER (11 tools per Round 4 § 3) + Round 6 follow-up additions CLI_VERIFY_TIER0_DRIFT (B58 full impl 146d97a) + CLI_SNOWFLAKE_COPY_SMOKE + CLI_SCD2_REPLAY_SMOKE + CLI_DIAGNOSE_STAGE_BRONZE_GAP (3-agent cohort 2026-05-14; 15 tools total). Metadata JSON carries args, actor, justification, exit_code per D75 + D76.
-- **CYCLE_\*** family — pipeline cycle lifecycle per Round 2 § 5.3.6 + Round 4 § 3.6. Values: CYCLE_FAILED_OVER (test claimed gate after prod heartbeat stale; written by SP-4 path), CYCLE_CANCELLED (graceful cancellation per D33; written by check_cancellation per RB-9).
-- **DEPLOYMENT_\*** family — per environment promotion audit row per D87 + Round 6 § 1.6. Values: DEPLOYMENT_DEV, DEPLOYMENT_TEST, DEPLOYMENT_PROD, DEPLOYMENT_ROLLBACK (4 variants). Metadata JSON carries tag, prior_tag, actor, justification, pre_check_results, post_check_results, soak_duration_minutes.
-- **MIGRATION_\*** family — per `migrations/<name>.py` script invocation per Round 6 § 4.1. Values: MIGRATION_<NAME> (one per script; N values, one per migration). Metadata JSON carries applied_at, applied_by, checksum. **Round 7 addition** (per `phase1/07_schema_evolution_governance.md` § 6.2): MIGRATION_AUTOMIC_INVENTORY canonical value when the frozen-Automic-job inventory is amended (e.g., frozen-8 → frozen-11 per JOB_PARQUET_VERIFY + JOB_LOG_CLEANUP + JOB_PARITY_EXCEPTION_NOTIFY); Metadata JSON carries `added_jobs`, `frozen_count_before`, `frozen_count_after`.
-- **PARQUET_\*** family — one row per Parquet snapshot state-machine transition per Round 3 § 1.3 + B-229. Values: PARQUET_VERIFY (post-write SHA verification), PARQUET_REPLICATE (Snowflake COPY succeeded), PARQUET_ARCHIVE (cold storage transition), PARQUET_PURGE (retention expiry), PARQUET_MARK_MISSING (file absent from network drive), PARQUET_MARK_REPLICATION_FAILED (Snowflake COPY error retryable). Metadata JSON carries registry_id, source_name, table_name, batch_id, business_date, sha256 per transition. Added 2026-05-14 at Round 3 close-out via paired-audit recommendation; closes B-229.
-- **STARTUP_\*** family — module startup sequence stages per D85 + Round 6 § 1.7. Values: CREDS_LOAD (Stage 1 credentials_loader complete), VAULT_CONFIG (Stage 2 vault pool config complete), PARITY_CHECK (Stage 3 server_parity_verifier complete), LEDGER_SWEEP (Stage 4 idempotency_ledger startup_recovery_sweep complete), ORCHESTRATION_START (Stage 5 main_*.py orchestration begins; gate acquired via SP-3/SP-4).
+**SqlServerLogHandler design**: custom `logging.Handler` subclass — every module uses standard `logger.info()`/`warning()`/`error()`. Handler holds current BatchId + TableName in thread-local / context-variable (modules never pass tracking context around). Batches log entries; writes to PipelineLog. Sub-threshold entries (e.g., DEBUG in production) filtered at handler level.
 
-**PipelineEventTracker design**: A context manager that wraps each pipeline step. Captures StartedAt on entry, CompletedAt on exit, computes DurationMs, catches exceptions into ErrorMessage and sets Status to FAILED, then writes the row to PipelineEventLog. Pipeline code sets row counts on the event object as it discovers them. TABLE_TOTAL is an outer context manager around all inner steps for nested timing. If anything inside the `with` block throws, the event still gets recorded — you never lose visibility into failures.
+**Canonical detail + typical debugging workflow + full Questions-the-tables-answer reference**: `docs/migration/phase1/02_configuration.md` § Observability.
 
-```python
-# Usage pattern in pipeline code
-with tracker.track("EXTRACT", table_config) as event:
-    df = extract_from_source(table_config)
-    event.rows_processed = len(df)
-
-with tracker.track("CDC_PROMOTION", table_config) as event:
-    cdc_result = run_cdc(df, table_config)
-    event.rows_inserted = cdc_result.inserts
-    event.rows_updated = cdc_result.updates
-    event.rows_deleted = cdc_result.deletes
-    event.rows_unchanged = cdc_result.unchanged
-```
-
-### General.ops.PipelineLog — Detailed Diagnostic Logs
-
-The investigation table for understanding *why* something was slow, failed, or behaved unexpectedly. Many rows per step — the narrative of what happened inside each pipeline step.
-
-PipelineLog columns:
-- BatchId: Same run-level ID as PipelineEventLog, enabling joins.
-- TableName: Nullable — some log entries are pipeline-wide, not table-specific.
-- SourceName: Nullable for the same reason.
-- LogLevel: DEBUG, INFO, WARNING, ERROR, CRITICAL.
-- Module: Python module that emitted the log (e.g., `extract.connectorx_oracle_extractor`, `cdc.engine`).
-- FunctionName: The specific function (e.g., `extract_with_partition`, `_detect_changes`).
-- Message: Human-readable log message.
-- ErrorType: Exception class name when applicable (e.g., `ConnectionError`, `PolarsSchemaError`).
-- StackTrace: Full traceback for ERROR/CRITICAL entries.
-- Metadata: JSON field for structured context (query text, chunk date range, memory usage, intermediate row counts).
-- CreatedAt: Timestamp of the log entry.
-
-**SqlServerLogHandler design**: A custom `logging.Handler` subclass so every module uses standard `logger.info()`, `logger.warning()`, `logger.error()` calls. The handler holds the current BatchId and TableName in a thread-local or context variable — individual modules never pass tracking context around. The handler batches log entries and writes them to PipelineLog. Logs below a configurable threshold (e.g., DEBUG in production) are filtered at the handler level to avoid flooding the table.
-
-**Log retention policy**: Keep 30 days of DEBUG/INFO, 90 days of WARNING+, indefinite for ERROR/CRITICAL. A SQL Agent job or pipeline post-step handles cleanup.
-
-### How the Two Tables Work Together
-
-PipelineEventLog is the **dashboard layer** — small, structured, one row per step. Query it to find the 10 slowest tables this week, which EventType is the bottleneck, whether throughput is degrading over time, or if a table's RowsProcessed dropped suddenly (a data quality signal).
-
-PipelineLog is the **investigation layer** — many rows per step, detailed narrative. Once the event log tells you "ACCT SCD2_PROMOTION took 12 minutes on Tuesday's 2PM run," filter PipelineLog by that BatchId + TableName and see: ConnectorX partition count was 4, the DataFrame was 2.3M rows, memory peaked at 6GB, a warning fired about 14 columns requiring dtype casting, and the UPDATE batch hit a lock wait on Bronze.
-
-Typical debugging workflow:
-```sql
--- Step 1: Find the slow run
-SELECT TableName, EventType, DurationMs, RowsProcessed, Status
-FROM General.ops.PipelineEventLog
-WHERE BatchId = 1042 AND DurationMs > 30000
-ORDER BY DurationMs DESC;
-
--- Step 2: Dig into the details
-SELECT CreatedAt, LogLevel, Module, FunctionName, Message, Metadata
-FROM General.ops.PipelineLog
-WHERE BatchId = 1042 AND TableName = 'ACCT'
-  AND CreatedAt BETWEEN '2025-02-20 14:00:00' AND '2025-02-20 14:15:00'
-ORDER BY CreatedAt;
-```
-
-Questions these tables answer together:
-- "Which tables take the longest?" — PipelineEventLog, TABLE_TOTAL by DurationMs.
-- "Is extraction or SCD2 the bottleneck for table X?" — PipelineEventLog, compare EXTRACT vs SCD2_PROMOTION DurationMs.
-- "How many rows/second does BCP achieve for large loads?" — PipelineEventLog, RowsPerSecond on BCP_LOAD events.
-- "Why did ACCT take 12 minutes today but 2 minutes yesterday?" — PipelineLog, compare Metadata and WARNING entries across BatchIds.
-- "Did any step fail and need a retry?" — PipelineEventLog where Status = FAILED, then PipelineLog for StackTrace.
-- "Are we seeing data quality drift?" — PipelineEventLog, trend RowsProcessed and RowsInserted/Updated/Deleted over time per table.
 
 ## Deployment Requirements
 - **MALLOC_ARENA_MAX=2** must be set in the systemd unit file, shell wrapper, or `.bashrc` for the pipeline user BEFORE the Python process starts (W-4). `os.environ.setdefault()` in main_*.py only covers child processes — glibc arena configuration is locked at process start. Without this, Polars/Rust allocations can cause 10x memory bloat from glibc arena fragmentation (Polars issue #23128).
 - **mssql-tools18**: Current minimum version is the installed default. When v18.6.1.1+ is available, upgrade to re-enable `-C 65001` for explicit UTF-8 codepage control (W-1).
 
 ## Gotchas
-- Item-22: `CSV_OUTPUT_DIR` is safe for concurrent `--workers` only because each table's extract→CDC→SCD2→cleanup pipeline is sequential within a single worker. `cleanup_csvs()` globs `{source}_{table}_*.csv` with a trailing underscore (P3-6) to prevent cross-table matches. Do NOT restructure the pipeline to allow overlapping steps within a worker without adding per-table subdirectories for CSV isolation.
-- B-1: _row_hash and UdmHash are VARCHAR(64) (full SHA-256 hex string). Previous BIGINT (64-bit truncation) was safe for per-PK CDC (~1.6×10⁻¹⁰ risk) but not for adjacent operations (reconciliation, future surrogate keys) where birthday-paradox collisions reach ~24% at 3B rows. Upgrade was defense-in-depth. Migration script: `migrations/b1_hash_varchar64.py`. First pipeline run after migration rehashes all rows (one-time CDC update wave).
-- B-2: SCD2 UPDATE batch size must stay below 5,000 to prevent SQL Server lock escalation from row locks to table-level exclusive locks. Table-level exclusive locks override RCSI, blocking all readers. Controlled by `config.SCD2_UPDATE_BATCH_SIZE` (default 4,000).
-- B-3: Schema evolution (column adds) changes all row hashes on the next run. `evolve_schema()` returns `SchemaEvolutionResult` so orchestrators can suppress E-12 false warnings during schema migration runs. Check `PipelineEventLog` metadata for `"schema_migration": true`.
-- B-4: Orphaned Flag=0 rows (from crash between SCD2 INSERT and activation) are cleaned up at the start of each SCD2 run via `_cleanup_orphaned_inactive_rows()`. Safe to delete because they are invisible to downstream consumers.
-- UInt64 from non-hash sources must be .reinterpret(signed=True) before writing — BCP/SQL Server cannot handle unsigned 64-bit
-- String columns with embedded tabs/newlines corrupt BCP CSV when quote_style='never' — sanitize BEFORE write_csv
-- ConnectorX returns Oracle DATE as Utf8 sometimes — auto-cast columns where DATE in col.upper()
-- _scd2_key is IDENTITY in Bronze — must be excluded from INSERT DataFrames and BCP column lists
-- _cdc_is_current and UdmActiveFlag are BIT in SQL Server — cast to Int8 before CSV write (not True/False)
-- Polars write_csv with batch_size=4096 avoids memory spikes on large DataFrames
-- The .env file lives at /debi/.env not project root
-- Oracle views have no primary keys — schema/column_sync.py will attempt unique index discovery, but IsPrimaryKey in UdmTablesColumnsList may still need manual setup for views without unique indexes
-- BCP CSV has no header — column mapping is POSITIONAL. `reorder_columns_for_bcp()` enforces deterministic order by reading INFORMATION_SCHEMA ordinal position before every BCP write (P0-1). Never use SELECT * in extraction queries.
-- CDC/SCD2 staging tables read actual PK types from the target table via `get_column_types()` (P0-3). Never hardcode NVARCHAR(MAX) for PK columns in staging tables.
-- NULL values in PK columns are filtered out before CDC comparison via `_filter_null_pks()` (P0-4). The count is tracked in PipelineEventLog metadata.
-- Empty extraction guard (`_check_extraction_guard`) blocks CDC if row count drops >90% vs previous run (P1-1). Use `--force` to override for intentional reloads.
-- `sp_getapplock` prevents concurrent pipeline runs on the same table (P1-2). If a run crashes, Session-owned locks auto-release on connection drop.
-- Schema evolution runs every extraction (P0-2): new columns are ADDed, removed columns are WARNed (never dropped), type changes raise SchemaEvolutionError and skip the table.
-- Large table windowed CDC scopes delete detection to the extraction window (P1-4). Rows outside the window are never marked as deleted.
-- `schema/staging_cleanup.py` should run at pipeline start to drop orphaned `_staging_*` tables from crashes (P3-3).
-- Weekly reconciliation (`cdc/reconciliation.py`) does full column-by-column comparison (not hash-based) to catch hash collisions and CDC logic bugs (P3-4).
-- ConnectorX Oracle windowed extraction uses TRUNC() in WHERE clauses to prevent timezone boundary drift (P3-2). The oracledb path also uses TRUNC().
-- oracledb extractor pre-queries for distinct dates to skip empty days (P2-2). ConnectorX large table path does not — empty days return quickly but incur connection overhead.
-- ConnectorX partition skew is logged via `_log_partition_skew()` (P2-3). If the partition column has >10% NULLs, a WARNING suggests choosing a different column.
-- V-4: After SCD2 promotion, `_check_duplicate_active_rows()` queries Bronze for PKs with >1 active row. Between a crash and recovery, downstream consumers using `WHERE UdmActiveFlag = 1` may see duplicates. Safe current-state access pattern: `ROW_NUMBER() OVER (PARTITION BY pk_cols ORDER BY UdmEffectiveDateTime DESC) WHERE rn = 1`.
-- V-11: If polars-hash becomes incompatible with a future Polars version, `add_row_hash_fallback()` in `bcp_csv.py` provides a pure-Python hashlib SHA-256 fallback. To activate: replace `add_row_hash` with `add_row_hash_fallback` in `prepare_dataframe_for_bcp()`. Performance is slower (~5-10x) but functionally equivalent. Verify hash output matches on a test table before switching.
-- W-2: NULL sentinel in hash input uses `\x1FNULL\x1F` (Unit Separator wrapping), NOT `\x00NULL\x00`. Null bytes risk C-string truncation in logging, debugging tools, and FFI boundaries. The `\x1F` sentinel is consistent with the column separator strategy (P0-6). Changing the sentinel changes hash output for every row containing NULLs — requires a one-time CDC update wave on first deployment.
-- W-3: Float columns in hash input are normalized for IEEE 754 edge cases: ±0.0 → +0.0, NaN → `\x1FNaN\x1F`, Infinity → `\x1FINF\x1F`, -Infinity → `\x1F-INF\x1F`. Without this, these special values produce platform-dependent string representations causing phantom CDC updates.
-- W-7: `validate_schema_before_concat()` in `bcp_csv.py` is called before every `pl.concat()` to catch silent type coercion (e.g., Int64 → Float64 in `diagonal_relaxed` mode). In extractors, schema mismatches are logged as warnings (non-blocking, since ConnectorX may legitimately return different dtypes). In CDC/SCD2, mismatches raise `SchemaValidationError`.
-- W-8: `table_lock.py` uses Session-owned locks (`@LockOwner='Session'`) with `autocommit=True`. The RCSI race condition (sp_releaseapplock before COMMIT) does NOT apply to Session-scoped locks. If lock ownership is ever changed to Transaction-scoped, remove the explicit `sp_releaseapplock` call and let locks release at COMMIT time.
-- W-10: `ensure_bronze_columnstore_index()` in `table_creator.py` is an opt-in migration for Bronze tables with 100M+ rows. Requires SQL Server 2022. Drops the clustered PK and recreates as nonclustered to make room for the ordered clustered columnstore index. Run during a maintenance window. Benchmark before and after.
-- W-11: `reconcile_counts()` in `reconciliation.py` provides lightweight daily count reconciliation (source vs Stage vs Bronze). Designed to catch gross data loss within 24 hours rather than waiting for the weekly full-column reconciliation. Schedule as part of normal pipeline completion.
-- W-12: `shrink_to_fit(in_place=True)` is called after large DataFrame operations (>100K rows) in CDC engine, large table extraction, and hash computation. Releases over-allocated memory buffers back to the allocator. Combines with W-4 (MALLOC_ARENA_MAX=2) to minimize memory bloat.
-- W-13: `generate_bcp_format_file()` in `bcp_csv.py` produces XML .fmt files from INFORMATION_SCHEMA metadata. `bcp_load()` accepts an optional `format_file` parameter for explicit column mapping. The format file uses character mode with tab delimiters and LF terminators per the BCP CSV Contract. `reorder_columns_for_bcp()` remains as defense-in-depth validation even when format files are used.
-- W-17: `General.ops.Quarantine` table stores records that fail schema contracts. `ensure_quarantine_table()`, `quarantine_record()`, and `quarantine_batch()` in `schema/evolution.py` provide the infrastructure. Currently hooked into schema type change errors. Low priority — the existing all-or-nothing table skip is safe, quarantine adds visibility into why records were rejected.
-- E-1: Oracle empty string/NULL equivalence — `add_row_hash(source_is_oracle=True)` normalizes empty strings to NULL before hashing for Oracle sources. Oracle treats '' as NULL; SQL Server does not. Without this, every Oracle-sourced row with empty string fields generates phantom CDC updates indefinitely. Applied to the DataFrame itself (not just hash input) so BCP CSV output is also normalized. First deployment triggers a one-time CDC update wave for affected rows.
-- E-2: SCD2 INSERT-first now uses a 3-step process: (1) INSERT new versions with UdmActiveFlag=0 for operation='U', (2) UPDATE to close old active versions, (3) UPDATE to activate new versions (`_activate_new_versions()`). This prevents conflicts with the filtered unique index (`ensure_bronze_unique_active_index`). New inserts (operation='I') still use UdmActiveFlag=1 directly. A crash after INSERT but before activation leaves rows with UdmActiveFlag=0, UdmEndDateTime IS NULL — detectable and recoverable on next run.
-- E-3: BCP `-b` (batch size) flag is now controlled by `bcp_load(atomic=True/False)`. Bronze SCD2 loads default to atomic=True (no `-b` flag) — the entire INSERT is a single transaction. Stage/staging loads use atomic=False for performance since they are ephemeral. Without atomicity, a BCP failure partway through an SCD2 INSERT creates inconsistent Bronze state (some PKs with two active versions, others with none).
-- E-4: All string columns are RTRIM'd before hashing to prevent phantom hash differences from trailing space divergence (Oracle CHAR padding, SQL Server ANSI padding rules). Applied after NFC normalization (V-2) and Oracle empty string normalization (E-1). First deployment triggers a one-time CDC update wave for rows with trailing spaces.
-- E-5: `_execute_bronze_updates()` deduplicates `pks_to_close` via `.unique(subset=pk_columns)` before loading into the staging table. Also applied in `run_scd2()` close concat. Defense-in-depth against UPDATE FROM JOIN nondeterminism with duplicate staging keys. Currently safe (SET values are constants) but prevents issues if the pattern is extended.
-- E-8: Under RCSI, the SCD2 INSERT and UPDATE are separate statements each with their own snapshot. Between INSERT commit and UPDATE commit, concurrent readers may see two active versions for updated PKs (transient window, typically milliseconds). Downstream consumers should use `ROW_NUMBER() OVER (PARTITION BY pk_cols ORDER BY UdmEffectiveDateTime DESC) WHERE rn = 1` instead of `WHERE UdmActiveFlag = 1` alone. The V-4 diagnostic and P1-16 dedup recovery handle the crash case.
-- E-9: `verify_rcsi_enabled()` in `connections.py` runs at pipeline startup to check `READ_COMMITTED_SNAPSHOT` on the Bronze database. B-2 reduced batch size from 500K to 4K to prevent lock escalation even with RCSI — table-level exclusive locks override RCSI. The check is non-blocking — logs WARNING and continues if RCSI is disabled.
-- E-10: `_check_log_space()` in `scd2/engine.py` runs before large UPDATE operations (>1M rows) to verify sufficient transaction log space. UPDATEs are always fully logged (~400 bytes × 2 per row for before/after images). A 5M-row UPDATE may require 5-20 GB of log space. Warns if available space is <1.5× estimated need. Ensure frequent log backups (15-30 min) during pipeline runs.
-- E-11: `validate_source_schema()` in `schema/evolution.py` compares extracted DataFrame columns against expected columns from UdmTablesColumnsList. Missing columns (possible rename/drop) are ERROR-level and skip the table. Unexpected columns (new in source) are WARNING-level and allowed through — schema evolution handles the ADD. Only runs when UdmTablesColumnsList has been populated (not on first run).
-- E-12: CDC update ratio is tracked in `CDC_PROMOTION` event metadata as `update_ratio`. A ratio >50% with >1000 updates triggers a WARNING for systematic hash mismatch (encoding change, schema drift, normalization bug). Query `PipelineEventLog WHERE EventType='CDC_PROMOTION'` and parse metadata JSON to trend update ratios over time.
-- E-13: `check_version_velocity()` in `cdc/reconciliation.py` queries avg/max versions per PK and flags PKs with >10 versions. High version velocity indicates either genuine high-change-rate data or phantom version creation. Schedule as part of periodic reconciliation.
-- E-14: Active-to-total ratio is tracked in `SCD2_PROMOTION` event metadata as `active_ratio`. A ratio <1% triggers a WARNING for possible mass incorrect closures. Trend this metric over time — gradual decline is expected as history accumulates.
-- E-15: `_log_data_freshness()` checks max `UdmEffectiveDateTime` in Bronze after each SCD2 run. Warns if data is >48 hours stale, indicating silent pipeline failures where runs complete without processing new data.
-- E-16: `detect_source_type_drift()` in `schema/column_sync.py` compares source column metadata (type, precision, scale) against Stage INFORMATION_SCHEMA. Detects precision changes (e.g., NUMBER(10,2) → NUMBER(15,4)) that could cause phantom hash mismatches. Call periodically or as part of reconciliation.
-- E-17: `reconcile_aggregates()` in `cdc/reconciliation.py` compares SUM/COUNT/MIN/MAX of numeric columns between source and Bronze active rows. Catches value-level corruption that count validation misses. Schedule daily for high-value tables.
-- E-18: Resurrected PKs (previously deleted, now reappearing in source) get `UdmScd2Operation='R'` in Bronze for audit trail. The version chain is: active ('I') → closed → deleted ('D') → closed → reactivated ('R'). Both `run_scd2()` and `run_scd2_targeted()` detect resurrections and build inserts with operation='R'. `_activate_new_versions()` targets both 'U' and 'R' operations.
-- E-19: The `\x1F` (Unit Separator) between columns in hash concatenation prevents cross-column collisions. Without it, `("AB", "CD")` and `("A", "BCD")` produce the same hash. Documented in `add_row_hash()` and `add_row_hash_fallback()`.
-- E-20: Categorical columns in Polars use physical integer encoding internally. polars-hash hashes the physical integer, not the logical string value (Polars Issue #21533). `add_row_hash()` and `add_row_hash_fallback()` detect Categorical columns and cast to Utf8 before hashing.
-- E-21: ConnectorX converts Oracle NUMBER to Python float64, which has ~15 significant digits (vs Oracle's 38). Precision is already lost before pipeline processing for high-precision Oracle NUMBER columns. For critical columns with >15 digits, cast to VARCHAR2 in the extraction SQL.
-- B-6: `sanitize_strings()` strips extended Unicode line-break characters (`\x0B`, `\x0C`, `\x85`, `\u2028`, `\u2029`) in addition to `\t`, `\n`, `\r`, `\x00`. These rare characters corrupt BCP CSV row boundaries. More likely in internationalized data, CMS content, or legacy system migrations.
-- B-7: `cx_read_sql_safe()` in `extract/__init__.py` wraps all ConnectorX calls with Rust panic recovery (catches `BaseException`, not just `Exception`) and exponential backoff retry (3 attempts, 2s base delay). Non-retryable errors (syntax, permissions) fail fast. All extractors route through this wrapper.
-- B-8: `_check_rss_memory()` in both `main_small_tables.py` and `main_large_tables.py` monitors RSS between table iterations in sequential mode. WARNING at 85% of `config.MAX_RSS_GB` (default 48), ERROR at limit. Combine with `MALLOC_ARENA_MAX=2` (W-4) for best results. psutil is optional — silently skipped if not installed.
-- B-9: Freshness alerting uses two tiers: WARNING at 36 hours (1.5× expected refresh interval), ERROR at 48 hours (2× — two missed cycles). Extraction guard baselines use day-of-week aware queries (last 30 days, same weekday) to reduce false positives on weekends/holidays; falls back to any-day median if insufficient same-day data.
-- B-10: `detect_distribution_shift()` in `reconciliation.py` compares numeric column means against a stored baseline using z-score analysis. Alert when shift exceeds 2σ. Stores baselines as `DISTRIBUTION_CHECK` events in PipelineEventLog. Schedule weekly — not every run.
-- B-11: `reconcile_transformation_boundary()` in `reconciliation.py` validates row counts, key existence, and NULL rate comparisons between adjacent medallion layers. Implements circuit-breaker pattern — callers can block downstream processing on failure.
-- B-12: `check_referential_integrity()` in `reconciliation.py` validates FK relationships across SCD2 tables. Supports both non-temporal (active flag) and temporal (BETWEEN effective/end dates) lookup modes. Detects orphaned FKs and ambiguous FKs (resolving to multiple dimension rows).
-- OBS-1: The `BCP_LOAD` event type was removed from `small_tables.py` — it wrapped an empty block. BCP timing is captured within `CDC_PROMOTION` (staging table loads) and `SCD2_PROMOTION` (Bronze INSERT/UPDATE loads). Large tables never had a standalone BCP_LOAD event.
-- OBS-2: Large table per-day events (EXTRACT, CDC_PROMOTION, SCD2_PROMOTION, CSV_CLEANUP) set `EventDetail = target_date` for per-day diagnostic filtering. Query example: `WHERE TableName = 'ACCT' AND EventDetail = '2025-02-15'`.
-- OBS-3: Lock-skipped tables write a `TABLE_TOTAL` event with `Status = 'SKIPPED'` and `EventDetail = 'Lock held by another run'`. SKIPPED is a valid PipelineEventLog status alongside SUCCESS and FAILED. Monitor lock contention: `WHERE Status = 'SKIPPED'`.
-- OBS-4: `SqlServerLogHandler` buffer reduced from 50 to 10 entries to narrow crash-loss window. WARNING+ log entries flush immediately regardless of buffer state. Flush failures print to stderr instead of being silently swallowed.
-- OBS-5: `PipelineEventTracker._write_event()` and `SqlServerLogHandler._flush_buffer()` both call explicit `conn.commit()` after writes. Do not remove these — they protect against future autocommit configuration changes silently breaking observability.
-- OBS-6: `General.ops.ReconciliationLog` stores reconciliation results for historical trending. Created by `ensure_reconciliation_log_table()` (idempotent). All public reconciliation functions (`reconcile_table`, `reconcile_counts`, `reconcile_active_pks`, `reconcile_bronze`, `reconcile_aggregates`) persist results via `_persist_reconciliation_result()`. CheckType discriminator identifies the reconciliation type.
-- OBS-7: `_log_active_ratio()` in both orchestrators uses `json.loads()`/`json.dumps()` merge pattern for SCD2 event metadata. Any future SCD2 metadata extensions must follow this pattern — never overwrite `scd2_event.metadata` directly.
-- SCD2-P1-a (dual date-pair contract): Bronze carries TWO independent date pairs. The **load-time pair** (`UdmEffectiveDateTime`, `UdmEndDateTime`) is the Silver/Gold contract and is unchanged from pre-Phase-1 — `UdmEffectiveDateTime` = arrival timestamp into UDM, `UdmEndDateTime` = NULL while active / load timestamp at close. The **source-date pair** (`UdmSourceBeginDate`, `UdmSourceEndDate`) is new in Phase 1 and carries R-1/R-3 business-date semantics — `UdmSourceBeginDate` = source business date, `UdmSourceEndDate` = `'2999-12-31'` sentinel while active, chained end when closed. The two pairs are INDEPENDENT; never conflate them. **R-2 extension:** `UdmSourceBeginDate` is now computed **per row** via a waterfall COALESCE over `table_config.scd2_date_columns` (primary → tie-breakers), falling through to `default_begin_date` then the batch-level fallback (`target_date` for large tables, `_extracted_at` for small tables). See `_build_source_begin_expr()` in `scd2/engine.py`. Tables without `SCD2DateColumns` configured still get the batch-level scalar — bit-for-bit identical to pre-R-2.
-- SCD2-P1-b (R-3 chained source end dates): Closes are split by reason. Update-close (new version supersedes old) stamps `UdmSourceEndDate = successor_begin - 1 day` → gapless business chain with the successor. Delete-close (no successor in source) stamps `UdmSourceEndDate = batch source_begin`. `_execute_bronze_updates()` is called twice in `run_scd2` / `run_scd2_targeted` with a `label_suffix` param to disambiguate staging-table names and CSV paths. **R-2 per-PK extension:** when `_waterfall_active()` returns True (`scd2_date_columns` configured and at least one named column exists in `df_current`), update-close switches to per-PK mode — the staging table carries a `_source_end_dt DATETIME2(3)` column computed per-row by `_build_update_close_pks()` as `successor_UdmSourceBeginDate - 1 day`. `_execute_bronze_updates()` auto-detects per-PK mode via `"_source_end_dt" in pks_to_close.columns` and issues `SET UdmSourceEndDate = s._source_end_dt` instead of a scalar parameter. Delete-close stays scalar (no successor to chain against).
-- SCD2-P1-c (R-3.3 active-row sentinel on source chain): Active rows carry `UdmSourceEndDate = '2999-12-31'` (DATETIME2(3) sentinel). NULL on `UdmSourceEndDate` is the B-4 in-flight marker for rows inserted with Flag=0 + operation U/R that haven't been activated yet. `_activate_new_versions()` stamps the sentinel and flips Flag=0 → Flag=1 in the same UPDATE. **R-2 update:** activation now matches rows by a **PK staging-table join** (`INNER JOIN _staging_scd2_activate_{table}` on `pk_columns`) — replaces the Phase-1 scalar `UdmSourceBeginDate = @dt` match so per-row waterfall values don't mask activations. The two-predicate in-flight filter (`UdmActiveFlag = 0 AND UdmSourceEndDate IS NULL AND UdmScd2Operation IN ('U','R')`) still gates against active rows and legacy closed rows per SCD2-P1-e. `UdmEndDateTime` is NOT part of this invariant — it stays NULL while active under the Silver/Gold contract.
-- SCD2-P1-d (R-9 configuration): `TableConfig` carries SCD2 enhancement fields populated from `UdmTablesList`: `SCD2Mode`, `SCD2DateColumns`, `SourceDeleteDateColumn`, `DuplicateResolutionOrder`, `AllowDuplicates`, `PreserveDateTime`, `RepairChainAfter`, `AllowGaps`, `ExcludeFromHash`, `DefaultBeginDate`, `ForceNewSegmentColumns`, `ExpectedRetentionDays`. All fields default to values that preserve current behavior (`scd2_mode = "incremental"`, other SCD2 fields NULL). Parser helpers (`_parse_csv_list`, `_bit_to_bool`, `_none_if_blank`) live at the top of `orchestration/table_config.py`. Migrations: `scd2_phase1_config.py` (Phase 1 columns + Bronze source-date pair), `scd2_expected_retention_days.py` (R-2 retention column). Bulk-populate via `tools/detect_scd2_config.py` which derives per-source conventions from `schema/scd2_autoconfig.py` and writes to `General.dbo.UdmScd2ConfigProposal` for operator review before apply.
-- SCD2-P1-e (orphan marker — BOTH predicates required): The B-4 in-flight orphan marker requires BOTH `UdmEndDateTime IS NULL` AND `UdmSourceEndDate IS NULL` (plus `UdmActiveFlag = 0 AND UdmScd2Operation IN ('U','R')`). Neither predicate is sufficient on its own: `UdmEndDateTime IS NULL` alone matches active rows; `UdmSourceEndDate IS NULL` alone matches pre-Phase-1 legacy CLOSED rows whose source-date column was never populated. The "source-date-only" predicate was the first Phase 1 design and it DELETED 53,747 legitimate historical rows from `UDM_Bronze.dna.ACCT_scd2_python` on the first run before being tightened. Any future engine work that inspects in-flight rows must use the combined predicate.
-- SCD2-P1-f (datetime precision + tz invariant — activation now uses PK-staging join, not scalar match): `_as_source_datetime()` returns a **naive** (no tzinfo), **millisecond-precision** datetime in UTC wall time. Both normalizations are mandatory for BCP/pyodbc alignment. (1) BCP CSV writes datetimes with `'%Y-%m-%d %H:%M:%S.%3f'` (ms only) without a timezone suffix — SQL Server stores the value in `DATETIME2(3)` as naive wall time. (2) pyodbc/ODBC Driver 18 sends an *aware* Python datetime as `DATETIMEOFFSET`; SQL Server does implicit timezone conversion when comparing `DATETIME2 = DATETIMEOFFSET`, which on a non-UTC server silently produces a different UTC moment than what BCP stored. `UDM_SOURCE_END_SENTINEL` is `datetime(2999, 12, 31)` (naive) for the same reason. **R-2 fix:** `_activate_new_versions()` no longer uses the scalar `UdmSourceBeginDate = @dt` predicate — activation matches by PK staging-table join so it survives per-row waterfall begin dates AND removes the pyodbc/BCP precision-alignment dependency from the activation path specifically. The ms-precision + tz-strip invariant still applies to INSERT values (for consistency with BCP-stored values) and to any future code path that compares datetimes via pyodbc parameters.
-- SCD2-R2-a (per-row UdmSourceBeginDate waterfall): When `table_config.scd2_date_columns` is non-empty, `_build_source_begin_expr()` emits a Polars expression that `pl.coalesce`s over the configured columns (cast to `Datetime("us")`, `strict=False` so unparseable Utf8 becomes NULL), `fill_null`s to `default_begin_date`, then to the batch-level fallback, then `.dt.truncate("1ms")`. The resulting per-row `UdmSourceBeginDate` supersedes the batch-level scalar used pre-R-2. Update-close `UdmSourceEndDate` chains off the per-row value via `_build_update_close_pks()`. Activation matching switched to PK-staging (SCD2-P1-c/f) because the scalar datetime predicate would miss rows with per-row begin dates. Tables without `SCD2DateColumns` configured keep the batch-level scalar — bit-for-bit identical to pre-R-2.
-- SCD2-R10.2 (ExcludeFromHash wiring): `TableConfig.exclude_from_hash` was populated from `UdmTablesList.ExcludeFromHash` by the Phase 1 migration but was never passed to `add_row_hash()` before the R-2 commit. `prepare_dataframe_for_bcp()` now accepts an `exclude_from_hash` param and threads it through `add_row_hash()` → `_normalize_for_hashing()`. Columns in the list are dropped from the source-column list before `pl.concat_str(hash_exprs)`; the columns themselves still extract and load to Stage/Bronze normally. Typical DNA convention: `['DATELASTMAINT']` per the legacy `GenerateTableSCD2` proc. Missing column names log WARNING (typo guard). **First run after enabling on a Bronze table with existing data triggers a mass SCD2 update wave** — new hash (without excluded cols) differs from stored `UdmHash` (which included them). Matches the B-3 schema-evolution pattern.
-- SCD2-R2-b (ExpectedRetentionDays classification): Delete-closes on tables with `UdmTablesList.ExpectedRetentionDays` set are classified by `_classify_delete_retention()` as "within retention" (INFO, expected purge) or "exceeds retention" (WARNING, anomalous delete — e.g. ACTV September incident). One SELECT per delete-close batch; runs only when `label_suffix == "delete_close"` AND per-PK mode is off AND `expected_retention_days is not None`. Non-blocking — SELECT failures warn-and-continue. Typical values from source purge policies (CCM TransactionDetail=1080 days, StatementHistory=365 days). Classification only — no behavior change on close itself.
-- SCD2-R4 (UdmActiveFlag legacy alignment): `UdmActiveFlag` carries three legacy semantic values that downstream consumers and nonclustered indexes depend on. **Flag = 1**: currently active in source. **Flag = 2**: deleted from source — the row's life ended with a hard delete, NOT a supersession. **Flag = 0**: historical, closed by a newer version (update-close). `_execute_bronze_updates()` selects Flag = 2 when `label_suffix == "delete_close"` and Flag = 0 for every other close. Existing nonclustered indexes filtered on `UdmActiveFlag = 2` and consumer queries with `WHERE UdmActiveFlag != 0` rely on this distinction; collapsing back to a single closed value would silently change the result set of those queries. The B-4 orphan-cleanup and `_activate_new_versions()` predicates remain `Flag = 0 + Op IN ('U','R')` — unaffected because in-flight rows never carry Flag = 2.
-- SCD2-R8 (DuplicateResolutionOrder enforcement): When source extraction returns >1 row per PK, `_dedup_source_pks()` in `cdc/engine.py` deduplicates BEFORE CDC and SCD2 see the data. With `UdmTablesList.DuplicateResolutionOrder` configured (parsed by `_parse_duplicate_resolution_order` into `[(col, descending), ...]` tuples), `_apply_duplicate_resolution_order` sorts by those columns (default DESC, explicit ASC supported) and keeps `first` per PK — deterministic across runs. Without configuration, falls back to `unique(keep="last")` (arbitrary but stable; the row chosen may differ across runs). Typical DNA convention: `'DATELASTMAINT,UdmEffectiveDateTime'` so the most-recently-touched row wins. Missing column names log WARNING and are dropped from the order. `_dedup_bronze_active` and `_dedup_stage_current` already sort by `UdmEffectiveDateTime DESC` / `_cdc_valid_from DESC` respectively — those paths are deterministic without R-8 and don't need it.
-- LT-2 (modified-date sweep, large-table Tier 2): `cdc/reconciliation/modified_sweep.py` extracts only `(PK, UdmTablesList.LastModifiedColumn)` from source for the last `sweep_window_days` (default 90), BCP-loads the projection into a temp staging table on Bronze, and runs a server-side LEFT JOIN to find PKs where source `LastModifiedColumn` > Bronze `UdmSourceBeginDate` (or no Bronze active row exists). Catches late updates that fall outside the daily `LookbackDays` window. Runs detect-only at the end of `_process_large_table_locked` when `last_modified_column` is configured AND the daily pass succeeded AND no R-13 backfill is in flight. Records a `MODIFIED_SWEEP` event with drift counts. Operator-driven reload via `tools/sweep_modified.py --apply` is a v1 stub — currently directs to `tools/backfill.py` for the affected date range. Tables without `LastModifiedColumn` configured (CCM, EPICOR — neither has the column) are skipped. Typical DNA value: `'DATELASTMAINT'` (autoconfig DNA profile proposes it). **Reliability caveat:** `DATELASTMAINT` is bumped by the writing process. Per the DNA source-system owner, every known batch job and online transaction sets it on update — but the sweep cannot detect a row whose update slipped past `DATELASTMAINT` (e.g. a future batch job written without that step). Backstops: Tier 3 `reconcile_active_pks` for PK drift, Tier 4 `reconcile_aggregates` for mass value drift, and `reconcile_table` (P3-4) for definitive full-row hash comparison on high-criticality tables. Treat the modified-date sweep as the cheap daily catch-up layer; full-row reconciliation is the safety net.
-- LT-3 (R-13 large-table backfill): `tools/backfill.py` re-processes an explicit date range via `process_large_table(..., dates_override=...)`. The orchestrator detects the override and uses the operator's date list verbatim instead of computing from `LookbackDays`/`FirstLoadDate`/checkpoints. The modified-date sweep step is suppressed during backfill — the explicit reload IS the action; sweep on top is redundant. `force=True` bypasses extraction guards (a backfill is already an authorized re-run). Idempotent: re-extracting an unchanged date produces no Bronze writes. Use case: discovered a January gap in March → `python3 tools/backfill.py --source DNA --table ACCT --from 2024-01-01 --to 2024-01-31`. CLI also accepts `--date YYYY-MM-DD` for single-day reprocess and `--dry-run` to list affected tables/dates without extracting.
-- SCD2-R6 (Chain repair scope): `cdc/reconciliation/scd2_repair.py` and `tools/repair_scd2.py` ship three deterministically-safe auto-repairs and explicitly refuse to auto-fix anything ambiguous. Safe: `sentinel_fill` (Flag=1 rows missing `UdmSourceEndDate='2999-12-31'`); `orphan_cleanup` (B-4 in-flight orphans — predicate is the SCD2-P1-e hardened form); `duplicate_active_dedup` (close older Flag=1 rows per PK with `UdmSourceEndDate = winner_UdmSourceBeginDate - 1 day`). Refused: overlapping intervals, zero-active without Flag=2 (lost deletion context), source-date gaps, invalid Flag/Op domain values, Flag=2 with NULL `UdmEndDateTime`. Default mode is `--dry-run`; real changes require `--apply`. Every operation appends one row to `General.ops.SCD2RepairLog` (created by `migrations/scd2_repair_log.py`) with `RepairType`, `Status`, `RowsAffected`, `SamplePks` (JSON), and timing.
-- B-13: Six Oracle→SQL Server type conversion pitfalls: (1) Oracle DATE includes time — `fix_oracle_date_columns()` upcasts `pl.Date` to `pl.Datetime` to prevent truncation. (2) Oracle NUMBER without precision can have >8 decimal places — document and monitor. (3) Oracle FLOAT(126) loses precision vs SQL Server FLOAT(53) — ~15 significant digits max. (4) Oracle RAW(16) GUID uses big-endian vs SQL Server mixed-endian — requires byte reordering if used as join keys. (5) Oracle BLOB/CLOB 4GB vs SQL Server 2GB limit — silent truncation possible. (6) Oracle VARCHAR2 BYTE vs SQL Server VARCHAR character semantics differ for multi-byte.
-- B-14: The INSERT-first SCD2 pattern creates a transient zero-active-row window between closing old versions and activating new versions. Under RCSI, new readers during this window see zero active rows for affected PKs. Documented in `scd2/engine.py` module docstring. Defensive query pattern: `ROW_NUMBER() OVER (PARTITION BY pk_cols ORDER BY UdmEffectiveDateTime DESC) WHERE rn = 1`.
-- DIAG-1 (Stage `_cdc_is_current=1` absence is normal for deleted PKs): When a PK is deleted from source, the CDC engine flips its `_cdc_is_current` from 1 to 0 and does NOT insert a new "delete marker" row in Stage. The PK ends up with zero `_cdc_is_current=1` rows. The audit trail of the delete lives in Bronze as `UdmActiveFlag = 2`. Operators investigating "missing current row" complaints should run `tools/inspect_cdc_pk.py --source <S> --table <T> --pk-values <PK>` — verdict `HEALTHY_DELETED` confirms the by-design behavior; any other verdict signals a real anomaly. Table-wide checks live in `tools/validate_cdc.py` (Stage current dups, Bronze active dups, hash divergence, in-flight orphans, Stage↔Bronze cross-layer drift, sampled source comparison). Both tools are read-only and complement `tools/validate_scd2.py` (which validates Bronze structural integrity in isolation).
+
+**Canonical reference**: `docs/migration/CLAUDE_GOTCHAS.md` (extracted 2026-05-15 per D.5 Approach A trim; verbatim B-N + E-N + V-N + W-N + OBS-N + SCD2-* + LT-* + DIAG-* + Item-* entries preserved). When a new gotcha emerges, ADD it there (not back to this file).
+
+**Category quick-index** (full content + cross-refs in `CLAUDE_GOTCHAS.md`):
+- **B-N** (engineering): hash discipline (B-1 VARCHAR(64) SHA-256), SCD2 batch size (B-2), schema-evolution hash invalidation (B-3), orphan cleanup (B-4), Unicode line-breaks (B-6), ConnectorX panic recovery (B-7), RSS monitoring (B-8), freshness tiers (B-9), distribution shift (B-10), boundary reconciliation (B-11), FK integrity (B-12), Oracle type conversions (B-13), INSERT-first SCD2 (B-14)
+- **E-N** (edge cases): Oracle empty string (E-1), 3-step SCD2 (E-2), atomic BCP (E-3), RTRIM hash (E-4), pks-to-close dedup (E-5), RCSI windows (E-8), RCSI check (E-9), log space (E-10), source schema validation (E-11), update ratio (E-12), version velocity (E-13), active ratio (E-14), data freshness (E-15), type drift (E-16), aggregate reconciliation (E-17), resurrected PKs (E-18), Unit Separator (E-19), Categorical hash (E-20), Oracle NUMBER precision (E-21)
+- **V-N** (verification): duplicate active rows (V-4), polars-hash fallback (V-11)
+- **W-N** (workarounds): NULL sentinel (W-2), float normalization (W-3), schema-before-concat (W-7), table-lock Session-owned (W-8), columnstore index (W-10), count reconciliation (W-11), shrink_to_fit (W-12), BCP format file (W-13), quarantine table (W-17)
+- **OBS-N** (observability): BCP_LOAD removed (OBS-1), per-day EventDetail (OBS-2), lock-SKIPPED status (OBS-3), log buffer (OBS-4), explicit commits (OBS-5), ReconciliationLog (OBS-6), metadata merge (OBS-7)
+- **SCD2-P1-\*** (Phase 1 contract): dual date-pair (a), chained source end dates (b), active-row sentinel (c), R-9 config (d), orphan marker BOTH predicates (e), datetime precision + tz invariant (f)
+- **SCD2-R\*** (Round-2+ enhancements): per-row waterfall (R2-a), ExpectedRetentionDays (R2-b), UdmActiveFlag 3-value legacy (R4), chain repair scope (R6), DuplicateResolutionOrder (R8), ExcludeFromHash wiring (R10.2)
+- **LT-\*** (large-table reconciliation): modified-date sweep (LT-2), R-13 backfill (LT-3)
+- **DIAG-\*** (operator diagnostics): Stage `_cdc_is_current=1` absence is normal for deletes (DIAG-1)
+- **Item-22**: CSV_OUTPUT_DIR concurrent-worker safety (P3-6 trailing-underscore glob)
+- **Misc** (no category prefix): UInt64 reinterpret; embedded tab/newline sanitization; Oracle DATE Utf8 cast; _scd2_key IDENTITY exclusion; BIT cast Int8; write_csv batch_size=4096; .env at /debi; Oracle views no PK; BCP positional mapping; staging PK types; NULL PK filter; extraction guard; sp_getapplock; schema evolution semantics; large-table delete-detection scope; staging cleanup; weekly reconciliation; TRUNC() timezone; distinct-date pre-query; partition skew
+
 
 ## SQL Naming Standards (D105 — MANDATORY)
 
@@ -537,66 +268,18 @@ No D105 mandate — existing conventions (PascalCase tables like `UdmTablesList`
 
 ## Claude Code Security Model (D103 — summary; canonical reference: `docs/migration/SECURITY_MODEL.md`)
 
-**Claude Code operates only inside the `/debi` working directory. Credentials live OUTSIDE `/debi` and Claude has zero authorized read path to them.** This is the project's primary architectural defense for AI-assisted development.
+**Claude Code operates only inside the `/debi` working directory. Credentials live OUTSIDE `/debi` and Claude has zero authorized read path to them.** Primary architectural defense for AI-assisted development.
 
-### Per-environment posture (threat-surface inversion: dev > test > prod)
-| Environment | Claude Code installed? | Why |
-|---|---|---|
-| **Dev workstation** | ✅ Yes (Windows or RHEL) | Highest threat surface — engineer AI-assists daily; deepest defense |
-| **Test (RHEL)** | ❌ No | Image-baked NO-CLAUDE policy; test data has prod parity |
-| **Prod (RHEL)** | ❌ No | Image-baked NO-CLAUDE policy; deployment is pull-from-registry only |
+**Per-environment posture**: Dev workstation = ✅ Claude installed (highest threat surface; deepest defense); Test (RHEL) = ❌ no Claude (image-baked); Prod (RHEL) = ❌ no Claude (deployment is pull-from-registry only).
 
-### Credential locations (Claude NEVER reads any of these)
-- **Production (RHEL)**: `/etc/pipeline/.env` (mode 0400, pipeline:pipeline), `/etc/pipeline/credentials.json.gpg` (TPM2-sealed), `/dev/shm/snowflake_pk_<pid>` (ephemeral RSA, in-memory only)
-- **Dev workstation (RHEL)**: `~/.ssh/`, `~/.gnupg/`, `~/.pipeline/`, `~/.aws/`, kernel keyring (`keyctl`)
-- **Dev workstation (Windows)**: `C:/Users/<user>/.ssh/`, Credential Manager (DPAPI), `C:/ProgramData/Pipeline/`
-- **NEVER inside `/debi`**: the project directory is sanitized — no `.env`, no `*.gpg`, no `*.pem`, no `*.key`, no `credentials.json`
+**Credential locations Claude NEVER reads**: `/etc/pipeline/.env` (mode 0400; D103) + `/etc/pipeline/credentials.json.gpg` (TPM2-sealed) + `/dev/shm/snowflake_pk_<pid>` (ephemeral RSA) + `~/.ssh/` + `~/.gnupg/` + `~/.aws/` + Credential Manager (DPAPI) + kernel keyring. **NEVER inside `/debi`**: project directory is sanitized — no `.env`, no `*.gpg`, no `*.pem`, no `*.key`, no `credentials.json`.
 
-### The 13 layers of defense (one-line summary; details in `SECURITY_MODEL.md`)
-1. `/debi` working-directory boundary (Claude Code architectural)
-2. `.claudeignore` patterns (human-readable inventory; community hook may enforce)
-3. `.claude/settings.local.json` `permissions.deny` array (Claude Code enforced — Read/Bash/PowerShell deny rules for ~60 credential patterns)
-4. No credential files on dev workstation inside any AI-accessible path
-5. POSIX ACLs (`setfacl`) on RHEL + NTFS ACLs (`icacls`) on Windows — explicit deny for the Claude user against `~/.ssh/`, `~/.gnupg/`, `~/.aws/`, etc.
-6. File-mode 0400 + ownership pipeline:pipeline on `/etc/pipeline/.env`
-7. GPG-encrypted `credentials.json.gpg` at rest; decrypted in-memory only at pipeline start
-8. OS-native credential vaults (Windows DPAPI / RHEL kernel keyring via `keyctl`) for dev secrets
-9. `auditd` on RHEL — `/etc/audit/rules.d/pipeline-secrets.rules` watches `/etc/pipeline/` and `~/.ssh/` for any access; `ausearch -k pipeline_secrets`
-10. `systemd-creds encrypt --with-key=tpm2` + `LoadCredentialEncrypted=` for service-managed secrets (TPM2-bound, cannot decrypt off the original machine)
-11. **SELinux** on RHEL (enabled, enforcing) — RHEL-shipped MAC framework. `sestatus`, `ls -lZ`, `ps -eZ`, `audit2allow` for policy iteration. No AppArmor (open-source policy bans it).
-12. Network isolation — Claude Code outbound restricted to allowlisted domains in `.claude/settings.local.json` `permissions.allow.WebFetch(domain:...)`
-13. Image-bake check: production/test golden image build step fails if `which claude-code` returns 0
+**13-layer defense** (full enumeration in `SECURITY_MODEL.md` §3-§4): (1) `/debi` boundary; (2) `.claudeignore`; (3) `.claude/settings.local.json` `permissions.deny`; (4) no creds in AI-accessible paths; (5) POSIX+NTFS ACLs; (6) file-mode 0400; (7) GPG-encrypted at rest; (8) OS-native vaults (DPAPI/keyring); (9) auditd; (10) systemd-creds TPM2; (11) SELinux enforcing; (12) network allowlists; (13) image-bake check fails build if Claude found on test/prod.
 
-### What we use vs. what we don't (per user policy)
-- ✅ RHEL-shipped tools (SELinux, auditd, systemd-creds, kernel keyring, POSIX ACLs, TPM2)
-- ✅ Microsoft built-ins (DPAPI, NTFS ACLs, Credential Manager, Windows Defender baseline)
-- ✅ Claude Code's own deny/allow lists in `.claude/settings.local.json`
-- ❌ Commercial endpoint security (CrowdStrike, McAfee, MS Defender for Endpoint) — zero budget for paid security tools
-- ❌ AppArmor — open-source MAC framework not shipped by RHEL; strict policy bans
-- ❌ Third-party secrets managers (HashiCorp Vault SaaS, AWS Secrets Manager, Azure Key Vault) — deferred to Phase 5+ evaluation
+**PiiVault crypto** (D102): AES-256-GCM in Python (`cryptography` library); wire format `nonce(12) || ciphertext || auth_tag(16)` single-column; key managed per Phase 0.4 plan; unique 12-byte random nonce per encryption (never reuse + key pair).
 
-### PiiVault encryption (D102 — AES-256-GCM)
-- `PiiVault.EncryptedPlaintext` uses **AES-256-GCM** in Python (`cryptography` library).
-- Wire format: `nonce (12 bytes) || ciphertext || auth_tag (16 bytes)` — single column, no separate IV/tag columns.
-- Key managed via Phase 0.4 merger-context plan (TBD — likely TPM2-sealed on RHEL + DPAPI on Windows dev).
-- Each token has a unique 12-byte random nonce per encryption operation; never reuse nonce + key.
-- See `03_DECISIONS.md` D102 and `SECURITY_MODEL.md` § 4 for full crypto rationale.
+**Operational discipline (DO / DO NOT)** + **Incident response procedure** + **What we use vs what we don't** (RHEL-shipped/MS built-ins YES; commercial endpoint/AppArmor/third-party-secrets NO): see `docs/migration/SECURITY_MODEL.md` (canonical 407 lines).
 
-### Operational discipline (DO / DO NOT)
-- **DO** keep `/debi` clean — no committed `.env`, no committed `*.gpg`, no committed `*.pem`. Grep-check before every commit.
-- **DO** add new credential paths to BOTH `.claudeignore` (documentation) AND `.claude/settings.local.json` `permissions.deny` (enforcement) when discovered.
-- **DO** treat any `Read(...)` or `Bash(cat ...)` permission prompt for a credential path as a red flag — deny + investigate which agent/tool/skill is asking.
-- **DO NOT** install Claude Code on test or prod RHEL servers. Image-bake check enforces this; do not whitelist around it.
-- **DO NOT** loosen `.claude/settings.local.json` `permissions.deny` for the convenience of a single task — if a workflow legitimately needs credential access, the workflow runs OUTSIDE Claude (operator runs the script manually, pipes the result into the AI conversation as text).
-- **DO NOT** commit anything from `~/.aws/`, `~/.ssh/`, `~/.gnupg/`, or any path matched by `.claudeignore` patterns.
-
-### Incident response
-If Claude Code is observed reading (or attempting to read) a credential file:
-1. Capture the tool-call evidence (Read path + timestamp + agent invoking).
-2. Check `auditd` (RHEL) or Event Viewer (Windows) for corroborating OS-level access logs.
-3. Rotate the credential immediately (no debate — assume compromise).
-4. Add the path to `permissions.deny` if not already present; verify `.claudeignore` parity.
-5. File an incident note in `RISKS.md` under R32 (Claude credential-access risk) with the trigger event.
 
 ## Do NOT
 - Do NOT truncate Bronze tables — SCD2 is append-only by design
@@ -702,7 +385,8 @@ If Claude Code is observed reading (or attempting to read) a credential file:
 5. `docs/migration/RISKS.md` — active delivery risks (per D61)
 6. This file (CLAUDE.md) — technical history, gotchas, Do-NOT rules
 7. **`docs/migration/PLANNING_DISCIPLINE.md`** — planning-session skill-selection matrix + sub-agent inheritance contract (per hard rule 13 + `udm-planning-session-startup` skill; read this BEFORE invoking any planning skill OR spawning a sub-agent during a planning session)
-8. Phase-specific docs as needed
+8. **`docs/migration/CLAUDE_GOTCHAS.md`** — extracted gotcha reference (B-N / E-N / V-N / W-N / OBS-N / SCD2-* / LT-* / DIAG-* / Item-* code-level entries; cross-ref from CLAUDE.md Gotchas section per D.5 Approach A trim 2026-05-15; read this when investigating any gotcha code identifier)
+9. Phase-specific docs as needed
 
 ## Error Recovery
 - BCP row count mismatch -> investigate string sanitization, check for new control characters in source data
