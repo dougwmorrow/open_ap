@@ -338,7 +338,17 @@ Per D114 (🟢 Locked 2026-05-16) adoption decision — Phase 1 high-ROI subset 
 
 **Empirical first production catch** (validates value-proposition): on commit `f699250` smoke test, query_blindspots surfaced 10 matches on BACKLOG.md including B-293 backfill gap (narrative trackers claimed open+closed but BACKLOG missed the entry — Pitfall #9.k + #9.m drift caught by the tool's own first run). After B-295 sub-items 8 + 9 fixes at commit `d645cee` (regex tightening + context-aware suppression), signal-to-noise: 10 → 1 (90% false-positive reduction; remaining 1 = TRUE positive on B144 stale-leading-badge tracked under B-295 sub-item 16).
 
-**B-295 cohort progress** (16 sub-items total): 8 closed; 8 remaining (Phase 2 detection rules + polish items + stale-badge cleanup). 2-3 cycles forecast to complete remaining sub-items per user calibration 2026-05-16.
+**B-295 cohort progress** (16 sub-items total): 9 closed; 7 remaining (Phase 2 detection rules + polish items batch 10-15). 1-2 cycles forecast to complete remaining high-value sub-items per user calibration 2026-05-16.
+
+## Mechanism B `udm-exemption-verifier` — 1/1 BUILT 2026-05-16 (per B-296 trigger met at Pitfall #9.o instance 7)
+
+Per B-296 closure (TRIGGER MET 2026-05-16 at commit `01d32c0` instance 7; ESCALATED HIGH→IMMEDIATE WSJF 5.0). Structural-fix-via-agent-invocation breaks the 7-instance Pitfall #9.o recursive failure pattern that Mechanism A (3 successive documentation-only iterations) could not prevent.
+
+| Status | Artifact | Purpose | Build state | Tests | Source |
+|---|---|---|---|---|---|
+| 🟢 | `.claude/skills/udm-exemption-verifier/SKILL.md` (~250 lines) | Independent verifier of hard-rule-14 cascade exemption claims. 5-min budget cap; binary VALID/INVALID-with-specific-files verdict. Triggered on 8 mandatory phrases ("Layer N+1 termination" / "recursive-exemption" / "verbatim implementation" / "100% overlap" / "REVIEW: SKIPPED" / etc.). INVALID triggers spawn of `udm-gap-check` per D56 second-pass + BLOCKS commit until verdict flips to VALID via remediation. Skill exempt from its own recursion (single-purpose; binary output). | 🟢 Built 2026-05-16 (this commit) | Tier 0: 11/11 pass at `tests/tier0/test_skill_exemption_verifier.py` (frontmatter + triggers + procedure + examples + self-exemption + binary output + budget + hard rules + composition) | B-296 + CLAUDE.md hard rule 14 step 6 + `udm-post-edit-verification` Step 2.5 |
+
+**First production invocation**: expected at next commit that would otherwise claim hard rule 14 cascade exemption. If skill performs as designed, the 7-instance Pitfall #9.o pattern should terminate. If pattern recurs at instance 8, escalate to next-level structural-fix evaluation per HANDOFF §8 Pitfall #9.o "if instance 8 occurs" guidance.
 
 ---
 

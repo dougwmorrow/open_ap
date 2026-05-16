@@ -67,6 +67,28 @@ Verdict: ✅ CLEAN / 🟡 fixable inline / 🔴 escalate.
 
 If 🟡: fix inline + re-verify. If 🔴: surface to user + DO NOT commit until resolved.
 
+### Step 2.5 — EXEMPTION VERIFICATION (`udm-exemption-verifier`; added 2026-05-16 per B-296 closure / Pitfall #9.o instance-7 closure)
+
+If the draft commit message contains ANY of these phrases:
+- "Layer N+1 termination"
+- "recursive-exemption"
+- "verbatim implementation"
+- "100% overlap on architectural-decision-substance"
+- "specific scope-justified exemption"
+- "REVIEW: SKIPPED"
+- "no new architecture introduced"
+- "implementing prior reviewer's recommendation"
+
+Then **MUST invoke `udm-exemption-verifier` skill** (see `.claude/skills/udm-exemption-verifier/SKILL.md`) BEFORE proceeding to Step 3 OR committing. The verifier is Mechanism B per CLAUDE.md hard rule 14 anti-rationalization clause; 5-min budget cap; binary VALID/INVALID verdict.
+
+**Verdict handling**:
+- **VALID** → exemption substantiated; proceed to Step 3 (parent inline REVIEW per scope-justified pattern)
+- **INVALID-with-specific-files** → spawn `udm-gap-check` independent reviewer per D56 second-pass; address findings; re-run Step 2.5; do NOT commit until verdict flips to VALID
+
+**Empirical anchor**: 7-instance Pitfall #9.o evidence base (commits 521b68c / 3eef410 / aee329c / a03a35c / 4112e92 / 570ac67 / 01d32c0) proved Mechanism A v3 (step-5 self-evidence requirement) empirically insufficient — pattern recurred within ~30 min of clause codification. Mechanism B (this Step 2.5 invocation) breaks the recursive failure mode by shifting verification from producer self-judgment to independent third-party agent invocation.
+
+**Anti-trigger for Step 2.5**: if commit message contains FULL independent reviewer evidence (Agent A + Agent B + gap-check all spawned + cited inline), no exemption is being claimed → Step 2.5 not needed → proceed directly to Step 3.
+
 ### Step 3 — REVIEW (scope-appropriate)
 
 Per PLANNING_DISCIPLINE.md §2.2 matrix, invoke the appropriate review skill:
