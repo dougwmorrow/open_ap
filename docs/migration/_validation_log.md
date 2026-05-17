@@ -10977,3 +10977,69 @@ Verdict: SOUND-with-improvements (0 🔴 BLOCK + 2 🟡 IMPROVE both inline-fixe
 - Mechanism C-1 effective layers: 10 (B-321 refined layer 1A)
 - Multi-agent applications: 9 (B-292 reviewer)
 - D-N amendments this session: 2 (D62 + D111)
+
+---
+
+### 2026-05-17 — B-295 sub-item 14 CLOSED + B-325 OPENED (2-part user-direction)
+
+**Event type**: small bundled cohort — B-N opening (cross-reference link gap surfaced via user audit-question) + B-295 sub-item 14 closure (protocol.md table annotation).
+
+**Trigger**: User-direction "Track the humans element as a backlog item. After that proceed with B-295 sub-item 14."
+
+**Part 1 — B-325 OPENED (LOW; WSJF 1.5)**: Cross-reference link gap.
+
+- Empirical evidence: CLAUDE.md has 2 bare-text "D62" mentions and 0 `[D62](...)` markdown-link mentions. Same pattern dominant across 03_DECISIONS / BACKLOG / HANDOFF.
+- For Claude agents using Grep/Read: bare-text refs work fine; `check_markdown_cross_refs` Mechanism C-1 hook check validates IDs resolve to canonical source. **Not a Claude-agent friction**.
+- For human reviewers on GitHub OR agents expecting click-navigation: can't click "per D62" to D62 body in 03_DECISIONS.md. **Real human-reviewer friction**.
+- Volume estimate: ~1000+ bare-text refs across 20 markdown files.
+- Proposed: one-time mechanical script (`tools/convert_bare_refs_to_links.py`) OR incremental "mandate links in NEW writes only" discipline.
+- WSJF 1.5; closure target opportunistic OR when human-reviewer activity surfaces the gap empirically.
+
+**Part 2 — B-295 sub-item 14 CLOSED**: protocol.md `udm-gap-check` row annotation.
+
+- `docs/migration/blindspots/protocol.md` L191 `udm-gap-check` skill row extended with "Phase 2 target (not yet wired): ledger invocation is currently producer-discretion + reviewer-discretion; Phase 2 will make ledger query the mechanical-first step of `udm-gap-check` skill execution (per B-295 sub-item 14 closure 2026-05-17)".
+- B-295 sub-item 14 wrapped in strikethrough at BACKLOG L317 with closure annotation.
+- B-295 sub-item progress: 9 → 10 of 16 CLOSED. 6 remain (sub-items 7 + 10 + 11 + 12 + 13 + 15).
+
+**Verification**:
+- Targeted: protocol.md L191 + BACKLOG sub-item 14 strikethrough verified via grep
+- Authoritative: pytest full → 2521 pass / 58 skip / 0 fail (unchanged from prior commit; doc-only substrate edits)
+- Orchestrator smoke test on staged scope: expected 6/6 PASS
+
+**Files modified**: 5
+- `docs/migration/blindspots/protocol.md` (+1 row extension; ~70 char annotation added to existing table cell)
+- `docs/migration/BACKLOG.md` (B-325 open + B-295 sub-item 14 strikethrough closure)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend dated 2026-05-17)
+- `docs/migration/HANDOFF.md` (§14 prepend dated 2026-05-17)
+- `docs/migration/_validation_log.md` (this entry)
+
+**Per-build-type tracker walk**:
+- BACKLOG.md → UPDATED (B-325 open + B-295 sub-item 14 closure annotation)
+- CURRENT_STATE.md → UPDATED (L7 prepend)
+- HANDOFF.md → UPDATED (§14 prepend)
+- _validation_log.md → UPDATED (this entry)
+- protocol.md → UPDATED (L191 row extension; substrate; SUBSTRATE_DIR_PREFIXES includes docs/migration/blindspots/)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (no new public surface; no new tool)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (same)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no code change)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+
+**Net delta**:
+- B-N: 1 NEW (B-325) + 1 CLOSED (B-295 sub-item 14; technically a sub-item not full B-N) = net +1 B-N count; sub-item progress 9→10 of 16 within B-295
+- Pytest: unchanged (2521/58/0)
+- Files modified: 5
+- Multi-agent applications this session: 9 (unchanged; small substrate edit; inline self-review valid per ≤50 LOC + no new public surface)
+
+**Review classification**: SUBSTRATE_EDIT (protocol.md is in SUBSTRATE_DIR_PREFIXES); cascade required. Inline self-review per Phase 2B SKILL v1.1.0 valid because: (a) ≤50 LOC scope (~70 char annotation + B-325 paragraph + tracker entries); (b) no new public surface; (c) substantive content is documentation-only (no architectural change; no new directive; codifies what was already implicit in B-295 sub-item 14 scope description).
+
+**Verdict**: 🟢 Small concrete bundle cleanly delivered. B-295 sub-item 14 closure brings AppLaunchpad-cohort progress to 10/16; 6 sub-items remain (mostly Phase 2 deeper work).
+
+**Cumulative session metrics (58 commits across 2 days; +1 this commit pending)**:
+- B-N: 52 opened + 41 closed - 1 re-open = net 10 open
+- Pytest: 2521/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective layers: 10
+- Multi-agent applications: 9
+- D-N amendments this session: 2 (D62 + D111)
+- B-295 sub-item progress: 10 of 16 CLOSED (was 9)

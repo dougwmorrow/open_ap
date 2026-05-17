@@ -188,7 +188,7 @@ Severity is property of the BLINDSPOT entry, not the matched instance. A p0 entr
 |---|---|---|
 | HANDOFF §8 Pitfall #9 sub-classes | Canonical prose source | Ledger = executable form |
 | CLAUDE.md hard rules 9 / 11 / 13 / 14 | Discipline-level requirements | Ledger is one of several checks invoked by hard rules |
-| `udm-gap-check` skill | Independent reviewer | First check = ledger query |
+| `udm-gap-check` skill | Independent reviewer | First check = ledger query — **Phase 2 target (not yet wired)**: ledger invocation is currently producer-discretion + reviewer-discretion; Phase 2 will make ledger query the mechanical-first step of `udm-gap-check` skill execution (per B-295 sub-item 14 closure 2026-05-17) |
 | `udm-step-10-verifier` skill | In-flight Step 10 validation | Subset of ledger entries (9.n + 9.j subset) |
 | `udm-cascade-auditor` agent (Pattern F) | Paired-judgment audit | Ledger is one of the Trigger sources (proposed Trigger H) |
 | Pre-commit git hook | Pre-commit deterministic check | Calls `query_blindspots.py --live` |
