@@ -121,6 +121,30 @@ def _staged_added_files() -> set[str]:
         return set()
 
 
+def _staged_diff_added_lines(file_path: str) -> str:
+    """Get only the lines ADDED in the staged diff for a file (per B-312 freshness
+    refinement). For new files, returns full content (all lines are additions).
+    For modified files, returns only the `+` lines (added/changed content).
+
+    Used by check_markdown_cross_refs to scope cross-ref check to NEW content
+    only — pre-existing broken refs in legacy content don't block unrelated commits.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "-U0", "--", file_path],
+            capture_output=True, text=True, cwd=str(REPO_ROOT), check=False,
+        )
+        if result.returncode != 0:
+            return ""
+        added_lines = []
+        for line in result.stdout.splitlines():
+            if line.startswith("+") and not line.startswith("+++"):
+                added_lines.append(line[1:])
+        return "\n".join(added_lines)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
 # ---------------------------------------------------------------------------
 # Check 1: delegate to query_blindspots (existing Mechanism C-1 behavior)
 # ---------------------------------------------------------------------------
@@ -299,8 +323,36 @@ def _load_canonical_ids() -> dict[str, set[int]]:
     return known
 
 
+def _scan_content_for_broken_refs(
+    content: str, file_path: str, known: dict[str, set[int]],
+) -> list[tuple[str, str, str, str]]:
+    """Scan content for broken cross-references. Returns list of
+    (file, prefix, number_str, line_snippet) tuples for unresolved refs."""
+    broken: list[tuple[str, str, str, str]] = []
+    for line in content.splitlines():
+        for match in _REF_PATTERN.finditer(line):
+            prefix, number_str = match.group(1), match.group(2)
+            try:
+                number = int(number_str)
+            except ValueError:
+                continue
+            if number == 0:
+                continue
+            if number not in known.get(prefix, set()):
+                broken.append((file_path, prefix, number_str, line.strip()[:100]))
+    return broken
+
+
 def check_markdown_cross_refs(staged: list[str]) -> CheckResult:
-    """For staged markdown in docs/migration/, verify D-N/B-N/R-N/RB-N/SP-N refs resolve."""
+    """For staged markdown in docs/migration/, verify D-N/B-N/R-N/RB-N/SP-N refs resolve.
+
+    Per B-312 freshness refinement (2026-05-16): only blocks on NEWLY-introduced
+    broken refs (scans the staged diff `+` lines, not the full file). Pre-existing
+    broken refs in legacy content don't block unrelated commits.
+
+    For new files (no HEAD version), entire content is treated as additions.
+    For modified files, only added/changed lines are scanned.
+    """
     md_files = []
     for f in staged:
         norm = f.replace("\\", "/")
@@ -315,30 +367,27 @@ def check_markdown_cross_refs(staged: list[str]) -> CheckResult:
                           "no markdown files in docs/migration/ staged; check skipped")
 
     known = _load_canonical_ids()
-    broken: list[tuple[str, str, int, str]] = []  # (file, prefix, number, line_snippet)
+    broken: list[tuple[str, str, str, str]] = []
+    added_files_set = _staged_added_files()
     for md_file in md_files:
-        md_path = REPO_ROOT / md_file
-        try:
-            content = md_path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue
-        for lineno, line in enumerate(content.splitlines(), start=1):
-            for match in _REF_PATTERN.finditer(line):
-                prefix, number_str = match.group(1), match.group(2)
-                try:
-                    number = int(number_str)
-                except ValueError:
-                    continue
-                if number == 0:
-                    continue
-                if number not in known.get(prefix, set()):
-                    broken.append((md_file, prefix, number_str, line.strip()[:100]))
+        if md_file in added_files_set:
+            md_path = REPO_ROOT / md_file
+            try:
+                scan_content = md_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+        else:
+            scan_content = _staged_diff_added_lines(md_file)
+            if not scan_content:
+                continue
+        broken.extend(_scan_content_for_broken_refs(scan_content, md_file, known))
 
     if broken:
         broken = broken[:20]
         return CheckResult(
             "markdown_cross_refs", False, "block",
-            f"{len(broken)} broken cross-reference(s) in staged markdown:\n"
+            f"{len(broken)} broken cross-reference(s) in staged markdown "
+            f"(scanning NEW content only per B-312 freshness):\n"
             + "\n".join(f"  - {f}: {p}-{n} unresolved (line: {snippet!r})"
                        for f, p, n, snippet in broken)
             + "\n\nVerify the reference exists in canonical source "
@@ -347,8 +396,9 @@ def check_markdown_cross_refs(staged: list[str]) -> CheckResult:
         )
     total_refs = sum(len(s) for s in known.values())
     return CheckResult("markdown_cross_refs", True, "info",
-                      f"all cross-refs in {len(md_files)} markdown file(s) resolved "
-                      f"(canonical universe: {total_refs} known IDs)")
+                      f"all NEW cross-refs in {len(md_files)} markdown file(s) resolved "
+                      f"(canonical universe: {total_refs} known IDs; pre-existing "
+                      f"broken refs in legacy content excluded per B-312)")
 
 
 # ---------------------------------------------------------------------------

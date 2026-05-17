@@ -2,6 +2,28 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — B-312 CLOSED: markdown_cross_refs freshness refinement (only blocks on NEW broken refs; pre-existing legacy excluded); first commit since hook activation passing all checks without --no-verify on a multi-file scope
+
+**Trigger**: user-direction "Proceed with B-312" (highest-priority follow-up surfaced during B-311 commit-prep smoke test).
+
+**Artifacts**:
+- `tools/pre_commit_checks.py`: refactored `check_markdown_cross_refs` to extract `_scan_content_for_broken_refs(content, file_path, known)` helper (for testability) + added `_staged_diff_added_lines(file_path)` helper (uses `git diff --cached -U0` filtered to `+` lines that aren't `+++` headers). New behavior: for files in `_staged_added_files()` set (NEW files), scan full content; for modified files, scan only diff `+` lines. Pre-existing broken refs in legacy content NO LONGER block unrelated commits.
+- `tests/tier0/test_pre_commit_checks.py`: 3 new tests — test_scan_content_for_broken_refs_helper (verifies broken-ref detection) + test_scan_content_resolves_zero_padded (verifies R-5 matches R05 via int comparison) + test_staged_diff_added_lines_function_exists. 16/16 pre_commit_checks Tier 0 tests pass (was 13).
+- `docs/migration/BACKLOG.md`: B-312 closed inline with comprehensive context (strikethrough + closure annotation per Pitfall #9.j).
+
+**Empirical verification**: smoke test on actual META-COMMIT staged scope produced "[PASS] markdown_cross_refs: all NEW cross-refs in 1 markdown file(s) resolved (canonical universe: 481 known IDs; pre-existing broken refs in legacy content excluded per B-312)". The 20 pre-existing BACKLOG broken refs that previously blocked commit `18c1772` (forcing --no-verify bypass) are now correctly excluded.
+
+**Hard rule 14 cascade applied**:
+- TEST: pytest 16/16 pre_commit_checks Tier 0 + smoke test all 5 checks PASS on actual staged scope
+- GAP ANALYSIS: parent inline G1-G6 + Step 2.1 self-application enumeration (orchestrator output above shows per-file scan; 0 broken refs on staged scope)
+- REVIEW: parent inline (refactor implements straightforward git-diff-based scoping; design pattern is similar to ruff --diff-only)
+
+**Forward outlook**: this commit is the FIRST since hook activation to land through Mechanism C-1 enforcement without --no-verify on a multi-file scope (commit ae7a7fa passed but had narrower scope). Confirms hook is now operationally usable for routine commits. The previous 2 --no-verify bypasses (2239c14 + 18c1772) were both due to bugs in the hook itself (cross-platform shebang + legacy-content blocking); both now fixed.
+
+**Bypass pattern resolved**: Cycle 1 + Cycle 2 + B-310 + B-312 closures together make Mechanism C-1 friction-acceptable for the steady-state developer workflow. Producer should rarely need --no-verify after B-312 lands.
+
+---
+
 ## 2026-05-16 — B-311 CLOSED: Cycle 2 GitHub Actions CI mirror of Mechanism C-1 (server-side enforcement architecturally completes Mechanism C-1; catches --no-verify bypasses + uninstalled-hook commits)
 
 **Trigger**: user D-answer 2026-05-16 "Cycle 2: CI / server-side mirror" (chose option B from 4-option next-step framing).

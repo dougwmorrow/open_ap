@@ -136,3 +136,32 @@ def test_find_test_files_for_existing_module():
     tests = _find_test_files_for("tools/query_blindspots.py")
     assert len(tests) >= 1
     assert any("test_query_blindspots" in str(t) for t in tests)
+
+
+def test_scan_content_for_broken_refs_helper():
+    """Assertion 14 (per B-312): _scan_content_for_broken_refs detects unresolved refs."""
+    from tools.pre_commit_checks import _scan_content_for_broken_refs
+    known = {"D": {1, 2, 3}, "B": set(), "R": set(), "RB": set(), "SP": set()}
+    content = "Per D62 this is a broken ref. Per D1 this resolves.\n"
+    broken = _scan_content_for_broken_refs(content, "test.md", known)
+    assert len(broken) == 1
+    assert broken[0][1] == "D"  # prefix
+    assert broken[0][2] == "62"  # number
+
+
+def test_scan_content_resolves_zero_padded():
+    """Assertion 15: int comparison normalizes zero-padding (R01 = R1)."""
+    from tools.pre_commit_checks import _scan_content_for_broken_refs
+    known = {"D": set(), "B": set(), "R": {1, 2, 5}, "RB": set(), "SP": set()}
+    content = "Per R-5 this should resolve (canonical R05 -> int 5).\n"
+    broken = _scan_content_for_broken_refs(content, "test.md", known)
+    assert broken == []
+
+
+def test_staged_diff_added_lines_function_exists():
+    """Assertion 16 (per B-312): _staged_diff_added_lines helper function present."""
+    from tools.pre_commit_checks import _staged_diff_added_lines
+    assert callable(_staged_diff_added_lines)
+    # When called outside git context OR for non-staged file, returns empty
+    result = _staged_diff_added_lines("nonexistent-file-xyz.md")
+    assert isinstance(result, str)
