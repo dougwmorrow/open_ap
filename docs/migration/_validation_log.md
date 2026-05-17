@@ -11122,3 +11122,72 @@ The 2 user-caught skipped-REVIEW events (0a0ff49 + 1fc59f9) would now BLOCK at c
 - Multi-agent applications: 12 (this cascade added 2 parallel reviewers)
 - D-N amendments this session: 2 (D62 + D111)
 - B-295 sub-item progress: 10 of 16 CLOSED
+
+---
+
+### 2026-05-17 — Structural-prevention sprint (3-layer gap-prevention build + B-326 opened)
+
+**Event type**: structural-prevention sprint per user-direction; closes the gap-classes that surfaced in just-completed cascade so they can't recur silently.
+
+**Trigger**: User-direction "Update our review process so that we address the recent gap findings. We should have these gaps included in our system process. Update any hooks, mcp, skills and so on."
+
+**Gap-classes surfaced in just-completed cascade**:
+1. Compositional API inconsistency — `audit_cascade_compliance` not passing classification kwarg → substrate-stricter B-321 check silently skipped in retroactive scans
+2. GLOSSARY parity gap — 3 new B-317 tools registered in CLAUDE.md but not GLOSSARY (Step 10/Pitfall #9.n compliance gap)
+
+**3-layer structural fix landed**:
+
+**Mechanical layer 1 — `tools/query_blindspots.py::check_9n_convention_registration` extended**:
+- Verifies GLOSSARY.md parity (in addition to CLAUDE.md Structure)
+- Surface-count threshold: <3 non-trivial public surfaces → CLAUDE.md-only check (avoids false-positive cascade on 15+ existing operator-helper tools that legitimately lack GLOSSARY entries); ≥3 non-trivial surfaces → BOTH CLAUDE.md AND GLOSSARY required
+- New `_glossary_md_content()` cache-helper
+- 4 new Tier 1 tests: parity-required + both-present-passes + GLOSSARY-only-fires + trivial-wrapper-exempt
+
+**Mechanical layer 2 — Tier 0 test `test_has_cascade_evidence_all_callers_pass_classification`**:
+- Grep-scans enforcement directories (`tools/` + `.claude/hooks/`) for has_cascade_evidence calls
+- Verifies classification kwarg appears within ±5 lines (multi-line call args supported)
+- Docstring/triple-quote-string/backtick-citation aware (avoids false positives on code-citations)
+- Skips test files (legitimately call has_cascade_evidence for unit-testing reasons)
+
+**Procedural layer 3 — `udm-gap-check` SKILL.md G1 + G5 wording extension**:
+- G1 gains "GLOSSARY.md public-surface entries for any new `tools/*.py` with ≥3 non-trivial public surfaces" check
+- G5 gains 2 new bullets: "BOTH CLAUDE.md AND GLOSSARY entries for substantial tools" + "all enforcement callers update when optional kwarg added to function"
+- Both cite mechanical-layer cross-refs for reviewer-time reinforcement
+
+**B-326 OPENED** (MEDIUM; WSJF 4.0 per design-reviewer "compositional drift is structurally similar to Pitfall #9.l canonical-schema-drift"):
+- Generalized compositional-drift detector — function-to-required-kwarg registry + generic Tier 0 test + potential 9.q detector class
+- Current Tier 0 test hardcodes one function (has_cascade_evidence); pattern generalizes
+- Phase 2 deferred work
+
+**Reviewer findings disposition** (design-reviewer `ab559a296d41f2ec4`):
+- 2 🔴 BLOCK findings were time-axis MISREADS (GLOSSARY gap was real at detection time; my just-staged test was reviewer-mischaracterized as "duplicate")
+- 2 🟡 IMPROVE findings INLINE FIXED: check_9n false-positive threshold + caller-test scope extension
+- 1 🟡 IMPROVE on B-326 WSJF: APPLIED (LOW 1.5 → MEDIUM 4.0)
+- 1 🟢 OK on G1+G5 wording: confirmed
+
+**Verification**:
+- Targeted: pytest tests/tier0/test_cascade_classifier.py + tests/tier1/test_query_blindspots_checks.py → 64/64 PASS (was 59; +5)
+- Authoritative: pytest full → 2527 / 58 / 0 (was 2522/58/0; +5)
+- Orchestrator smoke test on staged scope: 6/6 PASS
+
+**Files modified**: 8
+- `tools/query_blindspots.py` (+~30 lines: GLOSSARY cache + check_9n extension with threshold)
+- `tests/tier1/test_query_blindspots_checks.py` (+4 tests)
+- `tests/tier0/test_cascade_classifier.py` (+1 caller-consistency test; extended to .claude/hooks/)
+- `.claude/skills/udm-gap-check/SKILL.md` (G1+G5 wording extension)
+- `docs/migration/BACKLOG.md` (B-326 OPENED)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend)
+- `docs/migration/HANDOFF.md` (§14 prepend)
+- `docs/migration/_validation_log.md` (this entry)
+
+**Net delta**:
+- B-N: 1 NEW (B-326 MEDIUM) + 0 CLOSED = net +1 open (was 10; now 11)
+- Pytest: +5
+- Files modified: 8
+- Multi-agent applications this session: 13
+- Skills updated: 1 (udm-gap-check)
+- Gap-prevention mechanical detectors added: 2 (check_9n GLOSSARY extension + caller-consistency Tier 0 test)
+
+**Verdict**: 🟢 Structural prevention layered correctly: mechanical-at-commit + mechanical-at-test + procedural-at-review. Both gap-classes that surfaced in just-completed cascade are now mechanically detectable + procedurally reinforced.
+
+**Falsifiable test of this sprint**: next time a new substantial `tools/*.py` lands without GLOSSARY entries, check_9n BLOCKS at commit-msg hook. Next time a new optional kwarg lands on has_cascade_evidence (or future similar function) without all callers updated, Tier 0 test FAILS. Both failure modes shift from "post-hoc user-audit catch" to "in-flight mechanical detection".

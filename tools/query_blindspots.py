@@ -336,6 +336,7 @@ def _is_in_item_bullet_block(lines: list[str], idx: int, lookback: int = 40) -> 
 
 
 _CLAUDE_MD_CACHE: str | None = None
+_GLOSSARY_MD_CACHE: str | None = None
 
 
 def _claude_md_content() -> str:
@@ -348,6 +349,21 @@ def _claude_md_content() -> str:
         except (OSError, UnicodeDecodeError):
             _CLAUDE_MD_CACHE = ""
     return _CLAUDE_MD_CACHE
+
+
+def _glossary_md_content() -> str:
+    """Cache-read GLOSSARY.md to avoid repeat reads (per 2026-05-17 9n
+    extension: GLOSSARY parity check in addition to CLAUDE.md Structure)."""
+    global _GLOSSARY_MD_CACHE
+    if _GLOSSARY_MD_CACHE is None:
+        glossary_path = (
+            Path(__file__).resolve().parent.parent / "docs" / "migration" / "GLOSSARY.md"
+        )
+        try:
+            _GLOSSARY_MD_CACHE = glossary_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            _GLOSSARY_MD_CACHE = ""
+    return _GLOSSARY_MD_CACHE
 
 
 def check_9n_convention_registration(content: str, file_path: str) -> list[Match]:
@@ -389,14 +405,49 @@ def check_9n_convention_registration(content: str, file_path: str) -> list[Match
     if not surfaces:
         return matches
 
-    # Suppress if CLAUDE.md already has a row for this file (basename appears
-    # in CLAUDE.md content). Soft check — could miss content-changed-but-name-same
-    # edits — but eliminates the false-positive class where producer already
-    # registered the file in CLAUDE.md before scanner runs.
+    # Suppress if BOTH CLAUDE.md AND GLOSSARY.md already reference this file
+    # (per 2026-05-17 extension after recent gap-check finding: GLOSSARY parity
+    # gap for 3 new B-317 tools went undetected by the prior CLAUDE.md-only
+    # check; GLOSSARY entries are required per Step 10 + Pitfall #9.n).
+    # Soft check — basename substring match — could miss content-changed-but-
+    # name-same edits but eliminates the dominant false-positive class.
+    #
+    # Per 2026-05-17 reviewer feedback (avoid false-positive cascade): trivial
+    # wrapper scripts with only `main`/`cli_main` public surface DON'T warrant
+    # GLOSSARY entries (15+ existing operator-helper tools would false-positive
+    # without this). Only require GLOSSARY parity when NON-TRIVIAL public
+    # surface count >= GLOSSARY_PARITY_SURFACE_THRESHOLD.
     basename = Path(file_path).name
-    claude_content = _claude_md_content()
-    if basename and basename in claude_content:
+    if not basename:
         return matches
+    claude_content = _claude_md_content()
+    glossary_content = _glossary_md_content()
+    in_claude = basename in claude_content
+    in_glossary = basename in glossary_content
+
+    # Filter trivial wrapper surfaces for GLOSSARY-requirement threshold
+    trivial_names = frozenset(("main", "cli_main"))
+    non_trivial_surfaces = [
+        (t, n) for t, n in surfaces if n not in trivial_names
+    ]
+    glossary_required = len(non_trivial_surfaces) >= 3
+
+    if in_claude and (in_glossary or not glossary_required):
+        # CLAUDE.md present + either GLOSSARY present OR not required → compliant
+        return matches
+
+    # Determine specific gap for diagnostic
+    if not in_claude:
+        if glossary_required and not in_glossary:
+            gap = f"NEITHER CLAUDE.md NOR GLOSSARY.md references `{basename}`"
+        else:
+            gap = f"CLAUDE.md has NO Structure row for `{basename}`"
+    else:
+        # in_claude True; gap must be in_glossary False with glossary_required True
+        gap = (
+            f"CLAUDE.md has Structure row but GLOSSARY.md has NO entries "
+            f"({len(non_trivial_surfaces)} non-trivial surfaces ≥ threshold 3)"
+        )
 
     surface_names = ", ".join(f"{n} ({t})" for t, n in surfaces[:10])
     matches.append(Match(
@@ -405,10 +456,13 @@ def check_9n_convention_registration(content: str, file_path: str) -> list[Match
         location=file_path,
         snippet=surface_names,
         diagnostic=(
-            f"File has {len(surfaces)} public surface element(s) + "
-            f"basename `{basename}` NOT found in CLAUDE.md. "
-            "Add a row in the Structure section + verify GLOSSARY entries "
-            "+ bump Last reviewed date. (Per Step 10 / Pitfall 9.n)"
+            f"File has {len(surfaces)} public surface element(s) "
+            f"({len(non_trivial_surfaces)} non-trivial beyond main/cli_main); {gap}. "
+            "Add row in CLAUDE.md Structure section "
+            + ("AND public-surface entries in GLOSSARY.md " if glossary_required else "")
+            + "(Per Step 10 / Pitfall #9.n; extended 2026-05-17 with surface-"
+            "count threshold + GLOSSARY parity check after empirical gap-check "
+            "finding on 3 B-317 tools)."
         ),
     ))
     return matches

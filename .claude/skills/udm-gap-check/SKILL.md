@@ -58,6 +58,7 @@ Check that EVERY new artifact reference is consistent across canonical docs:
 - CURRENT_STATE.md "Recently completed" lists the closure?
 - 00_OVERVIEW.md document-map row for any new doc?
 - GLOSSARY.md entries for any new short-form identifier (B-N, D-N, R-N, P-N, Pitfall #9.x, Pattern X.y, skill name)?
+- GLOSSARY.md public-surface entries for any new `tools/*.py` with ≥3 non-trivial public surfaces (per 2026-05-17 extension after empirical gap-check finding on 3 B-317 tools that had CLAUDE.md Structure rows but ZERO GLOSSARY entries; mechanical detection now in `tools/query_blindspots.py::check_9n_convention_registration` per 9n GLOSSARY-parity extension)?
 - MAINTENANCE.md grooming cadence for new trackers?
 - POLISH_QUEUE.md skim if cosmetic-class drift surfaced?
 
@@ -93,6 +94,8 @@ Did any new convention land WITHOUT registration in canonical convention-aware d
 - New D-number → registered in 03_DECISIONS.md + NORTH_STAR.md decisions list + GLOSSARY?
 - New tracker → registered in 00_OVERVIEW.md doc-map + CLAUDE.md + MAINTENANCE.md?
 - New Pattern label / discipline → registered in HANDOFF / CLAUDE.md / cycle-cadence-optimizer skill?
+- New `tools/*.py` with ≥3 non-trivial public surfaces → BOTH CLAUDE.md Structure section AND GLOSSARY.md public-surface entries? (Per 2026-05-17 extension after B-317 tools landed with CLAUDE.md rows but missing GLOSSARY entries; mechanical detection at commit-msg hook per `check_9n` GLOSSARY parity extension)
+- New optional kwarg on a function with multiple ENFORCEMENT callers (e.g., `has_cascade_evidence(commit_msg, classification=None)`) → did ALL enforcement-pathway callers update to pass the new kwarg? (Per 2026-05-17 compositional-drift gap-finding: `audit_cascade_compliance` initially missed passing `classification=` to `has_cascade_evidence`, silently bypassing the substrate-stricter B-321 check in retroactive scans; mechanical detection now at `tests/tier0/test_cascade_classifier.py::test_has_cascade_evidence_all_callers_pass_classification` grep-scanning enforcement directories)
 
 ### Category 5 — Untracked B-N opportunities
 

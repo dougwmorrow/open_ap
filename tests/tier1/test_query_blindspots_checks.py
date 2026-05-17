@@ -203,6 +203,82 @@ def test_9n_skips_underscore_prefixed_only():
     assert matches == []
 
 
+SUBSTANTIAL_TOOL_CONTENT = (
+    "def public_fn():\n    pass\n\n"
+    "def another_public_fn():\n    pass\n\n"
+    "def third_public_fn():\n    pass\n\n"
+    "EVENT_TYPE = 'CLI_FOO'\n"
+)
+
+
+def test_9n_glossary_parity_check_extension(monkeypatch):
+    """Per 2026-05-17 extension after empirical gap-check finding: 9n must
+    verify BOTH CLAUDE.md Structure AND GLOSSARY.md entries present (not just
+    CLAUDE.md) for SUBSTANTIAL tools (≥3 non-trivial public surfaces).
+    The 3 B-317 tools had CLAUDE.md rows but ZERO GLOSSARY entries; prior 9n
+    only checked CLAUDE.md so the GLOSSARY gap went undetected."""
+    import tools.query_blindspots as qb
+    monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_claude_md_content",
+                        lambda: "...mytool.py Structure description...")
+    monkeypatch.setattr(qb, "_glossary_md_content",
+                        lambda: "...other unrelated content...")
+    matches = qb.check_9n_convention_registration(SUBSTANTIAL_TOOL_CONTENT, "tools/mytool.py")
+    assert len(matches) == 1
+    assert "GLOSSARY.md has NO entries" in matches[0].diagnostic
+
+
+def test_9n_passes_when_both_claude_and_glossary_have_entries(monkeypatch):
+    """Per 2026-05-17 extension: 9n suppresses when BOTH CLAUDE.md AND
+    GLOSSARY.md reference the file (basename match)."""
+    import tools.query_blindspots as qb
+    monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_claude_md_content",
+                        lambda: "...mytool.py Structure description...")
+    monkeypatch.setattr(qb, "_glossary_md_content",
+                        lambda: "...mytool.py public surface entries...")
+    matches = qb.check_9n_convention_registration(SUBSTANTIAL_TOOL_CONTENT, "tools/mytool.py")
+    assert matches == []
+
+
+def test_9n_flags_when_only_glossary_present_but_claude_missing(monkeypatch):
+    """Per 2026-05-17 extension: opposite direction also flagged."""
+    import tools.query_blindspots as qb
+    monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_claude_md_content",
+                        lambda: "...unrelated content...")
+    monkeypatch.setattr(qb, "_glossary_md_content",
+                        lambda: "...mytool.py entries...")
+    matches = qb.check_9n_convention_registration(SUBSTANTIAL_TOOL_CONTENT, "tools/mytool.py")
+    assert len(matches) == 1
+    assert "CLAUDE.md has NO Structure row" in matches[0].diagnostic
+
+
+def test_9n_trivial_wrapper_does_not_require_glossary(monkeypatch):
+    """Per 2026-05-17 reviewer feedback: tools with only `main`+`cli_main`
+    (trivial wrapper scripts) don't need GLOSSARY entries; only need CLAUDE.md
+    Structure row. Avoids false-positive cascade on 15+ existing operator-
+    helper tools that legitimately lack GLOSSARY entries."""
+    import tools.query_blindspots as qb
+    monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_claude_md_content",
+                        lambda: "...trivialtool.py Structure description...")
+    monkeypatch.setattr(qb, "_glossary_md_content",
+                        lambda: "...unrelated content...")
+    trivial_content = (
+        "def main():\n    cli_main()\n\n"
+        "def cli_main():\n    pass\n"
+    )
+    matches = qb.check_9n_convention_registration(trivial_content, "tools/trivialtool.py")
+    # Only main + cli_main (2 trivial surfaces; below threshold of 3 non-trivial)
+    # CLAUDE.md present + GLOSSARY not required → no match
+    assert matches == []
+
+
 # ---------------------------------------------------------------------------
 # 9h — Off-by-N line citation
 # ---------------------------------------------------------------------------
