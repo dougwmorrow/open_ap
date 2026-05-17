@@ -156,7 +156,23 @@ def _staged_diff_added_lines(file_path: str) -> str:
 # ---------------------------------------------------------------------------
 
 def check_query_blindspots(staged: list[str]) -> CheckResult:
-    """Run query_blindspots scan on staged files at p0/p1 severity per D74 --live."""
+    """Run query_blindspots scan on staged files at p0/p1 severity per D74 --live.
+
+    Per B-316 (2026-05-16): for MODIFIED files, scan only diff `+` lines (mirrors
+    B-312 freshness pattern for markdown_cross_refs). Pre-existing matches in
+    legacy content NO LONGER block unrelated commits.
+
+    Strategy:
+    - For NEW files (in `_staged_added_files()` set): pass --file <original_path>
+      for full content scan (line numbers correct).
+    - For MODIFIED files: write `_staged_diff_added_lines(f)` to a temp file
+      and pass --file <temp_path>. Output post-processed to rewrite temp paths
+      back to original for clearer diagnostic; line numbers in temp file refer
+      to NEW lines only (not original file lines).
+    - For MODIFIED files with empty diff: skip (no scannable change).
+    """
+    import tempfile
+
     if not QUERY_BLINDSPOTS_PATH.is_file():
         return CheckResult("query_blindspots", True, "warn",
                           "query_blindspots.py not found; scan skipped")
@@ -164,23 +180,51 @@ def check_query_blindspots(staged: list[str]) -> CheckResult:
         return CheckResult("query_blindspots", True, "info",
                           "no staged files; scan skipped")
     python_exe = _venv_python()
-    file_args = []
-    for f in staged:
-        file_args.extend(["--file", f])
-    try:
-        result = subprocess.run(
-            [python_exe, str(QUERY_BLINDSPOTS_PATH), *file_args,
-             "--severity", "p0,p1", "--no-audit", "--live"],
-            capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=30,
-        )
-    except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired) as exc:
-        return CheckResult("query_blindspots", True, "warn",
-                          f"query_blindspots scan failed ({exc}); not blocking")
+    added_files_set = _staged_added_files()
+    file_args: list[str] = []
+    temp_map: dict[str, str] = {}
+
+    with tempfile.TemporaryDirectory(prefix="qb_diff_") as tmpdir:
+        for f in staged:
+            if f in added_files_set:
+                file_args.extend(["--file", f])
+                continue
+            diff_content = _staged_diff_added_lines(f)
+            if not diff_content:
+                continue
+            base = Path(f).name
+            temp_path = Path(tmpdir) / f"DIFF_{base}"
+            try:
+                temp_path.write_text(diff_content, encoding="utf-8")
+            except OSError:
+                continue
+            file_args.extend(["--file", str(temp_path)])
+            temp_map[str(temp_path)] = f
+
+        if not file_args:
+            return CheckResult("query_blindspots", True, "info",
+                              "no scannable content in staged files (all modified files have empty diffs); scan skipped")
+
+        try:
+            result = subprocess.run(
+                [python_exe, str(QUERY_BLINDSPOTS_PATH), *file_args,
+                 "--severity", "p0,p1", "--no-audit", "--live"],
+                capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=30,
+                encoding="utf-8", errors="replace",
+            )
+        except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired) as exc:
+            return CheckResult("query_blindspots", True, "warn",
+                              f"query_blindspots scan failed ({exc}); not blocking")
+
+    output = result.stdout or ""
+    for temp_path, original in temp_map.items():
+        output = output.replace(temp_path, f"{original} (NEW content per B-316)")
+
     if result.returncode == 2:
         return CheckResult("query_blindspots", False, "block",
-                          f"p0 match (--live exit 2):\n{result.stdout}")
+                          f"p0 match (--live exit 2; scanning NEW content per B-316 freshness):\n{output}")
     return CheckResult("query_blindspots", True, "info",
-                      f"scan clean (exit {result.returncode})")
+                      f"scan clean (exit {result.returncode}; NEW content only per B-316 freshness)")
 
 
 # ---------------------------------------------------------------------------

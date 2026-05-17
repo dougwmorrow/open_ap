@@ -141,6 +141,35 @@ def test_scan_for_unaddressed_gaps_test_file_allowlisted():
     assert findings == []
 
 
+def test_check_query_blindspots_empty_staged_returns_info():
+    """Assertion 23 (per B-316): empty staged list returns info pass without invoking subprocess."""
+    from tools.pre_commit_checks import check_query_blindspots
+    result = check_query_blindspots(staged=[])
+    assert result.passed
+    assert result.severity == "info"
+    assert "no staged files" in result.diagnostic
+
+
+def test_check_query_blindspots_docstring_cites_b316_freshness():
+    """Assertion 24 (per B-316): wrapper docstring documents the freshness behavior."""
+    from tools.pre_commit_checks import check_query_blindspots
+    doc = check_query_blindspots.__doc__ or ""
+    assert "B-316" in doc
+    assert "B-312 freshness pattern" in doc
+    assert "MODIFIED files" in doc
+    assert "NEW files" in doc
+
+
+def test_check_query_blindspots_uses_added_files_helper():
+    """Assertion 25 (per B-316): implementation uses _staged_added_files to classify NEW vs MODIFIED."""
+    import inspect
+    from tools.pre_commit_checks import check_query_blindspots
+    src = inspect.getsource(check_query_blindspots)
+    assert "_staged_added_files" in src
+    assert "_staged_diff_added_lines" in src
+    assert "tempfile" in src
+
+
 def test_check_lint_no_python_files():
     """Assertion 13: lint/security/types check passes (info) when no source .py staged."""
     from tools.pre_commit_checks import check_lint_security_types_changed_python_files

@@ -10280,3 +10280,82 @@ The recurring pattern: gap surfaces in PROSE → producer judgment-based convers
 - Pytest: 2442/58/0
 - Hook-bypass cycles since hook activation: 2 → 0 (this commit + prior 3)
 - Mechanism C-1 orchestrator checks: 6 (added at prior commit e66debd)
+
+---
+
+### 2026-05-16 — B-316 CLOSED (check_query_blindspots freshness fix; B-312 pattern propagated)
+
+**Event type**: HIGH-priority structural-tool fix; closes recurring "pre-existing-content blocks unrelated commits" pattern via B-312 freshness mechanism propagation.
+
+**Trigger**: User-direction "Proceed with your recommended next steps" → HIGH/RECOMMENDED item from prior runway: B-316 (the freshness gap surfaced by the 983e73c hook BLOCK).
+
+**Why this matters (empirical motivation)**:
+3 of 4 hook bypasses since hook activation (2026-05-16) were this exact class:
+- `2239c14` (B-309): cross-platform shebang bug → fixed by B-310
+- `18c1772` (B-311): pre-existing markdown broken refs → fixed by B-312 (`check_markdown_cross_refs` freshness)
+- `983e73c` (B-289): pre-existing 9o match at 03_DECISIONS.md L1279 → fixed by THIS commit (B-316 = `check_query_blindspots` freshness)
+
+The B-312 pattern is reusable across all full-file-scan checks. B-316 propagates the pattern to the second-most-frequent check (query_blindspots) that fires on staged-file content.
+
+**B-316 work**:
+- Refactored `tools/pre_commit_checks.py::check_query_blindspots` (~50 lines; was ~25 lines).
+- Strategy:
+  - NEW files (in `_staged_added_files()` set): pass `--file <original_path>` for full-content scan; line numbers correct
+  - MODIFIED files: write `_staged_diff_added_lines(f)` to a temp file in `tempfile.TemporaryDirectory(prefix="qb_diff_")`; pass `--file <temp_path>` to query_blindspots; line numbers refer to temp content (NEW-only)
+  - MODIFIED files with empty diff: skip
+- Output post-processed: temp paths rewritten back to `<original_path> (NEW content per B-316)` for clearer diagnostic
+- Subprocess invocation gains `encoding="utf-8", errors="replace"` (same Windows cp1252 fix that B-312 needed; was missing here too)
+- Docstring updated to explicitly document the B-316 freshness behavior + B-312 pattern reference
+
+**Tests added**: 3 new Tier 0 assertions in `test_pre_commit_checks.py` (23-25):
+- `test_check_query_blindspots_empty_staged_returns_info` — graceful no-op when nothing staged
+- `test_check_query_blindspots_docstring_cites_b316_freshness` — docstring documents B-316 + B-312
+- `test_check_query_blindspots_uses_added_files_helper` — implementation source uses _staged_added_files + _staged_diff_added_lines + tempfile
+
+**Verification**:
+- Targeted: `pytest tests/tier0/test_pre_commit_checks.py` → 25/25 PASS (was 22; +3)
+- Authoritative: pytest full → 2445 pass / 58 skip / 0 fail (was 2442/58/0; +3 net)
+- Orchestrator smoke test on staged scope (just code + test changes): 6/6 PASS clean
+  - query_blindspots reports `scan clean (exit 0; NEW content only per B-316 freshness)` — confirms freshness behavior is active
+
+**Files modified**: 5
+- `tools/pre_commit_checks.py` (+30 lines net; check_query_blindspots refactor)
+- `tests/tier0/test_pre_commit_checks.py` (+3 tests)
+- `docs/migration/BACKLOG.md` (B-316 closure annotation)
+- `docs/migration/CURRENT_STATE.md` (L7 narrative prepended)
+- `docs/migration/HANDOFF.md` (§14 narrative prepended)
+- `docs/migration/_validation_log.md` (this entry)
+
+(6 total — fixed count.)
+
+**Per-build-type tracker walk** (per udm-progress-logger Step 1):
+- BACKLOG.md → UPDATED (B-316 closure)
+- CURRENT_STATE.md → UPDATED (L7 prepend)
+- HANDOFF.md → UPDATED (§14 prepend per B-313 disambiguation)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no new code-build artifact; this is an orchestrator-wrapper refactor)
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (no new public surface; check_query_blindspots already registered)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (same)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+- RISKS.md → UNTOUCHED-AS-EXPECTED (no risk change)
+
+**Net delta**:
+- B-N: 0 NEW + 1 CLOSED (B-316) = net -1 open (was 7; now 6)
+- Pytest: 2442 → 2445 (+3)
+- Files modified: 6
+- Hook-bypass cycles since hook activation: 4 (prior); 4 (no new bypass this commit)
+
+**Hook self-verification (target)**: this commit will trigger all 6 orchestrator checks. query_blindspots with new freshness behavior should report clean since this commit only modifies tools/pre_commit_checks.py + tests/tier0/test_pre_commit_checks.py + tracker docs (no pre-existing p0 matches in NEW content). Expected: 6/6 PASS; restores hook-clean streak after necessary bypass at 983e73c.
+
+**Verdict**: 🟢 HIGH-priority structural fix cleanly applied. Pattern propagation complete: 2 of 2 full-file-scan checks now apply B-312 freshness. Future bypasses should be RARE (only real producer-claim drift in NEW content).
+
+**Pitfall #9 sub-class formalization track**: the "pre-existing-content-blocks-unrelated-commits" pattern is now structurally addressed across both full-file-scan checks. If a 3rd full-file-scan check is added in future, the freshness pattern should be applied at authoring time (not retrofitted).
+
+**Cumulative session metrics (42 commits across 2 days; +1 this commit pending)**:
+- B-N: 43 opened + 36 closed - 1 re-open = net 6 open
+- Pytest: 2445/58/0
+- Hook-bypass cycles since hook activation: 4 (no new bypass this commit if hook passes)
+- Mechanism C-1 orchestrator checks: 6
+- Multi-agent team applications this session: 1 (B-313/B-314 cohort)
+- B-312 pattern propagations: 2 (markdown_cross_refs initial; query_blindspots this commit)
