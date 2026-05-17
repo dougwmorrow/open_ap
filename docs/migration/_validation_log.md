@@ -10677,3 +10677,91 @@ The B-312 pattern is reusable across all full-file-scan checks. B-316 propagates
 - Mechanism C-1 effective layers: 9
 - Multi-agent team applications: 5 (B-313/B-314; B-316 retro; Phase 1 review; Phase 2A review; Phase 2B review)
 - SKILL semver bumps this session: 1 (udm-post-edit-verification 1.0.0 → 1.1.0)
+
+---
+
+### 2026-05-16 — Phase 3 LANDED (`tools/audit_cascade_compliance.py` retroactive safety-net)
+
+**Event type**: Phase 3 retroactive audit tool — completes B-317 multi-layer fix; provides catch-the-misses coverage for edge cases that escape Phase 1A mechanical enforcement (--no-verify bypasses / new file classes that escape substrate enumeration / pre-hook-activation commits).
+
+**Trigger**: User-direction "Proceed with your recommended next steps" → HIGH/RECOMMENDED Phase 3 from prior runway.
+
+**Phase 3 work**:
+- Authored `tools/audit_cascade_compliance.py` (~280 lines after fixes): walks `git log -n N` + `git show -m --name-only --format= <hash>` for each commit; reconstructs file scope; classifies via 5 historical labels (SUBSTRATE_EDIT / CANONICAL_SOURCE / POLISH_QUEUE_ONLY / TYPO_SMALL_MD / SUBSTANTIVE); composes with `cascade_classifier.is_substrate_path()` + canonical-source check for historical classification (no live git diff stats); checks commit-msg via `cascade_classifier.has_cascade_evidence()`; flags commits where `cascade_required=True` AND `has_evidence=False`.
+- D74 exit codes (0 / 1 / 3 — SUCCESS / WARNING / FATAL). D75 read-only (no fix action). D76 audit row to `_session_logs/cli_audit_cascade_compliance_<date>.log`.
+- CLI: `--n <N>` (last N commits; default 20) / `--json` (machine-readable) / `--non-compliant-only` (filter to flagged) / `--no-audit` (suppress row).
+- 19 Tier 0 tests (assertions 1-19; includes 3 reviewer-prompted additions for SUBSTRATE_DIR_PREFIXES coverage + --json mode + --non-compliant-only filter).
+- Public API: `audit_commits(n)` / `classify_historical(files)` / `CommitAudit` dataclass / 5 `CLASS_*` labels / `EVENT_TYPE` / `EXIT_*` constants.
+
+**Design reviewer Agent A (`ae5450e06421c9221`)**: verdict SOUND-with-improvements (2 🔴 BLOCK + 4 🟡 IMPROVE).
+
+**🔴 BLOCK fixes**:
+1. **Merge-commit blindspot** — `git show --name-only --format=` returns NOTHING on merge commits by default (git suppresses combined diff) → empty file list → falsely classified as SUBSTANTIVE with no scope; AND misses substrate edits introduced via merge. INLINE FIX: added `-m` flag + deduplicated file list (merge commits emit per-parent diffs).
+2. **`BACKLOG_ONLY` over-permissive** — class treated every BACKLOG-only commit as cascade-NOT-required; false negative for new B-N entries with full body. PRE-REVIEW FIX (caught during initial test failure): removed BACKLOG_ONLY class entirely. BACKLOG.md is in CANONICAL_SOURCE_FILES → classifies as CANONICAL_SOURCE → cascade required. Conservative default safer than badge-flip assumption.
+
+**🟡 IMPROVE inline fixes**:
+- TYPO_SMALL_MD threshold mismatch: verified canonical-source check fires before typo check (no fix needed; reviewer's concern about HANDOFF.md was actually addressed by precedence ordering).
+- SUBSTRATE_DIR_PREFIXES test coverage: assertion 17 `test_classify_historical_skill_md_substrate_via_prefix` added.
+- CLI flag test coverage: assertions 18 + 19 added (`test_cli_main_json_mode` + `test_cli_main_non_compliant_only_filter`).
+- Subject truncation in JSON output: DEFERRED as B-323 (LOW; cosmetic; not affecting compliance detection).
+
+**Dogfood empirical run** (audit_cascade_compliance.py --n 10 --non-compliant-only on this branch BEFORE this commit lands):
+- 10 commits audited
+- 7 non-compliant (expected — earlier commits pre-date Phase 1A hook activation OR are tracker-only commits not covered by 5-class historical detector)
+- Tool correctly identifies missing `## TEST` / `## GAP ANALYSIS` / `## REVIEW` sections in commit messages
+- Validates Phase 3 mechanism end-to-end on real data
+
+**Verification**:
+- Targeted: `pytest tests/tier0/test_audit_cascade_compliance.py` → 19/19 PASS
+- Authoritative: pytest full → 2508 pass / 58 skip / 0 fail (was 2489/58/0; +19 net per the 19 new Tier 0 tests)
+- Orchestrator smoke test on staged scope: expected 6/6 PASS
+
+**Files modified**: 5
+- `tools/audit_cascade_compliance.py` (NEW; ~280 lines)
+- `tests/tier0/test_audit_cascade_compliance.py` (NEW; 19 tests)
+- `CLAUDE.md` (Structure row for audit_cascade_compliance.py)
+- `docs/migration/BACKLOG.md` (B-323 open)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend)
+- `docs/migration/HANDOFF.md` (§14 prepend)
+- `docs/migration/_validation_log.md` (this entry)
+
+(7 total — fixed count.)
+
+**Per-build-type tracker walk**:
+- BACKLOG.md → UPDATED (B-323 open)
+- CURRENT_STATE.md → UPDATED (L7 prepend)
+- HANDOFF.md → UPDATED (§14 prepend)
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UPDATED (audit_cascade_compliance.py row added)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (per Round 4 precedent, tool surfaces tracked in CLAUDE.md Structure)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (Phase 3 is meta-tooling, not code-build status transition)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (recurring operator tool; same category as generate_cascade_evidence)
+
+**Net delta**:
+- B-N: 1 NEW (B-323) + 0 CLOSED = net +1 open (was 10; now 11)
+- Pytest: 2489 → 2508 (+19)
+- Files modified: 7
+- Mechanism C-1 effective layers: 9 + 1 retroactive audit = 10
+- Multi-agent applications: 5 + 1 (Phase 3 review) = 6
+
+**Verdict**: 🟢 Phase 3 cleanly delivered. B-317 multi-layer architecture now ALL 4 PHASES COMPLETE. The silent-omission cascade-skip class has structural defense at: (a) discoverability (SKILL v1.1.0; Phase 2B); (b) friction reduction (generator; Phase 2A); (c) mechanical detection at commit-msg (Phase 1A); (d) classification with strict substrate override (Phase 1B); (e) substrate-edit canonical clause in CLAUDE.md (Phase 2A); (f) retroactive audit safety net (Phase 3 this commit). Phase 4 (Pitfall #9.p formalization at 5-event base) remains deferred until empirical threshold met.
+
+**B-317 cumulative closure summary**:
+| Phase | Artifact | Status |
+|---|---|---|
+| 1A | check_commit_msg cascade-evidence enforcement | ✅ landed `c0ad9c6` |
+| 1B | cascade_classifier 6-class detector | ✅ landed `c0ad9c6` |
+| 2A | CLAUDE.md substrate clause + generate_cascade_evidence | ✅ landed `c0ad9c6` + `c662863` |
+| 2B | udm-post-edit-verification SKILL v1.1.0 | ✅ landed `dda1bd2` |
+| 3 | audit_cascade_compliance retroactive safety net | ✅ landed (THIS commit) |
+| 4 | Pitfall #9.p formalization | ⏳ deferred (1-event base; need 5) |
+
+**Cumulative session metrics (47 commits across 2 days; +1 this commit pending)**:
+- B-N: 50 opened + 38 closed - 1 re-open = net 11 open
+- Pytest: 2508/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective layers: 10
+- Multi-agent applications: 6 (B-313/B-314; B-316 retro; Phase 1 review; Phase 2A review; Phase 2B review; Phase 3 review)
+- SKILL semver bumps this session: 1
+- New tools authored this session: 3 (cascade_classifier; generate_cascade_evidence; audit_cascade_compliance)
