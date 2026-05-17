@@ -245,6 +245,7 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
         "tests/tier0/test_exemption_phrases.py",
         "tests/tier0/test_commit_msg_hook.py",
         "tools/exemption_phrases.py",
+        "tools/check_commit_msg.py",
         "udm-exemption-verifier/skill.md",
     )
     if any(substrate in norm_path for substrate in trigger_phrase_substrate_files):
@@ -437,7 +438,8 @@ def query_blindspots(
     elif since_main:
         diff_files = _git_diff_files("main")
         scopes = [(f, _read_text_safe(f)) for f in diff_files if f]
-    elif files:
+    elif files is not None:
+        # Explicit files (possibly empty list); do NOT fall back to staged
         scopes = [(f, _read_text_safe(f)) for f in files]
     else:
         staged = _git_staged_files()

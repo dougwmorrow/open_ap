@@ -95,15 +95,17 @@ def test_python_constant_matches_skill_md():
     )
 
 
-def test_commit_msg_hook_uses_python_module():
-    """Assertion 6: commit-msg hook imports from tools.exemption_phrases (no embedded list)."""
-    hook_path = REPO_ROOT / ".githooks" / "commit-msg"
-    assert hook_path.is_file()
-    content = hook_path.read_text(encoding="utf-8")
+def test_check_commit_msg_uses_python_module():
+    """Assertion 6 (per B-310 bash-wrapper split): tools/check_commit_msg.py
+    (extracted from commit-msg hook per B-310 cross-platform shebang fix)
+    imports from tools.exemption_phrases (single source of truth)."""
+    checker_path = REPO_ROOT / "tools" / "check_commit_msg.py"
+    assert checker_path.is_file()
+    content = checker_path.read_text(encoding="utf-8")
     assert "from tools.exemption_phrases import" in content, (
-        "commit-msg hook must import from tools.exemption_phrases (single source of truth)"
+        "check_commit_msg.py must import from tools.exemption_phrases (single source of truth)"
     )
     assert "EXEMPTION_TRIGGER_PHRASES = [" not in content, (
-        "commit-msg hook must NOT embed its own EXEMPTION_TRIGGER_PHRASES list "
+        "check_commit_msg.py must NOT embed its own EXEMPTION_TRIGGER_PHRASES list "
         "(would re-introduce 4-way drift surface)"
     )

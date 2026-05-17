@@ -239,7 +239,7 @@ def check_pytest_changed_python_files(staged: list[str]) -> CheckResult:
     test_args = [str(t.relative_to(REPO_ROOT)) for t in sorted(test_files)]
     try:
         result = subprocess.run(
-            [python_exe, "-m", "pytest", *test_args, "--no-header", "-q", "--timeout=60"],
+            [python_exe, "-m", "pytest", *test_args, "--no-header", "-q"],
             capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=120,
         )
     except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired) as exc:
