@@ -1,5 +1,6 @@
 ---
 name: udm-step-10-verifier
+version: v1.1.0
 description: Producer-side Step 10 application verifier. Fires AFTER a build cohort completes AND BEFORE the independent gap-check reviewer. Verifies that every newly-authored module/tool has its public surface registered in CLAUDE.md "Structure" section + GLOSSARY.md public-surface tables. Surfaces drift as 🟡 in-flight so producer can fix BEFORE gap-check (not post-hoc detected). Closes B-261 mechanism-evolution candidate per D95 umbrella + 19-instance Pitfall #9.j/n empirical evidence base.
 ---
 
@@ -83,6 +84,13 @@ For each new public NAME (function / class / constant):
 **🟡 finding if**: NAME not present in GLOSSARY.md OR NAME present but in wrong section OR EventType constant not in L207 family registry
 
 **Mechanical layer cross-reference (per 2026-05-17 check_9n GLOSSARY-parity extension)**: `tools/query_blindspots.py::check_9n_convention_registration` now mechanically enforces this at commit-msg hook time for tools with **≥3 non-trivial public surfaces** (excluding `main`/`cli_main` trivial wrappers). The Step 10 verifier (this skill) is the PRODUCER-side check; check_9n is the HARNESS-side enforcement. Both should fire on the same gap class — this skill catches it at producer-time (in-flight), check_9n catches it at commit-time (mechanical BLOCK). Tools with <3 non-trivial surfaces (operator-helper scripts) are exempt from the mechanical GLOSSARY-parity check but Step 10 verifier still recommends entries for completeness.
+
+**Step 3 (L207 sync check) — producer-side / harness-side defense pairing (added 2026-05-17 per B189 closure cohort empirical-drift remediation)**:
+
+- **Step 3 role**: producer-side discipline at build-cohort attestation. Pairs with `tools/pre_commit_checks.py::check_cli_registry_sync` (8th orchestrator check; landed 2026-05-17 per B189 closure cohort empirical-drift remediation; mechanically BLOCKS commit at hook time).
+- **Empirical anchor**: B-317 cascade tools (`CLI_CASCADE_CLASSIFIER` + `CLI_GENERATE_CASCADE_EVIDENCE` + `CLI_AUDIT_CASCADE_COMPLIANCE`) drifted unregistered in L207 for ~1 day; B189 `CLI_IMPORT_PII_INVENTORY` drifted unregistered for 5 days. Producer-side Step 3 was supposed to catch these in-flight; harness-side `check_cli_registry_sync` is the structural backstop.
+- **Two-layer defense**: Step 10 (producer-time pre-attestation; this skill) + `check_cli_registry_sync` (hook-time pre-commit; mechanical BLOCK). Reduces honor-system surface — even when producer self-check Step 10 is skipped or applied incompletely, the harness layer mechanically refuses the commit.
+- **Failure-mode coverage**: Step 3 catches drift at producer-time when working correctly (0-day lag; in-flight fix). `check_cli_registry_sync` catches drift at commit-time when Step 3 was skipped (mechanical BLOCK; no commit lands without L207 sync). Together they bracket the discipline window — Step 3 is the cheap producer-time check; the hook is the expensive-but-mechanical structural backstop.
 
 ### Step 4 — Verify Last reviewed date bump
 
@@ -210,3 +218,10 @@ This skill closes B-261 with the following empirical evidence base (per HANDOFF 
 - **Lag between formalization and recurrence**: ≤24 hours (Step 10 formalized 2026-05-14 AM; failed at Round 4.1 same afternoon)
 
 This skill shifts the catch-time from post-hoc gap-check (1-4 day lag) to producer-time validation (0-day lag; in-flight fix).
+
+## Changelog (per D98 semver discipline)
+
+| Version | Date | Change | Trigger |
+|---|---|---|---|
+| v1.0.0 | 2026-05-14 | Initial authoring per B-261 closure + Pitfall #9.n formalization (producer-side Step 10 application verifier) | 3 first-encounter Step 10 failures + ~19 post-formalization render-drift instances |
+| v1.1.0 | 2026-05-17 | MINOR — directive clarification + mechanical-layer cross-reference: Step 3 (L207 CLI_* family registry check) explicitly paired with new harness-side `tools/pre_commit_checks.py::check_cli_registry_sync` (8th orchestrator check landing same day per B189 closure cohort). Documents two-layer defense (producer-time Step 3 + hook-time mechanical BLOCK). | B189 closure cohort 2026-05-17 surfaced 4-tool drift (B-317 cascade tools + B189 CLI_IMPORT_PII_INVENTORY absent from L207 for 1-5 days). Paired with `udm-progress-logger` v1.1.0 directive strengthening per Option A plan. |

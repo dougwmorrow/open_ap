@@ -30,6 +30,15 @@ scan) to also enforce code quality + compliance:
    `udm-planning-session-startup`) proved insufficient — same documentation-
    not-mechanically-enforced gap as v1.2.0 inline-self-review citation check
    landed at commit `d5af93a` for cascade_classifier.
+7. `check_cli_registry_sync` (B189 closure cohort empirical anchor 2026-05-17;
+   B-317 cascade-tools drift class) — for staged `tools/*.py` files declaring
+   `EVENT_TYPE = "CLI_*"`, verify each declared EVENT_TYPE appears in CLAUDE.md
+   L207 CLI_* family registry. BLOCK on missing. Closes the empirical drift
+   class where 3 B-317 cascade tools were missing from L207 for 1 day post-
+   closure + the B189 import_pii_inventory tool was missing for 5 days post-
+   build — 3rd instance of the documentation-but-not-mechanically-enforced
+   gap pattern (after v1.2.0 inline-self-review citation check at `d5af93a`
+   and `check_planning_provenance` at `a8668fd`).
 
 Per D74 exit-code contract:
 - 0: all checks passed
@@ -877,6 +886,193 @@ def check_planning_provenance(staged_files: list[str]) -> CheckResult:
     return CheckResult("planning_provenance", True, "info", diagnostic)
 
 
+# ---------------------------------------------------------------------------
+# Check 8: CLI_* registry sync for staged tools/*.py (B189 closure cohort
+# empirical anchor; B-317 cascade-tools drift class — same documentation-
+# but-not-mechanically-enforced gap as v1.2.0 inline-self-review citation
+# check at d5af93a + planning provenance at a8668fd)
+# ---------------------------------------------------------------------------
+
+# Module-level (line-anchored) EVENT_TYPE constant declaration matching
+# CLI_* prefix; multiline mode so `^` matches start-of-line throughout file.
+# Excludes assignments nested inside functions / classes (those don't start
+# at column 0).
+_EVENT_TYPE_DECLARATION_RE = re.compile(
+    r'''^EVENT_TYPE\s*=\s*["'](CLI_[A-Z_]+)["']''',
+    re.MULTILINE,
+)
+
+# L207 region boundary: matches the "- **CLI_\\*** (N tools)" bullet header
+# that opens the CLI_* family registry. Used to scope the registry search
+# to that bullet's text region (until the next top-level bullet header
+# starting "- **FAMILY_\\***").
+_CLI_REGISTRY_REGION_START_RE = re.compile(
+    r"^-\s+\*\*CLI_\\?\*\*\*", re.MULTILINE
+)
+_NEXT_FAMILY_REGION_RE = re.compile(
+    r"^-\s+\*\*[A-Z_]+_\\?\*\*\*", re.MULTILINE
+)
+
+CLAUDE_MD_PATH = REPO_ROOT / "CLAUDE.md"
+
+
+def _extract_cli_event_type_from_file(file_content: str) -> str | None:
+    """Extract the module-level EVENT_TYPE = "CLI_*" value from a tool's source.
+
+    Returns the matched CLI_* name (e.g. "CLI_PRE_COMMIT_CHECKS") or None if
+    no module-level EVENT_TYPE CLI_* declaration found. Uses the first match
+    if multiple are present (rare; tools typically declare a single EVENT_TYPE
+    constant; multiple module-level declarations would itself be a defect).
+    """
+    match = _EVENT_TYPE_DECLARATION_RE.search(file_content)
+    if not match:
+        return None
+    return match.group(1)
+
+
+def _claude_md_l207_region_contains(claude_md_content: str, cli_event_type: str) -> bool:
+    """Verify the CLI_* family registry region of CLAUDE.md contains the given
+    CLI_* token.
+
+    The region is scoped to the text between the "- **CLI_\\*** (N tools)"
+    bullet header and the NEXT top-level family bullet (e.g. "- **CYCLE_\\***").
+    This prevents false positives where CLI_* tokens may appear elsewhere in
+    CLAUDE.md (e.g. in Structure section bullet text) without being in the
+    registry.
+
+    Returns True if the registry region exists AND contains the cli_event_type
+    as a token (matched as a word boundary to avoid substring false positives).
+    """
+    start_match = _CLI_REGISTRY_REGION_START_RE.search(claude_md_content)
+    if not start_match:
+        return False
+    region_start = start_match.start()
+    next_match = _NEXT_FAMILY_REGION_RE.search(claude_md_content, start_match.end())
+    region_end = next_match.start() if next_match else len(claude_md_content)
+    region_text = claude_md_content[region_start:region_end]
+    token_re = re.compile(r"\b" + re.escape(cli_event_type) + r"\b")
+    return bool(token_re.search(region_text))
+
+
+def check_cli_registry_sync(staged_files: list[str]) -> CheckResult:
+    """For staged `tools/*.py` files declaring `EVENT_TYPE = "CLI_*"`, verify
+    each declared EVENT_TYPE appears in the CLAUDE.md L207 CLI_* family
+    registry region.
+
+    Per B189 closure cohort empirical anchor (2026-05-17) + B-317 cascade-
+    tools drift class — 3 cascade tools (cascade_classifier /
+    generate_cascade_evidence / audit_cascade_compliance) had Structure
+    entries with EVENT_TYPE constants but were MISSING from the L207 CLI_*
+    family registry for 1 day after B-317 closure. The B189 import_pii_inventory
+    tool was missing from L207 for 5 days post-build. Both gaps were caught
+    only by post-hoc independent reviewer (`a6543502412116fe3`) 🟡 IMPROVE
+    surface — there was no commit-time mechanical enforcement.
+
+    Closes the empirical drift class STRUCTURALLY at the commit-msg hook
+    layer (this is the 3rd instance of the documentation-but-not-mechanically-
+    enforced gap pattern, after v1.2.0 inline-self-review citation check
+    landed at commit `d5af93a` for cascade_classifier review, and
+    `check_planning_provenance` landed at commit `a8668fd` for §0 plan
+    provenance discipline).
+
+    Companion skills:
+    - `udm-progress-logger` Step 1: L207 update is mandatory when authoring
+      a tool with an `EVENT_TYPE = "CLI_*"` constant
+    - `udm-step-10-verifier`: L207 sync is part of the canonical Step 10
+      new-public-surface-registration procedure
+
+    Detection logic:
+    1. Filter staged_files to `tools/*.py` matches (NOT `tests/`, NOT `.claude/`)
+    2. For each, read content; regex-extract module-level
+       `^EVENT_TYPE = "CLI_*"` to find declared CLI_* value (skip if absent)
+    3. For each declared CLI_*, scan CLAUDE.md L207 region (between the
+       "- **CLI_\\*** (N tools)" bullet header and the next family bullet)
+    4. Return BLOCK if any declared CLI_* missing from the L207 region
+    5. Skip non-CLI_* EVENT_TYPE values (only CLI_* prefix is enforced)
+
+    Edge cases:
+    - Multiple module-level EVENT_TYPE declarations: use first match (rare)
+    - Non-CLI_* EVENT_TYPE value: silently skip (only CLI_* enforced)
+    - CLAUDE.md unreadable: treat as warning per existing pattern in
+      `check_planning_provenance`
+    - Function-scoped EVENT_TYPE: skipped by `^EVENT_TYPE` line-anchor
+
+    Returns:
+        INFO if no tools/*.py files staged OR none declare CLI_* EVENT_TYPE
+        PASS if all declared CLI_* EVENT_TYPEs present in L207 registry
+        BLOCK with diagnostic enumerating missing CLI_* names
+        WARN if CLAUDE.md unreadable
+    """
+    tool_files = []
+    for f in staged_files:
+        norm = f.replace("\\", "/")
+        if not norm.endswith(".py"):
+            continue
+        if not norm.startswith("tools/"):
+            continue
+        if norm.startswith("tools/tests/") or "/tests/" in norm:
+            continue
+        tool_files.append(norm)
+
+    if not tool_files:
+        return CheckResult("cli_registry_sync", True, "info",
+                          "no tools/*.py files staged; check skipped")
+
+    # Build map of {file_path: declared_cli_event_type} (only for files that
+    # declare a module-level CLI_* EVENT_TYPE).
+    declared: list[tuple[str, str]] = []
+    for tool_file in tool_files:
+        file_path = REPO_ROOT / tool_file
+        try:
+            content = file_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        cli_name = _extract_cli_event_type_from_file(content)
+        if cli_name is None:
+            continue
+        declared.append((tool_file, cli_name))
+
+    if not declared:
+        return CheckResult("cli_registry_sync", True, "info",
+                          f"none of {len(tool_files)} staged tools/*.py file(s) "
+                          "declare a module-level CLI_* EVENT_TYPE; check skipped")
+
+    # Read CLAUDE.md once; warn (do not block) if unreadable per pattern in
+    # check_planning_provenance.
+    try:
+        claude_md_content = CLAUDE_MD_PATH.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return CheckResult("cli_registry_sync", True, "warn",
+                          f"CLAUDE.md unreadable ({exc}); CLI_* registry sync check skipped")
+
+    missing: list[tuple[str, str]] = []
+    for tool_file, cli_name in declared:
+        if not _claude_md_l207_region_contains(claude_md_content, cli_name):
+            missing.append((tool_file, cli_name))
+
+    if missing:
+        return CheckResult(
+            "cli_registry_sync", False, "block",
+            f"{len(missing)} staged tools/*.py file(s) declare CLI_* EVENT_TYPE "
+            f"NOT present in CLAUDE.md L207 CLI_* family registry "
+            f"(per B189 closure cohort empirical anchor 2026-05-17 + "
+            f"B-317 cascade-tools drift class):\n"
+            + "\n".join(f"  - {f}: declares EVENT_TYPE = {cli!r} but missing from L207 registry"
+                       for f, cli in missing)
+            + "\n\nUpdate CLAUDE.md L207 CLI_* bullet to add the new tool entry "
+              "(format: '+ CLI_NAME (N+1; per `tools/<file>.py` <closure-anchor>)') "
+              "AND increment the '(N tools)' count in the bullet header. "
+              "Skill reference: `udm-progress-logger` Step 1 + `udm-step-10-verifier`. "
+              "Bypass with --no-verify is self-flagging exemption-claim."
+        )
+
+    return CheckResult(
+        "cli_registry_sync", True, "info",
+        f"all {len(declared)} declared CLI_* EVENT_TYPE(s) in staged tools/*.py "
+        f"file(s) present in CLAUDE.md L207 registry"
+    )
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
@@ -885,6 +1081,7 @@ CHECKS = [
     check_cli_compliance_d74_d75_d76,
     check_gap_accountability,
     check_planning_provenance,
+    check_cli_registry_sync,
 ]
 
 

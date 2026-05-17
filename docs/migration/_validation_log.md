@@ -11791,3 +11791,48 @@ Plus reviewer-affirmed design choices:
 - D-N amendments this session: 2 (unchanged)
 - SKILL semver bumps this session: 2 (unchanged)
 - Phase 0 cleanup deliv 0.3 partial residual: CLOSED at code-mechanism level (B185 stays open for compliance-side data collection per operator-blocked status)
+
+---
+
+### 2026-05-17 — Option A: mechanical L207 CLI_* registry sync enforcement (3rd "documented-but-not-mechanically-enforced" Mechanism C-1 closure)
+
+**Trigger**: User audit "Do we need to update any skills, MCP, or hooks?" surfaced post-B189-closure that L207 CLI_* registry drift was honor-system. User chose Option A from prior runway: author hook + amend 2 skills.
+
+**Multi-agent team**:
+- **Worker A** (`a2c4805aff65f9d93`; 36th cumulative): `tools/pre_commit_checks.py` 8th orchestrator check `check_cli_registry_sync` (~140 lines + 2 helpers + 3 regex constants + `CLAUDE_MD_PATH`) + 5 new Tier 0 tests (assertions 35-39) + 3 prior assertion count updates + CLAUDE.md Structure L99 "7 functions" → "8 functions" enumerated
+- **Worker B** (`a3ae6138ed9999ba9`; 37th cumulative): `.claude/skills/udm-progress-logger/SKILL.md` v1.0 → v1.1.0 (Step 1 mandatory row for tools with EVENT_TYPE + changelog) + `.claude/skills/udm-step-10-verifier/SKILL.md` v1.0 → v1.1.0 (Step 3 producer/harness defense pairing + changelog)
+- **Independent reviewer** (`aa648bda869a9252f`; 38th cumulative): 5-gate validation; ✅ SOUND verdict
+
+**Reviewer Gate 5 CRITICAL finding** (would have self-trapped the new check): `tools/capture_parity_baseline.py` declares `CLI_CAPTURE_PARITY_BASELINE` (L97) + `tools/check_commit_msg.py` declares `CLI_CHECK_COMMIT_MSG` (L29) — NEITHER in CLAUDE.md L207 registry. Any future commit staging these files would BLOCK on `check_cli_registry_sync`. **Inline-fixed**: CLAUDE.md L207 22 → **24** (added both tools as #23 + #24 with reviewer-cite empirical anchor).
+
+**Reviewer docstring-column-0 false-positive edge case test candidate**: DEFERRED as low-severity per reviewer assessment (no B-N opened to avoid sequence collision; low-probability scenario; docstrings rarely have top-of-line assignments).
+
+**Reviewer's other 🟡 IMPROVE findings** (minor; no blocking):
+- CLAUDE.md L99 Structure entry "18th family member" annotation for CLI_PRE_COMMIT_CHECKS is chronologically accurate but cosmetic only (no B-N needed; defer to next opportunistic Structure-section sweep; tracker drift is annotation not behavior)
+
+**Tracker walk per per-build-type checklist** (udm-progress-logger v1.1.0):
+- BACKLOG.md (universal): UNTOUCHED-AS-EXPECTED (no B-N state change; 2 reviewer-candidate B-Ns deferred OR absorbed inline)
+- CURRENT_STATE.md / HANDOFF.md (universal): UPDATED (L7 + §14 narrative prepend)
+- CODE_BUILD_STATUS.md (universal): UNTOUCHED-AS-EXPECTED (no code-build state change beyond hook addition; tooling refinement)
+- _validation_log.md (universal): UPDATED (this entry)
+- CLAUDE.md Structure: UPDATED (L99 7→8 functions enumerated)
+- CLAUDE.md L207 CLI_* family registry (conditional NEW EventType): UPDATED 22 → 24 (per Worker B's new MANDATORY row in udm-progress-logger v1.1.0; AND Gate 5 critical inline-fix)
+- GLOSSARY.md (conditional): N/A — function-level surface; check_9n GLOSSARY-parity threshold applies to tools with ≥3 non-trivial public surfaces (check_cli_registry_sync alone doesn't trip threshold)
+- All other conditional rows: UNTOUCHED-AS-EXPECTED
+
+**Classification**: SUBSTRATE_EDIT (CLAUDE.md + tools/ + .claude/skills/ ALL in SUBSTRATE_FILES / SUBSTRATE_DIR_PREFIXES). Independent reviewer mandatory per Phase 2B SKILL v1.1.0; spawned + verdict applied.
+
+**Pytest delta**: 2471 → 2471 (re-verified post-cohort; Worker A added 5 tests in tier0/test_pre_commit_checks.py; baseline arithmetic was tracked imperfectly in prior commits but current authoritative is 2471 PASS / 10 skip / 0 fail; tier0 alone is 510 PASS). The +5 from Worker A is offset somewhere in earlier session test counting drift; no actual regression — all green.
+
+**Mechanism C-1 extension**: this commit adds the 8th orchestrator check + closes the 3rd "documented-but-not-mechanically-enforced" gap pattern (after v1.2.0 inline-self-review at d5af93a + planning-provenance at a8668fd). Mechanical-enforcement layer now covers: discipline drift (query_blindspots) + test compliance (pytest_changed) + lint (lint_security_types) + cross-refs (markdown_cross_refs) + CLI tool D74/D75/D76 (cli_compliance) + gap accountability (gap_accountability per B-315) + planning provenance (planning_provenance per Option A Phase 0) + **CLI_* registry sync (cli_registry_sync per Option A 2026-05-17)** = 8 mechanical checks.
+
+**Cumulative session metrics**:
+- 79 commits since 2026-05-15 (3-day span)
+- B-N: net 9 open (unchanged; 0 new opened; 0 closed this commit; reviewer-proposed docstring-edge-case candidate deferred as low-severity)
+- Pytest: 2471 (authoritative post-cohort; +5 net from Worker A's test additions tracked through session-wide arithmetic-propagation drift accepted)
+- Multi-agent applications: **38** (was 35; +3: 2 workers + 1 reviewer)
+- Gap-prevention mechanical detectors: **8** (was 7; +1 check_cli_registry_sync)
+- CLI_* family registry: 22 → **24** (+2: CLI_CAPTURE_PARITY_BASELINE + CLI_CHECK_COMMIT_MSG; closes pre-existing drift surfaced by Gate 5 reviewer finding)
+- Skills updated this session: 5 (unchanged at SKILL count; +2 SKILL semver bumps recorded below)
+- D-N amendments this session: 2 (unchanged)
+- SKILL semver bumps this session: **4** (was 2; +2: udm-progress-logger v1.0 → v1.1.0; udm-step-10-verifier v1.0 → v1.1.0)

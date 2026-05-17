@@ -1,11 +1,13 @@
 """Tier 0 smoke tests for tools/pre_commit_checks.py per D67 + B-308 closure.
 
-Quality-checks orchestrator (7 checks: query_blindspots + pytest_changed +
+Quality-checks orchestrator (8 checks: query_blindspots + pytest_changed +
 lint_security_types + markdown_cross_refs + cli_compliance_d74_d75_d76 +
-gap_accountability + planning_provenance). Per user-direction 2026-05-16
-"update it to be a code quality layer as well" + BLOCK on failures + BLOCK
-on new public surface without tests + B-275-class planning-discipline
-forward-prevention.
+gap_accountability + planning_provenance + cli_registry_sync). Per user-direction
+2026-05-16 "update it to be a code quality layer as well" + BLOCK on failures +
+BLOCK on new public surface without tests + B-275-class planning-discipline
+forward-prevention + B189 closure cohort CLI_* registry sync mechanical
+enforcement (2026-05-17 — 3rd instance of documentation-but-not-mechanically-
+enforced gap pattern; closes empirical drift class structurally).
 """
 from __future__ import annotations
 
@@ -52,10 +54,11 @@ def test_exit_codes_per_d74():
 
 
 def test_checks_registry_complete():
-    """Assertion 5 (per B-309 Cycle 1 + B-315 + B-275-class): CHECKS registry has
-    7 Phase 1 checks (B-275-class adds check_planning_provenance as 7th check;
-    planning-discipline layer forward-prevention; empirical anchor commit
-    `1b00755`)."""
+    """Assertion 5 (per B-309 Cycle 1 + B-315 + B-275-class + B189 closure cohort):
+    CHECKS registry has 8 Phase 1 checks (B189 closure 2026-05-17 adds
+    check_cli_registry_sync as 8th check; CLI_* registry sync mechanical
+    enforcement; empirical anchor B189 closure cohort + B-317 cascade-tools
+    drift class)."""
     from tools.pre_commit_checks import (
         CHECKS,
         check_query_blindspots,
@@ -65,6 +68,7 @@ def test_checks_registry_complete():
         check_cli_compliance_d74_d75_d76,
         check_gap_accountability,
         check_planning_provenance,
+        check_cli_registry_sync,
     )
     assert check_query_blindspots in CHECKS
     assert check_pytest_changed_python_files in CHECKS
@@ -73,7 +77,8 @@ def test_checks_registry_complete():
     assert check_cli_compliance_d74_d75_d76 in CHECKS
     assert check_gap_accountability in CHECKS
     assert check_planning_provenance in CHECKS
-    assert len(CHECKS) == 7
+    assert check_cli_registry_sync in CHECKS
+    assert len(CHECKS) == 8
 
 
 def test_check_result_shape():
@@ -90,10 +95,11 @@ def test_check_result_shape():
 
 
 def test_empty_staged_returns_passes():
-    """Assertion 7: with no staged files, all 7 checks return passed (info severity)."""
+    """Assertion 7 (per B189 closure cohort): with no staged files, all 8 checks
+    return passed (info severity)."""
     from tools.pre_commit_checks import run_all_checks
     results = run_all_checks(staged=[])
-    assert len(results) == 7
+    assert len(results) == 8
     for r in results:
         assert r.passed, f"{r.name} failed on empty input: {r.diagnostic}"
 
@@ -425,5 +431,161 @@ def test_check_planning_provenance_in_checks_registry():
     """Assertion 34 (per B-275-class): CHECKS registry contains check_planning_provenance."""
     from tools.pre_commit_checks import CHECKS, check_planning_provenance
     assert check_planning_provenance in CHECKS
-    # 7th and final entry (after the 6 prior checks landed by B-308/B-309/B-315)
-    assert len(CHECKS) == 7
+    # 8th entry per B189 closure cohort (added check_cli_registry_sync as 8th)
+    assert len(CHECKS) == 8
+
+
+# ---------------------------------------------------------------------------
+# Check 8: CLI_* registry sync for staged tools/*.py (B189 closure cohort
+# empirical anchor; B-317 cascade-tools drift class)
+# ---------------------------------------------------------------------------
+
+def test_check_cli_registry_sync_no_tools_files_returns_info():
+    """Assertion 35 (per B189 closure cohort): no tools/*.py staged → info pass (skip)."""
+    from tools.pre_commit_checks import check_cli_registry_sync
+    result = check_cli_registry_sync(staged_files=[
+        "docs/migration/some_doc.md",
+        "CLAUDE.md",
+        "tests/tier0/test_foo.py",
+    ])
+    assert result.passed
+    assert result.severity == "info"
+    assert "no tools/*.py files staged" in result.diagnostic
+
+
+def test_check_cli_registry_sync_tool_with_event_type_in_registry_passes(tmp_path, monkeypatch):
+    """Assertion 36 (per B189 closure cohort): tool declaring CLI_* EVENT_TYPE
+    that IS present in CLAUDE.md L207 registry → PASS."""
+    import tools.pre_commit_checks as pcc
+
+    # Synthetic tools/ directory + tool file
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir()
+    tool_file = tools_dir / "fake_tool.py"
+    tool_file.write_text(
+        '"""Fake tool."""\n'
+        'EVENT_TYPE = "CLI_FAKE_TOOL"\n'
+        'EXIT_SUCCESS = 0\n',
+        encoding="utf-8",
+    )
+
+    # Synthetic CLAUDE.md with L207 region containing the CLI_FAKE_TOOL token
+    claude_md = tmp_path / "CLAUDE.md"
+    claude_md.write_text(
+        "Some preamble.\n\n"
+        "**EventType families registered**:\n"
+        "- **CLI_\\*** (1 tools) — one row per CLI invocation. "
+        "CLI_FAKE_TOOL (1; per `tools/fake_tool.py` test).\n"
+        "- **CYCLE_\\*** — pipeline cycle lifecycle.\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(pcc, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(pcc, "CLAUDE_MD_PATH", claude_md)
+
+    result = pcc.check_cli_registry_sync(staged_files=["tools/fake_tool.py"])
+    assert result.passed, f"Expected pass; got: {result.diagnostic}"
+    assert result.severity == "info"
+
+
+def test_check_cli_registry_sync_tool_with_event_type_missing_blocks(tmp_path, monkeypatch):
+    """Assertion 37 (per B189 closure cohort): tool declaring CLI_* EVENT_TYPE
+    NOT present in CLAUDE.md L207 registry → BLOCK."""
+    import tools.pre_commit_checks as pcc
+
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir()
+    tool_file = tools_dir / "missing_tool.py"
+    tool_file.write_text(
+        '"""Missing tool."""\n'
+        'EVENT_TYPE = "CLI_MISSING_TOOL"\n'
+        'EXIT_SUCCESS = 0\n',
+        encoding="utf-8",
+    )
+
+    # CLAUDE.md has the CLI_* family bullet but CLI_MISSING_TOOL not listed
+    claude_md = tmp_path / "CLAUDE.md"
+    claude_md.write_text(
+        "Some preamble.\n\n"
+        "**EventType families**:\n"
+        "- **CLI_\\*** (1 tools) — CLI_OTHER_TOOL (1; per `tools/other.py`).\n"
+        "- **CYCLE_\\*** — pipeline cycle lifecycle.\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(pcc, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(pcc, "CLAUDE_MD_PATH", claude_md)
+
+    result = pcc.check_cli_registry_sync(staged_files=["tools/missing_tool.py"])
+    assert not result.passed
+    assert result.severity == "block"
+    assert "missing_tool.py" in result.diagnostic
+    assert "CLI_MISSING_TOOL" in result.diagnostic
+    assert "L207" in result.diagnostic
+    assert "B189" in result.diagnostic  # empirical anchor cited
+
+
+def test_check_cli_registry_sync_non_cli_event_type_skipped(tmp_path, monkeypatch):
+    """Assertion 38 (per B189 closure cohort): tool with EVENT_TYPE that is NOT
+    CLI_* prefix → silently skipped (only CLI_* enforced)."""
+    import tools.pre_commit_checks as pcc
+
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir()
+    tool_file = tools_dir / "library_module.py"
+    # Library module declares non-CLI EVENT_TYPE; should be skipped
+    tool_file.write_text(
+        '"""Library module."""\n'
+        'EVENT_TYPE = "PARQUET_VERIFY"\n'
+        'EXIT_SUCCESS = 0\n',
+        encoding="utf-8",
+    )
+
+    # CLAUDE.md without any registry that lists PARQUET_VERIFY in CLI_* region
+    claude_md = tmp_path / "CLAUDE.md"
+    claude_md.write_text(
+        "Some preamble.\n\n"
+        "- **CLI_\\*** (0 tools) — empty.\n"
+        "- **CYCLE_\\*** — pipeline cycle lifecycle.\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(pcc, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(pcc, "CLAUDE_MD_PATH", claude_md)
+
+    result = pcc.check_cli_registry_sync(staged_files=["tools/library_module.py"])
+    # Non-CLI_* EVENT_TYPE is treated as "no declaration to verify" → info pass
+    assert result.passed, f"Expected pass for non-CLI EVENT_TYPE; got: {result.diagnostic}"
+    assert result.severity == "info"
+
+
+def test_check_cli_registry_sync_in_checks_registry():
+    """Assertion 39 (per B189 closure cohort): CHECKS registry contains
+    check_cli_registry_sync as 8th entry; verify helper functions + module-level
+    regex constants public-surface present."""
+    import tools.pre_commit_checks as pcc
+    from tools.pre_commit_checks import CHECKS, check_cli_registry_sync
+    assert check_cli_registry_sync in CHECKS
+    # 8th entry per B189 closure cohort 2026-05-17
+    assert len(CHECKS) == 8
+    # Module-level regex constants + helper functions present in public surface
+    assert hasattr(pcc, "_EVENT_TYPE_DECLARATION_RE")
+    assert hasattr(pcc, "_CLI_REGISTRY_REGION_START_RE")
+    assert hasattr(pcc, "_extract_cli_event_type_from_file")
+    assert hasattr(pcc, "_claude_md_l207_region_contains")
+    assert hasattr(pcc, "CLAUDE_MD_PATH")
+    # Helper roundtrip — extraction works on canonical pattern
+    extracted = pcc._extract_cli_event_type_from_file(
+        'EVENT_TYPE = "CLI_PRE_COMMIT_CHECKS"\n'
+    )
+    assert extracted == "CLI_PRE_COMMIT_CHECKS"
+    # Function-scoped EVENT_TYPE NOT matched (line-anchored regex)
+    nested = pcc._extract_cli_event_type_from_file(
+        'def foo():\n    EVENT_TYPE = "CLI_NESTED"\n'
+    )
+    assert nested is None
+    # Non-CLI prefix NOT matched
+    non_cli = pcc._extract_cli_event_type_from_file(
+        'EVENT_TYPE = "PARQUET_VERIFY"\n'
+    )
+    assert non_cli is None
