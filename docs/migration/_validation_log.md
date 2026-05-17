@@ -11556,4 +11556,62 @@ Plus reviewer-affirmed design choices:
 - Gap-prevention mechanical detectors: 5 (check_9n GLOSSARY parity + check_9n structured-pattern + caller-consistency Tier 0 [now migrated] + cascade_classifier citation-context + B-326 registry-driven)
 - Skills updated this session: 4
 - D-N amendments this session: 2 (D62 + D111)
+
+---
+
+### 2026-05-17 — B-328 + B-329 CLOSED bundle (LOW tracker-hygiene)
+
+**Trigger**: User-direction "Proceed with your recommended next steps." HIGH-confidence trigger phrase per `udm-next-step-cascade`. NO push/PR semantics → HOLD push by default. Fall-through MEDIUM (Push HELD) → LOW item "B-327/B-328/B-329 bundle" picked (smallest-scope at LOW; B-327 deferred per its own material assessment).
+
+**Scope**:
+- **B-328** (Windows dev-env pytest collection skew): authored documentation in CLAUDE.md "Environment & Dependencies" section after `.env` location bullet. Note covers (a) `oracledb` + `polars` typically NOT installed on Windows dev; (b) `grep -rl '^import oracledb\|^import polars'` enumeration pattern (NOT hardcoded count — per reviewer 🟡 IMPROVE #1 anti-Pitfall #9.k arithmetic-propagation drift); (c) 3 workarounds (CI trust / Tier 0+1+property subset / optional pip install); (d) fresh-agent "do NOT panic" guidance preventing false-regression reports.
+- **B-329** (B-326 closure-target preventive-vs-reactive framing): PREEMPTED by B-326 actual closure at commit `6f3b3a3` 2026-05-17 — preventive framing achieved by deed (REQUIRED_KWARGS registry shipped) BEFORE any subsequent compositional drift surfaced empirically. Per reviewer 🟡 IMPROVE #2: closure annotation cites preemption mechanism explicitly for future-reader traceability ("why was B-329 closed without proposed amendment executed?").
+- **B-327** (citation-context coverage extension to `_has_invalid_substrate_review_phrase`) DEFERRED — per its own material assessment ("all low-incidence in practice; producer-evasion path exists for sophisticated producers; defer until empirical demand").
+
+**Classification**: SUBSTRATE_EDIT per `tools/cascade_classifier.py::SUBSTRATE_FILES` L71 (CLAUDE.md is substrate). Phase 2B SKILL v1.1.0 requires INDEPENDENT reviewer for SUBSTRATE_EDIT (no inline self-review valid).
+
+**Reviewer**: Agent A `a240f793888bc3883` (udm-design-reviewer; 19th cumulative production application this session).
+
+**Verdict**: ✅ SOUND-with-improvements
+- Q1 (section placement): SOUND — Environment & Dependencies correct location; preserves single-location dep context
+- Q2 (workaround triad completeness): SOUND — Docker/WSL correctly omitted (high friction, no D-number backing); 🟡 IMPROVE #1 on hardcoded "7" count → inline-fixed via grep-pattern enumeration
+- Q3 (do NOT panic framing): SOUND — aligns with existing CLAUDE.md "Do NOT" register; proportionate to fresh-agent risk
+- Q4 (B-329 preempted-closure disposition): SOUND — alternative ("leave open as lessons learned") would create BACKLOG bloat on 0-COD item
+- Q5 (hidden conflicts): NONE — only "Windows" mention elsewhere is D103 per-env posture; complementary, not conflicting
+- 🟡 IMPROVE #2 on B-329 closure annotation lacking preemption-mechanism citation → inline-fixed
+
+**Inline fixes applied**:
+1. CLAUDE.md L13: dropped hardcoded "7 source modules" count → "Several source modules ... (enumerate the current set via `grep -rl '^import oracledb\|^import polars\|^from oracledb\|^from polars' extract/ data_load/ cdc/ scd2/ orchestration/ schema/` rather than relying on a hardcoded count which can drift silently as new extractors land)"
+2. BACKLOG.md B-329 closure annotation: extended from bare "⚫ CLOSED" to full preemption-mechanism citation explaining why closed without proposed amendment executed
+
+**Tracker walk per per-build-type checklist** (udm-progress-logger Step 1):
+- BACKLOG.md (universal): UPDATED (B-328 + B-329 strikethrough + closure annotations + Pitfall #9.j leading-badge flip applied to both)
+- CURRENT_STATE.md (universal): UPDATED (L7 narrative prepend)
+- HANDOFF.md (universal): UPDATED (§14 narrative prepend at L427)
+- CODE_BUILD_STATUS.md (universal): UNTOUCHED-AS-EXPECTED (no code-build state change; documentation-only commit; no per-unit row transitions)
+- _validation_log.md (universal): UPDATED (this entry)
+- CLAUDE.md Structure (conditional NEW public surface): UNTOUCHED-AS-EXPECTED (no new public surface; documentation-only; the Environment & Dependencies note is dep-context not Structure-list)
+- GLOSSARY.md (conditional NEW public surface): UNTOUCHED-AS-EXPECTED (same rationale)
+- CLAUDE.md L325 CLI_* family registry (conditional NEW EventType): UNTOUCHED-AS-EXPECTED (no new EventType)
+- 03_DECISIONS.md (conditional NEW D-number): UNTOUCHED-AS-EXPECTED
+- 05_RUNBOOKS.md (conditional NEW RB-N): UNTOUCHED-AS-EXPECTED
+- 04_EDGE_CASES.md (conditional NEW edge case): UNTOUCHED-AS-EXPECTED
+- RISKS.md (conditional risk change): UNTOUCHED-AS-EXPECTED — reviewer noted R16 marginally de-escalated (fresh-agent guidance prevents false-regression CCL discipline derailment) but effect minor; no R-N body change warranted
+- 02_PHASES.md (conditional phase status change): UNTOUCHED-AS-EXPECTED
+- POLISH_QUEUE.md (conditional cosmetic): UNTOUCHED-AS-EXPECTED
+- ONE_OFF_SCRIPTS.md / phase1/02_configuration.md §5.1 (conditional executable artifact): UNTOUCHED-AS-EXPECTED
+- phase1/0X_*.md (conditional spec doc edit): UNTOUCHED-AS-EXPECTED
+- HANDOFF.md §8 Pitfall #9 sub-class (conditional sub-class formalization): UNTOUCHED-AS-EXPECTED (no new sub-class; references existing #9.k + #9.j)
+- GLOSSARY.md skill catalogue (conditional new skill): UNTOUCHED-AS-EXPECTED
+
+**Pytest delta**: 2545/58/0 → 2545/58/0 (NO test changes; documentation + tracker hygiene only).
+
+**Cumulative session metrics**:
+- 66 commits across 2 days
+- B-N: 57 opened + 46 closed - 1 re-open = **net 10 open** (was 12)
+- Pytest: 2545/58/0 (unchanged)
+- Multi-agent applications: **19** (was 18; this commit's reviewer = 19th)
+- Gap-prevention mechanical detectors: 5 (unchanged)
+- Skills updated this session: 4 (unchanged)
+- D-N amendments this session: 2 (unchanged)
 - SKILL semver bumps this session: 1 (udm-post-edit-verification 1.0.0 → 1.1.0)
