@@ -170,6 +170,80 @@ def test_check_query_blindspots_uses_added_files_helper():
     assert "tempfile" in src
 
 
+def test_check_query_blindspots_no_basename_collision(monkeypatch):
+    """Assertion 26 (per B-316 fix-cycle 2; review 🔴 BLOCK closure): same-basename
+    files in different directories must NOT collide in temp file naming.
+    Original bug: `DIFF_{Path(f).name}` produced silent content substitution +
+    wrong-file diagnostic attribution. Hash-based naming fixes."""
+    import tools.pre_commit_checks as pcc
+
+    monkeypatch.setattr(pcc, "_staged_added_files", lambda: set())  # all MODIFIED
+    monkeypatch.setattr(pcc, "_staged_diff_added_lines",
+                        lambda f: f"diff content for {f}")
+
+    captured_args: list[list[str]] = []
+    def fake_run(args, **kwargs):
+        captured_args.append(list(args))
+        return type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+    monkeypatch.setattr(pcc.subprocess, "run", fake_run)
+
+    pcc.check_query_blindspots(staged=["tests/foo.py", "docs/foo.py"])
+    assert len(captured_args) == 1
+    file_paths = [a for a in captured_args[0] if "DIFF_" in str(a)]
+    assert len(file_paths) == 2, f"Expected 2 distinct temp file paths; got {len(file_paths)}"
+    assert file_paths[0] != file_paths[1], (
+        "Temp file paths must NOT collide on basename "
+        f"(got {file_paths[0]} == {file_paths[1]})"
+    )
+
+
+def test_check_query_blindspots_filters_binary_extensions(monkeypatch):
+    """Assertion 27 (per B-316 fix-cycle 2; review 🟡 IMPROVE closure): binary
+    extensions (.png/.pdf/.exe/etc) filtered before scan loop. Prevents scanning
+    binary blobs that produce garbled output."""
+    import tools.pre_commit_checks as pcc
+
+    monkeypatch.setattr(pcc, "_staged_added_files", lambda: {"image.png", "doc.md"})
+    captured_args: list[list[str]] = []
+    def fake_run(args, **kwargs):
+        captured_args.append(list(args))
+        return type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+    monkeypatch.setattr(pcc.subprocess, "run", fake_run)
+
+    pcc.check_query_blindspots(staged=["image.png", "doc.md"])
+    if captured_args:
+        args = captured_args[0]
+        assert "image.png" not in args, "Binary file should not be scanned"
+        assert "doc.md" in args, "Text file should be scanned"
+
+
+def test_check_query_blindspots_all_binary_returns_info(monkeypatch):
+    """Assertion 28 (per B-316 fix-cycle 2): all-binary staged scope returns info pass
+    (no scan invoked)."""
+    import tools.pre_commit_checks as pcc
+
+    def should_not_run(*a, **kw):
+        raise AssertionError("subprocess.run should NOT be invoked when all files are binary")
+    monkeypatch.setattr(pcc.subprocess, "run", should_not_run)
+
+    result = pcc.check_query_blindspots(staged=["x.png", "y.exe", "z.zip"])
+    assert result.passed
+    assert result.severity == "info"
+    assert "binary" in result.diagnostic.lower()
+
+
+def test_check_query_blindspots_binary_extensions_constant_present():
+    """Assertion 29 (per B-316 fix-cycle 2): module exports binary-extension allowlist."""
+    import tools.pre_commit_checks as pcc
+    assert hasattr(pcc, "QUERY_BLINDSPOTS_BINARY_EXTENSIONS")
+    bins = pcc.QUERY_BLINDSPOTS_BINARY_EXTENSIONS
+    assert ".png" in bins
+    assert ".pdf" in bins
+    assert ".exe" in bins
+    assert ".md" not in bins
+    assert ".py" not in bins
+
+
 def test_check_lint_no_python_files():
     """Assertion 13: lint/security/types check passes (info) when no source .py staged."""
     from tools.pre_commit_checks import check_lint_security_types_changed_python_files

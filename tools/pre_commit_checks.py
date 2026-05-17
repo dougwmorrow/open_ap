@@ -155,6 +155,15 @@ def _staged_diff_added_lines(file_path: str) -> str:
 # Check 1: delegate to query_blindspots (existing Mechanism C-1 behavior)
 # ---------------------------------------------------------------------------
 
+QUERY_BLINDSPOTS_BINARY_EXTENSIONS = frozenset((
+    ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg",
+    ".pdf", ".zip", ".tar", ".gz", ".tgz", ".bz2", ".7z",
+    ".exe", ".dll", ".so", ".dylib", ".bin", ".o", ".a",
+    ".pyc", ".pyo", ".class", ".jar", ".woff", ".woff2", ".ttf", ".otf",
+    ".mp3", ".mp4", ".wav", ".webm", ".webp",
+))
+
+
 def check_query_blindspots(staged: list[str]) -> CheckResult:
     """Run query_blindspots scan on staged files at p0/p1 severity per D74 --live.
 
@@ -162,15 +171,24 @@ def check_query_blindspots(staged: list[str]) -> CheckResult:
     B-312 freshness pattern for markdown_cross_refs). Pre-existing matches in
     legacy content NO LONGER block unrelated commits.
 
+    Per B-316 fix-cycle 2 (2026-05-16; design review findings 🔴 BLOCK +
+    🟡 IMPROVE applied inline):
+    - Hash-based temp file naming (`DIFF_<sha1[:16]>_<sanitized-basename>`)
+      eliminates basename collision (was: silent content substitution + wrong-file
+      diagnostic attribution if two staged files shared basename across dirs).
+    - Binary extensions filtered before loop (PNG/JPG/PDF/EXE/etc) to prevent
+      scanning binary blobs that produce garbled diff output.
+
     Strategy:
+    - Filter out binary extensions (QUERY_BLINDSPOTS_BINARY_EXTENSIONS).
     - For NEW files (in `_staged_added_files()` set): pass --file <original_path>
       for full content scan (line numbers correct).
-    - For MODIFIED files: write `_staged_diff_added_lines(f)` to a temp file
-      and pass --file <temp_path>. Output post-processed to rewrite temp paths
-      back to original for clearer diagnostic; line numbers in temp file refer
-      to NEW lines only (not original file lines).
-    - For MODIFIED files with empty diff: skip (no scannable change).
+    - For MODIFIED files: write `_staged_diff_added_lines(f)` to a hash-named
+      temp file (collision-safe) and pass --file <temp_path>. Output
+      post-processed to rewrite temp paths back to original.
+    - For MODIFIED files with empty diff: skip.
     """
+    import hashlib
     import tempfile
 
     if not QUERY_BLINDSPOTS_PATH.is_file():
@@ -179,21 +197,30 @@ def check_query_blindspots(staged: list[str]) -> CheckResult:
     if not staged:
         return CheckResult("query_blindspots", True, "info",
                           "no staged files; scan skipped")
+
+    text_files = [f for f in staged
+                  if Path(f).suffix.lower() not in QUERY_BLINDSPOTS_BINARY_EXTENSIONS]
+    if not text_files:
+        return CheckResult("query_blindspots", True, "info",
+                          "all staged files filtered as binary; scan skipped")
+
     python_exe = _venv_python()
     added_files_set = _staged_added_files()
     file_args: list[str] = []
     temp_map: dict[str, str] = {}
 
     with tempfile.TemporaryDirectory(prefix="qb_diff_") as tmpdir:
-        for f in staged:
+        for f in text_files:
             if f in added_files_set:
                 file_args.extend(["--file", f])
                 continue
             diff_content = _staged_diff_added_lines(f)
             if not diff_content:
                 continue
-            base = Path(f).name
-            temp_path = Path(tmpdir) / f"DIFF_{base}"
+            # Hash-based collision-safe naming per B-316 fix-cycle 2 (review 🔴 BLOCK)
+            path_hash = hashlib.sha1(f.encode("utf-8")).hexdigest()[:16]
+            safe_base = re.sub(r"[^\w.-]", "_", Path(f).name)
+            temp_path = Path(tmpdir) / f"DIFF_{path_hash}_{safe_base}"
             try:
                 temp_path.write_text(diff_content, encoding="utf-8")
             except OSError:
