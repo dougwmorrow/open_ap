@@ -39,12 +39,16 @@ def test_main_nonexistent_path_returns_zero(tmp_path):
     assert main(["check_commit_msg.py", str(fake_path)]) == 0
 
 
-def test_main_clean_message_returns_zero(tmp_path):
-    """Assertion 5: main with clean commit message returns 0."""
-    from tools.check_commit_msg import main
+def test_main_clean_message_returns_zero(tmp_path, monkeypatch):
+    """Assertion 5: main with clean commit message returns 0 (anti-trigger commit;
+    cascade-evidence not required per Phase 1B classifier)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
     msg_path = tmp_path / "COMMIT_EDITMSG"
     msg_path.write_text("feat: add new feature\n\nNormal commit body.\n", encoding="utf-8")
-    assert main(["check_commit_msg.py", str(msg_path)]) == 0
+    assert ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"]) == 0
 
 
 def test_main_blocks_on_exemption_phrase(tmp_path):
@@ -55,16 +59,39 @@ def test_main_blocks_on_exemption_phrase(tmp_path):
     assert main(["check_commit_msg.py", str(msg_path)]) == 1
 
 
-def test_main_strips_git_comment_lines(tmp_path):
-    """Assertion 7: main ignores git-comment lines (#-prefixed)."""
-    from tools.check_commit_msg import main
+def test_main_strips_git_comment_lines(tmp_path, monkeypatch):
+    """Assertion 7: main ignores git-comment lines ('# <text>' but NOT '## markdown')."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
     msg_path = tmp_path / "COMMIT_EDITMSG"
     # Exemption phrase only in a comment line — should NOT block
     msg_path.write_text(
         "feat: real commit message\n\n# Comment: Layer N+1 termination is forbidden\n",
         encoding="utf-8",
     )
-    assert main(["check_commit_msg.py", str(msg_path)]) == 0
+    assert ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"]) == 0
+
+
+def test_main_preserves_markdown_headers_through_comment_strip(tmp_path, monkeypatch):
+    """Assertion 7b (per B-317 Phase 1A): comment-strip preserves '## TEST' markdown
+    headers (only strips '# <text>' git comments)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_SUBSTANTIVE
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_SUBSTANTIVE, "test", False, True, 5, 100))
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "build: substantive change\n\n"
+        "## TEST\npytest passed\n\n"
+        "## GAP ANALYSIS\ninline CLEAN\n\n"
+        "## REVIEW\nSOUND\n\n"
+        "# Please enter commit message (this is a git comment)\n",
+        encoding="utf-8",
+    )
+    # Should PASS — cascade sections preserved through comment-strip
+    assert ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"]) == 0
 
 
 def test_main_uses_canonical_phrases():
@@ -93,8 +120,11 @@ def test_event_type_constant():
 def test_audit_row_written_on_clean_message(tmp_path, monkeypatch):
     """Assertion 11 (per B-306): per-invocation audit row written when not --no-audit."""
     import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
     audit_dir = tmp_path / "_session_logs"
     monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
 
     msg_path = tmp_path / "COMMIT_EDITMSG"
     msg_path.write_text("feat: clean commit\n", encoding="utf-8")
@@ -131,7 +161,10 @@ def test_audit_row_written_on_blocked_message(tmp_path, monkeypatch):
 def test_no_audit_flag_skips_audit_write(tmp_path, monkeypatch):
     """Assertion 13 (per B-306): --no-audit flag suppresses audit-row write."""
     import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
     monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
 
     msg_path = tmp_path / "COMMIT_EDITMSG"
     msg_path.write_text("feat: clean\n", encoding="utf-8")
@@ -141,3 +174,90 @@ def test_no_audit_flag_skips_audit_write(tmp_path, monkeypatch):
     audit_dir = tmp_path / "_session_logs"
     if audit_dir.is_dir():
         assert not list(audit_dir.glob("cli_check_commit_msg_*.log"))
+
+
+def test_cascade_classifier_imported(monkeypatch):
+    """Assertion 14 (per B-317 Phase 1A): check_commit_msg imports cascade_classifier."""
+    import tools.check_commit_msg as ccm
+    assert ccm.classify_commit is not None
+    assert ccm.has_cascade_evidence is not None
+
+
+def test_cascade_evidence_required_for_substantive_commit(tmp_path, monkeypatch):
+    """Assertion 15 (per B-317 Phase 1A): cascade-evidence missing on cascade-required commit
+    blocks (EXIT_BLOCKED). Mock classify_commit to return SUBSTANTIVE."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_SUBSTANTIVE
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+
+    def fake_classify():
+        return CommitClassification(
+            classification=CLASS_SUBSTANTIVE,
+            rationale="test fixture; forced substantive",
+            is_anti_trigger=False,
+            cascade_required=True,
+            staged_count=5,
+            total_lines_changed=100,
+        )
+    monkeypatch.setattr(ccm, "classify_commit", fake_classify)
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "build: substantial change\n\nNo cascade-evidence section.\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    assert rc == ccm.EXIT_BLOCKED
+
+
+def test_cascade_evidence_present_passes(tmp_path, monkeypatch):
+    """Assertion 16: cascade-required commit WITH all 3 sections passes."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_SUBSTANTIVE
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+
+    def fake_classify():
+        return CommitClassification(
+            classification=CLASS_SUBSTANTIVE,
+            rationale="test",
+            is_anti_trigger=False,
+            cascade_required=True,
+            staged_count=5,
+            total_lines_changed=100,
+        )
+    monkeypatch.setattr(ccm, "classify_commit", fake_classify)
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "build: change\n\n"
+        "## TEST\npytest passed\n\n"
+        "## GAP ANALYSIS\ninline G1-G6 CLEAN\n\n"
+        "## REVIEW\ndesign-reviewer SOUND\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    assert rc == ccm.EXIT_SUCCESS
+
+
+def test_anti_trigger_commit_skips_cascade_check(tmp_path, monkeypatch):
+    """Assertion 17: anti-trigger commit (typo / whitespace / badge-flip) does NOT
+    require cascade-evidence; passes even with bare commit message."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_BADGE_FLIP
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+
+    def fake_classify():
+        return CommitClassification(
+            classification=CLASS_BADGE_FLIP,
+            rationale="badge-flip only",
+            is_anti_trigger=True,
+            cascade_required=False,
+            staged_count=1,
+            total_lines_changed=2,
+        )
+    monkeypatch.setattr(ccm, "classify_commit", fake_classify)
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text("chore: badge flip on B-123\n", encoding="utf-8")
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    assert rc == ccm.EXIT_SUCCESS

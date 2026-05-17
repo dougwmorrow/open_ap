@@ -244,9 +244,20 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
         "tests/tier0/test_skill_exemption_verifier.py",
         "tests/tier0/test_exemption_phrases.py",
         "tests/tier0/test_commit_msg_hook.py",
+        "tests/tier0/test_cascade_classifier.py",
+        "tests/tier0/test_query_blindspots.py",
         "tools/exemption_phrases.py",
         "tools/check_commit_msg.py",
+        "tools/cascade_classifier.py",
+        # The detector itself contains the suspicious phrases as data (in this
+        # allowlist + suspicious_phrases regex list); self-allowlist closes the
+        # chicken-and-egg false-positive at detector authoring commits.
+        "tools/query_blindspots.py",
         "udm-exemption-verifier/skill.md",
+        # CLAUDE.md is the canonical narrative source for the discipline patterns
+        # that 9o detects; appearances of these phrases there are descriptive
+        # (documenting the anti-pattern) not claims.
+        "claude.md",
     )
     if any(substrate in norm_path for substrate in trigger_phrase_substrate_files):
         return matches  # chicken-and-egg false-positive suppression per B-304
@@ -261,6 +272,9 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
             "polish_queue.md",
             "checks_and_balances.md",
             "north_star.md",
+            "claude.md",
+            "planning_discipline.md",
+            "self_improvement_discipline.md",
         )
     )
     lines = content.splitlines()
@@ -317,13 +331,31 @@ def _is_in_item_bullet_block(lines: list[str], idx: int, lookback: int = 40) -> 
     return False
 
 
+_CLAUDE_MD_CACHE: str | None = None
+
+
+def _claude_md_content() -> str:
+    """Cache-read CLAUDE.md to avoid repeat reads when scanning multiple files."""
+    global _CLAUDE_MD_CACHE
+    if _CLAUDE_MD_CACHE is None:
+        claude_path = Path(__file__).resolve().parent.parent / "CLAUDE.md"
+        try:
+            _CLAUDE_MD_CACHE = claude_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            _CLAUDE_MD_CACHE = ""
+    return _CLAUDE_MD_CACHE
+
+
 def check_9n_convention_registration(content: str, file_path: str) -> list[Match]:
     """Detect new public surface in source files missing from CLAUDE.md Structure.
 
-    Conservative implementation: only fires when scanning a Python source file
-    under tools/ data_load/ cdc/ scd2/ orchestration/ schema/ extract/.
-    Does NOT verify CLAUDE.md content (would require re-read each invocation);
-    instead surfaces a REMINDER when new public surface is detected.
+    Only fires when scanning a Python source file under tools/ data_load/ cdc/
+    scd2/ orchestration/ schema/ extract/.
+
+    Per 2026-05-16 false-positive fix: NOW reads CLAUDE.md and suppresses the
+    match if the file's basename appears in the file (proxy for Structure-row
+    registration). Was REMINDER-only previously (always fired); produced
+    false-positive p1 BLOCKS on commits that had ALREADY registered the file.
     """
     matches = []
     source_dirs = ("tools/", "data_load/", "cdc/", "scd2/", "orchestration/",
@@ -350,20 +382,31 @@ def check_9n_convention_registration(content: str, file_path: str) -> list[Match
     for m in public_const_re.finditer(content):
         surfaces.append(("constant", m.group(1)))
 
-    if surfaces:
-        surface_names = ", ".join(f"{n} ({t})" for t, n in surfaces[:10])
-        matches.append(Match(
-            entry_id="9n-convention-registration-not-applied-to-new-build-artifacts",
-            severity="p1",
-            location=file_path,
-            snippet=surface_names,
-            diagnostic=(
-                f"File has {len(surfaces)} public surface element(s). "
-                "Verify CLAUDE.md Structure section has a row for this file + "
-                "GLOSSARY public-surface tables include the exports + "
-                "Last reviewed date bumped. (Per Step 10 / Pitfall 9.n)"
-            ),
-        ))
+    if not surfaces:
+        return matches
+
+    # Suppress if CLAUDE.md already has a row for this file (basename appears
+    # in CLAUDE.md content). Soft check — could miss content-changed-but-name-same
+    # edits — but eliminates the false-positive class where producer already
+    # registered the file in CLAUDE.md before scanner runs.
+    basename = Path(file_path).name
+    claude_content = _claude_md_content()
+    if basename and basename in claude_content:
+        return matches
+
+    surface_names = ", ".join(f"{n} ({t})" for t, n in surfaces[:10])
+    matches.append(Match(
+        entry_id="9n-convention-registration-not-applied-to-new-build-artifacts",
+        severity="p1",
+        location=file_path,
+        snippet=surface_names,
+        diagnostic=(
+            f"File has {len(surfaces)} public surface element(s) + "
+            f"basename `{basename}` NOT found in CLAUDE.md. "
+            "Add a row in the Structure section + verify GLOSSARY entries "
+            "+ bump Last reviewed date. (Per Step 10 / Pitfall 9.n)"
+        ),
+    ))
     return matches
 
 
