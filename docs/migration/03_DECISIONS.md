@@ -1219,6 +1219,8 @@ Alternatives considered:
 
 **Why recommended-not-mandatory**: experienced agents on recurring tasks don't need INDEX.md routing — they already know which Stage 1 docs to load. Mandatory Stage 0 for ALL invocations would add overhead without proportional value. The recommendation gate captures the benefit (discoverability for novel task patterns + fresh-agent onboarding) without imposing the cost on every invocation.
 
+**Evaluation heuristic** (added 2026-05-16 per B-289 closure): If your task-type does not map to a known recurring pattern from prior rounds, treat Stage 0 as mandatory. Closes the asymmetry where experienced agents correctly skip Stage 0 on familiar work BUT fresh agents on novel task patterns may also skip (incorrectly). The recurring-pattern test: have you (or any prior agent on this branch) performed a task with this scope + artifact-set + invocation context within the last 3-5 rounds? If NO → Stage 0 mandatory; consult INDEX.md before proceeding.
+
 #### Downstream-artifact cross-refs added (per PLANNING_DISCIPLINE.md §1.4)
 
 Artifacts authored since D62 lock that the doctrine now references:

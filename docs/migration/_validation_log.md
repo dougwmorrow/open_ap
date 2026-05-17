@@ -10211,3 +10211,72 @@ The recurring pattern: gap surfaces in PROSE → producer judgment-based convers
 - Hook-bypass cycles since hook activation: 2 → 0 (this commit + prior 2)
 - Mechanism C-1 orchestrator checks: 5 → 6
 - Multi-agent team applications this session: 1 (this cohort; 2 parallel agents)
+
+---
+
+### 2026-05-16 — B-289 CLOSED + B-272 Option A confirmed (D62 amendment cleanup; archive policy decision)
+
+**Event type**: small concrete UDM B-N closure (B-289) + policy-decision recording (B-272 Option A) bundled in single commit.
+
+**Trigger**: User-direction cascade — "Proceed with your recommended next steps" → AskUserQuestion (B-272 archive policy + alternative direction) → "Option A: Defer; let entries age (Recommended)" + "Pick a concrete UDM B-N to close" → AskUserQuestion (3 B-N candidates) → "B-289: D62 Stage 0 evaluation heuristic (smallest; Recommended)".
+
+**Closures**:
+- **B-289** (HIGH; WSJF 2.0): D62 amendment Stage 0 evaluation heuristic
+- **B-272**: NOT closed; Option A confirmed (defer; preserve Q-2 policy)
+
+**B-289 work**:
+- Appended "Evaluation heuristic" paragraph to D62 amendment at `03_DECISIONS.md` L1222 (immediately after the "Why recommended-not-mandatory" rationale).
+- Wording extended from proposed single-sentence ("If your task-type does not map to a known recurring pattern from prior rounds, treat Stage 0 as mandatory") to add concrete recurring-pattern decision-test (scope + artifact-set + invocation context within last 3-5 rounds → if NO, Stage 0 mandatory; consult INDEX.md).
+- Closes asymmetry: experienced agents on recurring tasks correctly skip Stage 0; fresh agents on novel patterns had ambiguous judgment call; now have explicit binding directive.
+- Per D111 process-infra exemption (extended-via-analogy per B-292 candidate): additive amendment to already-locked D62 permitted without new round close-out.
+
+**B-272 work**:
+- Pipeline-lead Option A confirmation recorded in BACKLOG L328 annotation (leading "(🟡 Open; **Option A confirmed 2026-05-16; defer until entries age**)" + closure-decision paragraph at top of body).
+- Defer Phase D.1; preserve approved Q-2 policy (30-day retention; 2026-04-15 cutoff); zero entries qualify yet (earliest 2026-05-09 → 2026-06-08 first-qualify date); revisit ~3-4 weeks.
+- B-272 stays 🟡 Open with Option A annotation; re-evaluation target 2026-06-08+ OR next user session.
+- Phase D.1+D.2 atomic cohort gate remains in effect; D.2 (INDEX.md) unblocked separately via B-273 F9.1 one-directional relaxation.
+
+**Verification**:
+- Authoritative: pytest full → 2442 pass / 58 skip / 0 fail (unchanged from prior commit; docs-only edit)
+- Orchestrator smoke test on staged scope: expect 6/6 PASS clean (gap_accountability validates all gap-phrases paired with B-289 or B-272 citations).
+
+**Files modified**: 4
+- `docs/migration/03_DECISIONS.md` (+5 lines; D62 amendment Evaluation heuristic paragraph)
+- `docs/migration/BACKLOG.md` (B-289 closure + B-272 Option A annotation)
+- `docs/migration/CURRENT_STATE.md` (L7 narrative prepended)
+- `docs/migration/HANDOFF.md` (§14 narrative prepended)
+- `docs/migration/_validation_log.md` (this entry)
+
+(Note: 5 total — typo above; 03_DECISIONS + BACKLOG + CURRENT_STATE + HANDOFF + _validation_log = 5.)
+
+**Lines**: ~+80 / -3
+
+**Per-build-type tracker walk** (per udm-progress-logger Step 1):
+- 03_DECISIONS.md → UPDATED (D62 amendment additive paragraph; per "NEW D-number locked" row though this is an AMENDMENT not new lock)
+- BACKLOG.md → UPDATED (B-289 closure + B-272 Option A)
+- CURRENT_STATE.md → UPDATED (L7 prepend)
+- HANDOFF.md → UPDATED (§14 prepend per B-313 disambiguation)
+- _validation_log.md → UPDATED (this entry)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no code changes)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (no new public surface)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (no new surfaces)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+- RISKS.md → UNTOUCHED-AS-EXPECTED (no risk change)
+
+**Net delta**:
+- B-N: 0 NEW + 1 CLOSED (B-289) = net -1 open (was 5; now 4)
+- D-N: 0 NEW + 1 AMENDED (D62 +1 paragraph)
+- Pytest: unchanged (2442/58/0)
+- Files modified: 5
+
+**Verdict**: 🟢 Small concrete UDM B-N cleanly closed via single-paragraph D62 amendment + policy-decision recording for deferred operational item.
+
+**Hook self-verification (3rd consecutive)**: this commit triggers all 6 orchestrator checks including check_gap_accountability (B-315). Narrative pairs all gap-phrases with B-289 / B-272 citations. Expected verdict: clean.
+
+**Cumulative session metrics (41 commits across 2 days; +1 this commit pending)**:
+- B-N: 43 opened + 35 closed - 1 re-open = net 7 open
+- D-N amendments this session: 1 (D62 Evaluation heuristic addition)
+- Pytest: 2442/58/0
+- Hook-bypass cycles since hook activation: 2 → 0 (this commit + prior 3)
+- Mechanism C-1 orchestrator checks: 6 (added at prior commit e66debd)
