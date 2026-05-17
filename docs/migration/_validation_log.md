@@ -11446,3 +11446,114 @@ Verified-OK by reviewer (all 4 code-fact checks):
 - Skills updated this session: 4
 - D-N amendments this session: 2 (D62 + D111)
 - SKILL semver bumps this session: 1 (udm-post-edit-verification 1.0.0 → 1.1.0; this commit doesn't bump because amendment is small + within v1.1.0 scope)
+
+---
+
+### 2026-05-17 — B-326 + B-330 CLOSED bundle (compositional-drift detector + Tier reclassification)
+
+**Event type**: Phase 2 closure of B-326 cascade-architecture work; B-330 closed implicitly via test migration.
+
+**Trigger**: User-direction "Proceed with your recommended next steps" → push HELD per skill 1.7.1 (no push semantics) → MEDIUM/recommended = B-326 closure.
+
+**B-326 closure** (MEDIUM WSJF 4.0 — generalized compositional-drift detector):
+
+New module `tools/required_kwargs_registry.py` (~140 lines):
+- `REQUIRED_KWARGS: dict[str, list[str]]` registry — initial entry `{"has_cascade_evidence": ["classification"]}`
+- `ENFORCEMENT_DIRS: tuple[str, ...] = ("tools", ".claude/hooks")` — scan scope
+- `ScanResult` dataclass: function_name + required_kwargs + violations + files_scanned + enforcement_dirs + is_clean() helper
+- `KwargViolation` dataclass: file + line + function + missing_kwarg (per reviewer 🟡 IMPROVE — forward-extensible for multi-kwarg cases vs tuple unpacking)
+- `scan_callers(function_name, enforcement_dirs)` — grep-walks enforcement dirs for callers + verifies required kwargs ±5 lines; docstring/code-fence/backtick aware; skips definer module + test files
+- `scan_all_registry_functions()` — convenience wrapper for parametrized test consumption
+- Library module (no CLI; consumed by Tier 1 test only)
+
+New tests `tests/tier1/test_required_kwargs_registry.py` (12 Tier 1 tests):
+- 1-5: imports + public surface + registry + enforcement_dirs + ScanResult shape
+- 6: scan_callers on has_cascade_evidence returns clean (architectural contract verified)
+- 7: unknown function returns empty
+- 8: scan_all_registry_functions returns clean for all entries (parametrized)
+- 9-10: skip-definer + skip-test-files heuristics
+- 11: parametrized test iterating REQUIRED_KWARGS (auto-extends as registry grows)
+- 12: KwargViolation dataclass shape (per reviewer 🟡 IMPROVE)
+
+Old Tier 0 hardcoded test migrated:
+- Was: `tests/tier0/test_cascade_classifier.py::test_has_cascade_evidence_all_callers_pass_classification` (~80 lines of hardcoded scan logic for ONE function)
+- Now: stub `test_has_cascade_evidence_callers_migrated_to_registry` verifies registry has the entry; actual enforcement happens in Tier 1 parametrized test
+
+**B-330 closure** (LOW WSJF 1.0 — Tier 0 → Tier 1 reclassification):
+- Implicitly closed by B-326 migration: new test lives in `tests/tier1/` per D67 (file IO + directory traversal = Tier 1, not Tier 0 smoke); old Tier 0 stub remains as registry-presence-verifier only
+
+**Cross-skill alignment update**:
+- `udm-gap-check` SKILL.md G5 wording citation updated from old test path to new registry: now cites `tools/required_kwargs_registry.py::REQUIRED_KWARGS` + parametrized Tier 1 test
+- Producers see the registry as the mechanism; old test name no longer dangling reference
+
+**CLAUDE.md Structure + GLOSSARY entries** added for new module per check_9n GLOSSARY-parity requirement (just-landed substantive-tool rule per this same B-326 architectural domain):
+- CLAUDE.md Structure row appended after audit_cascade_compliance.py entry
+- GLOSSARY 7 new public-surface entries (REQUIRED_KWARGS + ENFORCEMENT_DIRS + ScanResult + KwargViolation + scan_callers + scan_all_registry_functions)
+
+**Phase 3 deferred work**: query_blindspots 9.q detector class firing at commit-time on staged code that calls registry functions without required kwargs. Currently the registry pattern is caught at test-time (CI / local pytest); Phase 3 would shift to commit-time mechanical BLOCK. Tracker B-N to open at next opportunistic cycle OR when empirical drift surfaces.
+
+**Independent reviewer Agent A (`a162c262775a47bfd`)**: verdict SOUND-with-improvements (3 🟡 IMPROVEs all inline-fixed).
+
+Reviewer findings disposition:
+1. 🟡 SKILL citation drift (old test path) → INLINE FIX applied (udm-gap-check G5 updated to point to registry)
+2. 🟡 B-330 implicit closure needs explicit annotation → INLINE FIX applied (B-330 strikethrough + ⚫ CLOSED + mechanism in BACKLOG)
+3. 🟡 KwargViolation dataclass over tuples → INLINE FIX applied (per-violation dataclass with 4 fields; forward-extensible for multi-kwarg cases)
+
+Plus reviewer-affirmed design choices:
+- ✅ Module location: new `tools/required_kwargs_registry.py` (vs adding to cascade_classifier) — rationale: single-responsibility + generic concept + no coupling to cascade-specific imports
+- ✅ Registry initial scope: keep to `has_cascade_evidence` only (don't proactively guess; 5-event formalization convention per HANDOFF §8 + Pitfall #9.l)
+- ✅ Tier 1 classification correct per D67 (file IO + directory traversal)
+- ✅ CLAUDE.md + GLOSSARY scoping correct per check_9n GLOSSARY-parity requirement
+
+**Verification**:
+- Targeted: pytest tests/tier0/test_cascade_classifier.py + tests/tier1/test_required_kwargs_registry.py → 51/51 PASS (was 50; +1 from KwargViolation test; -1 from removed hardcoded version)
+- Authoritative: pytest full → 2545 / 58 / 0 (was 2533/58/0; +12 net per the 12 new Tier 1 tests minus the 1 replaced Tier 0 test = +11, but actually +12 because old test was replaced not deleted)
+- Orchestrator smoke test on staged scope: expected 6/6 PASS
+
+**Files modified**: 7
+- `tools/required_kwargs_registry.py` (NEW; ~140 lines)
+- `tests/tier1/test_required_kwargs_registry.py` (NEW; 12 tests)
+- `tests/tier0/test_cascade_classifier.py` (old hardcoded test replaced with registry-stub)
+- `.claude/skills/udm-gap-check/SKILL.md` (G5 wording citation updated)
+- `CLAUDE.md` (Structure row for required_kwargs_registry.py)
+- `docs/migration/GLOSSARY.md` (+7 public-surface entries)
+- `docs/migration/BACKLOG.md` (B-326 + B-330 closures)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend)
+- `docs/migration/HANDOFF.md` (§14 prepend)
+- `docs/migration/_validation_log.md` (this entry)
+
+(10 total — fixed count.)
+
+**Per-build-type tracker walk** (per just-updated udm-progress-logger Step 1):
+- BACKLOG.md → UPDATED (B-326 + B-330 closures)
+- CURRENT_STATE.md → UPDATED
+- HANDOFF.md → UPDATED
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UPDATED (new module row added per check_9n GLOSSARY-parity requirement triggered by ≥3 non-trivial public surfaces)
+- GLOSSARY.md → UPDATED (7 new entries for new module)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no code-build artifact tracked; library module not a deliverable tool)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+
+**Net delta**:
+- B-N: 0 NEW + 2 CLOSED (B-326 + B-330) = net -2 open (was 14; now 12)
+- Pytest: 2533 → 2545 (+12)
+- Files modified: 10
+- Multi-agent applications this session: 17 → 18 (this commit's reviewer)
+- Gap-prevention mechanical detectors: 4 → 5 (added: registry-driven caller-consistency for any registered function)
+- Skills updated this session: 4 (udm-gap-check now updated twice — G1+G5 prior + G5 citation update this commit)
+
+**Verdict**: 🟢 B-326 + B-330 cleanly closed via single coherent bundle. Phase 2 cascade-architecture work delivers structural fix: new compositional-drift patterns now get test coverage via single dict entry vs hand-authoring monolithic tests. Self-application VERIFIED: registry's own initial entry (has_cascade_evidence) passes scan_callers cleanly (composition contract empirically validated).
+
+**Falsifiable test of B-326 closure**: next time a new function with required-kwarg composition contract emerges, producer adds ONE entry to REQUIRED_KWARGS → parametrized Tier 1 test automatically covers it; no new hand-authored test file needed. If pattern recurs WITHOUT registry addition, the gap shifts to producer-discipline (which the SKILL.md G5 update addresses procedurally).
+
+**Cumulative session metrics (64 commits across 2 days; +1 this commit pending)**:
+- B-N: 57 opened + 44 closed - 1 re-open = net 12 open
+- Pytest: 2545/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective layers: 10 (no new layer; B-326 is generalization of existing layer-5 test-time enforcement)
+- Multi-agent applications: 18
+- Gap-prevention mechanical detectors: 5 (check_9n GLOSSARY parity + check_9n structured-pattern + caller-consistency Tier 0 [now migrated] + cascade_classifier citation-context + B-326 registry-driven)
+- Skills updated this session: 4
+- D-N amendments this session: 2 (D62 + D111)
+- SKILL semver bumps this session: 1 (udm-post-edit-verification 1.0.0 → 1.1.0)

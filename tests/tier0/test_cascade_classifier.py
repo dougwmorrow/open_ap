@@ -520,86 +520,28 @@ sound
     assert any("SKIPPED" in f and "anti-trigger" in f for f in findings)
 
 
-def test_has_cascade_evidence_all_callers_pass_classification():
-    """Assertion 32 (per 2026-05-17 structural prevention; meta-cascade finding):
-    every caller of has_cascade_evidence() across tools/*.py MUST pass the
-    `classification=` kwarg so substrate-stricter REVIEW check (B-321) fires
-    in all contexts (live commit-msg hook + retroactive audit + future callers).
+def test_has_cascade_evidence_callers_migrated_to_registry():
+    """Assertion 32 (per B-326 closure 2026-05-17): the hardcoded version
+    of this test was MIGRATED to tests/tier1/test_required_kwargs_registry.py
+    + generalized via REQUIRED_KWARGS registry in tools/required_kwargs_registry.py.
 
-    The compositional defect that prompted this test: audit_cascade_compliance
-    originally called has_cascade_evidence(commit_msg) without classification
-    kwarg, silently bypassing the B-321 substrate-stricter check in retroactive
-    scans. Same composition pattern check_commit_msg got right was missing
-    from the retroactive-audit pathway.
+    Migration rationale:
+    - B-330 closure: prior Tier 0 placement was incorrect per D67 (test
+      does directory traversal + file IO → belongs in Tier 1)
+    - B-326 closure: generalization to function-to-required-kwarg registry
+      means new enforcement patterns get test coverage by adding ONE dict
+      entry (vs hand-authoring a new monolithic test)
 
-    This test grep-walks all source files for has_cascade_evidence( calls
-    and verifies classification= appears within 5 lines of each call site.
+    This stub test verifies the migration: the registry module exists +
+    has the has_cascade_evidence entry. Actual caller-consistency
+    enforcement happens in Tier 1 parametrized test.
     """
-    import re
-    from pathlib import Path
-
-    repo_root = Path(__file__).resolve().parent.parent.parent
-    # Per 2026-05-17 reviewer feedback: extend scope beyond tools/ to also
-    # catch future enforcement callers in .claude/hooks/ + similar substrate
-    # directories. Test scope: ENFORCEMENT callers (not test code).
-    enforcement_dirs = [
-        repo_root / "tools",
-        repo_root / ".claude" / "hooks",
-    ]
-    call_re = re.compile(r"has_cascade_evidence\s*\(")
-
-    py_files: list[Path] = []
-    for d in enforcement_dirs:
-        if d.is_dir():
-            py_files.extend(d.rglob("*.py"))
-
-    violations: list[tuple[str, int]] = []
-    triple_quote_re = re.compile(r'"""|' + r"'''")
-    for py_file in py_files:
-        # Skip the definer itself (function definition + tests don't count)
-        if py_file.name in ("cascade_classifier.py",):
-            continue
-        # Skip test files; test code legitimately calls the function for
-        # unit-testing reasons without enforcement semantics
-        if "test_" in py_file.name or py_file.name.startswith("test"):
-            continue
-        try:
-            content = py_file.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            continue
-        lines = content.splitlines()
-        # Track triple-quote-string state to skip docstring/comment occurrences
-        in_string = False
-        for i, line in enumerate(lines):
-            # Toggle string state on each triple-quote occurrence
-            quote_count = len(triple_quote_re.findall(line))
-            if quote_count % 2 == 1:
-                # Odd count = state toggles
-                if in_string:
-                    in_string = False
-                    continue  # this line ends a string; skip parsing
-                else:
-                    in_string = True
-                    continue  # this line starts a string; skip parsing
-            if in_string:
-                continue
-            # Skip lines that are obviously code-citation (backticked)
-            if "`has_cascade_evidence" in line:
-                continue
-            if not call_re.search(line):
-                continue
-            # Check ±5 lines for `classification=` (multi-line call args allowed)
-            window_lo = max(0, i - 2)
-            window_hi = min(len(lines), i + 6)
-            window = "\n".join(lines[window_lo:window_hi])
-            if "classification=" not in window:
-                violations.append((str(py_file.relative_to(repo_root)), i + 1))
-
-    assert violations == [], (
-        "has_cascade_evidence() callers MUST pass classification= kwarg "
-        "to ensure B-321 substrate-stricter REVIEW check fires in all "
-        f"contexts. Violations: {violations}"
+    from tools.required_kwargs_registry import REQUIRED_KWARGS
+    assert "has_cascade_evidence" in REQUIRED_KWARGS, (
+        "has_cascade_evidence enforcement migrated to "
+        "tools/required_kwargs_registry.py per B-326 closure; entry missing"
     )
+    assert REQUIRED_KWARGS["has_cascade_evidence"] == ["classification"]
 
 
 def test_skipped_label_colon_pattern_does_fire_check():

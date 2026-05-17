@@ -806,6 +806,12 @@ Public-API surface of newly-authored Round 4 CLI tool modules (5-tool parallel c
 | **CommitAudit** | `tools/audit_cascade_compliance.py` | Per-commit audit dataclass: `hash / subject / classification / cascade_required / has_evidence / missing_sections / is_compliant / file_count`; `to_dict()` for JSON (2026-05-16) |
 | **CLASS_SUBSTRATE_HIST / CLASS_CANONICAL_SOURCE / CLASS_POLISH / CLASS_TYPO_SMALL_MD / CLASS_SUBSTANTIVE** | `tools/audit_cascade_compliance.py` | 5 historical-classification label string constants matching cascade_classifier string values for compositional pass-through (2026-05-16) |
 | **EVENT_TYPE** (`= "CLI_AUDIT_CASCADE_COMPLIANCE"`) | `tools/audit_cascade_compliance.py` | 21st CLI_* family member per CLAUDE.md L197 (2026-05-16) |
+| **REQUIRED_KWARGS** | `tools/required_kwargs_registry.py` | Dict mapping function name → required kwarg list (initial: `{"has_cascade_evidence": ["classification"]}`); per B-326 Phase 2 closure 2026-05-17 |
+| **ENFORCEMENT_DIRS** | `tools/required_kwargs_registry.py` | Tuple of directories scanned for callers (`("tools", ".claude/hooks")`); EXCLUDES test code (legitimate unit-testing without enforcement kwargs) |
+| **ScanResult** | `tools/required_kwargs_registry.py` | Dataclass: `function_name / required_kwargs / violations / files_scanned / enforcement_dirs`; `is_clean()` helper (2026-05-17) |
+| **KwargViolation** | `tools/required_kwargs_registry.py` | Per-violation dataclass: `file / line / function / missing_kwarg`; forward-extensible for multi-kwarg cases per reviewer 🟡 IMPROVE (2026-05-17) |
+| **scan_callers** | `tools/required_kwargs_registry.py` | Grep-walk enforcement directories for callers of `function_name`; verifies required kwargs within ±5 lines; docstring/code-fence/backtick aware (2026-05-17) |
+| **scan_all_registry_functions** | `tools/required_kwargs_registry.py` | Convenience: scan every registered function (parametrized by Tier 1 test) (2026-05-17) |
 ### Module dataclasses / exception classes
 
 | Identifier | Module | Purpose |
