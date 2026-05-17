@@ -211,6 +211,13 @@ SUBSTANTIAL_TOOL_CONTENT = (
 )
 
 
+# Structured-format fixtures per 2026-05-17 Gap A closure (structural pattern match)
+CLAUDE_WITH_STRUCTURE_ROW = "  - mytool.py - description of the tool\n"
+GLOSSARY_WITH_TOOL_REF = "| **fn** | `tools/mytool.py` | description |\n"
+CLAUDE_WITHOUT_STRUCTURE = "Some other narrative discussing mytool.py in passing.\n"
+GLOSSARY_WITHOUT_TOOL_REF = "Some unrelated content here.\n"
+
+
 def test_9n_glossary_parity_check_extension(monkeypatch):
     """Per 2026-05-17 extension after empirical gap-check finding: 9n must
     verify BOTH CLAUDE.md Structure AND GLOSSARY.md entries present (not just
@@ -220,10 +227,8 @@ def test_9n_glossary_parity_check_extension(monkeypatch):
     import tools.query_blindspots as qb
     monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
     monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
-    monkeypatch.setattr(qb, "_claude_md_content",
-                        lambda: "...mytool.py Structure description...")
-    monkeypatch.setattr(qb, "_glossary_md_content",
-                        lambda: "...other unrelated content...")
+    monkeypatch.setattr(qb, "_claude_md_content", lambda: CLAUDE_WITH_STRUCTURE_ROW)
+    monkeypatch.setattr(qb, "_glossary_md_content", lambda: GLOSSARY_WITHOUT_TOOL_REF)
     matches = qb.check_9n_convention_registration(SUBSTANTIAL_TOOL_CONTENT, "tools/mytool.py")
     assert len(matches) == 1
     assert "GLOSSARY.md has NO entries" in matches[0].diagnostic
@@ -235,10 +240,8 @@ def test_9n_passes_when_both_claude_and_glossary_have_entries(monkeypatch):
     import tools.query_blindspots as qb
     monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
     monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
-    monkeypatch.setattr(qb, "_claude_md_content",
-                        lambda: "...mytool.py Structure description...")
-    monkeypatch.setattr(qb, "_glossary_md_content",
-                        lambda: "...mytool.py public surface entries...")
+    monkeypatch.setattr(qb, "_claude_md_content", lambda: CLAUDE_WITH_STRUCTURE_ROW)
+    monkeypatch.setattr(qb, "_glossary_md_content", lambda: GLOSSARY_WITH_TOOL_REF)
     matches = qb.check_9n_convention_registration(SUBSTANTIAL_TOOL_CONTENT, "tools/mytool.py")
     assert matches == []
 
@@ -248,10 +251,8 @@ def test_9n_flags_when_only_glossary_present_but_claude_missing(monkeypatch):
     import tools.query_blindspots as qb
     monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
     monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
-    monkeypatch.setattr(qb, "_claude_md_content",
-                        lambda: "...unrelated content...")
-    monkeypatch.setattr(qb, "_glossary_md_content",
-                        lambda: "...mytool.py entries...")
+    monkeypatch.setattr(qb, "_claude_md_content", lambda: CLAUDE_WITHOUT_STRUCTURE)
+    monkeypatch.setattr(qb, "_glossary_md_content", lambda: GLOSSARY_WITH_TOOL_REF)
     matches = qb.check_9n_convention_registration(SUBSTANTIAL_TOOL_CONTENT, "tools/mytool.py")
     assert len(matches) == 1
     assert "CLAUDE.md has NO Structure row" in matches[0].diagnostic
@@ -265,10 +266,10 @@ def test_9n_trivial_wrapper_does_not_require_glossary(monkeypatch):
     import tools.query_blindspots as qb
     monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
     monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
+    # Structured CLAUDE.md entry for trivialtool.py
     monkeypatch.setattr(qb, "_claude_md_content",
-                        lambda: "...trivialtool.py Structure description...")
-    monkeypatch.setattr(qb, "_glossary_md_content",
-                        lambda: "...unrelated content...")
+                        lambda: "  - trivialtool.py - wrapper script\n")
+    monkeypatch.setattr(qb, "_glossary_md_content", lambda: GLOSSARY_WITHOUT_TOOL_REF)
     trivial_content = (
         "def main():\n    cli_main()\n\n"
         "def cli_main():\n    pass\n"
@@ -276,6 +277,37 @@ def test_9n_trivial_wrapper_does_not_require_glossary(monkeypatch):
     matches = qb.check_9n_convention_registration(trivial_content, "tools/trivialtool.py")
     # Only main + cli_main (2 trivial surfaces; below threshold of 3 non-trivial)
     # CLAUDE.md present + GLOSSARY not required → no match
+    assert matches == []
+
+
+def test_9n_structured_match_rejects_narrative_mention(monkeypatch):
+    """Per 2026-05-17 Gap A closure: structured-pattern matching rejects
+    false-positive on narrative mentions like 'we considered mytool.py'
+    that aren't actual Structure-section bullet entries."""
+    import tools.query_blindspots as qb
+    monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
+    # CLAUDE.md mentions mytool.py in narrative but not as Structure bullet
+    monkeypatch.setattr(qb, "_claude_md_content",
+                        lambda: "## Notes\n\nWe considered mytool.py but rejected it.\n")
+    monkeypatch.setattr(qb, "_glossary_md_content", lambda: GLOSSARY_WITH_TOOL_REF)
+    matches = qb.check_9n_convention_registration(SUBSTANTIAL_TOOL_CONTENT, "tools/mytool.py")
+    # CLAUDE.md narrative mention should NOT satisfy structured check
+    assert len(matches) == 1
+    assert "CLAUDE.md has NO Structure row" in matches[0].diagnostic
+
+
+def test_9n_structured_match_accepts_em_dash_separator(monkeypatch):
+    """Per 2026-05-17 Gap A closure: regex accepts both `-` (hyphen) and
+    `—` (em-dash) separators between basename and description."""
+    import tools.query_blindspots as qb
+    monkeypatch.setattr(qb, "_CLAUDE_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_GLOSSARY_MD_CACHE", "")
+    monkeypatch.setattr(qb, "_claude_md_content",
+                        lambda: "  - mytool.py — description with em-dash\n")
+    monkeypatch.setattr(qb, "_glossary_md_content", lambda: GLOSSARY_WITH_TOOL_REF)
+    matches = qb.check_9n_convention_registration(SUBSTANTIAL_TOOL_CONTENT, "tools/mytool.py")
+    # Em-dash should also be accepted
     assert matches == []
 
 

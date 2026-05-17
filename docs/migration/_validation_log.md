@@ -11191,3 +11191,74 @@ The 2 user-caught skipped-REVIEW events (0a0ff49 + 1fc59f9) would now BLOCK at c
 **Verdict**: 🟢 Structural prevention layered correctly: mechanical-at-commit + mechanical-at-test + procedural-at-review. Both gap-classes that surfaced in just-completed cascade are now mechanically detectable + procedurally reinforced.
 
 **Falsifiable test of this sprint**: next time a new substantial `tools/*.py` lands without GLOSSARY entries, check_9n BLOCKS at commit-msg hook. Next time a new optional kwarg lands on has_cascade_evidence (or future similar function) without all callers updated, Tier 0 test FAILS. Both failure modes shift from "post-hoc user-audit catch" to "in-flight mechanical detection".
+
+---
+
+### 2026-05-17 — B-324 CLOSED + Gap A + Gap N bundle (highest-impact residuals)
+
+**Event type**: 3-gap structural-fix bundle addressing the highest-impact residuals from the just-completed structural-prevention sprint.
+
+**Trigger**: User-direction "Proceed with the highest impact objective next" after honest gap assessment.
+
+**Bundled fixes** (paired because same root-cause class — substring-match looseness):
+
+**Gap A (check_9n substring-match → structured pattern)**:
+- Extracted `_claude_has_structure_entry(content, basename)` helper using `^\s*-\s+(?:\*\*)?{basename}(?:\*\*)?\s+[-–—]\s` regex (accepts all 3 dash variants — ASCII hyphen / en-dash / em-dash — plus optional `**bolding**` per reviewer 🔴 BLOCK fix)
+- Extracted `_glossary_has_tool_entries(content, basename)` helper using `` `tools/{basename}` `` backticked-path regex
+- Replaces fragile `basename in content` substring matching that produced false-positives on narrative mentions like "we considered mytool.py"
+- 3 new Tier 1 tests pin behavior: structured-match-rejects-narrative-mention + em-dash-separator-accepted + (bonus) bolded-variant
+
+**B-324 closure (B-321 substring-match → citation-context awareness)**:
+- Extracted `_has_invalid_substrate_review_phrase(body_lines)` helper that skips ONLY unambiguous citation markers: backticked spans + blockquoted lines + code-fenced blocks
+- Initial plan stripped single/double-quoted strings too; reviewer Agent A (`a727745832c072cdc`) correctly flagged as 🔴 BLOCK ("producers frequently wrap claims in narrative voice using quotes; stripping creates false-negatives")
+- Reviewer-corrected approach: producers MUST use explicit citation markers (backticks/blockquotes/code-fences) to bypass the check
+- 4 new Tier 0 tests pin behavior: quoted-narrative-still-fires + backticked-skipped + blockquoted-skipped + unquoted-still-fires
+
+**Gap N (self-dogfood verification)**:
+- Ran `python tools/query_blindspots.py --file tools/query_blindspots.py --severity p0,p1` post-extension → **0 matches** (substrate allowlist working as designed)
+- Ran `python tools/query_blindspots.py --file tools/cascade_classifier.py --severity p0,p1` post-extension → **0 matches** (substrate allowlist working)
+- Closes meta-discipline gap: structural fixes verified on their own substrate before commit, not post-hoc
+
+**Reviewer interaction**:
+- Spawned Agent A (`a727745832c072cdc`) on initial plan BEFORE applying
+- Verdict UNSOUND-fix-required with 2 🔴 BLOCK findings:
+  - Gap A regex missed em-dash/en-dash/bold variants → INLINE FIX (extended to `[-–—]` + optional `**`)
+  - B-324 quote-stripping over-aggressive → INLINE FIX (removed quote-stripping; reviewer-corrected approach)
+- All reviewer-recommended test cases added (6 of 6 from reviewer list)
+
+**Verification**:
+- Targeted: `pytest tests/tier0/test_cascade_classifier.py tests/tier1/test_query_blindspots_checks.py` → 70/70 PASS (was 64; +6 new from B-324 + Gap A)
+- Authoritative: pytest full → 2533 / 58 / 0 (was 2527/58/0; +6 net)
+- Self-dogfood: query_blindspots on its own substrate + cascade_classifier substrate → 0 matches each (allowlist working)
+
+**Files modified**: 6
+- `tools/query_blindspots.py` (+30 lines: _claude_has_structure_entry + _glossary_has_tool_entries + check_9n integration)
+- `tools/cascade_classifier.py` (+30 lines: _has_invalid_substrate_review_phrase + integration)
+- `tests/tier0/test_cascade_classifier.py` (+4 B-324 tests assertions 33-36)
+- `tests/tier1/test_query_blindspots_checks.py` (+2 Gap A tests + structured-fixture refactor)
+- `docs/migration/BACKLOG.md` (B-324 closure)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend)
+- `docs/migration/HANDOFF.md` (§14 prepend)
+- `docs/migration/_validation_log.md` (this entry)
+
+(8 total — fixed count.)
+
+**Net delta**:
+- B-N: 0 NEW + 1 CLOSED (B-324) = net -1 open (was 11; now 10)
+- Pytest: 2527 → 2533 (+6)
+- Files modified: 8
+- Multi-agent applications this session: 13 → 14 (B-324+Gap A reviewer)
+- Mechanism C-1 effective layers: 10 (B-324 + Gap A are refinements of existing layers; no new layer)
+- Gap-prevention mechanical detectors hardened: 2 (check_9n structured-pattern + cascade_classifier citation-context awareness)
+
+**Verdict**: 🟢 2 of the 4 highest-impact residual gaps from prior assessment now CLOSED structurally. Remaining residuals (telemetry, time-axis-misread, generalized compositional-drift detector B-326, Phase 4 #9.p formalization) are deferred as tracked items.
+
+**False-positive rate measurement**: BEFORE fix, check_9n could fire on ANY narrative mention of basename; AFTER fix, requires structured Structure-section bullet pattern. Pre-fix false-positive class eliminated; new false-positive class is "structured pattern that's not a real Structure entry" (extremely rare in practice). Similar for B-324: pre-fix substring match fired on quoted citations; AFTER fix, only fires on non-citation-context occurrence; new false-positive class is "phrase in narrative without explicit citation marker" (correct behavior per reviewer-corrected interpretation).
+
+**Cumulative session metrics (61 commits across 2 days; +1 this commit pending)**:
+- B-N: 53 opened + 42 closed - 1 re-open = net 10 open
+- Pytest: 2533/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective layers: 10
+- Multi-agent applications: 14
+- Gap-prevention mechanical detectors authored or hardened: 4 (check_9n GLOSSARY parity + check_9n structured-pattern + caller-consistency Tier 0 + cascade_classifier citation-context)

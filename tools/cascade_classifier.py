@@ -433,6 +433,46 @@ def _has_anti_trigger_justification(body_lines: list[str]) -> bool:
     )
 
 
+def _has_invalid_substrate_review_phrase(body_lines: list[str]) -> bool:
+    """Check if body contains an invalid-for-SUBSTRATE review claim, EXCLUDING
+    only UNAMBIGUOUS citation context: backticked spans, blockquoted lines,
+    code-fenced blocks.
+
+    Per 2026-05-17 B-324 closure (reviewer 🔴 BLOCK fix on initial proposal):
+    quote-stripping (single/double quoted strings) was REMOVED from earlier
+    plan. Reviewer rationale: producers frequently wrap claims in narrative
+    voice using quotes (e.g. `Reviewer: "inline self-review per scope-justified"`
+    IS a claim, not a citation). Stripping quotes creates false-negatives.
+
+    Only TRULY UNAMBIGUOUS citation markers strip:
+    - Backticked spans (` `foo` ` = literal code/path reference)
+    - Blockquote-prefixed lines (`> ...` = explicit quote-cited content)
+    - Code-fenced blocks (` ``` ... ``` ` = literal code block)
+
+    Producers who legitimately need to cite the phrase without triggering
+    the check should use ONE of these explicit citation markers.
+    """
+    in_code_fence = False
+    for line in body_lines:
+        # Toggle code-fence state
+        if line.lstrip().startswith("```"):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
+        # Skip blockquotes (legitimate quote-cited reviewer output)
+        if line.lstrip().startswith(">"):
+            continue
+        # Strip ONLY backticked spans (code/path citations); preserve quoted
+        # strings since they often contain claims in narrative voice
+        stripped = re.sub(r"`[^`]*`", "", line)
+        stripped_lower = stripped.lower()
+        for phrase in _INVALID_SUBSTRATE_REVIEW_PHRASES:
+            if phrase in stripped_lower:
+                return True
+    return False
+
+
 def has_cascade_evidence(
     commit_msg: str, classification: str | None = None
 ) -> tuple[bool, list[str]]:
@@ -474,10 +514,13 @@ def has_cascade_evidence(
 
         body_text_lower = "\n".join(body).lower()
 
-        # Substrate-stricter check: REVIEW in SUBSTRATE_EDIT must not claim inline self-review
+        # Substrate-stricter check: REVIEW in SUBSTRATE_EDIT must not claim inline self-review.
+        # Per 2026-05-17 B-324 closure: citation-context-aware check excludes
+        # phrases inside backticks / quotes / blockquotes / code-fences
+        # (eliminates false-positive on legitimate meta-narrative citations).
         if (classification == CLASS_SUBSTRATE
                 and section_name == "REVIEW"
-                and any(p in body_text_lower for p in _INVALID_SUBSTRATE_REVIEW_PHRASES)):
+                and _has_invalid_substrate_review_phrase(body)):
             findings.append(
                 "REVIEW: 'inline self-review' INVALID for SUBSTRATE_EDIT "
                 "(per Phase 2B SKILL v1.1.0; substrate requires independent reviewer spawn)"

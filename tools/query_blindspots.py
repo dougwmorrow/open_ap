@@ -366,6 +366,37 @@ def _glossary_md_content() -> str:
     return _GLOSSARY_MD_CACHE
 
 
+def _claude_has_structure_entry(content: str, basename: str) -> bool:
+    """True if basename appears as a CLAUDE.md Structure-section bullet entry
+    (not just any narrative mention). Per 2026-05-17 Gap A closure: structured
+    pattern matching prevents false-positive on narrative discussions like
+    'we considered mytool.py but rejected it'.
+
+    Accepted formats (per reviewer 🔴 BLOCK fix: ALL 3 dash variants +
+    optional `**bolding**`):
+    - `  - basename.py - description` (ASCII hyphen)
+    - `  - basename.py — description` (em-dash; e.g. CLAUDE.md L20)
+    - `  - basename.py – description` (en-dash; possible)
+    - `  - **basename.py** - description` (bolded variant)
+    """
+    pattern = re.compile(
+        rf"^\s*-\s+(?:\*\*)?{re.escape(basename)}(?:\*\*)?\s+[-–—]\s",
+        re.MULTILINE,
+    )
+    return bool(pattern.search(content))
+
+
+def _glossary_has_tool_entries(content: str, basename: str) -> bool:
+    """True if basename appears as `tools/<basename>` reference in GLOSSARY.md
+    (not just any narrative mention). Per 2026-05-17 Gap A closure: required
+    backticked path-format match prevents false-positive on basename-anywhere.
+
+    GLOSSARY public-surface table cells use canonical `tools/<basename>` format.
+    """
+    pattern = re.compile(rf"`tools/{re.escape(basename)}`")
+    return bool(pattern.search(content))
+
+
 def check_9n_convention_registration(content: str, file_path: str) -> list[Match]:
     """Detect new public surface in source files missing from CLAUDE.md Structure.
 
@@ -422,8 +453,11 @@ def check_9n_convention_registration(content: str, file_path: str) -> list[Match
         return matches
     claude_content = _claude_md_content()
     glossary_content = _glossary_md_content()
-    in_claude = basename in claude_content
-    in_glossary = basename in glossary_content
+    # Per 2026-05-17 Gap A closure: use structured-pattern matching instead
+    # of substring `basename in content` (prevents false-positives on
+    # narrative mentions that aren't actual Structure-section entries).
+    in_claude = _claude_has_structure_entry(claude_content, basename)
+    in_glossary = _glossary_has_tool_entries(glossary_content, basename)
 
     # Filter trivial wrapper surfaces for GLOSSARY-requirement threshold
     trivial_names = frozenset(("main", "cli_main"))

@@ -243,6 +243,96 @@ Reviewer: inline self-review per scope-justified pattern
     assert any("inline self-review" in f.lower() and "INVALID" in f for f in findings)
 
 
+def test_b324_quoted_narrative_phrase_still_fires():
+    """Assertion 33 (per B-324 reviewer-corrected 2026-05-17): double-quoted
+    phrases in narrative DO still fire the substrate check. Reviewer rationale:
+    producers frequently wrap claims in narrative voice using quotes (e.g.
+    `Reviewer: "inline self-review per scope-justified"` IS a claim, not a
+    citation). Stripping quotes would create false-negatives. Producers who
+    legitimately need to cite the phrase MUST use backticks / blockquotes /
+    code-fences."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTRATE
+    msg = """build: substrate change
+
+## TEST
+pytest ok
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Reviewer verdict: "inline self-review per scope-justified pattern"
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTRATE)
+    # Double-quoted phrase IS a claim in narrative voice → MUST fire
+    assert has_ev is False
+    assert any("inline self-review" in f.lower() for f in findings)
+
+
+def test_b324_backticked_phrase_skipped():
+    """Assertion 34 (per B-324 closure): backticked phrase citations are skipped."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTRATE
+    msg = """build: substrate change
+
+## TEST
+pytest ok
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Reviewer Agent A spawned (agentId xyz98765); verdict SOUND.
+The check fires when `inline self-review` appears in REVIEW body without independent reviewer.
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTRATE)
+    assert has_ev is True
+    assert findings == []
+
+
+def test_b324_blockquoted_phrase_skipped():
+    """Assertion 35 (per B-324 closure): blockquoted phrase citations skipped.
+    Blockquote prefix `>` is unambiguous "this is quoted content" marker."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTRATE
+    msg = """build: substrate change
+
+## TEST
+pytest ok
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Reviewer Agent A spawned (agentId hhh22222); verdict SOUND.
+Prior reviewer output:
+> claim inline self-review per scope-justified was incorrect
+This commit addresses that finding via independent reviewer spawn.
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTRATE)
+    assert has_ev is True
+    assert findings == []
+
+
+def test_b324_unquoted_phrase_still_fires():
+    """Assertion 36 (per B-324 closure): legitimate substrate-violation
+    (unquoted, non-cited 'inline self-review' phrase as actual claim) STILL FIRES."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTRATE
+    msg = """build: substrate change
+
+## TEST
+pytest ok
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Reviewer: inline self-review per scope-justified pattern.
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTRATE)
+    # Phrase NOT in citation context; substrate-stricter check MUST fire
+    assert has_ev is False
+    assert any("inline self-review" in f.lower() and "INVALID" in f for f in findings)
+
+
 def test_has_cascade_evidence_substrate_independent_review_passes():
     """Assertion 21 (per B-321): SUBSTRATE_EDIT with proper independent
     reviewer agentId in REVIEW section PASSES."""
