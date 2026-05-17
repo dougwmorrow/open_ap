@@ -11695,3 +11695,50 @@ Plus reviewer-affirmed design choices:
 - D-N amendments this session: 2 (unchanged)
 - SKILL semver bumps this session: **2** (was 1; +1 `udm-post-edit-verification` 1.1.0 → 1.2.0)
 - SKILL semver bumps this session: 1 (udm-post-edit-verification 1.0.0 → 1.1.0)
+
+---
+
+### 2026-05-17 — v1.2.0 mechanical enforcement gap CLOSED (Mechanism C-1 extension)
+
+**Trigger**: User audit "Do we need to update any skills, MCP, or hooks?" surfaced post-`5f33cca` that v1.2.0 inline-self-review citation discipline was DOCUMENTED in SKILL.md but NOT MECHANICALLY ENFORCED at commit-time. Recommendation: Option A (close the gap structurally — extend `has_cascade_evidence` + Tier 0 tests + SUBSTRATE_EDIT cascade). User-direction "Proceed with your recommended next steps." HIGH-confidence cascade trigger; NO push semantics → HOLD push.
+
+**Scope**: Code-change commit. SUBSTRATE_EDIT classification (`tools/cascade_classifier.py` in SUBSTRATE_FILES).
+
+**Implementation**:
+- `tools/cascade_classifier.py`: 3 new pattern families (`_V1_2_0_LOC_PATTERNS` / `_V1_2_0_NO_SURFACE_PATTERNS` / `_V1_2_0_NO_SUBSTRATE_PATTERNS`) + new helper `_has_v1_2_0_citation()` + integration into `has_cascade_evidence` SUBSTANTIVE+inline-review path. Asymmetric citation-context decision per reviewer Q3: for BLOCK detection strip backticks/blockquotes/code-fences (false-FIRE prevention); for citation-satisfaction accept all contexts (false-PASS prevention).
+- `tests/tier0/test_cascade_classifier.py`: 1 reformulated test (assertion 22 — old bare-format now requires compliant format) + 5 new tests (assertions 37-41: missing-LOC / missing-no-surface / missing-no-substrate / bare-claim / no-claim-unaffected) + 1 SUBSTRATE-interaction test (assertion 42 per reviewer `abe55b22d66687fe6` Q4 Gap A — protects against future code accidentally wiring v1.2.0 check for SUBSTRATE).
+
+**Reviewer**: Agent `abe55b22d66687fe6` (28th cumulative production application this session; spawned via udm-design-reviewer subagent per SUBSTRATE_EDIT requirement).
+
+**Verdict**: ✅ SOUND-with-improvements (0 🔴 BLOCK; 2 🟡 IMPROVEs inline-fixed):
+- **IMPROVE #1** (dead `in_code_fence` variable in `_has_v1_2_0_citation`): variable set but never used to gate appends; misleading readability. Inline-fixed via simplification to `body_text = "\n".join(body_lines)` directly + comment explaining asymmetric citation-context decision (cite reviewer Q3 rationale).
+- **IMPROVE #2** (missing SUBSTRATE+inline-review interaction test): no test verified v1.2.0 check does NOT fire alongside SUBSTRATE block. Inline-fixed via assertion 42 `test_v1_2_0_substrate_classification_does_not_fire_v1_2_0_check` — verifies SUBSTRATE finding present + v1.2.0 finding absent.
+
+**3 reviewer-proposed B-N candidates ALL preempted/absorbed inline** (no new B-Ns opened; reviewer-suggested numbering deliberately NOT cited to avoid B-N collisions with the canonical sequence):
+- SUBSTRATE-vs-v1.2.0 interaction test: absorbed as assertion 42
+- Clean up dead `in_code_fence` variable: absorbed inline via helper simplification
+- Verify `audit_cascade_compliance.py` passes `classification=` kwarg: preempted by existing B-326 REQUIRED_KWARGS registry (`tools/audit_cascade_compliance.py` L208 + `tools/check_commit_msg.py` L144-145 both verified passing kwarg via mechanical Tier 1 parametrized test)
+
+**Tracker walk per per-build-type checklist**:
+- BACKLOG.md (universal): UNTOUCHED-AS-EXPECTED (no B-N state change; 3 reviewer-proposed B-Ns absorbed inline)
+- CURRENT_STATE.md / HANDOFF.md (universal): UPDATED (L7 + §14 narrative prepend)
+- CODE_BUILD_STATUS.md (universal): UNTOUCHED-AS-EXPECTED (no code-build entry; this is meta-tooling refinement of existing tool)
+- _validation_log.md (universal): UPDATED (this entry)
+- CLAUDE.md Structure (conditional NEW public surface): UNTOUCHED-AS-EXPECTED — `_has_v1_2_0_citation` is private (underscore-prefixed); no public surface added
+- GLOSSARY.md (conditional NEW public surface): UNTOUCHED-AS-EXPECTED
+- CLAUDE.md L207 CLI_* family registry (conditional NEW EventType): UNTOUCHED-AS-EXPECTED (no new EventType)
+- All other conditional rows: UNTOUCHED-AS-EXPECTED
+
+**Pytest delta**: 2444 → 2449 (+5 net: +5 new assertions 37-41 + +1 new assertion 42 - 1 existing assertion 22 reformulated). On Linux/CI full-suite should be 2545 → 2550 (+5).
+
+**Mechanism C-1 extension**: this commit adds the 6th gap-prevention mechanical detector (was 5: check_9n GLOSSARY parity / check_9n structured-pattern / caller-consistency Tier 1 [registry] / cascade_classifier citation-context / B-326 registry-driven; now +1 v1.2.0 SUBSTANTIVE+inline-review citation check).
+
+**Cumulative session metrics**:
+- 76 commits since 2026-05-15 (3-day span; this commit will be commit #16 on 2026-05-17)
+- B-N: net **11 open** (unchanged; 3 reviewer-proposed B-Ns absorbed inline)
+- Pytest: 2444 → 2449 (+5) on Windows subset; 2545 → 2550 (+5) on Linux/CI
+- Multi-agent applications: **28** (was 27; +1 this commit's reviewer)
+- Gap-prevention mechanical detectors: **6** (was 5; +1 v1.2.0 citation check)
+- Skills updated this session: 5 (unchanged)
+- D-N amendments this session: 2 (unchanged)
+- SKILL semver bumps this session: 2 (unchanged)

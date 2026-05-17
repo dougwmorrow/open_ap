@@ -353,10 +353,11 @@ Spawned udm-design-reviewer agent (agentId abc12345); verdict SOUND.
     assert findings == []
 
 
-def test_has_cascade_evidence_substantive_self_review_passes():
-    """Assertion 22 (per B-321): non-substrate (SUBSTANTIVE) commit with
-    'inline self-review' in REVIEW section is ALLOWED (substrate-stricter
-    check fires only when classification is SUBSTRATE_EDIT)."""
+def test_has_cascade_evidence_substantive_self_review_with_v1_2_0_citations_passes():
+    """Assertion 22 (per B-321 + v1.2.0 strengthening 2026-05-17): non-substrate
+    (SUBSTANTIVE) commit with 'inline self-review' in REVIEW section is ALLOWED
+    ONLY when v1.2.0 citation discipline is satisfied (LOC count + no-new-public-
+    surface + no-SUBSTRATE_EDIT)."""
     from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTANTIVE
     msg = """build: small substantive change
 
@@ -367,10 +368,147 @@ pytest 100/100 PASS
 inline G1-G6: CLEAN
 
 ## REVIEW
-Inline self-review per scope-justified pattern (small scope; no new public surface).
+Inline self-review (SUBSTANTIVE per cascade_classifier; +12/-3 = 15 LOC within ≤50 threshold; no new public surface; no SUBSTRATE_EDIT classification).
 """
     has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTANTIVE)
-    assert has_ev is True
+    assert has_ev is True, f"Expected PASS, got findings: {findings}"
+    assert findings == []
+
+
+def test_v1_2_0_substantive_self_review_without_loc_citation_fails():
+    """Assertion 37 (per v1.2.0 SKILL udm-post-edit-verification mechanical
+    enforcement gap closure 2026-05-17): SUBSTANTIVE commit with inline
+    self-review claim BUT missing LOC count + ≤50 threshold → BLOCKED."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTANTIVE
+    msg = """build: change
+
+## TEST
+pytest PASS
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Inline self-review per SUBSTANTIVE classification (no new public surface; no SUBSTRATE_EDIT).
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTANTIVE)
+    assert has_ev is False
+    assert any("v1.2.0 required citations" in f and "LOC count" in f for f in findings)
+
+
+def test_v1_2_0_substantive_self_review_without_no_surface_citation_fails():
+    """Assertion 38: SUBSTANTIVE commit with inline self-review claim BUT
+    missing 'no new public surface' citation → BLOCKED."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTANTIVE
+    msg = """build: change
+
+## TEST
+pytest PASS
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Inline self-review (SUBSTANTIVE per cascade_classifier; 30 LOC within ≤50 threshold; no SUBSTRATE_EDIT).
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTANTIVE)
+    assert has_ev is False
+    assert any("no new public surface" in f for f in findings)
+
+
+def test_v1_2_0_substantive_self_review_without_no_substrate_citation_fails():
+    """Assertion 39: SUBSTANTIVE commit with inline self-review claim BUT
+    missing 'no SUBSTRATE_EDIT' classification citation → BLOCKED."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTANTIVE
+    msg = """build: change
+
+## TEST
+pytest PASS
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Inline self-review per SUBSTANTIVE classification (+10/-2 = 12 LOC within ≤50 threshold; no new public surface).
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTANTIVE)
+    assert has_ev is False
+    assert any("SUBSTRATE_EDIT" in f and "classification" in f for f in findings)
+
+
+def test_v1_2_0_substantive_bare_self_review_claim_blocked():
+    """Assertion 40: SUBSTANTIVE commit with BARE 'inline self-review' claim
+    (no citations at all) → BLOCKED with ALL 3 missing citations enumerated.
+    This is the precise precedent-drift pattern v1.2.0 closes — commit 63edcbc
+    Q5 finding from 2nd-pass design reviewer a6b24c207dd9fdb75."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTANTIVE
+    msg = """build: change
+
+## TEST
+pytest PASS
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Inline self-review acceptable for SUBSTANTIVE.
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTANTIVE)
+    assert has_ev is False
+    # Single finding string enumerates ALL 3 missing citations
+    relevant = [f for f in findings if "v1.2.0 required citations" in f]
+    assert len(relevant) == 1
+    finding = relevant[0]
+    assert "LOC count" in finding
+    assert "no new public surface" in finding
+    assert "SUBSTRATE_EDIT" in finding
+
+
+def test_v1_2_0_substrate_classification_does_not_fire_v1_2_0_check():
+    """Assertion 42 (per reviewer `abe55b22d66687fe6` Q4 Gap A 2026-05-17):
+    SUBSTRATE_EDIT + inline self-review claim produces ONLY the SUBSTRATE
+    finding, NOT a v1.2.0 finding. Verifies asymmetric routing — v1.2.0 check
+    gates on CLASS_SUBSTANTIVE; SUBSTRATE_EDIT path is unaffected (substrate
+    block fires upstream, v1.2.0 check is bypassed). Protects against future
+    code changes accidentally wiring both checks for SUBSTRATE."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTRATE
+    msg = """build: substrate change
+
+## TEST
+pytest PASS
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Inline self-review per SUBSTANTIVE classification.
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTRATE)
+    assert has_ev is False
+    # Should have SUBSTRATE finding present
+    assert any("SUBSTRATE_EDIT" in f and "INVALID" in f for f in findings)
+    # Should NOT have v1.2.0 finding (v1.2.0 path skipped for SUBSTRATE_EDIT)
+    assert not any("v1.2.0 required citations" in f for f in findings)
+
+
+def test_v1_2_0_substantive_no_self_review_claim_unaffected():
+    """Assertion 41: SUBSTANTIVE commit WITHOUT any inline-review claim (e.g.,
+    citing independent reviewer agentId) is unaffected by v1.2.0 discipline —
+    the check fires ONLY when inline self-review IS claimed."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTANTIVE
+    msg = """build: change
+
+## TEST
+pytest 100/100 PASS
+
+## GAP ANALYSIS
+inline G1-G6 CLEAN
+
+## REVIEW
+Independent reviewer Agent `abc123def456789ab` (28th cumulative) — SOUND verdict; no IMPROVEs.
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTANTIVE)
+    assert has_ev is True, f"Expected PASS, got findings: {findings}"
     assert findings == []
 
 

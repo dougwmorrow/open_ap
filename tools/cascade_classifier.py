@@ -355,6 +355,27 @@ _INVALID_SUBSTRATE_REVIEW_PHRASES = (
     "self-review (scope-justified",
 )
 
+# v1.2.0 citation discipline (closes mechanical enforcement gap noted post-
+# multi-agent-team commit 5f33cca per user audit): when a SUBSTANTIVE commit
+# REVIEW section claims inline self-review, the body must cite all 3 carve-out
+# conditions per SKILL udm-post-edit-verification v1.2.0 hard rule.
+_V1_2_0_LOC_PATTERNS = (
+    re.compile(r"<=?\s*50\s*loc", re.IGNORECASE),  # "<=50 LOC" / "<50 LOC"
+    re.compile(r"≤\s*50\s*loc", re.IGNORECASE),  # "≤50 LOC" (Unicode)
+    re.compile(r"50\s*loc\s*threshold", re.IGNORECASE),  # "50 LOC threshold"
+    re.compile(r"\d+\s*loc\s+(?:total|within|=)", re.IGNORECASE),  # "47 LOC total" / "47 LOC within"
+    re.compile(r"\+\d+/-\d+\s*=\s*\d+\s*loc", re.IGNORECASE),  # "+12/-3 = 15 LOC"
+)
+_V1_2_0_NO_SURFACE_PATTERNS = (
+    re.compile(r"no\s+new\s+public\s+surface", re.IGNORECASE),
+)
+_V1_2_0_NO_SUBSTRATE_PATTERNS = (
+    re.compile(r"no\s+SUBSTRATE_EDIT", re.IGNORECASE),
+    re.compile(r"not\s+SUBSTRATE_EDIT", re.IGNORECASE),
+    re.compile(r"SUBSTANTIVE\s+(?:not|vs\.?)\s+SUBSTRATE_EDIT", re.IGNORECASE),
+    re.compile(r"non-?substrate", re.IGNORECASE),
+)
+
 
 def _extract_section_bodies(commit_msg: str) -> dict[str, list[str]]:
     """Parse markdown sections. Returns {section_name: [body_lines]} where
@@ -473,6 +494,41 @@ def _has_invalid_substrate_review_phrase(body_lines: list[str]) -> bool:
     return False
 
 
+def _has_v1_2_0_citation(body_lines: list[str]) -> tuple[bool, list[str]]:
+    """Verify REVIEW body contains all 3 v1.2.0 required citations when inline
+    self-review is claimed for a SUBSTANTIVE commit.
+
+    Per SKILL udm-post-edit-verification v1.2.0 hard rule (closes precedent-drift
+    class surfaced at commit 63edcbc Q5; structural enforcement gap closed at
+    commit-msg hook layer per user-audit follow-up to 5f33cca):
+
+    Required citations:
+    1. LOC count with ≤50 threshold reference (e.g. "47 LOC within ≤50 threshold")
+    2. "no new public surface" (verbatim phrase)
+    3. "no SUBSTRATE_EDIT" / "not SUBSTRATE_EDIT" / "non-substrate" (classification)
+
+    Citation-context decision: phrases inside backticks / blockquotes /
+    code-fences COUNT toward citation satisfaction (legitimate scope formatting,
+    not narrative voice). Asymmetric with `_has_invalid_substrate_review_phrase`
+    which STRIPS those contexts for BLOCK detection. Rationale per 2026-05-17
+    reviewer `abe55b22d66687fe6` Q3: for citation-satisfaction (false-PASS
+    prevention) accept all contexts; for BLOCK detection (false-FIRE prevention)
+    strip context. Whole body text is therefore the citation search corpus.
+
+    Returns (all_present, list_of_missing_citations).
+    """
+    body_text = "\n".join(body_lines)
+
+    missing: list[str] = []
+    if not any(p.search(body_text) for p in _V1_2_0_LOC_PATTERNS):
+        missing.append("LOC count + ≤50 threshold")
+    if not any(p.search(body_text) for p in _V1_2_0_NO_SURFACE_PATTERNS):
+        missing.append("'no new public surface'")
+    if not any(p.search(body_text) for p in _V1_2_0_NO_SUBSTRATE_PATTERNS):
+        missing.append("'no SUBSTRATE_EDIT' classification check")
+    return (not missing, missing)
+
+
 def has_cascade_evidence(
     commit_msg: str, classification: str | None = None
 ) -> tuple[bool, list[str]]:
@@ -525,6 +581,28 @@ def has_cascade_evidence(
                 "REVIEW: 'inline self-review' INVALID for SUBSTRATE_EDIT "
                 "(per Phase 2B SKILL v1.1.0; substrate requires independent reviewer spawn)"
             )
+
+        # v1.2.0 inline-self-review citation discipline (closes mechanical
+        # enforcement gap surfaced post-5f33cca per user audit): when SUBSTANTIVE
+        # commit claims inline self-review in REVIEW, body MUST cite
+        # ≤50 LOC + no-new-public-surface + no-SUBSTRATE_EDIT per SKILL
+        # udm-post-edit-verification v1.2.0 hard rule. SUBSTANTIVE alone is
+        # NOT sufficient justification (closes precedent-drift class
+        # demonstrated at commit 63edcbc Q5 finding).
+        if (classification == CLASS_SUBSTANTIVE
+                and section_name == "REVIEW"
+                and _has_invalid_substrate_review_phrase(body)):
+            # Reuse the same phrase-detection logic — same phrases that BLOCK
+            # for SUBSTRATE_EDIT must satisfy citation discipline for SUBSTANTIVE
+            citation_ok, missing = _has_v1_2_0_citation(body)
+            if not citation_ok:
+                findings.append(
+                    "REVIEW: inline self-review claim MISSING v1.2.0 required "
+                    f"citations: {', '.join(missing)} (per SKILL "
+                    "udm-post-edit-verification v1.2.0 hard rule; SUBSTANTIVE "
+                    "alone is NOT sufficient — must cite ≤50 LOC + no-new-public-"
+                    "surface + no-SUBSTRATE_EDIT)"
+                )
 
         # SKIPPED-justification check: SKIPPED in body must cite anti-trigger reason.
         # Per reviewer 🟡 #2 fix: word-boundary regex avoids false-positive on
