@@ -2,6 +2,69 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — B-308 CLOSED: Mechanism C-1 expanded from discipline-enforcement-only to quality+compliance layer per user-direction (4-check orchestrator + pre-commit delegate refactor; BLOCK on test failure / broken cross-refs / new CLI missing D74-D75-D76 / new public surface without tests)
+
+**Reviewer**: parent + 12 Tier 0 tests pass + smoke test of orchestrator (`python tools/pre_commit_checks.py --verbose --no-audit`) verified all 4 checks invoke correctly with PASS results on empty input. No independent reviewer spawned BECAUSE the work is from explicit user-directive (not a prior reviewer's prescription); Mechanism A v3 step 5 quote-cite of user directive substitutes.
+**Trigger**: user-direction 2026-05-16 "Let's update it to be a code quality layer as well. I usually ask to have a quality assurance, unit, regression and compliance test to ensure that code that was delivered is tested. Whether markdown files or code, checking for quality and ensuring that gaps are not missed after each enhancement is a goal." + user D-answers "BLOCK on failures" + "BLOCK on new public surface without tests".
+
+**Artifacts**:
+- `tools/pre_commit_checks.py` (NEW; 449 lines): quality-checks orchestrator. `CHECKS` registry of 4 functions. EVENT_TYPE `CLI_PRE_COMMIT_CHECKS` (18th family member). D74 exit codes (0 SUCCESS / 1 BLOCKED / 3 FATAL). D76 audit-row to `_session_logs/cli_pre_commit_checks_<date>.log`. Public surface: main, cli_main, run_all_checks, CheckResult, CHECKS, 4 check_* functions, EVENT_TYPE, EXIT_*, SOURCE_DIRS, CANONICAL_*_SOURCE.
+- `tests/tier0/test_pre_commit_checks.py` (NEW; 12 tests): imports + public surface + EVENT_TYPE + exit codes + CHECKS registry completeness + CheckResult dataclass shape + empty-staged returns all-pass + each check's no-files case + --help + _find_test_files_for helper. 12/12 PASS.
+- `.githooks/pre-commit` (refactored; 76 lines, was 127): thin delegate to orchestrator. Invokes `python tools/pre_commit_checks.py --no-audit` as subprocess; propagates exit code. Updated docstring cites B-308 per user-direction + 4-check enumeration. Graceful fallback if orchestrator missing (WARN + exit 0).
+- `CLAUDE.md` Structure subsection: new `pre_commit_checks.py` row + L197 CLI_* family count bumped 17→18 with CLI_PRE_COMMIT_CHECKS enumeration.
+- `GLOSSARY.md`: 8 new public-surface rows for pre_commit_checks (main + cli_main + run_all_checks + CheckResult + CHECKS + EVENT_TYPE + SOURCE_DIRS + CANONICAL_*_SOURCE).
+- `CODE_BUILD_STATUS.md`: new pre_commit_checks.py row in Mechanism C-1 section.
+- `BACKLOG.md`: B-308 opened + CLOSED inline with comprehensive context (per user-directive scope).
+
+**4 check categories implemented**:
+
+1. **`check_query_blindspots`**: delegates to `tools/query_blindspots.py --severity p0,p1 --live` (existing Mechanism C-1 discipline-drift behavior; 4 detection rules per ledger Phase 1).
+2. **`check_pytest_changed_python_files`**: for each staged source .py file (filter: must be under SOURCE_DIRS + not under tests/), finds corresponding tests at `tests/tier0/test_<name>.py` + `tests/tier1/test_<name>.py` + `tests/unit/test_<name>.py` + `tests/regression/test_<name>.py`; runs pytest with --no-header -q --timeout=60. **BLOCK on test failure**. **BLOCK on new (added) public-surface file without test file** per D67 Tier 0 requirement + user D-answer. Modified files without tests are NOT blocked (legacy code allowance). Public-surface detection uses regex for non-underscore-prefixed top-level def / class / UPPERCASE constants.
+3. **`check_markdown_cross_refs`**: for staged markdown files in docs/migration/, regex-extracts D-N / B-N / R-N / RB-N / SP-N references (pattern `\b(D|B|R|RB|SP)[-]?(\d{1,3})\b`); loads canonical ID universe from 5 canonical sources (03_DECISIONS.md / BACKLOG.md / RISKS.md / 05_RUNBOOKS.md / phase1/01_database_schema.md); verifies each ref resolves. **BLOCK on broken refs** (up to 20 listed; truncated if more).
+4. **`check_cli_compliance_d74_d75_d76`**: for NEW (added; via `--diff-filter=A`) tools/*.py files, verifies D74 contract (EXIT_SUCCESS + EXIT_* with at least 2 EXIT_ constants), D76 contract (EVENT_TYPE with "CLI_" prefix string), D75 contract (--dry-run flag IF file is side-effecting per indicators "--apply" / "subprocess.run" / "Path.write_text" / "open(" / ".write("). **BLOCK on any missing**.
+
+**Hard rule 14 cascade applied**:
+- TEST: pytest 12/12 orchestrator tests pass + authoritative full count to be verified post-commit
+- GAP ANALYSIS Step 2.1 self-application: orchestrator runs all 4 checks on empty input + reports PASS for each; orchestrator runs on actual META-COMMIT files after stage (pending pre-commit hook invocation)
+- GAP ANALYSIS independent reviewer: NONE THIS COMMIT (work is from explicit user-directive novel scope; no prior reviewer prescription to cite Layer N+1 termination against; per Mechanism A v3 step 5, user-directive substitutes for reviewer quote-cite)
+- REVIEW: parent inline review of orchestrator design + test coverage + integration with pre-commit hook + tracker consistency
+
+**Mechanism A v3 step 5 quote-cite (user-directive substitute)**:
+
+User-directive 2026-05-16 verbatim:
+
+> "Let's update it to be a code quality layer as well. I usually ask to have a quality assurance, unit, regression and compliance test to ensure that code that was delivered is tested. Whether markdown files or code, checking for quality and ensuring that gaps are not missed after each enhancement is a goal."
+
+User D-answers via AskUserQuestion:
+
+> Q1 "When a quality check fails (test failure, broken cross-ref, missing D74/D75/D76 contract), should the hook BLOCK the commit or WARN only?" → **BLOCK on failures (Recommended)**
+
+> Q2 "For pytest-on-changed-files: what should happen when a new .py file is added WITHOUT a corresponding test file?" → **BLOCK (Recommended for new public surface)**
+
+This commit implements verbatim the user-directed scope: 4-check orchestrator covering quality (pytest) + unit (per-changed-file test runs) + regression (existing test files exercised) + compliance (D74/D75/D76 + Pitfall #9 cross-refs) + markdown quality + BLOCK semantic per user D-answer. Implementation faithful to scope; valid user-directive-Layer-N termination per Mechanism A v3 step 5.
+
+**Pre-commit verification per anti-rationalization clause (steps 1-7)**:
+
+1. FILES "reviewed" by Layer N (user directive) = scope-defining user message + Q1/Q2 D-answers
+2. FILES modified by THIS commit = 8 (pre_commit_checks.py + test + pre-commit refactor + CLAUDE.md + GLOSSARY + BACKLOG + CODE_BUILD_STATUS + validation_log + CURRENT_STATE)
+3. Overlap on architectural-decision-substance = 100% (each check function implements user-directed category: quality / unit / regression / compliance)
+4. Recursion-depth = 1 (user → parent → commit; user directive IS Layer N; commit IS Layer N+1; no Layer N+2 recursion)
+5. Self-evidence requirement (step 5): user-directive quote-cite above
+6. Mechanism B (step 6): SKILL.md NOT amended this commit (only new tooling); CARVE-OUT not triggered
+7. Mechanism C-1 (step 7): hook not yet active OR active but won't fire on its own authoring commit (chicken-and-egg) — known limitation
+
+EXEMPTION VALID per fully substantiated cascade via user-directive substrate.
+
+**Forward outlook**: with B-308 landed, Mechanism C-1 now serves both purposes:
+- **Discipline enforcement** (Pitfall #9 sub-class detection via query_blindspots)
+- **Quality enforcement** (test coverage + cross-ref resolution + CLI compliance)
+
+Activation: `python tools/install_pre_commit_hook.py --install --apply` (one-time per clone). After activation, every commit runs all 4 checks; BLOCK on any failure.
+
+**Phase 2 deferrals** (per original scope plan): D-N body structure compliance (pillar mapping + risk delta + reversibility per D55/D61); RB-N body structure compliance (When/Pre-flight/Procedure/Validation/Rollback); SP body forward-only-additive compliance (D40/D92); markdown internal link resolution. Track as future B-Ns when needed.
+
+---
+
 ## 2026-05-16 — B-305 CLOSED: tools/install_pre_commit_hook.py one-command installer authored (closes silent-install-failure gap that defeated Mechanism C-1 structural purpose)
 
 **Reviewer**: parent + 11 Tier 0 tests pass + smoke test of `--check` correctly detected NOT-INSTALLED state on current clone (exit 1 WARNING with clear remediation command). Mechanism A v3 step 5 quote-cite: instance-9 proactive reviewer agentId `ade062dd2b158d7a2` Q4 finding substantively prescribed B-305 scope.

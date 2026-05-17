@@ -40,13 +40,11 @@ def test_hook_has_python_shebang(hook_content: str):
     assert "python" in first_line.lower(), "hook shebang must invoke python"
 
 
-def test_hook_cites_b301_and_instance_8_and_9(hook_content: str):
-    """Assertion 3: hook docstring cites B-301 + Pitfall #9.o instance 8 + 9 evidence."""
+def test_hook_cites_b301_b307_b308(hook_content: str):
+    """Assertion 3 (per B-308 refactor): hook docstring cites B-301 + B-307 + B-308 closures."""
     assert "B-301" in hook_content
-    assert "INSTANCE 8" in hook_content or "instance 8" in hook_content
-    assert "bd9210c" in hook_content
-    assert "INSTANCE 9" in hook_content or "instance 9" in hook_content
-    assert "f8a6ae1" in hook_content
+    assert "B-307" in hook_content
+    assert "B-308" in hook_content
 
 
 def test_exemption_trigger_phrases_moved_to_commit_msg(hook_content: str):
@@ -61,24 +59,27 @@ def test_exemption_trigger_phrases_moved_to_commit_msg(hook_content: str):
     assert "B-307" in hook_content, "pre-commit hook docstring must cite B-307 split"
 
 
-def test_hook_runs_query_blindspots(hook_content: str):
-    """Assertion 5: hook invokes tools/query_blindspots.py for staged-file scan."""
-    assert "query_blindspots.py" in hook_content
-    assert "--severity" in hook_content
-    assert "p0,p1" in hook_content
+def test_hook_delegates_to_orchestrator(hook_content: str):
+    """Assertion 5 (per B-308 refactor): hook delegates to tools/pre_commit_checks.py orchestrator
+    instead of invoking query_blindspots directly. The orchestrator handles all 4 quality checks."""
+    assert "pre_commit_checks.py" in hook_content
+    assert "ORCHESTRATOR_PATH" in hook_content
 
 
-def test_hook_uses_live_mode(hook_content: str):
-    """Assertion 6: hook uses --live mode for D74 exit-code-2 blocking semantic."""
-    assert "--live" in hook_content
+def test_hook_propagates_exit_code(hook_content: str):
+    """Assertion 6 (per B-308 refactor): hook returns orchestrator's exit code
+    (BLOCK=1 propagates to git's commit-abort path)."""
+    assert "result.returncode" in hook_content
 
 
-def test_hook_check_function_present(hook_content: str):
-    """Assertion 7 (per B-307 split): pre-commit hook now has 1 check function
-    (_check_blindspots only); _check_exemption_phrases MOVED to commit-msg hook."""
-    assert "_check_blindspots" in hook_content
+def test_hook_check_functions_moved_to_orchestrator(hook_content: str):
+    """Assertion 7 (per B-308 refactor): hook no longer contains _check_blindspots OR
+    _check_exemption_phrases (both moved: blindspots to orchestrator, exemption to commit-msg)."""
+    assert "_check_blindspots" not in hook_content, (
+        "_check_blindspots should be in orchestrator per B-308 refactor"
+    )
     assert "_check_exemption_phrases" not in hook_content, (
-        "_check_exemption_phrases should be MOVED to commit-msg hook per B-307 split"
+        "_check_exemption_phrases should be in commit-msg hook per B-307 split"
     )
 
 

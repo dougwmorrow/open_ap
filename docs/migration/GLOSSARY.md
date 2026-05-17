@@ -758,6 +758,14 @@ Public-API surface of newly-authored Round 4 CLI tool modules (5-tool parallel c
 
 | **main** | `tools/diagnose_stage_bronze_gap.py` | Diagnostic entry point — identifies PKs in Stage CDC current rows but missing from Bronze active rows; characterizes each missing PK's gap state via 5 theory categories; READ-ONLY (no Stage/Bronze writes; only PipelineEventLog audit row); accepts `(*, source, table, limit, include_state, json_output, output_file, actor, no_audit_event, verbose, quiet, cursor_factory, table_config_loader, audit_cursor_factory, general_db, stage_db, bronze_db)` kwargs for test injection per B214; returns dict matching D76 audit-row Metadata shape (2026-05-14 / Round 6 follow-up) |
 | **cli_main** | `tools/diagnose_stage_bronze_gap.py` | argv parser + `main()` dispatcher; required `--source` / `--table`; per D74 exit-code contract (2026-05-14) |
+| **main** | `tools/pre_commit_checks.py` | Phase 1 quality-checks orchestrator (B-308 closure 2026-05-16); wraps `cli_main()`; D74 exit-code contract |
+| **cli_main** | `tools/pre_commit_checks.py` | argv parser + dispatcher; --verbose + --no-audit flags; D74 exit codes |
+| **run_all_checks** | `tools/pre_commit_checks.py` | Orchestrator that runs all 4 CHECKS on staged files; returns list[CheckResult] |
+| **CheckResult** | `tools/pre_commit_checks.py` | Dataclass: name + passed + severity (block/warn/info) + diagnostic; `to_dict()` for JSON |
+| **CHECKS** | `tools/pre_commit_checks.py` | Registry tuple of 4 check functions (query_blindspots / pytest_changed / markdown_cross_refs / cli_compliance_d74_d75_d76) |
+| **EVENT_TYPE** (`= "CLI_PRE_COMMIT_CHECKS"`) | `tools/pre_commit_checks.py` | 18th CLI_* family member per CLAUDE.md L197 (2026-05-16) |
+| **SOURCE_DIRS** | `tools/pre_commit_checks.py` | Tuple of source-code directory prefixes (tools/, data_load/, etc.); used by pytest+CLI checks to filter staged paths |
+| **CANONICAL_D_SOURCE / CANONICAL_B_SOURCE / CANONICAL_R_SOURCE / CANONICAL_RB_SOURCE / CANONICAL_SP_SOURCE** | `tools/pre_commit_checks.py` | Path constants to canonical D-N/B-N/R-N/RB-N/SP-N sources; used by markdown cross-ref check |
 | **main** | `tools/install_pre_commit_hook.py` | One-command installer for Mechanism C-1 git hooks (B-305 closure 2026-05-16); wraps `cli_main()`; D74 exit-code contract |
 | **cli_main** | `tools/install_pre_commit_hook.py` | argv parser + dispatcher; mutually-exclusive `--install / --uninstall / --check`; `--apply` flag per D75 dry-run-default; `--no-audit` flag; D74 exit codes |
 | **install / uninstall / check** | `tools/install_pre_commit_hook.py` | Action functions; each returns `(exit_code, diagnostic)` tuple |
