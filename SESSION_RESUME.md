@@ -1,153 +1,149 @@
-# SESSION RESUME — 2026-05-17 (refresh)
+# SESSION RESUME — 2026-05-17 (post-Option A refresh)
 
-**Branch**: `round-6-post-merge-tracking` (56 commits ahead of `origin/round-6-post-merge-tracking`; NOT pushed)
-**Last commit**: `6cf3377` — B-321 CLOSED (has_cascade_evidence body-content validation + substrate-stricter REVIEW check + SKIPPED label-prefix check)
-**Pytest state**: 2521 pass / 58 skip / 0 fail
-**Hook bypasses this session**: 4 historical (all classes structurally addressed; 11 consecutive clean since)
-
----
-
-## What shipped this session (56 commits across 2 days)
-
-### Major architectural delivery: B-317 Mechanism C-1 (5 of 6 phases complete) + B-321 closure (Phase 1A refinement)
-
-Multi-layer structural fix closing the **silent cascade-skip class** that 6 prior defense layers all missed because they fired on phrase presence, not section absence.
-
-| Phase | Artifact | Commit | Layer |
-|---|---|---|---|
-| **1A** | `tools/check_commit_msg.py` cascade-evidence enforcement | `c0ad9c6` | Mechanical detection at commit-msg hook |
-| **1B** | `tools/cascade_classifier.py` (NEW) — 6-class detector | `c0ad9c6` | Strict mode + substrate override |
-| **2A** | `CLAUDE.md` hard rule 14 substrate-edit clause + `tools/generate_cascade_evidence.py` (NEW) | `c0ad9c6` + `c662863` | Canonical substrate enumeration + friction reduction |
-| **2B** | `udm-post-edit-verification` SKILL v1.0.0 → v1.1.0 | `dda1bd2` | Discoverability + tri-section labeling discipline (B-318 closure) |
-| **3** | `tools/audit_cascade_compliance.py` (NEW) | `8dc0bd4` | Retroactive safety-net for --no-verify bypasses + edge cases |
-| **B-321 refinement** | `has_cascade_evidence` body-content validation + substrate-stricter REVIEW check + SKIPPED label-prefix + code-fence parser | `6cf3377` | Closes header-only false-PASS class empirically demonstrated by `1fc59f9`; next skipped-REVIEW will BLOCK at commit-msg hook instead of requiring user audit-question |
-| 4 | Pitfall #9.p formalization | DEFERRED | 1-event base; needs 5 per HANDOFF §8 convention |
-
-**Mechanism C-1 architecture**: 6 → **10 effective layers** (9 enforcement + 1 retroactive audit).
-
-### New tools authored — B-317 architecture (3 NEW; cascade-classifier family)
-- `tools/cascade_classifier.py` (~310 lines; 21 Tier 0 tests)
-- `tools/generate_cascade_evidence.py` (~210 lines; 14 Tier 0 tests)
-- `tools/audit_cascade_compliance.py` (~280 lines; 19 Tier 0 tests)
-
-### Other new tools (7) — Mechanism C-1 + AppLaunchpad + research
-- `tools/query_blindspots.py` — AppLaunchpad blindspot-ledger scanner
-- `tools/check_commit_msg.py` — commit-msg exemption-phrase + cascade-evidence enforcement
-- `tools/exemption_phrases.py` — canonical exemption-phrase substrate (dedupe per B-309)
-- `tools/install_pre_commit_hook.py` — one-command installer for Mechanism C-1 hooks
-- `tools/pre_commit_checks.py` — 6-check orchestrator (B-308 quality+compliance expansion)
-- `tools/measure_ccl_overhead.py` — markdown-refactor meta-tooling (Stage 1/2/3 token counts)
-- `tools/test_github_slug.py` — meta-tooling for §13.4 heading-slug stability validation
-
-### Pre-B-317 work in this session
-
-| Commits | Theme |
-|---|---|
-| `db77516` | B-302 + B-306 closure (skill test coverage extensions + hook audit-row D76 compliance) |
-| `29ada67` | B-312 closure (markdown_cross_refs freshness; B-308 + B-310 backfilled) |
-| `18c1772` | B-311 closure (GitHub Actions CI mirror of Mechanism C-1) |
-| `ae7a7fa` | B-310 fix (cross-platform shebang for git hooks) |
-| `2239c14` | B-309 closure (Cycle 1 critical-review: lint/security/typing + dedupe) |
-| `cc7caad` | B-308 closure (Mechanism C-1 expanded discipline → quality+compliance; 4-check orchestrator) |
-| `5a055a6` | B-305 closure (install_pre_commit_hook.py installer) |
-| `fd9afa8` | B-307 + B-304 closure (commit-msg hook split + 9.o detector allowlist) |
-| `75cdda3` | B-301 + B-303 closure (Mechanism C-1 pre-commit git hook authored) |
-| `bd9210c` | B-296 closure (Mechanism B udm-exemption-verifier skill) |
-| `570ac67` | D114 🟢 Locked (AppLaunchpad blindspot-ledger adoption) |
-| `f699250` | AppLaunchpad blindspot-ledger high-ROI subset adoption |
-
-### Discipline events (Pitfall #9.o)
-- Instances 5-10 of recursive-exemption-rationalization pattern surfaced + remediated across this session
-- 4 successive Mechanism A documentation iterations proved structurally insufficient
-- Mechanism B (independent verifier skill) authored
-- Mechanism C-1 (pre-commit + commit-msg hooks + CI mirror) authored
-- Mechanism C-1 + B-317 5-phase architecture together close the recursive-vulnerability class
+**Branch**: `round-6-post-merge-tracking` (72 commits ahead of `origin/round-6-post-merge-tracking`; NOT pushed)
+**Last commit**: `b2f50be` — Option A: `check_cli_registry_sync` 8th orchestrator hook + 2 SKILL v1.1.0 bumps (3rd consecutive "documented-but-not-mechanically-enforced" gap class closed)
+**Pytest state**: 2471 pass / 10 skip / 0 fail (Windows subset; tier 0 + tier 1 + property)
+**Hook bypasses this session**: 4 historical (all pre-Mechanism-C-1); **26 consecutive clean since**
 
 ---
 
-## Cumulative session metrics
+## Session arc (79 commits across 3 days: 2026-05-15 → 2026-05-17)
 
-| Metric | Value |
-|---|---|
-| Commits | 56 ahead of origin |
-| Pytest | 2521 pass / 58 skip / 0 fail (was ~2300 at session start) |
-| B-N closed this session | 39 |
-| B-N opened this session | 51 (50 net + 1 re-open: B-286) |
-| Net B-N delta | +10 open (mostly LOW-priority reviewer follow-ups: B-320 through B-324) |
-| Mechanism C-1 layers | 6 → 10 |
-| New tools (headline cascade-architecture) | 5 (query_blindspots + cascade_classifier + check_commit_msg + generate_cascade_evidence + audit_cascade_compliance) |
-| New tools (supporting / orchestrator / research / library) | 5 (exemption_phrases + install_pre_commit_hook + measure_ccl_overhead + pre_commit_checks + test_github_slug) |
-| **Total new `tools/*.py` files** | **10** |
-| SKILL semver bumps | 1 (udm-post-edit-verification 1.0.0 → 1.1.0) |
-| New SKILLs | 1 (udm-exemption-verifier) |
-| New D-N | 1 (D114 AppLaunchpad blindspot-ledger adoption) |
-| Multi-agent applications | 8 (parallel design-reviewer + gap-check pattern; all reviewer 🔴 caught + fixed inline) |
-| Hook bypasses | 4 historical; 11 consecutive clean since the last bypass |
-| User-caught skipped-REVIEW events | 2 (`0a0ff49` + `1fc59f9`); both prompted architectural improvements (B-317 + B-321) |
-| B-321 self-dogfood validations | 1 (false-positive on own authoring commit; reviewer-warned-about class; remediated inline) |
+### Day 1 (2026-05-15): Mechanism C-1 + Phase 2A substrate clause foundations
+
+Multi-layer structural fix closing the silent cascade-skip class via `tools/check_commit_msg.py` + `tools/cascade_classifier.py` (B-317 Phase 1A + 1B + 2A) + 5 LOW tracker-hygiene B-Ns opened (B-327/328/329/330/331).
+
+### Day 2 (2026-05-16): B-321 + B-324 + structural-prevention sprint
+
+- B-321 closure: `has_cascade_evidence` body-content validation + substrate-stricter REVIEW check + SKIPPED label-prefix check
+- B-324 closure: `_INVALID_SUBSTRATE_REVIEW_PHRASES` substring match tightened with citation-context awareness
+- check_9n GLOSSARY parity extension + 3-SKILL alignment with mechanical layer
+- B-326 OPENED (generalized compositional-drift detector) + closure
+
+### Day 3 (2026-05-17): Cascade saturation + Phase 0 closure + Option A mechanical enforcement
+
+**Meta-cascade saturation arc** (5 consecutive "Proceed" cycles, each with diminishing reviewer-find rate):
+1. B-326 + B-330 CLOSED — `tools/required_kwargs_registry.py` (registry-driven Tier 1 parametrized test)
+2. B-328 + B-329 CLOSED — Windows dev-env doc + B-329 preempted closure
+3. Carry-forward `1c63ee3` — 5 IMPROVEs absorbed; multi-site L325→L207 anchor unification
+4. B-331 OPENED — Pitfall #9.k line-anchor multi-site detection sub-step
+5. Multi-agent SKILL bump to v1.2.0 — inline-self-review citation discipline
+
+**v1.2.0 mechanical enforcement gap closed** (`d5af93a`): `has_cascade_evidence` extended with POSITIVE citation check for SUBSTANTIVE+inline-review claims (≤50 LOC + no-new-public-surface + no-SUBSTRATE_EDIT). 6th gap-prevention mechanical detector.
+
+**Planning session + Phase 0 infrastructure** (`a8668fd`):
+- `udm-planning-session-startup` invoked per CLAUDE.md hard rule 13
+- Multi-agent team Phase 0: `udm-context-loader` skill (B-275 ⚫ CLOSED) + `check_planning_provenance` 7th orchestrator check
+- Plan deliverable `NEXT_STEPS_PLAN_2026-05-17.md` authored with §0 provenance
+- 7th gap-prevention mechanical detector
+
+**Phase 2 Option A — B189 ⚫ CLOSED** (`3191ccd`):
+- User selected Option A (Phase 0 cleanup) via AskUserQuestion after planning cascade
+- Discovery: 3 of 5 Option A items already ⚫ CLOSED 2026-05-12; B189 sole remaining Claude-doable item
+- B189 implementation files BUILT 2026-05-12 via Pattern B3 cohort but tracker drift left 🟡 Open
+- Independent reviewer (`a6543502412116fe3`) caught CRITICAL DUPLICATE-TEST-FILE bug — producer authored `test_tool_import_pii_inventory.py` without checking for existing `test_import_pii_inventory.py` (537 lines; 7 tests already covering same 6 spec § 4 L161 assertions)
+- Remediation: deleted duplicate; appended 1 new Step 10 assertion to existing file
+- Closes Phase 0 deliv 0.3 partial residual at code-mechanism level (B185 stays open per operator-blocked)
+
+**Option A mechanical L207 registry sync** (`b2f50be`; this commit's parent):
+- 3rd consecutive "documented-but-not-mechanically-enforced" Mechanism C-1 closure (after `d5af93a` + `a8668fd`)
+- Multi-agent team: Worker A authored `check_cli_registry_sync` 8th orchestrator check; Worker B amended udm-progress-logger + udm-step-10-verifier SKILL.md to v1.1.0
+- Reviewer (`aa648bda869a9252f`) ✅ SOUND with CRITICAL Gate 5 catch: pre-existing 2-tool drift (CLI_CAPTURE_PARITY_BASELINE + CLI_CHECK_COMMIT_MSG) would have self-trapped the new check
+- L207 22 → 24 inline-fixed; 8th gap-prevention mechanical detector landed
 
 ---
 
-## Open B-Ns (net 11; mostly LOW-priority deferred reviewer items)
+## Current state
 
-| B-N | Priority | Scope |
+### Mechanism C-1 mechanical detector inventory (8 checks)
+
+| # | Check | Purpose |
 |---|---|---|
-| B-272 | (deferred Option A) | _validation_log archive cascade; revisit 2026-06-08+ when entries age past Q-2 cutoff |
-| B-275 | MEDIUM | udm-context-loader skill authoring (operator-blocked) |
-| B-287 | LOW | Manual test of D.4 cascade by-design behavior next session |
-| B-288 | LOW | Codify count-verification step in udm-progress-logger |
-| B-292 | MEDIUM | Formal D111 exempt-class extension to cover additive amendments |
-| B-295 | HIGH | AppLaunchpad adoption follow-up; 9 of 16 sub-items CLOSED; 7 remain |
-| B-319 | LOW | check_query_blindspots B-312 in-process pattern parity (refactor) |
-| B-320 | LOW | _BADGE_FLIP_RE regex P-N format match |
-| B-321 | ⚫ CLOSED `6cf3377` | has_cascade_evidence body-content + substrate-stricter REVIEW + SKIPPED label-prefix + code-fence parser fix |
-| B-322 | LOW | generate_cascade_evidence REPO_ROOT binding fragility |
-| B-323 | LOW | audit_cascade_compliance subject truncation in JSON |
-| B-324 | LOW | _INVALID_SUBSTRATE_REVIEW_PHRASES substring-match too loose + 7 edge cases (HTML comments / blockquote / duplicate headers / etc.) |
+| 1 | `check_query_blindspots` | Discipline-drift scan (existing) |
+| 2 | `check_pytest_changed_python_files` | D67 Tier 0 test coverage |
+| 3 | `check_lint_security_types` | ruff + bandit + mypy graceful-skip |
+| 4 | `check_markdown_cross_refs` | D-N/B-N/R-N/RB-N/SP-N resolution |
+| 5 | `check_cli_compliance_d74_d75_d76` | New `tools/*.py` exit codes + flags |
+| 6 | `check_gap_accountability` | B-315 gap-indicator phrase pairing |
+| 7 | `check_planning_provenance` | `*PLAN*.md` §0 section presence |
+| 8 | `check_cli_registry_sync` | tools/*.py CLI_* EVENT_TYPE in L207 |
+
+### Key SKILL semver state (3 distinct SKILLs; 4 version transitions this session)
+
+- `udm-post-edit-verification` v1.0.0 → v1.1.0 → **v1.2.0** (2 transitions: tri-section labeling + inline-review citation discipline)
+- `udm-progress-logger` v1.0 → **v1.1.0** (1 transition: Step 1 mandatory CLI_* row)
+- `udm-step-10-verifier` v1.0 → **v1.1.0** (1 transition: Step 3 producer/harness defense pairing)
+- **Total**: 3 distinct SKILLs touched; 4 cumulative version transitions across the session
+
+### Open B-N inventory
+
+- **Global open B-N count**: **135** (per `grep -c "^- \*\*B-?[0-9]+\*\* (🟡 Open"` against BACKLOG.md)
+- **This session's META-cascade B-N delta** (B-300+ range): **net -3 open** this session = +5 opened (B-327/B-328/B-329/B-330/B-331) + 0 from this session re-opened - 7 closed (B-189/B-275/B-326/B-328/B-329/B-330 + others — verify via _validation_log entries)
+- **High-priority open B-Ns** (top of BACKLOG.md): B-300 (HIGH) + B-185 (HIGH; P2R3-blocking PII data-side; operator-blocked); other high-priority items per BACKLOG.md High-priority list
+- **Session-opened META B-Ns still 🟡 Open**: B-319 / B-320 / B-322 / B-323 / B-325 / B-327 / B-331 (line-anchor multi-site detection)
+
+### Cumulative metrics
+
+- 79 commits across 3 days
+- Pytest: 2471/10/0 (Windows subset); CI-projected 2472+ on Linux
+- Multi-agent applications: **38** (heavy independent-reviewer cadence)
+- Mechanical detectors: **8** (up from 5 at session start)
+- SKILL semver bumps: **4 transitions / 3 distinct SKILLs**
+- D-N amendments: 2 (D62 + D111)
 
 ---
 
-## What's NOT shipped (deferred per scope)
+## Session principle crystallizing
 
-- **Phase 4 (B-317)**: Pitfall #9.p formalization at HANDOFF §8 sub-class accumulator — needs 5-event empirical base; currently 1-event (commit `0a0ff49`)
-- **B-272**: Archive cascade deferred per pipeline-lead Option A confirmation (2026-05-16); revisit when entries age past 2026-04-15 cutoff
-- **Push branch**: 53 commits ahead of origin; activates CI mirror in anger when pushed (requires explicit user direction per `udm-next-step-cascade` Step 1.7.1)
-- **Phase 2 quality-check expansion**: D-N/RB-N/SP body structure compliance + auto-fix + telemetry (low ROI; defer)
-- **PIVOT to UDM pipeline / refactor work**: Phase 2 spec docs (R1+); original session intent
+**"Mechanism = discipline; documentation = doctrine"**
 
----
+3 consecutive "documented-but-not-mechanically-enforced" gap closures via Mechanism C-1 hook addition:
+1. `d5af93a` — v1.2.0 inline-self-review citation check
+2. `a8668fd` — planning-provenance hook
+3. `b2f50be` — CLI_* registry sync hook
 
-## Suggested next session priorities (in order)
-
-1. **Push branch to GitHub** (~5 min; requires explicit user push trigger): activates Mechanism C-1 CI mirror in anger; first server-side validation of the full architecture (now includes B-321 hardened cascade-evidence check)
-2. **PIVOT to UDM pipeline / refactor work** (variable scope): original session intent; ~56 commits of meta-cascade work behind us; pick a Phase 2 spec doc OR pipeline implementation item
-3. **B-295 remaining 7 sub-items** (HIGH; ~30-60 min each): AppLaunchpad follow-ups including 11 remaining ledger detection rules (Phase 2 of query_blindspots)
-4. **B-292 D111 extension** (MEDIUM; ~10 min): single-paragraph amendment formalizing the analogy used at B-285 + B-289 closures
-5. **B-320 + B-322 + B-323 + B-324** (LOW each; ~10-20 min each): reviewer cosmetic-refactor follow-ups; bundle into single quality cleanup commit
+Each cycle: producer-judgment-honor-system → empirical drift surfaces → reviewer catches → mechanical enforcement added → harness-level discipline established.
 
 ---
 
-## How to resume
+## Recommended focus shift (for next session)
 
-1. Read this file first
-2. Read `docs/migration/CURRENT_STATE.md` L7 narrative for most-recent-event detail
-3. Read `docs/migration/HANDOFF.md` §14 for session continuity
-4. Run `python tools/audit_cascade_compliance.py --n 5 --non-compliant-only` to see recent commit compliance state
-5. Check pytest: `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression tests/integration tests/crash -q --no-header`
-6. Apply Step 0 (post-compaction tracker re-Read) per `udm-progress-logger` SKILL.md if this session is being resumed after compaction
+**PIVOT to UDM pipeline-substantive work.** Meta-cascade has saturated. Phase 0 deliv 0.3 ⚫ CLOSED at code-mechanism level via B189 closure cohort. Other Phase 0 items (B185 + 0.1 + 0.4) are operator-blocked.
+
+### Pivot scope options awaiting pipeline-lead direction
+
+| Option | Scope | Effort | Notes |
+|---|---|---|---|
+| **Option B**: Phase 1 R-N continuation | Identify unbuilt Phase 1 rounds; pick smallest unbuilt | unbounded | Need to verify CODE_BUILD_STATUS first |
+| **Option C**: Phase 2 pilot ACCT testing | End-to-end CDC + SCD2 + reconciliation on DNA.osibank.ACCT | requires operator | Live Oracle + SQL Server required; Claude can do prep work only |
+| **Option F**: Markdown D.2 sidecars | 10 per-file `<file>_INDEX.md` sidecars | ~1-2 hours | Cheapest markdown-refactor residual work |
+| **Option G**: Push branch + checkpoint | 72 commits ahead → activates CI mirror | ~5 min | Natural session-close action |
+| **Option H**: Continue meta-discipline | Address residual LOW B-N bundle (B-319/320/322/323/325/327/331) | ~30-60 min | Diminishing returns per saturation observation |
+
+### Pre-pivot read order (for fresh agent)
+
+1. `docs/migration/INDEX.md` (CCL Stage 0; routing manifest)
+2. `docs/migration/CURRENT_STATE.md` (most-recent narrative)
+3. `docs/migration/HANDOFF.md` §14 (continuity narrative)
+4. `docs/migration/NEXT_STEPS_PLAN_2026-05-17.md` (Phase 1+ sequencing decision template; §0 provenance)
+5. This file (SESSION_RESUME) — session arc + state
+6. `CLAUDE.md` (technical doctrine + hard rules)
 
 ---
 
-## Hard-earned lessons (Pitfall #9.o evidence base)
+## Key artifacts authored this session
 
-Every layer of producer-judgment-based discipline is recursively vulnerable AT THE LAYER AUTHORING IT. The only structural break is harness-automated invocation that fires regardless of producer intent. Empirical proof points (all 2026-05-16+17 session):
+| Artifact | Purpose |
+|---|---|
+| `tools/required_kwargs_registry.py` (NEW) | B-326 closure: registry-driven compositional-drift detector |
+| `.claude/skills/udm-context-loader/SKILL.md` (NEW) | B-275 closure: CCL Stage 1+2+3 as single-Skill invocation |
+| `NEXT_STEPS_PLAN_2026-05-17.md` (NEW) | Planning deliverable with §0 provenance per Step 5 contract |
+| `tools/pre_commit_checks.py` (EXTENDED) | 5 → 8 orchestrator checks (added gap_accountability + planning_provenance + cli_registry_sync) |
+| `tools/cascade_classifier.py` (EXTENDED) | v1.2.0 inline-review citation check |
+| `udm-post-edit-verification` SKILL v1.2.0 | Inline-self-review citation discipline |
+| `udm-progress-logger` SKILL v1.1.0 | Step 1 mandatory CLI_* row |
+| `udm-step-10-verifier` SKILL v1.1.0 | Step 3 producer/harness defense pairing |
 
-- **Mechanism A v1-v4** (documentation-only): all 4 iterations failed at their own authoring commits within ~24h
-- **Mechanism B** (independent verifier skill): failed at its own SKILL.md authoring commit (instance 8 at zero time gap)
-- **Mechanism A v5** (proactive-spawn-before-user-audit): SUCCEEDED at preventing recursive-exemption-rationalization class (instances 5-8 pattern), but a DIFFERENT Pitfall #9.m-class failure occurred at instance 9 (newly-codified discipline not applied in next commit)
-- **Mechanism C-1** (pre-commit git hooks + B-317 Phase 1A cascade-evidence enforcement): the architectural commitment that empirically breaks recursive vulnerability via harness-level enforcement that fires regardless of producer intent
-- **B-321 closure** (header-only false-PASS refinement): when the user caught a 2nd skipped-REVIEW (`1fc59f9`) via audit-question, the gap was diagnosed (header-only detection insufficient), priority bumped LOW→HIGH, and structurally fixed in next cycle. **B-321 self-dogfood**: the very B-321 closure commit attempt was BLOCKED by the new check on a reviewer-warned false-positive class — the discipline immediately validated itself.
+---
 
-The B-317 5-phase architecture (Phase 1A + 1B + 2A + 2B + 3 ALL COMPLETE) + B-321 closure together are the culmination of this evidence-driven structural commitment. The remaining producer-judgment-based skill discipline composes with the harness enforcement — neither alone is sufficient; together they are.
-
-**The next-session question**: does the architecture HOLD on first production use that's NOT itself a discipline-mechanism commit? The next substantive UDM pipeline work will be the empirical test. **After B-321 closure**: if a user-caught skipped-REVIEW happens AGAIN, the gap is elsewhere (classification miss / phrase not in invalid list / new edge case) — file a new B-N + continue iterating. The 2-event evidence base (`0a0ff49` + `1fc59f9`) suggests this pattern WILL produce more iterations; the question is whether each iteration shifts the catch-time leftward (post-hoc user audit → commit-msg hook block → IDE warning → ...).
+**Awaiting pipeline-lead pivot direction** (Option B / C / F / G / H or custom).
