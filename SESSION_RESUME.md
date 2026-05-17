@@ -1,15 +1,15 @@
-# SESSION RESUME — 2026-05-16
+# SESSION RESUME — 2026-05-17 (refresh)
 
-**Branch**: `round-6-post-merge-tracking` (53 commits ahead of `origin/round-6-post-merge-tracking`; NOT pushed)
-**Last commit**: `8dc0bd4` — Phase 3 LANDED (audit_cascade_compliance retroactive safety-net)
-**Pytest state**: 2508 pass / 58 skip / 0 fail
-**Hook bypasses this session**: 4 historical (all classes structurally addressed; 8 consecutive clean since)
+**Branch**: `round-6-post-merge-tracking` (56 commits ahead of `origin/round-6-post-merge-tracking`; NOT pushed)
+**Last commit**: `6cf3377` — B-321 CLOSED (has_cascade_evidence body-content validation + substrate-stricter REVIEW check + SKIPPED label-prefix check)
+**Pytest state**: 2521 pass / 58 skip / 0 fail
+**Hook bypasses this session**: 4 historical (all classes structurally addressed; 11 consecutive clean since)
 
 ---
 
-## What shipped this session (53 commits across 2 days)
+## What shipped this session (56 commits across 2 days)
 
-### Major architectural delivery: B-317 Mechanism C-1 (5 of 6 phases complete)
+### Major architectural delivery: B-317 Mechanism C-1 (5 of 6 phases complete) + B-321 closure (Phase 1A refinement)
 
 Multi-layer structural fix closing the **silent cascade-skip class** that 6 prior defense layers all missed because they fired on phrase presence, not section absence.
 
@@ -20,6 +20,7 @@ Multi-layer structural fix closing the **silent cascade-skip class** that 6 prio
 | **2A** | `CLAUDE.md` hard rule 14 substrate-edit clause + `tools/generate_cascade_evidence.py` (NEW) | `c0ad9c6` + `c662863` | Canonical substrate enumeration + friction reduction |
 | **2B** | `udm-post-edit-verification` SKILL v1.0.0 → v1.1.0 | `dda1bd2` | Discoverability + tri-section labeling discipline (B-318 closure) |
 | **3** | `tools/audit_cascade_compliance.py` (NEW) | `8dc0bd4` | Retroactive safety-net for --no-verify bypasses + edge cases |
+| **B-321 refinement** | `has_cascade_evidence` body-content validation + substrate-stricter REVIEW check + SKIPPED label-prefix + code-fence parser | `6cf3377` | Closes header-only false-PASS class empirically demonstrated by `1fc59f9`; next skipped-REVIEW will BLOCK at commit-msg hook instead of requiring user audit-question |
 | 4 | Pitfall #9.p formalization | DEFERRED | 1-event base; needs 5 per HANDOFF §8 convention |
 
 **Mechanism C-1 architecture**: 6 → **10 effective layers** (9 enforcement + 1 retroactive audit).
@@ -68,11 +69,11 @@ Multi-layer structural fix closing the **silent cascade-skip class** that 6 prio
 
 | Metric | Value |
 |---|---|
-| Commits | 53 ahead of origin |
-| Pytest | 2508 pass / 58 skip / 0 fail (was ~2300 at session start) |
-| B-N closed this session | 38 |
-| B-N opened this session | 50 (49 net + 1 re-open: B-286) |
-| Net B-N delta | +11 open (mostly LOW-priority reviewer follow-ups: B-320 through B-323) |
+| Commits | 56 ahead of origin |
+| Pytest | 2521 pass / 58 skip / 0 fail (was ~2300 at session start) |
+| B-N closed this session | 39 |
+| B-N opened this session | 51 (50 net + 1 re-open: B-286) |
+| Net B-N delta | +10 open (mostly LOW-priority reviewer follow-ups: B-320 through B-324) |
 | Mechanism C-1 layers | 6 → 10 |
 | New tools (headline cascade-architecture) | 5 (query_blindspots + cascade_classifier + check_commit_msg + generate_cascade_evidence + audit_cascade_compliance) |
 | New tools (supporting / orchestrator / research / library) | 5 (exemption_phrases + install_pre_commit_hook + measure_ccl_overhead + pre_commit_checks + test_github_slug) |
@@ -80,8 +81,10 @@ Multi-layer structural fix closing the **silent cascade-skip class** that 6 prio
 | SKILL semver bumps | 1 (udm-post-edit-verification 1.0.0 → 1.1.0) |
 | New SKILLs | 1 (udm-exemption-verifier) |
 | New D-N | 1 (D114 AppLaunchpad blindspot-ledger adoption) |
-| Multi-agent applications | 6 (parallel design-reviewer + gap-check pattern; all reviewer 🔴 caught + fixed inline) |
-| Hook bypasses | 4 historical; 8 consecutive clean since the last bypass |
+| Multi-agent applications | 8 (parallel design-reviewer + gap-check pattern; all reviewer 🔴 caught + fixed inline) |
+| Hook bypasses | 4 historical; 11 consecutive clean since the last bypass |
+| User-caught skipped-REVIEW events | 2 (`0a0ff49` + `1fc59f9`); both prompted architectural improvements (B-317 + B-321) |
+| B-321 self-dogfood validations | 1 (false-positive on own authoring commit; reviewer-warned-about class; remediated inline) |
 
 ---
 
@@ -97,9 +100,10 @@ Multi-layer structural fix closing the **silent cascade-skip class** that 6 prio
 | B-295 | HIGH | AppLaunchpad adoption follow-up; 9 of 16 sub-items CLOSED; 7 remain |
 | B-319 | LOW | check_query_blindspots B-312 in-process pattern parity (refactor) |
 | B-320 | LOW | _BADGE_FLIP_RE regex P-N format match |
-| B-321 | LOW | has_cascade_evidence body-content requirement |
+| B-321 | ⚫ CLOSED `6cf3377` | has_cascade_evidence body-content + substrate-stricter REVIEW + SKIPPED label-prefix + code-fence parser fix |
 | B-322 | LOW | generate_cascade_evidence REPO_ROOT binding fragility |
 | B-323 | LOW | audit_cascade_compliance subject truncation in JSON |
+| B-324 | LOW | _INVALID_SUBSTRATE_REVIEW_PHRASES substring-match too loose + 7 edge cases (HTML comments / blockquote / duplicate headers / etc.) |
 
 ---
 
@@ -115,11 +119,11 @@ Multi-layer structural fix closing the **silent cascade-skip class** that 6 prio
 
 ## Suggested next session priorities (in order)
 
-1. **Push branch to GitHub** (~5 min; requires explicit user push trigger): activates Mechanism C-1 CI mirror in anger; first server-side validation of the full architecture
-2. **PIVOT to UDM pipeline / refactor work** (variable scope): original session intent; ~60 commits of meta-cascade work behind us; pick a Phase 2 spec doc OR pipeline implementation item
+1. **Push branch to GitHub** (~5 min; requires explicit user push trigger): activates Mechanism C-1 CI mirror in anger; first server-side validation of the full architecture (now includes B-321 hardened cascade-evidence check)
+2. **PIVOT to UDM pipeline / refactor work** (variable scope): original session intent; ~56 commits of meta-cascade work behind us; pick a Phase 2 spec doc OR pipeline implementation item
 3. **B-295 remaining 7 sub-items** (HIGH; ~30-60 min each): AppLaunchpad follow-ups including 11 remaining ledger detection rules (Phase 2 of query_blindspots)
 4. **B-292 D111 extension** (MEDIUM; ~10 min): single-paragraph amendment formalizing the analogy used at B-285 + B-289 closures
-5. **B-320 through B-323** (LOW each; ~10-20 min each): reviewer cosmetic-refactor follow-ups; bundle into single quality cleanup commit
+5. **B-320 + B-322 + B-323 + B-324** (LOW each; ~10-20 min each): reviewer cosmetic-refactor follow-ups; bundle into single quality cleanup commit
 
 ---
 
@@ -136,13 +140,14 @@ Multi-layer structural fix closing the **silent cascade-skip class** that 6 prio
 
 ## Hard-earned lessons (Pitfall #9.o evidence base)
 
-Every layer of producer-judgment-based discipline is recursively vulnerable AT THE LAYER AUTHORING IT. The only structural break is harness-automated invocation that fires regardless of producer intent. Empirical proof points (all 2026-05-16 session):
+Every layer of producer-judgment-based discipline is recursively vulnerable AT THE LAYER AUTHORING IT. The only structural break is harness-automated invocation that fires regardless of producer intent. Empirical proof points (all 2026-05-16+17 session):
 
 - **Mechanism A v1-v4** (documentation-only): all 4 iterations failed at their own authoring commits within ~24h
 - **Mechanism B** (independent verifier skill): failed at its own SKILL.md authoring commit (instance 8 at zero time gap)
 - **Mechanism A v5** (proactive-spawn-before-user-audit): SUCCEEDED at preventing recursive-exemption-rationalization class (instances 5-8 pattern), but a DIFFERENT Pitfall #9.m-class failure occurred at instance 9 (newly-codified discipline not applied in next commit)
 - **Mechanism C-1** (pre-commit git hooks + B-317 Phase 1A cascade-evidence enforcement): the architectural commitment that empirically breaks recursive vulnerability via harness-level enforcement that fires regardless of producer intent
+- **B-321 closure** (header-only false-PASS refinement): when the user caught a 2nd skipped-REVIEW (`1fc59f9`) via audit-question, the gap was diagnosed (header-only detection insufficient), priority bumped LOW→HIGH, and structurally fixed in next cycle. **B-321 self-dogfood**: the very B-321 closure commit attempt was BLOCKED by the new check on a reviewer-warned false-positive class — the discipline immediately validated itself.
 
-The B-317 5-phase architecture (Phase 1A + 1B + 2A + 2B + 3 ALL COMPLETE) is the culmination of this evidence-driven structural commitment. The remaining producer-judgment-based skill discipline composes with the harness enforcement — neither alone is sufficient; together they are.
+The B-317 5-phase architecture (Phase 1A + 1B + 2A + 2B + 3 ALL COMPLETE) + B-321 closure together are the culmination of this evidence-driven structural commitment. The remaining producer-judgment-based skill discipline composes with the harness enforcement — neither alone is sufficient; together they are.
 
-**The next-session question**: does the architecture HOLD on first production use that's NOT itself a discipline-mechanism commit? The next substantive UDM pipeline work will be the empirical test.
+**The next-session question**: does the architecture HOLD on first production use that's NOT itself a discipline-mechanism commit? The next substantive UDM pipeline work will be the empirical test. **After B-321 closure**: if a user-caught skipped-REVIEW happens AGAIN, the gap is elsewhere (classification miss / phrase not in invalid list / new edge case) — file a new B-N + continue iterating. The 2-event evidence base (`0a0ff49` + `1fc59f9`) suggests this pattern WILL produce more iterations; the question is whether each iteration shifts the catch-time leftward (post-hoc user audit → commit-msg hook block → IDE warning → ...).
