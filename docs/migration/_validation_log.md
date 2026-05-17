@@ -11742,3 +11742,52 @@ Plus reviewer-affirmed design choices:
 - Skills updated this session: 5 (unchanged)
 - D-N amendments this session: 2 (unchanged)
 - SKILL semver bumps this session: 2 (unchanged)
+
+---
+
+### 2026-05-17 — B189 CLOSED (Tool 15 PII inventory import full closure; Phase 2 Option A execution)
+
+**Trigger**: User chose Option A (Phase 0 cleanup) via AskUserQuestion 2026-05-17 after `udm-planning-session-startup` cascade. Investigation surfaced B189 sole remaining Claude-doable Option A item.
+
+**Wave 1 (parallel verification)**:
+- Worker A `a55447e38d182fbd7` (33rd cumulative): verified `data_load/pii_inventory_importer.py` (827 lines) + `migrations/pii_inventory_audit_log.py` (485 lines) exist from 2026-05-12 Pattern B3 cohort; surfaced 5 cosmetic IMPROVE (all accepted as-is per Pitfall #9.l canonical re-read)
+- Worker B `a17541f3b4a4f68f6` (34th cumulative): added Step 10 compliance to `tools/import_pii_inventory.py` — `__all__` public-surface export + `EXIT_OPERATIONAL` alias (parent-brief naming reconciliation); surfaced 2 IMPROVE (dry-run spec-vs-brief preserved per Pitfall #9.l; EVENT_TYPE registry drift)
+
+**Wave 2 (parent closure attempt — INITIAL with major bug)**:
+- Authored DUPLICATE test file `tests/tier0/test_tool_import_pii_inventory.py` (192 lines; 7 tests). **Producer error**: failed to check for existing `tests/tier0/test_import_pii_inventory.py` (537 lines; 7 tests covering same 6 spec § 4 L161 assertions from 2026-05-12 cohort) BEFORE authoring. This is the "didn't read before write" anti-pattern.
+
+**Independent reviewer remediation** (`a6543502412116fe3`; 35th cumulative; spawned per Phase 2B SKILL v1.1.0 substrate-edit clause after v1.2.0 mechanical check correctly BLOCKED producer's attempted inline self-review on SUBSTRATE_EDIT):
+- 🔴 BLOCK #1: DUPLICATE TEST FILE — remediation: DELETED duplicate; APPENDED 1 new test (`test_tool_public_surface_and_exit_operational_alias`) to existing file covering Worker B's `__all__` + EXIT_OPERATIONAL additions; 8/8 PASS post-augment.
+- 🔴 BLOCK #2: BACKLOG L92 high-priority summary missing strikethrough (Pitfall #9.j) — remediation: applied inline strikethrough + ⚫ CLOSED annotation pointing to L515 full body.
+- 🟡 IMPROVE #3: CLI_* registry undercounted — 3 cascade tools (CLI_CASCADE_CLASSIFIER + CLI_GENERATE_CASCADE_EVIDENCE + CLI_AUDIT_CASCADE_COMPLIANCE) registered in CLAUDE.md Structure but absent from L207 registry. Pre-existing drift surfaced by touching L207. Remediation: 18 → 22 (added B189 tool + 3 cascade tools).
+- 🟡 IMPROVE #4: missing _validation_log entry per hard rule 9 — remediation: this entry.
+- 🟡 IMPROVE #5: producer brief count drift (tool row enumerates 8 items not 7) — acknowledged; artifact itself correct.
+
+**Pitfall recurrence taxonomy added by this commit**:
+- "Didn't read existing tests before authoring" — generalizable beyond B189; should be in producer self-check at Step 0 of build cohorts. CANDIDATE for Pitfall #9 sub-class accumulator at next round close-out (need 5-event base; this is 1st event).
+- "Tracker-drift latent over multiple sessions" — B189 code shipped 2026-05-12; CLAUDE.md L207 registry stale 5 days. Confirms udm-progress-logger Step 1 per-build-type checklist must include CLI_* family registry update for ANY new CLI_* EventType-introducing build.
+
+**Classification**: SUBSTRATE_EDIT (CLAUDE.md in SUBSTRATE_FILES); INDEPENDENT reviewer spawned per Phase 2B SKILL v1.1.0; v1.2.0 mechanical check correctly blocked producer's attempted inline self-review (mechanism working as designed at d5af93a).
+
+**Tracker walk per per-build-type checklist**:
+- BACKLOG.md (universal): UPDATED (B-189 ⚫ CLOSED L515 full body + L92 strikethrough; Pitfall #9.j compliance verified)
+- CURRENT_STATE.md / HANDOFF.md (universal): UPDATED (L7 + §14 narrative prepend with full reviewer remediation)
+- CODE_BUILD_STATUS.md (universal): UNTOUCHED-AS-EXPECTED (no code-build state change; tests-only + tracker hygiene)
+- _validation_log.md (universal): UPDATED (this entry)
+- CLAUDE.md Structure (NEW public surface): UPDATED (2 new rows: data_load/pii_inventory_importer.py + tools/import_pii_inventory.py)
+- CLAUDE.md L207 CLI_* family registry (NEW EventType): UPDATED (18 → 22; added B189 tool + 3 pre-existing-drift cascade tools)
+- GLOSSARY.md (NEW public surface): UNTOUCHED-AS-EXPECTED — module exports already authored 2026-05-12; GLOSSARY may already have them from prior session (TODO follow-up if check_9n flags at commit)
+
+**Pytest delta**: 2472 → 2473 (+1 net; was 7 existing in test_import_pii_inventory + 1 new Step 10 assertion appended = 8 total).
+
+**Cumulative session metrics**:
+- 78 commits since 2026-05-15 (3-day span)
+- B-N: net 9 open (was 10; B-189 ⚫ CLOSED; 0 new opened)
+- Pytest: 2472 → 2473 (+1 net)
+- Multi-agent applications: **35** (was 32; +3: 2 workers + 1 independent reviewer)
+- CLI_* family registry: 18 → **22** (+4: 1 new B189 tool + 3 pre-existing-drift cascade tools)
+- Gap-prevention mechanical detectors: 7 (unchanged)
+- Skills updated this session: 5 (unchanged)
+- D-N amendments this session: 2 (unchanged)
+- SKILL semver bumps this session: 2 (unchanged)
+- Phase 0 cleanup deliv 0.3 partial residual: CLOSED at code-mechanism level (B185 stays open for compliance-side data collection per operator-blocked status)
