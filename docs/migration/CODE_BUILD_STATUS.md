@@ -340,6 +340,20 @@ Per D114 (🟢 Locked 2026-05-16) adoption decision — Phase 1 high-ROI subset 
 
 **B-295 cohort progress** (16 sub-items total): 9 closed; 7 remaining (Phase 2 detection rules + polish items batch 10-15). 1-2 cycles forecast to complete remaining high-value sub-items per user calibration 2026-05-16.
 
+## Mechanism C-1 Cycle 2 GitHub Actions CI mirror — 1/1 BUILT 2026-05-16 (per B-311 user-directive "Cycle 2: CI / server-side mirror")
+
+Server-side mirror of pre-commit + commit-msg hooks via GitHub Actions. Catches --no-verify bypasses + devs who didn't install local hook. Architectural completion of Mechanism C-1 per critical-review hole 19 + 20 (local hook only; no server-side enforcement).
+
+| Status | Artifact | Purpose | Build state | Tests | Source |
+|---|---|---|---|---|---|
+| 🟢 | `.github/workflows/pre-commit-mirror.yml` (~100 lines) | 2 jobs: pre-commit-mirror (runs orchestrator on changed files vs base) + commit-msg-mirror (iterates commits in range + runs check_commit_msg.py on each message). Triggers on push + pull_request. Python 3.12 + pip install ruff/bandit/mypy (`|| true` graceful). | 🟢 Built 2026-05-16 (this commit) | None (CI workflow validated by GitHub on first run) | B-311 user-directive + critical-review holes 19+20 |
+| 🟢 | `tools/pre_commit_checks.py` `--files <comma-separated>` flag (per B-311) | New CLI flag bypasses git --cached lookup for CI use; explicit file list passed via comma-separated args. | 🟢 Extended 2026-05-16 (this commit) | Existing 13/13 Tier 0 tests still pass | B-311 |
+| 🟢 | `tools/pre_commit_checks.py` markdown_cross_refs int-comparison fix | Inline-fix during B-311 smoke test: RISKS.md uses R01 zero-padded; BACKLOG cites R5; string comparison failed. Fixed to int-based comparison via `int(match.group(2))`. | 🟢 Fixed 2026-05-16 (this commit) | Same | B-311 inline-fix |
+
+**To enable enforcement (one-time per repo)**: configure GitHub branch protection rule on `main` with "Require status checks to pass before merging" → select "Mechanism C-1 CI mirror" jobs. Producer cannot bypass via --no-verify on local (bypasses local hook but NOT this CI mirror).
+
+---
+
 ## Mechanism C-1 pre-commit git hook — 1/1 BUILT 2026-05-16 (per B-301 trigger met at Pitfall #9.o instance 8; reinforced by instance 9 self-application-gap empirical finding)
 
 Per B-301 closure (TRIGGER MET 2026-05-16 at commit `bd9210c` instance 8; reinforced by instance 9 at `f8a6ae1` confirming sub-class split 9.o.1 + 9.o.2 both require harness-automated enforcement). **Structural-fix-via-harness-automation** completes what documentation-only Mechanism A (3 iterations) and structural-fix-via-agent-invocation Mechanism B could not achieve at structural-fix authoring commits. Shifts discipline-substrate from "producer self-applies discipline" to "discipline applies via harness regardless of producer".

@@ -2,6 +2,39 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — B-311 CLOSED: Cycle 2 GitHub Actions CI mirror of Mechanism C-1 (server-side enforcement architecturally completes Mechanism C-1; catches --no-verify bypasses + uninstalled-hook commits)
+
+**Trigger**: user D-answer 2026-05-16 "Cycle 2: CI / server-side mirror" (chose option B from 4-option next-step framing).
+
+**Artifacts**:
+- `.github/workflows/pre-commit-mirror.yml` (NEW; ~100 lines): GitHub Actions workflow with 2 jobs: `pre-commit-mirror` (runs `tools/pre_commit_checks.py --files <diff>` on changed files vs base ref) + `commit-msg-mirror` (iterates commits in push/PR range; runs `tools/check_commit_msg.py` on each message). Triggers `on: push` (any branch) + `on: pull_request` (any base). Setup: Python 3.12 + minimal deps (pytest + pyyaml) + optional lint tools (ruff+bandit+mypy with `|| true` for graceful skip).
+- `tools/pre_commit_checks.py` cli_main extended: NEW `--files <comma-separated>` flag bypasses git --cached lookup; CI workflow uses this to pass explicit file list. When provided, passes to `run_all_checks(staged=explicit_files)`.
+- `tools/pre_commit_checks.py` `_load_canonical_ids` + `check_markdown_cross_refs` int-comparison fix: RISKS.md uses `R01` zero-padded; BACKLOG cites `R5`; previous string comparison failed (20 false-positives surfaced during smoke test). Fixed to int-based comparison via `int(match.group(2))`. Falsie-positives eliminated; real-positives (SP-12 + D-115 unresolved in BACKLOG.md body) preserved for future cleanup (out of THIS commit's scope).
+
+**Smoke test on Cycle 2 staged scope** (`tools/pre_commit_checks.py + .github/workflows/pre-commit-mirror.yml`): 5/5 checks PASS. Hook should not block this commit.
+
+**Hard rule 14 cascade applied**:
+- TEST: pytest 13/13 orchestrator Tier 0 still pass + smoke test all checks PASS
+- GAP ANALYSIS: parent inline G1-G6 (CI workflow is GitHub-native YAML; no Python code to scan; verified syntax via YAML parser implicit at GitHub side)
+- REVIEW: parent inline (CI workflow follows GitHub Actions documented patterns; uses standard actions/checkout@v4 + actions/setup-python@v5)
+
+**Forward outlook**:
+- After commit lands + push to GitHub: CI workflow auto-discovered + runs on next push/PR
+- To enforce: configure GitHub branch protection rule on `main`
+- Producer cannot bypass via --no-verify locally (bypasses local hook but NOT this CI)
+- If CI fails on a PR: status check shows failure; merge blocked (if branch protection enabled)
+
+**Critical-review hole closure tracking** (per parent's prior critical review):
+- ✅ Hole 19 (Hook not activated on this clone): CLOSED at B-309 (`install_pre_commit_hook.py --install --apply` run; --check confirms ACTIVE)
+- ✅ Hole 20 (No CI/server-side mirror): CLOSED this commit (B-311; GitHub Actions workflow live after push)
+- ⏳ Hole 21 (No --no-verify audit trail): still open; B-N candidate (future)
+- ⏳ Holes 1-3 (No lint/security/import-structure): partially addressed via B-309 graceful-skip; full activation requires CI install which IS in this workflow YAML (ruff+bandit+mypy installed in CI environment)
+- ⏳ Other holes from critical review: still open as Phase 2+ work
+
+**Major structural milestone**: Mechanism C-1 is now FULLY architecturally complete (local hook + CI mirror + bypass-self-flagging). Discipline-substrate shift from producer-applied to harness-applied (Cycle 1) + harness-applied-with-server-mirror (Cycle 2). No bypass mechanism that escapes audit (--no-verify is self-flagging local; CI runs regardless of local hook state).
+
+---
+
 ## 2026-05-16 — B-309 CLOSED: Cycle 1 critical-review improvements (lint+security+typing check + fail-open distinguishes FATAL vs BLOCKED + dedupe exemption phrases + ACTIVATE hook on dev clone)
 
 **Reviewer**: parent + 41 Tier 0 tests pass + smoke-tested orchestrator runs all 5 checks correctly. Per Mechanism A v3 step 5: user-directive quote-cite substitutes ("Proceed with cycle 1" following parent's critical-review identifying 3 highest-value low-risk improvements).

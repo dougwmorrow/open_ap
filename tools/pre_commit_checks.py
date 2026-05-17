@@ -269,9 +269,13 @@ def check_pytest_changed_python_files(staged: list[str]) -> CheckResult:
 _REF_PATTERN = re.compile(r"\b(D|B|R|RB|SP)[-]?(\d{1,3})\b")
 
 
-def _load_canonical_ids() -> dict[str, set[str]]:
-    """Load known D-N / B-N / R-N / RB-N / SP-N identifiers from canonical sources."""
-    known: dict[str, set[str]] = {"D": set(), "B": set(), "R": set(), "RB": set(), "SP": set()}
+def _load_canonical_ids() -> dict[str, set[int]]:
+    """Load known D-N / B-N / R-N / RB-N / SP-N identifiers from canonical sources.
+
+    Stores as int (not str) to normalize zero-padding (e.g., R01 from RISKS.md
+    canonical form matches R-5 / R5 citations without false positives).
+    """
+    known: dict[str, set[int]] = {"D": set(), "B": set(), "R": set(), "RB": set(), "SP": set()}
     sources = {
         "D": CANONICAL_D_SOURCE,
         "B": CANONICAL_B_SOURCE,
@@ -288,7 +292,10 @@ def _load_canonical_ids() -> dict[str, set[str]]:
             continue
         for match in _REF_PATTERN.finditer(content):
             if match.group(1) == prefix:
-                known[prefix].add(match.group(2))
+                try:
+                    known[prefix].add(int(match.group(2)))
+                except ValueError:
+                    pass
     return known
 
 
@@ -317,11 +324,15 @@ def check_markdown_cross_refs(staged: list[str]) -> CheckResult:
             continue
         for lineno, line in enumerate(content.splitlines(), start=1):
             for match in _REF_PATTERN.finditer(line):
-                prefix, number = match.group(1), match.group(2)
+                prefix, number_str = match.group(1), match.group(2)
+                try:
+                    number = int(number_str)
+                except ValueError:
+                    continue
+                if number == 0:
+                    continue
                 if number not in known.get(prefix, set()):
-                    if number == "0":
-                        continue
-                    broken.append((md_file, prefix, number, line.strip()[:100]))
+                    broken.append((md_file, prefix, number_str, line.strip()[:100]))
 
     if broken:
         broken = broken[:20]
@@ -553,13 +564,22 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument("--verbose", action="store_true", help="Print PASS results too.")
     parser.add_argument("--no-audit", action="store_true", help="Skip audit-row write.")
+    parser.add_argument(
+        "--files", default=None,
+        help="Comma-separated list of files to check (CI use; bypasses git "
+             "--cached staged-files lookup). Used by GitHub Actions mirror "
+             "workflow per B-311 Cycle 2.",
+    )
     return parser.parse_args(argv)
 
 
 def cli_main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv if argv is not None else sys.argv[1:])
+    explicit_files: list[str] | None = None
+    if args.files:
+        explicit_files = [f.strip() for f in args.files.split(",") if f.strip()]
     try:
-        results = run_all_checks()
+        results = run_all_checks(staged=explicit_files)
     except Exception as exc:
         print(f"FATAL: orchestrator error: {exc}", file=sys.stderr)
         return EXIT_FATAL
