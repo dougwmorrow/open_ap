@@ -1,7 +1,7 @@
 ---
 name: udm-post-edit-verification
-version: 1.0.0
-description: Mandatory post-edit verification cascade per CLAUDE.md hard rule 14 — runs TEST + GAP ANALYSIS + REVIEW after ANY substantive update / enhancement / creation of an object (markdown file / code / SKILL.md / D-N body / runbook / SP / etc.) BEFORE commit. Closes the discipline-debt accumulation pattern that surfaced across this project's history (commit 521b68c stale-narrative-quotation; D.3/D.4 cumulative pragmatic exemptions documented in B-285 / B-286). Trigger: any substantive edit. Anti-trigger: trivial typo fixes (<5 lines + no semantic change) + tracker-only commits (BACKLOG strikethrough flip only). Per user-direction 2026-05-15.
+version: 1.1.0
+description: Mandatory post-edit verification cascade per CLAUDE.md hard rule 14 — runs TEST + GAP ANALYSIS + REVIEW after ANY substantive update / enhancement / creation of an object (markdown file / code / SKILL.md / D-N body / runbook / SP / etc.) BEFORE commit. Closes the discipline-debt accumulation pattern that surfaced across this project's history (commit 521b68c stale-narrative-quotation; D.3/D.4 cumulative pragmatic exemptions documented in B-285 / B-286). Trigger: any substantive edit. Anti-trigger: trivial typo fixes (<5 lines + no semantic change) + tracker-only commits (BACKLOG strikethrough flip only). Per user-direction 2026-05-15. v1.1.0 (2026-05-16) per B-317 Phase 2B: adds tri-section labeling discipline (closes B-318) + Workflow tooling subsection citing tools/generate_cascade_evidence.py + tools/cascade_classifier.py + auto-spawn parallel-agent pattern for substrate edits.
 ---
 
 # UDM Post-Edit Verification
@@ -29,6 +29,8 @@ This skill is **always-mandatory** per CLAUDE.md hard rule 14 for any substantiv
 - Whitespace / line-ending normalization
 - POLISH_QUEUE P-N entry cosmetic edit
 - This very SKILL.md authoring (recursive trigger; bootstrap exemption documented)
+
+**SUBSTRATE override (per Phase 2A; v1.1.0)**: anti-triggers above do NOT apply to substrate-edit commits. `tools/cascade_classifier.py::is_substrate_path()` mechanically detects substrate (CLAUDE.md / .claude/skills/udm-*/SKILL.md / .claude/agents/udm-*.md / `tools/pre_commit_checks.py` etc.) and classifies as `SUBSTRATE_EDIT` with `cascade_required=True` regardless of typo/whitespace/badge-flip appearance. Substrate-edits are high-risk by definition (they BREAK discipline if broken). Empirical: commit `0a0ff49` silently skipped cascade on substrate refactor.
 
 ### When in doubt
 
@@ -111,19 +113,69 @@ ALL three steps must produce ✅ verdict OR documented 🟡-with-inline-fix evid
 
 If any step produces 🔴 escalate — DO NOT commit; surface to user for direction.
 
-## Output contract
+## Output contract — Tri-section labeling discipline (v1.1.0; closes B-318)
 
-After cascade completes, parent agent must emit (in commit message OR `_validation_log.md` entry):
+After cascade completes, parent agent MUST emit explicit tri-section markdown headers in the commit message (NOT a bullet list — markdown headers are mechanically detected by `tools/check_commit_msg.py` cascade-evidence regex per B-317 Phase 1A).
+
+**Required structure (mechanically enforced at commit-msg hook for non-anti-trigger commits)**:
 
 ```markdown
-**Post-edit verification cascade per hard rule 14**:
-- TEST: <command run> → <verdict + fresh evidence>
-- GAP ANALYSIS: <skill invoked + verdict>
-- REVIEW: <skill invoked + verdict>
-- ANTI-TRIGGER claim (if cascade skipped): <which anti-trigger applies + justification>
+## TEST
+<pytest verdict — fresh run; cite NNN/MM/0>
+<orchestrator smoke test verdict if applicable — `python tools/pre_commit_checks.py --verbose` → 6/6 PASS>
+<targeted-module test verdict>
+
+## GAP ANALYSIS
+<udm-gap-check independent reviewer agentId + verdict>
+<OR inline G1-G6 audit with per-category verdict>
+
+## REVIEW
+<scope-appropriate reviewer skill + agentId + verdict>
+<OR inline self-review (valid ONLY ≤50 LOC + no new public surface; NEVER valid for SUBSTRATE_EDIT)>
 ```
 
+**For anti-trigger commits (TYPO_ONLY / WHITESPACE_ONLY / BADGE_FLIP_ONLY / POLISH_QUEUE_ONLY)**: each section may contain `SKIPPED: <classification> anti-trigger` text. Generator emits this scaffold automatically (see Workflow tooling subsection below).
+
+**Mechanical enforcement (Phase 1A; B-317)**: `tools/check_commit_msg.py` invokes `tools/cascade_classifier.py::classify_commit()` → if `cascade_required=True` (SUBSTANTIVE / SUBSTRATE_EDIT), then `has_cascade_evidence()` regex scan must find all 3 section headers OR commit-msg hook BLOCKS the commit. Producer cannot bypass mechanically without `--no-verify` (self-flagging).
+
 This commit-message section IS the audit trail. Future Pattern F audits cross-check the commit-message claim against actual evidence in `_validation_log.md` + sub-agent transcripts.
+
+## Workflow tooling (v1.1.0 — Phase 2A; B-317)
+
+**`tools/generate_cascade_evidence.py`** — friction-reduction template generator. Producer runs `python tools/generate_cascade_evidence.py --no-audit` on staged scope; tool classifies the commit + emits tri-section template appropriate to classification (ANTI_TRIGGER brief with SKIPPED / SUBSTANTIVE full G1-G6 scaffold / SUBSTRATE full + 6-reviewer-type scaffold). Producer pipes into commit message + fills verdicts. Removes the "skip cascade because writing evidence section is overhead" failure mode.
+
+**`tools/cascade_classifier.py`** — 6-classification mechanical detector (SUBSTRATE_EDIT / TYPO_ONLY / WHITESPACE_ONLY / BADGE_FLIP_ONLY / POLISH_QUEUE_ONLY / SUBSTANTIVE). Strict mode: substrate-edits (enumerated `SUBSTRATE_FILES` + `SUBSTRATE_DIR_PREFIXES`) OVERRIDE all anti-trigger detection per CLAUDE.md hard rule 14 substrate-edit clause. Used by both `tools/check_commit_msg.py` enforcement + `tools/generate_cascade_evidence.py` template generation.
+
+**`tools/check_commit_msg.py`** — commit-msg hook enforcement (Phase 1A). Reads classification + verifies tri-section structure for cascade-required commits. Audit row written to `_session_logs/cli_check_commit_msg_<date>.log` per D76 with classification + missing_sections payload for forensic audit.
+
+**Producer workflow** (v1.1.0 recommended pattern):
+1. Make edits + stage with `git add`
+2. Run `python tools/generate_cascade_evidence.py --no-audit` → get scaffold
+3. Run TEST / GAP ANALYSIS / REVIEW per scaffold; fill in verdicts
+4. Commit via `git commit -F <commit-msg-file>` OR `git commit -m "<message>"` — BOTH trigger the commit-msg hook per B-307 closure (hook receives `COMMIT_EDITMSG` path as `$1`; reliable for ALL commit modes including direct `-m`)
+
+**When to skip the generator**: anti-trigger commits classified as TYPO_ONLY / WHITESPACE_ONLY / BADGE_FLIP_ONLY / POLISH_QUEUE_ONLY may skip the generator if the producer writes a minimal commit message + the commit-msg hook will not BLOCK (anti-triggers bypass cascade-evidence check). For all SUBSTANTIVE / SUBSTRATE commits: ALWAYS use the generator OR write the tri-section structure manually.
+
+## Auto-spawn parallel-agent pattern (v1.1.0 — Phase 2B optional discipline)
+
+For SUBSTANTIVE / SUBSTRATE_EDIT commits where independent review is required, parent agent should spawn GAP ANALYSIS + REVIEW agents in PARALLEL (not sequential) via `Agent` tool with `run_in_background=true`. While agents work, parent does tracker updates. When agents complete, parent synthesizes findings into commit message.
+
+**Why parallel**: GAP ANALYSIS (`udm-gap-check`) and REVIEW (`udm-design-reviewer` / `udm-data-engineer-review` / etc.) review DIFFERENT scopes. Their work is independent. Sequential invocation wastes wall-clock time.
+
+**Pattern**:
+```
+1. Make + stage edits
+2. Spawn 2 background agents (Agent tool, run_in_background=true):
+   - Agent A: udm-design-reviewer (or scope-appropriate review)
+   - Agent B: udm-gap-check 6-category audit
+3. While agents work: pytest verify + tracker updates (BACKLOG / CURRENT_STATE / HANDOFF / _validation_log)
+4. Await both task-notification completions
+5. Synthesize findings into commit message tri-section structure
+6. Apply BLOCK findings inline; defer IMPROVE findings as B-Ns
+7. Commit (hook validates)
+```
+
+**Empirical anchor** (2026-05-16 session; 4 commits): `db77516` (B-313/B-314/B-315 cohort; 2 agents A+B), `354dd5d` (B-316 fix-cycle 2; retroactive cascade on 0a0ff49 with 2 agents), `c0ad9c6` (Phase 1A/1B/2A landing; 1 design reviewer), `c662863` (Phase 2A generator; 1 design reviewer). Total 6 sub-agent invocations; 0 missed-finding regressions; all reviewer-surfaced 🔴 BLOCKs caught + fixed inline before commit. Pattern composes with hard rule 14 cascade.
 
 ## Cost discipline
 
@@ -226,15 +278,22 @@ This skill structurally prevents the pattern by making the cascade mandatory + a
 ## Cross-references
 
 - User-direction 2026-05-15: "Turn this into a mandatory event. After updating, enhancing, or creating a new object such as markdown file or code, a test, gap analysis, and review must be run to check the latest updates."
-- **CLAUDE.md hard rule 14** (canonical home; binding directive)
+- User-direction 2026-05-16: "We need a complete solution to ensure this never happens again. Come up with an extensive plan." → B-317 Phase 1A + 1B + 2A + 2B (this v1.1.0 amendment).
+- **CLAUDE.md hard rule 14** (canonical home; binding directive) + substrate-edit clause (Phase 2A added 2026-05-16)
 - `udm-gap-check` SKILL.md (Step 2 invocation)
 - `udm-checks-and-balances` SKILL.md (Step 3 invocation for D-N + doc scopes)
 - `superpowers-verification-before-completion` SKILL.md (Step 1 verification discipline)
 - `udm-step-10-verifier` SKILL.md (Step 1 substep for new public surface)
 - `udm-next-step-cascade` SKILL.md (Step 1.6 NEW invokes this skill)
+- `udm-exemption-verifier` SKILL.md (Step 2.5 invocation; Mechanism B for exemption claims)
 - `PLANNING_DISCIPLINE.md` §2.3 always-mandatory skills (this skill added)
+- `tools/cascade_classifier.py` (Phase 1B mechanical classifier; B-317)
+- `tools/check_commit_msg.py` cascade-evidence enforcement (Phase 1A; B-317)
+- `tools/generate_cascade_evidence.py` (Phase 2A friction reduction; B-317)
 - HANDOFF §8 Pitfall #9.o candidate B-286 (formalization candidate; superseded by hard rule 14 forward-prevention; B-286 closed concurrent with this skill landing)
-- Evidence base: commit `521b68c` + `3eef410` + `aee329c` + `a03a35c` discipline-debt accumulation events
+- B-317 (Phase 1A + 1B + 2A + 2B complete; closes silent cascade-skip class)
+- B-318 (tri-section labeling discipline; closed inline at v1.1.0 amendment)
+- Evidence base: commit `521b68c` + `3eef410` + `aee329c` + `a03a35c` discipline-debt accumulation events + commit `0a0ff49` (B-316 closure; silent cascade-skip empirical anchor)
 
 ## Owner
 

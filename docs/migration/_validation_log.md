@@ -10600,3 +10600,80 @@ The B-312 pattern is reusable across all full-file-scan checks. B-316 propagates
 - Mechanism C-1 effective enforcement-points: 7 detection + 1 friction-reduction
 - Multi-agent team applications this session: 4 (B-313/B-314; B-316 retro; Phase 1 review; Phase 2A review)
 - B-312 pattern propagations: 2
+
+---
+
+### 2026-05-16 — Phase 2B LANDED + B-318 CLOSED (SKILL v1.0.0→v1.1.0 amendment)
+
+**Event type**: SKILL discoverability + tri-section labeling discipline (B-318 closure bundled).
+
+**Trigger**: User-direction "Proceed with your recommended next steps" → HIGH/RECOMMENDED Phase 2B from prior runway.
+
+**SKILL.md amendments** (`.claude/skills/udm-post-edit-verification/SKILL.md`):
+1. Frontmatter version 1.0.0 → 1.1.0; description amended to cite B-317 Phase 2A/2B + 3 tools
+2. Output contract section REWRITTEN with explicit `## TEST` / `## GAP ANALYSIS` / `## REVIEW` markdown header format (closes B-318); body content requirements specified; mechanical enforcement at commit-msg hook cited
+3. NEW "Workflow tooling (v1.1.0 — Phase 2A; B-317)" subsection enumerating 3 tools (generate_cascade_evidence + cascade_classifier + check_commit_msg) + 4-step producer workflow
+4. NEW "Auto-spawn parallel-agent pattern (v1.1.0 — Phase 2B optional discipline)" subsection codifying the parallel-agent pattern empirically validated 4 times in 2026-05-16 session (commits `db77516` / `354dd5d` / `c0ad9c6` / `c662863`)
+5. Anti-triggers section: SUBSTRATE override note (substrate-edits NEVER anti-trigger; per Phase 2A clause)
+6. Cross-references section extended with B-317 + B-318 + Phase 2A/2B + Pitfall #9.o + commit anchors
+
+**Design reviewer Agent A (`a9c91a5722a0a8af6`)**: SOUND-with-improvements (0 🔴 BLOCK + 3 🟡 IMPROVE all minor + 0 closure-blocking).
+
+**Inline fixes applied (all 3 reviewer IMPROVES)**:
+1. Producer-workflow note: `git commit -m` ALSO triggers commit-msg hook (not just `-F`); per B-307 closure
+2. Empirical-anchor claim now cites 4 specific commits (`db77516` / `354dd5d` / `c0ad9c6` / `c662863`) with 6 total sub-agent invocations
+3. Anti-triggers section gains SUBSTRATE override cross-ref note
+
+**B-318 closure verdict (per reviewer)**: ADEQUATELY closes B-318. Output contract section mandates markdown-header tri-section structure (not bullet list); example block conforms; mechanical enforcement cited; regex edge cases (`## Verification — TEST` variant) confirmed working.
+
+**Verification**:
+- Targeted: SKILL.md changes verified via grep (SUBSTRATE override clause + empirical-anchor 4-commits cite + Producer workflow note)
+- Authoritative: pytest full → 2489 pass / 58 skip / 0 fail (unchanged from prior commit; SKILL doc-only)
+- Orchestrator smoke test on staged scope: expected 6/6 PASS (SKILL substrate edit; cascade-evidence section present per this commit message structure)
+
+**Files modified**: 4
+- `.claude/skills/udm-post-edit-verification/SKILL.md` (+85 lines net: 4 amendments + 3 inline IMPROVE fixes)
+- `docs/migration/BACKLOG.md` (B-318 closure annotation)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend)
+- `docs/migration/HANDOFF.md` (§14 prepend)
+- `docs/migration/_validation_log.md` (this entry)
+
+(5 total — fixed count.)
+
+**Per-build-type tracker walk**:
+- BACKLOG.md → UPDATED (B-318 closure)
+- CURRENT_STATE.md → UPDATED (L7 prepend)
+- HANDOFF.md → UPDATED (§14 prepend)
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (no new public surface; SKILL.md amendment only)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (same)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no code-build status transition)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+
+**Net delta**:
+- B-N: 0 NEW + 1 CLOSED (B-318) = net -1 open (was 11; now 10)
+- Pytest: unchanged (2489/58/0)
+- Files modified: 5
+- Mechanism C-1 effective layers: 9 (7 detection + 1 friction-reduction + 1 SKILL-discoverability)
+- SKILL versions bumped: 1 (udm-post-edit-verification 1.0.0 → 1.1.0 per Round 8 D98 minor-version semver)
+
+**Verdict**: 🟢 Phase 2B cleanly delivered. SKILL discoverability loop closed; producers find the workflow tooling via SKILL frontmatter description + Workflow tooling subsection + Cross-references section. B-318 tri-section labeling discipline now codified at SKILL level + enforced at commit-msg layer.
+
+**B-317 cumulative closure (Phase 1A + 1B + 2A + 2B)**:
+- Phase 1A: mechanical cascade-evidence detection at commit-msg hook ✅
+- Phase 1B: cascade_classifier 6-class detector with strict mode ✅
+- Phase 2A: CLAUDE.md substrate-edit clause + generate_cascade_evidence.py friction reduction ✅
+- Phase 2B: SKILL v1.1.0 discoverability + Auto-spawn pattern codification ✅
+
+**Phase 3 (deferred)**: retroactive audit tool (`tools/audit_cascade_compliance.py`) walks recent N commits + flags missing evidence — per original B-317 extensive plan.
+
+**Phase 4 (deferred)**: Pitfall #9.p formalization at 5-event base — currently 1-event empirical (this fix-pattern surfaced from `0a0ff49` incident; pattern recurrence threshold not yet met).
+
+**Cumulative session metrics (46 commits across 2 days; +1 this commit pending)**:
+- B-N: 49 opened + 38 closed - 1 re-open = net 10 open
+- Pytest: 2489/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective layers: 9
+- Multi-agent team applications: 5 (B-313/B-314; B-316 retro; Phase 1 review; Phase 2A review; Phase 2B review)
+- SKILL semver bumps this session: 1 (udm-post-edit-verification 1.0.0 → 1.1.0)
