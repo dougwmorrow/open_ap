@@ -220,6 +220,36 @@ def test_cli_main_json_mode(capsys, monkeypatch):
     assert parsed[0]["is_compliant"] is True
 
 
+def test_audit_passes_classification_to_has_cascade_evidence(monkeypatch):
+    """Assertion 20 (per design-reviewer compositional gap fix 2026-05-17):
+    audit_commits passes classification to has_cascade_evidence so substrate-
+    stricter REVIEW check (B-321) fires in retroactive scans. Previously
+    audit silently bypassed that check by omitting the classification kwarg.
+    """
+    import tools.audit_cascade_compliance as acc
+
+    captured_kwargs: list[dict] = []
+
+    def fake_has_cascade_evidence(commit_msg, classification=None):
+        captured_kwargs.append({"classification": classification})
+        return (True, [])
+
+    monkeypatch.setattr(acc, "_git_log",
+                        lambda n: [("abc12345", "test")])
+    monkeypatch.setattr(acc, "_commit_files",
+                        lambda h: ["tools/pre_commit_checks.py"])  # SUBSTRATE
+    monkeypatch.setattr(acc, "_commit_message",
+                        lambda h: "## TEST\nok\n## GAP ANALYSIS\nok\n## REVIEW\nspawned reviewer abc123\n")
+    monkeypatch.setattr(acc, "has_cascade_evidence", fake_has_cascade_evidence)
+
+    acc.audit_commits(n_commits=1)
+    assert len(captured_kwargs) == 1
+    assert captured_kwargs[0]["classification"] == "SUBSTRATE_EDIT", (
+        "audit_commits MUST pass classification to has_cascade_evidence "
+        "so substrate-stricter REVIEW check fires retroactively (B-321 composition)"
+    )
+
+
 def test_cli_main_non_compliant_only_filter(capsys, monkeypatch):
     """Assertion 19 (per reviewer 🟡 IMPROVE): --non-compliant-only filters output
     to only flagged commits."""

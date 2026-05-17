@@ -189,14 +189,23 @@ def classify_historical(files: list[str]) -> tuple[str, bool]:
 
 
 def audit_commits(n_commits: int = 20) -> list[CommitAudit]:
-    """Walk recent N commits + audit each for cascade-evidence compliance."""
+    """Walk recent N commits + audit each for cascade-evidence compliance.
+
+    Per design-reviewer compositional gap fix 2026-05-17: passes `classification`
+    to `has_cascade_evidence()` so the substrate-stricter REVIEW check (B-321)
+    fires in retroactive scans too. Previously the audit silently bypassed
+    that check by calling has_cascade_evidence(commit_msg) without the kwarg —
+    safety-net would mark commits compliant even with "inline self-review" on
+    substrate edits. Now classification flows through, mirroring check_commit_msg's
+    pass-through pattern.
+    """
     pairs = _git_log(n_commits)
     audits: list[CommitAudit] = []
     for commit_hash, subject in pairs:
         files = _commit_files(commit_hash)
         classification, cascade_required = classify_historical(files)
         commit_msg = _commit_message(commit_hash)
-        has_ev, missing = has_cascade_evidence(commit_msg)
+        has_ev, missing = has_cascade_evidence(commit_msg, classification=classification)
         is_compliant = (not cascade_required) or has_ev
         audits.append(CommitAudit(
             hash=commit_hash[:8],

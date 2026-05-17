@@ -11043,3 +11043,82 @@ Verdict: SOUND-with-improvements (0 🔴 BLOCK + 2 🟡 IMPROVE both inline-fixe
 - Multi-agent applications: 9
 - D-N amendments this session: 2 (D62 + D111)
 - B-295 sub-item progress: 10 of 16 CLOSED (was 9)
+
+---
+
+### 2026-05-17 — Hard rule 14 cascade on 10-commit B-317 cohort + inline disposition
+
+**Event type**: User-directed cascade explicit invocation on cumulative architectural work; 2 parallel reviewers (gap-check + design-review) surfaced 2 inline-fixable findings; both fixed in single follow-up commit.
+
+**Trigger**: User-direction "run a gap analysis, review, and test of the recent updates."
+
+**Cascade execution**:
+- **TEST**: pytest full → 2521 pass / 58 skip / 0 fail. Dogfooded `audit_cascade_compliance --n 10` on the architecture cohort itself → 10/10 PASS (0 non-compliant). Confirms B-321 mechanical check is correctly validating tri-section structure on recent commits.
+- **GAP ANALYSIS** (Agent A `a38693b0c2964f038` udm-gap-check 6-category audit): verdict 🟡 fixable inline. G1-G4 ✅ CLEAN. G5 🟡 (GLOSSARY parity gap for 3 new B-317 tools). G6 1 candidate (compositional gap from design review).
+- **REVIEW** (Agent B `a83163a0b7cb356ef` udm-design-reviewer architectural assessment): verdict SOUND-with-improvements. 1 🟡 IMPROVE (compositional defect). Composition correctness 🟢 OK across 5 layers + B-321 refinement.
+
+**Compositional defect discovered (design-reviewer finding)**:
+- `audit_cascade_compliance.py::audit_commits()` called `has_cascade_evidence(commit_msg)` WITHOUT classification kwarg
+- Substrate-stricter REVIEW check (B-321) silently SKIPPED in retroactive scans
+- Safety-net would mark commits compliant even with "inline self-review" on substrate edits
+- Same composition pattern that `check_commit_msg.py` gets right (passes classification) was missing from the retroactive-audit pathway
+- **Inline fix**: `has_cascade_evidence(commit_msg, classification=classification)` (1-line change); new Tier 0 assertion 20 `test_audit_passes_classification_to_has_cascade_evidence` pins behavior
+
+**GLOSSARY parity gap (gap-check finding)**:
+- 3 new B-317 tools (cascade_classifier / generate_cascade_evidence / audit_cascade_compliance) had CLAUDE.md Structure rows but ZERO GLOSSARY entries
+- Pre-B-317 tooling (pre_commit_checks / install_pre_commit_hook / query_blindspots) IS registered in GLOSSARY
+- Step 10 + Pitfall #9.n compliance gap
+- **Inline fix**: 24 GLOSSARY public-surface entries added across the 3 new tools (cascade_classifier 13 + generate_cascade_evidence 4 + audit_cascade_compliance 7)
+
+**No new B-N opened**: design-reviewer's suggested new-B-N for compositional gap is closed inline this same commit. Disposition is fix-not-defer.
+
+**Verification**:
+- Targeted: `pytest tests/tier0/test_audit_cascade_compliance.py` → 20/20 PASS (was 19; +1 new assertion 20)
+- Authoritative: pytest full → 2522 pass / 58 skip / 0 fail (was 2521/58/0; +1 net)
+- GLOSSARY entry verification: 13 + 4 + 7 = 24 references for 3 new tools
+
+**Files modified**: 6
+- `tools/audit_cascade_compliance.py` (+8 lines: classification pass-through + docstring update)
+- `tests/tier0/test_audit_cascade_compliance.py` (+1 test: assertion 20)
+- `docs/migration/GLOSSARY.md` (+24 public-surface entries)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend)
+- `docs/migration/HANDOFF.md` (§14 prepend)
+- `docs/migration/_validation_log.md` (this entry)
+
+**Per-build-type tracker walk**:
+- BACKLOG.md → UNTOUCHED-AS-EXPECTED (no new B-N; design-reviewer's compositional gap fixed inline rather than tracked)
+- CURRENT_STATE.md → UPDATED
+- HANDOFF.md → UPDATED
+- _validation_log.md → UPDATED (this entry)
+- GLOSSARY.md → UPDATED (24 new public-surface entries)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (Structure rows already present; gap was GLOSSARY-only)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no new code-build artifact)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+
+**Net delta**:
+- B-N: 0 NEW + 0 CLOSED (fix-cycle disposition)
+- Pytest: 2521 → 2522 (+1)
+- Files modified: 6
+- Multi-agent applications this session: 10 → 12 (this cascade spawned 2 parallel reviewers)
+- B-317 architecture composition: 5 layers + B-321 refinement + audit-classification-passthrough fix (composition now fully complete)
+
+**Verdict**: 🟢 Cascade cleanly delivered findings + inline disposition cleanly closed. The compositional defect (audit safety-net not respecting B-321 substrate-stricter check) was a real silent-bug that user-direction-led cascade caught.
+
+**Architectural completion validation**: after this fix-cycle commit, the 5-layer architecture composes correctly end-to-end:
+- Layer 1 (commit-msg hook) → classification → has_cascade_evidence(classification=) → BLOCK on substrate-stricter violation ✅
+- Layer 2 (substrate clause) → cascade_classifier::is_substrate_path() ✅
+- Layer 3 (generator) → produces tri-section template per classification ✅
+- Layer 4 (SKILL discoverability) → producer finds workflow tooling ✅
+- Layer 5 (retroactive audit) → audit_commits → classify_historical → has_cascade_evidence(classification=) → flags substrate-stricter violations retroactively ✅ (NEW: composition fix this commit)
+
+The 2 user-caught skipped-REVIEW events (0a0ff49 + 1fc59f9) would now BLOCK at commit-msg hook layer (Phase 1A + B-321) OR be flagged by retroactive audit (Phase 3 + this composition fix).
+
+**Cumulative session metrics (59 commits across 2 days; +1 this commit pending)**:
+- B-N: 52 opened + 41 closed - 1 re-open = net 10 open
+- Pytest: 2522/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective layers: 10 (composition fix completes layer-5 ↔ layer-1 parity)
+- Multi-agent applications: 12 (this cascade added 2 parallel reviewers)
+- D-N amendments this session: 2 (D62 + D111)
+- B-295 sub-item progress: 10 of 16 CLOSED
