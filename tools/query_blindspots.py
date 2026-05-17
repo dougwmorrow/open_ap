@@ -258,6 +258,9 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
         # that 9o detects; appearances of these phrases there are descriptive
         # (documenting the anti-pattern) not claims.
         "claude.md",
+        # SESSION_RESUME.md is the session-handoff narrative; descriptive
+        # discussion of Pitfall #9.o pattern is expected content.
+        "session_resume.md",
     )
     if any(substrate in norm_path for substrate in trigger_phrase_substrate_files):
         return matches  # chicken-and-egg false-positive suppression per B-304
@@ -275,6 +278,7 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
             "claude.md",
             "planning_discipline.md",
             "self_improvement_discipline.md",
+            "session_resume.md",
         )
     )
     lines = content.splitlines()
