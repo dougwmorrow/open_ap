@@ -338,6 +338,16 @@ For 3B-row table at 8% daily change (e.g., bulk update at source): 250M-row delt
 
 **Risk**: H drive capacity NOT documented in any planning artifact. Risk candidate per §11 below (will be assigned R-number upon plan approval).
 
+### §5.4 Pre-execution gates (per 2026-05-17 pre-sign-off gap-check Agent `ae1476a588dd34e15` — CRITICAL)
+
+**This plan's execution is GATED on resolving 2 CRITICAL gaps surfaced by independent gap-check reviewer 2026-05-17:**
+
+- **G1 (CCPA + Parquet replay)**: naive `replay_parquet_range()` would mechanically defeat CCPA right-to-deletion by re-INSERTing Bronze rows referencing tokens with `PiiVault.Status='deleted_per_request'`. Design proposed: Option A4 time-aware replay per `docs/migration/D2_GAP_RESOLUTION_PLAN_2026-05-17.md` §2. Pending: R5 research integration (Agent `a959ee0434c90087b` background; CCPA/GDPR + immutable audit data legal classification) → lock D-N (tentative-future-D-N number assigned at lock) → implement per **B-341**. **GATES Phase 2 R1 ACCT pilot.**
+
+- **G2 (Multi-table replay ordering)**: `replay_parquet_range()` per-(source, table) cannot preserve FK integrity for multi-table corruption recovery. Design proposed: Option B1 cross-table BatchId-aligned replay per `docs/migration/D2_GAP_RESOLUTION_PLAN_2026-05-17.md` §3 → implement per **B-342**. **GATES Phase 3 R1 large-table pilot** (single-table ACCT pilot Phase 2 R1 can proceed without).
+
+**Plan sign-off authorizes APPROACH; execution requires B-341 + B-342 + B-343 + B-344 + B-345 resolution per gap-resolution plan §7.3 + §7.4.**
+
 ### §5.3 Schema evolution during 6-month replay (per Reviewer Q8 not explicitly addressed; SURFACE here)
 
 If source schema changes mid-replay window:
@@ -498,6 +508,7 @@ Per Reviewer; renumbered to avoid B-N sequence collision (current open B-N high 
 | **Risk-NEW-A** | Multi-day replay engine does not exist; SCD2-invariant-preserving ordered replay at 3B-row scale is unproven | 🟡 Medium × High = 6; mitigation: implement `replay_parquet_range()` as Phase 2 R1 prerequisite (B-332) BEFORE Phase 3 |
 | **Risk-NEW-B** | H drive capacity for 10 large tables at 7-year retention is ~80 TB and NOT verified against actual drive sizing | 🟡 Medium × High = 6; mitigation: record actual capacity as Phase 3 gate (B-333) |
 | **Risk-NEW-C** | D18 source coupling — wiring source connections into SCD2 layer changes every `run_scd2_targeted` call site in `orchestration/`; risk of regression at unupdated call sites | ⚪ Low × Medium = 2; mitigation: `source_verifier_fn` parameter pattern; grep all call sites before plan executes (B-334) |
+| **Risk-NEW-D** (added 2026-05-17 per pre-sign-off gap-check G1) | **CCPA + Parquet replay interaction unresolved** — naive replay would re-INSERT Bronze rows referencing tokens whose `PiiVault.Status='deleted_per_request'`, mechanically defeating CCPA right-to-deletion = compliance breach risk | 🟡 Medium × **High** = 6; mitigation: G1 design Option A4 time-aware replay per `D2_GAP_RESOLUTION_PLAN_2026-05-17.md` §2 + B-341 CRITICAL; pending R5 legal research integration |
 | **R15 ESCALATION candidate** | DR drill scenarios reveal Bronze rebuild gaps — 80 TB Parquet footprint × 7-year retention + D110 DC-loss-no-DR posture means replay-from-scratch after DC loss requires source re-extraction (may not be possible 7 years later) | Severity increases from Medium × Medium = 4 → escalate to Medium × High = 6 |
 | **R02 DE-ESCALATION candidate** | Round 0.5 spike untested — execution plan context confirms D2 design is stable; spike scope narrows to connection factory + tokenization integration only | severity reduces |
 | **R01 watch** | Phase 0 deliverables completion — H drive capacity gap may re-escalate this when Phase 3 encounters storage constraint | watch |
