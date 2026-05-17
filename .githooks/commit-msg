@@ -34,40 +34,19 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
 
-# Exemption-claim trigger phrases per
-# .claude/skills/udm-exemption-verifier/SKILL.md L29-46 (12 phrases:
-# 8 verbatim + 4 B-303 structured-pattern extensions)
-EXEMPTION_TRIGGER_PHRASES = [
-    # Verbatim phrases (8 from SKILL.md L29-36)
-    "Layer N+1 termination",
-    "recursive-exemption",
-    "verbatim implementation",
-    "100% overlap on architectural-decision-substance",
-    "specific scope-justified exemption",
-    "REVIEW: SKIPPED",
-    "no new architecture introduced",
-    "implementing prior reviewer's recommendation",
-    # Structured-pattern extensions per B-303
-    "EXEMPTION VALID",
-    "step 6: N/A",
-    "cannot fire on commits modifying its own SKILL.md",
-    "self-exemption clause applies",
-]
-
-
-def _check_exemption_phrases(commit_msg: str) -> list[str]:
-    """Check commit message for exemption-claim trigger phrases.
-
-    Returns list of matched phrases (empty list = no triggers).
-    """
-    if not commit_msg:
-        return []
-    matched = []
-    for phrase in EXEMPTION_TRIGGER_PHRASES:
-        if phrase.lower() in commit_msg.lower():
-            matched.append(phrase)
-    return matched
+# Single source of truth for trigger phrases per B-309 dedupe closure 2026-05-16
+# (previously 4-way duplicated: this hook + pre-commit + SKILL.md + 2 test files).
+# Import error treated as fail-open WARN (defensive); the canonical authoritative
+# list lives at tools/exemption_phrases.py + SKILL.md L29-46.
+try:
+    from tools.exemption_phrases import contains_exemption_phrase
+except ImportError as _exc:
+    print(f"[commit-msg WARN] cannot import tools.exemption_phrases ({_exc}); "
+          "exemption-phrase check skipped. Restore from git OR fix sys.path.",
+          file=sys.stderr)
+    contains_exemption_phrase = None  # type: ignore[assignment]
 
 
 def main(argv: list[str]) -> int:
@@ -86,6 +65,10 @@ def main(argv: list[str]) -> int:
         # Cannot read; pass through (not blocking)
         return 0
 
+    if contains_exemption_phrase is None:
+        # Import failed; fail-open already warned at module load
+        return 0
+
     # Strip git-comment lines (lines starting with #) which are stripped from
     # final commit message anyway; they should not trigger phrase detection
     non_comment_lines = [
@@ -94,7 +77,7 @@ def main(argv: list[str]) -> int:
     ]
     actual_msg = "\n".join(non_comment_lines)
 
-    matched_phrases = _check_exemption_phrases(actual_msg)
+    matched_phrases = contains_exemption_phrase(actual_msg)
     if matched_phrases:
         print("[commit-msg BLOCKED] commit message contains exemption-claim "
               "trigger phrases:", file=sys.stderr)

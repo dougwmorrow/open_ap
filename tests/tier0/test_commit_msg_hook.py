@@ -42,27 +42,19 @@ def test_hook_cites_b307_split(hook_content: str):
     assert "git commit -m" in hook_content
 
 
-def test_exemption_trigger_phrases_list_present(hook_content: str):
-    """Assertion 4: hook has all 12 exemption-trigger phrases (8 verbatim + 4 B-303)."""
-    assert "EXEMPTION_TRIGGER_PHRASES" in hook_content
-    expected_phrases = [
-        # Original 8 from SKILL.md L29-36
-        "Layer N+1 termination",
-        "recursive-exemption",
-        "verbatim implementation",
-        "100% overlap on architectural-decision-substance",
-        "specific scope-justified exemption",
-        "REVIEW: SKIPPED",
-        "no new architecture introduced",
-        "implementing prior reviewer's recommendation",
-        # B-303 structured-pattern extensions
-        "EXEMPTION VALID",
-        "step 6: N/A",
-        "cannot fire on commits modifying its own SKILL.md",
-        "self-exemption clause applies",
-    ]
-    for phrase in expected_phrases:
-        assert phrase in hook_content, f"expected trigger phrase missing: {phrase}"
+def test_hook_imports_canonical_phrases(hook_content: str):
+    """Assertion 4 (per B-309 dedupe 2026-05-16): hook imports from tools.exemption_phrases
+    (single source of truth) instead of embedding its own EXEMPTION_TRIGGER_PHRASES list.
+
+    The actual phrase list is verified at tests/tier0/test_exemption_phrases_sync.py
+    (verifies Python constant matches SKILL.md L29-46)."""
+    assert "from tools.exemption_phrases import" in hook_content, (
+        "commit-msg hook must import from tools.exemption_phrases (B-309 dedupe)"
+    )
+    assert "EXEMPTION_TRIGGER_PHRASES = [" not in hook_content, (
+        "commit-msg hook must NOT embed its own EXEMPTION_TRIGGER_PHRASES list "
+        "(would re-introduce 4-way drift surface; defeats B-309 dedupe)"
+    )
 
 
 def test_hook_accepts_commit_msg_path_argv(hook_content: str):

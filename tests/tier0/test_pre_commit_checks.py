@@ -50,19 +50,22 @@ def test_exit_codes_per_d74():
 
 
 def test_checks_registry_complete():
-    """Assertion 5: CHECKS registry has all 4 Phase 1 checks."""
+    """Assertion 5 (per B-309 Cycle 1 Improvement 1): CHECKS registry has 5 Phase 1 checks
+    (added lint_security_types per critical-review Cycle 1)."""
     from tools.pre_commit_checks import (
         CHECKS,
         check_query_blindspots,
         check_pytest_changed_python_files,
+        check_lint_security_types_changed_python_files,
         check_markdown_cross_refs,
         check_cli_compliance_d74_d75_d76,
     )
     assert check_query_blindspots in CHECKS
     assert check_pytest_changed_python_files in CHECKS
+    assert check_lint_security_types_changed_python_files in CHECKS
     assert check_markdown_cross_refs in CHECKS
     assert check_cli_compliance_d74_d75_d76 in CHECKS
-    assert len(CHECKS) == 4
+    assert len(CHECKS) == 5
 
 
 def test_check_result_shape():
@@ -79,12 +82,20 @@ def test_check_result_shape():
 
 
 def test_empty_staged_returns_passes():
-    """Assertion 7: with no staged files, all checks return passed (info severity)."""
+    """Assertion 7: with no staged files, all 5 checks return passed (info severity)."""
     from tools.pre_commit_checks import run_all_checks
     results = run_all_checks(staged=[])
-    assert len(results) == 4
+    assert len(results) == 5
     for r in results:
         assert r.passed, f"{r.name} failed on empty input: {r.diagnostic}"
+
+
+def test_check_lint_no_python_files():
+    """Assertion 13: lint/security/types check passes (info) when no source .py staged."""
+    from tools.pre_commit_checks import check_lint_security_types_changed_python_files
+    result = check_lint_security_types_changed_python_files(staged=["docs/foo.md"])
+    assert result.passed
+    assert result.severity == "info"
 
 
 def test_check_markdown_cross_refs_no_md_files():

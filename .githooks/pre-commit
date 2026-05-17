@@ -63,6 +63,17 @@ def main() -> int:
               "not blocking commit. Check Python venv + orchestrator path.",
               file=sys.stderr)
         return 0
+
+    # Per B-309 Cycle 1 Improvement 2 (2026-05-16): distinguish FATAL (3 —
+    # orchestrator script crashed; fail-open with WARN to prevent repo-wide
+    # commit lockup from broken orchestrator) vs BLOCKED (1 — legitimate check
+    # failure; honor BLOCK semantic). Exit 0 = pass-through.
+    if result.returncode == 3:
+        print("[pre-commit WARN] orchestrator returned FATAL (exit 3); "
+              "commit proceeding unchecked. Fix tools/pre_commit_checks.py "
+              "before next commit to restore Mechanism C-1 enforcement.",
+              file=sys.stderr)
+        return 0
     return result.returncode
 
 

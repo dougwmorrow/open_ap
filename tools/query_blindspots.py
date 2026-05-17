@@ -242,6 +242,9 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
         ".githooks/commit-msg",
         "tests/tier0/test_pre_commit_hook.py",
         "tests/tier0/test_skill_exemption_verifier.py",
+        "tests/tier0/test_exemption_phrases.py",
+        "tests/tier0/test_commit_msg_hook.py",
+        "tools/exemption_phrases.py",
         "udm-exemption-verifier/skill.md",
     )
     if any(substrate in norm_path for substrate in trigger_phrase_substrate_files):

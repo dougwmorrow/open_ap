@@ -369,6 +369,11 @@ def check_cli_compliance_d74_d75_d76(staged: list[str]) -> CheckResult:
             content = file_path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
+        # Distinguish CLI tools from library modules: only files with
+        # `if __name__ == "__main__":` are subject to D74/D75/D76 compliance.
+        # Library modules (e.g., tools/exemption_phrases.py) are exempt.
+        if 'if __name__ == "__main__":' not in content:
+            continue
         file_violations = []
         if "EXIT_SUCCESS" not in content:
             file_violations.append("D74: missing EXIT_SUCCESS constant")
@@ -400,9 +405,89 @@ def check_cli_compliance_d74_d75_d76(staged: list[str]) -> CheckResult:
 # Orchestrator + CLI
 # ---------------------------------------------------------------------------
 
+def check_lint_security_types_changed_python_files(staged: list[str]) -> CheckResult:
+    """For each staged source .py file, run ruff + bandit + mypy (graceful-skip
+    if tool not installed). BLOCK on any tool reporting errors.
+
+    Per B-309 Cycle 1 critical-review Improvement 1 (2026-05-16). Tools are
+    optional dev-environment dependencies; check warns + skips gracefully if
+    absent (preserves cross-environment usability while activating when tools
+    land in CI / future dev installs).
+    """
+    code_files = []
+    for f in staged:
+        norm = f.replace("\\", "/")
+        if not norm.endswith(".py"):
+            continue
+        if norm.startswith("tests/") or "/tests/" in norm:
+            continue
+        if not any(norm.startswith(d) for d in SOURCE_DIRS):
+            continue
+        code_files.append(norm)
+
+    if not code_files:
+        return CheckResult("lint_security_types", True, "info",
+                          "no source .py files staged; check skipped")
+
+    python_exe = _venv_python()
+    file_args = code_files
+    tool_results: list[tuple[str, str]] = []  # (tool, diagnostic)
+    skipped: list[str] = []
+
+    def _try_run(tool: str, args: list[str]) -> tuple[bool, str]:
+        """Returns (passed, diagnostic). passed=False means tool FOUND errors;
+        if tool not installed, returns (True, 'skipped: not installed')."""
+        try:
+            result = subprocess.run(
+                [python_exe, "-m", tool, *args],
+                capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=60,
+            )
+        except (OSError, subprocess.SubprocessError, subprocess.TimeoutExpired) as exc:
+            return True, f"skipped: invocation failed ({exc})"
+        if "No module named" in result.stderr:
+            return True, "skipped: not installed (pip install " + tool + ")"
+        if result.returncode == 0:
+            return True, "clean"
+        return False, f"errors:\n{result.stdout[-1500:]}\n{result.stderr[-500:]}"
+
+    ruff_ok, ruff_diag = _try_run("ruff", ["check", *file_args])
+    if "skipped" in ruff_diag:
+        skipped.append(f"ruff: {ruff_diag}")
+    elif not ruff_ok:
+        tool_results.append(("ruff", ruff_diag))
+
+    bandit_ok, bandit_diag = _try_run("bandit", ["-q", "-ll", *file_args])
+    if "skipped" in bandit_diag:
+        skipped.append(f"bandit: {bandit_diag}")
+    elif not bandit_ok:
+        tool_results.append(("bandit", bandit_diag))
+
+    mypy_ok, mypy_diag = _try_run("mypy", file_args)
+    if "skipped" in mypy_diag:
+        skipped.append(f"mypy: {mypy_diag}")
+    elif not mypy_ok:
+        tool_results.append(("mypy", mypy_diag))
+
+    if tool_results:
+        msg_parts = [f"{len(tool_results)} tool(s) reported errors on "
+                    f"{len(code_files)} source file(s):"]
+        for tool, diag in tool_results:
+            msg_parts.append(f"\n  --- {tool} ---\n{diag}")
+        return CheckResult("lint_security_types", False, "block", "\n".join(msg_parts))
+
+    if not skipped:
+        return CheckResult("lint_security_types", True, "info",
+                          f"all 3 tools (ruff + bandit + mypy) PASSED on "
+                          f"{len(code_files)} source file(s)")
+    return CheckResult("lint_security_types", True, "warn",
+                      f"{len(code_files)} source file(s) checked; "
+                      f"{len(skipped)} tool(s) skipped:\n  " + "\n  ".join(skipped))
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
+    check_lint_security_types_changed_python_files,
     check_markdown_cross_refs,
     check_cli_compliance_d74_d75_d76,
 ]

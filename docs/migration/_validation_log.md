@@ -2,6 +2,67 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-16 — B-309 CLOSED: Cycle 1 critical-review improvements (lint+security+typing check + fail-open distinguishes FATAL vs BLOCKED + dedupe exemption phrases + ACTIVATE hook on dev clone)
+
+**Reviewer**: parent + 41 Tier 0 tests pass + smoke-tested orchestrator runs all 5 checks correctly. Per Mechanism A v3 step 5: user-directive quote-cite substitutes ("Proceed with cycle 1" following parent's critical-review identifying 3 highest-value low-risk improvements).
+**Trigger**: user-directive 2026-05-16 "Proceed with cycle 1" → executed all 3 Improvements identified in parent critical-review + activated hook on dev clone.
+
+**Improvements applied**:
+
+1. **Lint + security + typing check (Improvement 1)**: NEW `check_lint_security_types_changed_python_files` function added to orchestrator CHECKS registry (now 5 checks). For each staged source .py file under SOURCE_DIRS, attempts `ruff check` + `bandit -q -ll` + `mypy`. **Graceful-skip-if-tool-not-installed**: detects "No module named" in stderr + skips that specific tool with WARN. Only BLOCKS when a tool runs AND finds errors. Acceptable cross-env behavior — tools may not be installed locally but will activate in CI / future dev environments. Currently 0/3 tools installed on this clone (verified: ruff/bandit/mypy all return "No module named"); check skips with WARN; commit proceeds.
+
+2. **Refined fail-open (Improvement 2)**: `.githooks/pre-commit` now distinguishes orchestrator exit codes:
+   - 0 SUCCESS → pass through
+   - 1 BLOCKED → propagate (legitimate check failure; honors BLOCK)
+   - 3 FATAL → WARN + fail-open (orchestrator crashed; prevents repo-wide commit lockup; tells dev to fix tools/pre_commit_checks.py)
+   - Subprocess invocation failure → WARN + fail-open (existing behavior)
+   Trade-off: 2-day FATAL window = 2 days of unprotected commits; better than repo-wide lockup.
+
+3. **Deduplicate exemption phrases (Improvement 3)**: NEW `tools/exemption_phrases.py` canonical Python module exports `EXEMPTION_TRIGGER_PHRASES` tuple (12 phrases) + `contains_exemption_phrase()` function. `.githooks/commit-msg` refactored: removed embedded list; `sys.path.insert(0, REPO_ROOT)` + `from tools.exemption_phrases import contains_exemption_phrase`. NEW `tests/tier0/test_exemption_phrases.py` (6 tests): Python module imports + constant has 12 entries + function works case-insensitively + SKILL.md exists + **Python constant matches SKILL.md L29-46** (the sync check; catches half-updates) + commit-msg hook imports from canonical source. `tests/tier0/test_commit_msg_hook.py` test_exemption_trigger_phrases_list_present renamed to test_hook_imports_canonical_phrases + verifies hook does NOT embed its own list. **Drift surface eliminated**: was 4 places (SKILL.md + commit-msg + 2 test files); now 2 (SKILL.md + tools/exemption_phrases.py) with sync test enforcing consistency.
+
+4. **ACTIVATED hook on dev clone**: `python tools/install_pre_commit_hook.py --install --apply` ran successfully; `--check` confirms `core.hooksPath=.githooks; hooks present: ['pre-commit', 'commit-msg']`. **THIS commit is the first real production test of Mechanism C-1 enforcement** (chicken-and-egg fixed below per inline-fix actions).
+
+**Inline-fix during stage-prep** (chicken-and-egg empirically confirmed; hook would have BLOCKED this very commit; 3 fixes applied):
+
+a. `tools/query_blindspots.py` `check_9o_recursive_exemption` substrate-file allowlist extended +3 entries: `tools/exemption_phrases.py` (the canonical Python module contains "recursive-exemption" as STRING DATA), `tests/tier0/test_exemption_phrases.py` (test file references phrases as test data), `tests/tier0/test_commit_msg_hook.py` (same). All needed for 9.o false-positive suppression on this clone.
+
+b. Renamed `tests/tier0/test_exemption_phrases_sync.py` → `tests/tier0/test_exemption_phrases.py` to match `_find_test_files_for` convention (`test_<module_name>.py`). Without this rename, pytest_changed check would BLOCK on "new public-surface file tools/exemption_phrases.py without test" because the existing test was at non-matching path.
+
+c. `tools/pre_commit_checks.py` `check_cli_compliance_d74_d75_d76` refined to skip non-CLI files: only fires on files containing `if __name__ == "__main__":` indicator. Without this refinement, the check would FALSE-POSITIVE on `tools/exemption_phrases.py` (library module; no main/cli_main/EVENT_TYPE).
+
+**Artifacts modified**:
+- NEW `tools/exemption_phrases.py` (~50 lines): EXEMPTION_TRIGGER_PHRASES tuple + contains_exemption_phrase function
+- NEW `tests/tier0/test_exemption_phrases.py` (~100 lines, 6 tests): sync verification
+- `tools/pre_commit_checks.py`: +`check_lint_security_types_changed_python_files` function (~75 lines) + CHECKS registry now 5 + `check_cli_compliance_d74_d75_d76` refined to skip non-CLI files
+- `tools/query_blindspots.py`: substrate-file allowlist +3 entries
+- `.githooks/pre-commit`: refined fail-open exit-code handling
+- `.githooks/commit-msg`: refactored to import from tools.exemption_phrases (removed 12-phrase embedded list + _check_exemption_phrases function)
+- `tests/tier0/test_pre_commit_checks.py`: CHECKS registry test bumped 4→5 + new test for lint check no-files case
+- `tests/tier0/test_commit_msg_hook.py`: test_exemption_trigger_phrases_list_present → test_hook_imports_canonical_phrases
+- `docs/migration/BACKLOG.md`: B-309 opened + CLOSED inline
+- `docs/migration/_validation_log.md`: this entry
+- `docs/migration/CURRENT_STATE.md`: narrative prepend
+
+**Hard rule 14 cascade applied**:
+- TEST: pytest 41/41 hook+orchestrator+dedupe tests pass + authoritative full count to be verified post-commit
+- GAP ANALYSIS Step 2.1 self-application: PENDING (hook will run on this commit; first real production test)
+- GAP ANALYSIS independent reviewer: NONE THIS COMMIT (user-directed Cycle 1 scope from parent's critical-review; quote-cite of user directive substitutes per Mechanism A v3 step 5)
+- REVIEW: parent inline (Cycle 1 implementation faithful to parent's own critical-review identified scope; user authorized "Proceed with cycle 1")
+
+**Mechanism A v3 step 5 quote-cite (user-directive substitute)**:
+
+User-directive 2026-05-16 verbatim: "Proceed with cycle 1"
+
+Following parent's critical-review identifying Cycle 1 as the 3 highest-value low-risk improvements:
+
+> "**Cycle 1** (~30-45 min): Add Improvement 1 (lint+security+typing) + Improvement 2 (fail-open on broken orchestrator) + Improvement 3 (deduplicate exemption phrases). These three close the biggest holes with lowest risk. Plus: **activate the hook on your clone** so you actually benefit from any of this."
+
+Implementation faithful to Cycle 1 scope: all 3 Improvements applied + hook activated. Inline-fixes (substrate allowlist + test rename + non-CLI exemption) are necessary chicken-and-egg accommodations to allow THIS commit to land under the now-active hook.
+
+**This commit is empirically significant**: first commit since hook activation; if Mechanism C-1 works as designed, all 5 checks fire + report PASS; if chicken-and-egg fixes are insufficient, hook BLOCKS + reveals what needs further refinement.
+
+---
+
 ## 2026-05-16 — B-308 CLOSED: Mechanism C-1 expanded from discipline-enforcement-only to quality+compliance layer per user-direction (4-check orchestrator + pre-commit delegate refactor; BLOCK on test failure / broken cross-refs / new CLI missing D74-D75-D76 / new public surface without tests)
 
 **Reviewer**: parent + 12 Tier 0 tests pass + smoke test of orchestrator (`python tools/pre_commit_checks.py --verbose --no-audit`) verified all 4 checks invoke correctly with PASS results on empty input. No independent reviewer spawned BECAUSE the work is from explicit user-directive (not a prior reviewer's prescription); Mechanism A v3 step 5 quote-cite of user directive substitutes.
