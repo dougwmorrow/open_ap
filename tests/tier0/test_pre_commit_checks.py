@@ -1,9 +1,11 @@
 """Tier 0 smoke tests for tools/pre_commit_checks.py per D67 + B-308 closure.
 
-Quality-checks orchestrator (4 checks: query_blindspots + pytest_changed +
-markdown_cross_refs + cli_compliance_d74_d75_d76). Per user-direction
-2026-05-16 "update it to be a code quality layer as well" + BLOCK on failures
-+ BLOCK on new public surface without tests.
+Quality-checks orchestrator (7 checks: query_blindspots + pytest_changed +
+lint_security_types + markdown_cross_refs + cli_compliance_d74_d75_d76 +
+gap_accountability + planning_provenance). Per user-direction 2026-05-16
+"update it to be a code quality layer as well" + BLOCK on failures + BLOCK
+on new public surface without tests + B-275-class planning-discipline
+forward-prevention.
 """
 from __future__ import annotations
 
@@ -50,8 +52,10 @@ def test_exit_codes_per_d74():
 
 
 def test_checks_registry_complete():
-    """Assertion 5 (per B-309 Cycle 1 + B-315): CHECKS registry has 6 Phase 1 checks
-    (B-315 adds check_gap_accountability as 6th check; Pitfall #9.p candidate)."""
+    """Assertion 5 (per B-309 Cycle 1 + B-315 + B-275-class): CHECKS registry has
+    7 Phase 1 checks (B-275-class adds check_planning_provenance as 7th check;
+    planning-discipline layer forward-prevention; empirical anchor commit
+    `1b00755`)."""
     from tools.pre_commit_checks import (
         CHECKS,
         check_query_blindspots,
@@ -60,6 +64,7 @@ def test_checks_registry_complete():
         check_markdown_cross_refs,
         check_cli_compliance_d74_d75_d76,
         check_gap_accountability,
+        check_planning_provenance,
     )
     assert check_query_blindspots in CHECKS
     assert check_pytest_changed_python_files in CHECKS
@@ -67,7 +72,8 @@ def test_checks_registry_complete():
     assert check_markdown_cross_refs in CHECKS
     assert check_cli_compliance_d74_d75_d76 in CHECKS
     assert check_gap_accountability in CHECKS
-    assert len(CHECKS) == 6
+    assert check_planning_provenance in CHECKS
+    assert len(CHECKS) == 7
 
 
 def test_check_result_shape():
@@ -84,10 +90,10 @@ def test_check_result_shape():
 
 
 def test_empty_staged_returns_passes():
-    """Assertion 7: with no staged files, all 6 checks return passed (info severity)."""
+    """Assertion 7: with no staged files, all 7 checks return passed (info severity)."""
     from tools.pre_commit_checks import run_all_checks
     results = run_all_checks(staged=[])
-    assert len(results) == 6
+    assert len(results) == 7
     for r in results:
         assert r.passed, f"{r.name} failed on empty input: {r.diagnostic}"
 
@@ -319,3 +325,105 @@ def test_staged_diff_added_lines_function_exists():
     # When called outside git context OR for non-staged file, returns empty
     result = _staged_diff_added_lines("nonexistent-file-xyz.md")
     assert isinstance(result, str)
+
+
+# ---------------------------------------------------------------------------
+# Check 7: planning-provenance section in *PLAN*.md files (B-275-class)
+# ---------------------------------------------------------------------------
+
+def test_check_planning_provenance_no_plan_files_staged_returns_info():
+    """Assertion 30 (per B-275-class): no *PLAN*.md staged → info pass (skip)."""
+    from tools.pre_commit_checks import check_planning_provenance
+    result = check_planning_provenance(staged_files=[
+        "tools/foo.py",
+        "docs/migration/some_doc.md",
+        "CLAUDE.md",
+    ])
+    assert result.passed
+    assert result.severity == "info"
+    assert "no *PLAN*.md files staged" in result.diagnostic
+
+
+def test_check_planning_provenance_plan_file_with_provenance_passes(tmp_path, monkeypatch):
+    """Assertion 31 (per B-275-class): plan file with §0 provenance header → PASS."""
+    import tools.pre_commit_checks as pcc
+
+    plan_file = tmp_path / "NEXT_STEPS_PLAN_2026-05-17.md"
+    plan_file.write_text(
+        "# Next Steps Plan\n\n"
+        "## §0. Planning session provenance\n\n"
+        "Trigger: 'Let's plan the next round'\n"
+        "Scope: PS-1 (architectural change)\n"
+        "Skills applied: udm-planning-session-startup, udm-decision-recorder\n\n"
+        "## §1. Scope\n\nFoo bar.\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(pcc, "REPO_ROOT", tmp_path)
+    result = pcc.check_planning_provenance(staged_files=["NEXT_STEPS_PLAN_2026-05-17.md"])
+    assert result.passed, f"Expected pass; got: {result.diagnostic}"
+    assert result.severity == "info"
+    assert "§0 Planning session provenance" in result.diagnostic
+
+
+def test_check_planning_provenance_plan_file_missing_provenance_blocks(tmp_path, monkeypatch):
+    """Assertion 32 (per B-275-class): plan file without §0 provenance header → BLOCK."""
+    import tools.pre_commit_checks as pcc
+
+    plan_file = tmp_path / "MARKDOWN_REFACTOR_PLAN.md"
+    plan_file.write_text(
+        "# Markdown Refactor Plan\n\n"
+        "## §1. Scope\n\n"
+        "Some content but no provenance section.\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(pcc, "REPO_ROOT", tmp_path)
+    result = pcc.check_planning_provenance(staged_files=["MARKDOWN_REFACTOR_PLAN.md"])
+    assert not result.passed
+    assert result.severity == "block"
+    assert "MARKDOWN_REFACTOR_PLAN.md" in result.diagnostic
+    assert "§0. Planning session provenance" in result.diagnostic
+    assert "1b00755" in result.diagnostic  # empirical anchor cited
+
+
+def test_check_planning_provenance_glob_case_insensitive(tmp_path, monkeypatch):
+    """Assertion 33 (per B-275-class): glob matches *plan*.md / *PLAN*.md / *Plan*.md."""
+    import tools.pre_commit_checks as pcc
+    from tools.pre_commit_checks import _is_planning_doc
+
+    # Direct helper test — basename case-insensitive substring match
+    assert _is_planning_doc("MARKDOWN_REFACTOR_PLAN.md")
+    assert _is_planning_doc("next_steps_plan_2026-05-17.md")
+    assert _is_planning_doc("My-Refactor-Plan.md")
+    assert _is_planning_doc("docs/migration/PHASE_X_DEEP_DIVE_PLAN.md")
+    assert _is_planning_doc("tools/migration-plan-2026.md")
+    # Non-matches
+    assert not _is_planning_doc("CLAUDE.md")
+    assert not _is_planning_doc("docs/migration/HANDOFF.md")
+    assert not _is_planning_doc("tools/foo.py")
+    assert not _is_planning_doc("plan.txt")  # not .md
+
+    # End-to-end: 3 case variants, all without provenance → all blocked
+    (tmp_path / "FOO_PLAN.md").write_text("# Foo Plan\n## Stuff\n", encoding="utf-8")
+    (tmp_path / "bar_plan.md").write_text("# Bar Plan\n## Stuff\n", encoding="utf-8")
+    (tmp_path / "Baz-Plan.md").write_text("# Baz Plan\n## Stuff\n", encoding="utf-8")
+
+    monkeypatch.setattr(pcc, "REPO_ROOT", tmp_path)
+    result = pcc.check_planning_provenance(
+        staged_files=["FOO_PLAN.md", "bar_plan.md", "Baz-Plan.md"]
+    )
+    assert not result.passed
+    assert result.severity == "block"
+    # All three files surfaced as missing
+    assert "FOO_PLAN.md" in result.diagnostic
+    assert "bar_plan.md" in result.diagnostic
+    assert "Baz-Plan.md" in result.diagnostic
+
+
+def test_check_planning_provenance_in_checks_registry():
+    """Assertion 34 (per B-275-class): CHECKS registry contains check_planning_provenance."""
+    from tools.pre_commit_checks import CHECKS, check_planning_provenance
+    assert check_planning_provenance in CHECKS
+    # 7th and final entry (after the 6 prior checks landed by B-308/B-309/B-315)
+    assert len(CHECKS) == 7

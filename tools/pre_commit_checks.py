@@ -20,6 +20,16 @@ scan) to also enforce code quality + compliance:
    be surfaced as B-N", "drift candidate", etc.) to be paired with a
    disposition: B-NNN / P-NNN citation OR explicit dismissal. Substrate files
    allowlisted. BLOCK on unpaired phrases.
+6. `check_planning_provenance` (B-275-class; planning-discipline layer
+   forward-prevention) — for staged markdown files matching `*PLAN*.md`
+   (case-insensitive), verify each contains a `## §0. Planning session
+   provenance` section header. BLOCK on missing. Closes empirical precedent
+   of commit `1b00755` (markdown refactor planning session 2026-05-15 missed
+   4 skills; no §0 provenance section meant the audit trail was post-hoc
+   reconstructed). Documentation alone (CLAUDE.md hard rule 13 + skill
+   `udm-planning-session-startup`) proved insufficient — same documentation-
+   not-mechanically-enforced gap as v1.2.0 inline-self-review citation check
+   landed at commit `d5af93a` for cascade_classifier.
 
 Per D74 exit-code contract:
 - 0: all checks passed
@@ -770,6 +780,103 @@ def check_gap_accountability(staged: list[str]) -> CheckResult:
                       "paired with disposition (B-315 contract)")
 
 
+# ---------------------------------------------------------------------------
+# Check 7: planning-provenance section in *PLAN*.md files (B-275-class)
+# ---------------------------------------------------------------------------
+
+# Case-insensitive substring match: any markdown file with "PLAN" in its
+# basename (e.g., NEXT_STEPS_PLAN_2026-05-17.md, MARKDOWN_REFACTOR_PLAN.md,
+# PHASE_X_DEEP_DIVE_PLAN.md, my-refactor-plan.md).
+_PLANNING_PROVENANCE_HEADER_RE = re.compile(
+    r"^##\s+§0\.\s+Planning session provenance", re.MULTILINE
+)
+
+
+def _is_planning_doc(file_path: str) -> bool:
+    """Case-insensitive glob: matches `*plan*.md` / `*PLAN*.md` / `*Plan*.md`.
+
+    Match is on basename only, not full path (avoids false-positive on a
+    `.md` file inside a directory named `plans/`).
+    """
+    norm = file_path.replace("\\", "/")
+    if not norm.lower().endswith(".md"):
+        return False
+    basename = Path(norm).name
+    return "plan" in basename.lower()
+
+
+def check_planning_provenance(staged_files: list[str]) -> CheckResult:
+    """For staged `*PLAN*.md` markdown files, verify each has a
+    `## §0. Planning session provenance` section header.
+
+    Per B-275-class forward-prevention (closes the empirical precedent of
+    commit `1b00755` — markdown refactor planning session 2026-05-15 missed
+    4 skills; no §0 provenance section meant the audit trail was post-hoc
+    reconstructed). Documentation alone (CLAUDE.md hard rule 13 + skill
+    `udm-planning-session-startup`) proved insufficient — same
+    documentation-but-not-mechanically-enforced gap pattern as v1.2.0
+    inline-self-review citation check that landed at commit `d5af93a` for
+    cascade_classifier.
+
+    Per CLAUDE.md hard rule 13: planning-session deliverables (plan markdown
+    files in `docs/migration/`) WITHOUT a §0 "Planning session provenance"
+    section are subject to backfill at next revision commit. This check
+    enforces that contract at commit-time so the audit trail is always
+    co-temporal with the plan content (not reconstructed post-hoc).
+
+    Companion skill: `.claude/skills/udm-context-loader/SKILL.md` operationalizes
+    the same §0 discipline at planning-session authoring time (before commit).
+    The skill emits the §0 brief structure for sub-agents; this check enforces
+    that the §0 section actually lands in committed plan files regardless of
+    whether the skill was invoked. Two-layer defense per next-steps plan
+    Phase 0 (2026-05-17 multi-agent team Option A).
+
+    Returns:
+        INFO if no plan files staged
+        PASS if all staged plan files have the §0 provenance header
+        BLOCK if any staged plan file is missing the §0 provenance header
+    """
+    plan_files = [f for f in staged_files if _is_planning_doc(f)]
+    if not plan_files:
+        return CheckResult("planning_provenance", True, "info",
+                          "no *PLAN*.md files staged; check skipped")
+
+    missing: list[str] = []
+    unreadable: list[str] = []
+    for plan_file in plan_files:
+        plan_path = REPO_ROOT / plan_file
+        try:
+            content = plan_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            unreadable.append(plan_file)
+            continue
+        if not _PLANNING_PROVENANCE_HEADER_RE.search(content):
+            missing.append(plan_file)
+
+    if missing:
+        return CheckResult(
+            "planning_provenance", False, "block",
+            f"{len(missing)} planning-doc(s) staged WITHOUT "
+            f"'## §0. Planning session provenance' section "
+            f"(per CLAUDE.md hard rule 13 + B-275-class forward-prevention; "
+            f"empirical anchor commit `1b00755`):\n"
+            + "\n".join(f"  - {f} (expected: '## §0. Planning session provenance' "
+                       "header per `udm-planning-session-startup` SKILL.md Step 5)"
+                       for f in missing)
+            + "\n\nAdd the provenance section enumerating: (a) trigger phrase "
+              "+ scope identification (PS-N category per `PLANNING_DISCIPLINE.md`); "
+              "(b) skill list applied; (c) sub-agent inheritance contract (if any); "
+              "(d) user approval/redirect of the skill list. Bypass with "
+              "--no-verify is self-flagging exemption-claim."
+        )
+
+    diagnostic = (f"all {len(plan_files)} *PLAN*.md file(s) have §0 "
+                  "Planning session provenance section")
+    if unreadable:
+        diagnostic += f" ({len(unreadable)} file(s) unreadable, treated as pass)"
+    return CheckResult("planning_provenance", True, "info", diagnostic)
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
@@ -777,6 +884,7 @@ CHECKS = [
     check_markdown_cross_refs,
     check_cli_compliance_d74_d75_d76,
     check_gap_accountability,
+    check_planning_provenance,
 ]
 
 
