@@ -148,6 +148,8 @@ This commit-message section IS the audit trail. Future Pattern F audits cross-ch
 
 **`tools/check_commit_msg.py`** — commit-msg hook enforcement (Phase 1A). Reads classification + verifies tri-section structure for cascade-required commits. Audit row written to `_session_logs/cli_check_commit_msg_<date>.log` per D76 with classification + missing_sections payload for forensic audit.
 
+**`tools/query_blindspots.py::check_9n_convention_registration`** (extended 2026-05-17 with GLOSSARY-parity check + structured-pattern matching) — commit-time mechanical detection of Step 10 + Pitfall #9.n compliance gaps. Verifies new `tools/*.py` with ≥3 non-trivial public surfaces (excluding `main`/`cli_main` trivial wrappers) have BOTH CLAUDE.md Structure entry AND GLOSSARY.md public-surface entries. Uses structured-pattern regex (`^\s*-\s+(?:\*\*)?{basename}(?:\*\*)?\s+[-–—]\s` for CLAUDE bullet; `` `tools/{basename}` `` for GLOSSARY) — not substring matching — to prevent false-positives on narrative mentions. Trivial-wrapper tools exempt to avoid false-positive cascade on operator-helper scripts. Per Step 10 producer-side verifier `udm-step-10-verifier` SKILL — producer-side check + this harness-side check fire on same gap class.
+
 **Producer workflow** (v1.1.0 recommended pattern):
 1. Make edits + stage with `git add`
 2. Run `python tools/generate_cascade_evidence.py --no-audit` → get scaffold

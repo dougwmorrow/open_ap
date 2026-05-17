@@ -81,6 +81,7 @@ For the completed work, determine which of these are touched:
 | Decision lock | `03_DECISIONS.md` (🟡 → 🟢) + `BACKLOG.md` (if B-item drove the decision) + `_validation_log.md` |
 | Runbook authoring | `05_RUNBOOKS.md` (new RB-N) + `BACKLOG.md` (if B-item) + `_validation_log.md` |
 | **Code module / tool / migration built** (REQUIRED tracker update — see hard rule 7 below) | **`CODE_BUILD_STATUS.md` (per-unit row state transition ⬜ → 🟡 → 🟢 → ✅)** + `ONE_OFF_SCRIPTS.md` (if migration / one-time tool per `udm-execution-classifier`) + `BACKLOG.md` (close B-item) + `_validation_log.md` |
+| **NEW `tools/*.py` with ≥3 non-trivial public surfaces** (added 2026-05-17 per check_9n GLOSSARY-parity extension) | **`CLAUDE.md` Structure section row** AND **`GLOSSARY.md` public-surface entries** (per-name rows in module-surface table; per Step 10 + Pitfall #9.n discipline). Mechanically enforced by `tools/query_blindspots.py::check_9n_convention_registration` at commit-msg hook (BLOCKS if GLOSSARY missing for substantial tools). Trivial-wrapper tools (only `main`+`cli_main` surfaces) exempt from mechanical GLOSSARY-parity check but recommended for completeness |
 | Edge case discovery | `04_EDGE_CASES.md` (new M/S/I/N/P/G/D/F/V/DP/T/SI entry) + `BACKLOG.md` (if B-item) + `_validation_log.md` |
 | Risk surfaced | `RISKS.md` (new R-N) + `_validation_log.md` |
 | Cosmetic / readability landed | `POLISH_QUEUE.md` (close P-N or add P-N) + `_validation_log.md` (low-touch row) |

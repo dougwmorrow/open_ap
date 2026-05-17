@@ -11348,3 +11348,101 @@ The 2 user-caught skipped-REVIEW events (0a0ff49 + 1fc59f9) would now BLOCK at c
 - Multi-agent applications: 16
 - Gap-prevention mechanical detectors: 4 (no new this commit)
 - Tracker-hygiene B-Ns opened from cascade audits this session: 7 (B-320 / B-322 / B-323 / B-325 / B-327 / B-328 / B-329)
+
+---
+
+### 2026-05-17 — 3-SKILL alignment with check_9n mechanical layer
+
+**Event type**: SKILL discoverability + producer-vs-harness layer cross-referencing. Closes the awareness gap between the just-built mechanical detection (check_9n GLOSSARY parity) and the existing producer-side discipline (udm-step-10-verifier + udm-progress-logger).
+
+**Trigger**: User-direction "Do any hooks, MCP, or skills need to be updated?" → honest survey identified 2 MUST + 1 OPTIONAL skill updates (no hooks/MCP changes needed; orchestrators auto-picked up new logic via subprocess composition). AskUserQuestion → "All 3" selected.
+
+**Survey results**:
+- **`.githooks/pre-commit` + `commit-msg`**: NO update needed (invoke orchestrators that have new logic via subprocess composition)
+- **`.claude/hooks/auto-verify-step-10.py`**: NO update needed (invokes query_blindspots via subprocess; auto-picks up extended check_9n)
+- **`.claude/hooks/protect-primary-docs.py` + `session-start-logger.py`**: NO update (unrelated scope)
+- **MCP**: NO project-specific MCP configured; nothing to update
+- **`udm-cascade-audit-evolver` + `udm-exemption-verifier` + `udm-next-step-cascade` + `udm-design-reviewer` agent**: NO update (don't reference specific check names; tracked at per-cascade discipline level)
+- **`udm-gap-check` SKILL**: ALREADY updated last commit (G1+G5 wording extension; no new update needed)
+- **`udm-step-10-verifier` SKILL**: ✅ MUST UPDATE (producer-side verifier for Step 10; should cite check_9n as mechanical layer)
+- **`udm-progress-logger` SKILL**: ✅ MUST UPDATE (per-build-type checklist missing GLOSSARY-parity row)
+- **`udm-post-edit-verification` SKILL**: 🟡 OPTIONAL (Workflow tooling subsection could cite check_9n)
+
+**3 SKILL amendments applied**:
+
+**Update 1 — `udm-step-10-verifier` SKILL.md (Step 3 GLOSSARY check)**:
+- Added "Mechanical layer cross-reference" paragraph after the 🟡 finding clause at Step 3
+- Clarifies producer-side vs harness-side division: this skill = producer-time (in-flight) catch; check_9n = harness-time (commit-msg mechanical BLOCK)
+- Documents trivial-wrapper exemption: tools with <3 non-trivial public surfaces (only `main`/`cli_main`) exempt from mechanical check; Step 10 verifier still recommends entries for completeness
+
+**Update 2 — `udm-progress-logger` SKILL.md (Step 1 per-build-type table)**:
+- New row added to per-build-type tracker checklist
+- Trigger: "NEW `tools/*.py` with ≥3 non-trivial public surfaces"
+- Required updates: CLAUDE.md Structure section row AND GLOSSARY.md public-surface entries
+- Cites check_9n as mechanical enforcement at commit-msg hook
+- Documents BLOCKS-if-missing semantic for substantial tools
+
+**Update 3 — `udm-post-edit-verification` SKILL.md (Workflow tooling subsection)**:
+- New paragraph added after check_commit_msg paragraph (preserves canonical position after `cascade_classifier` + `generate_cascade_evidence` + `check_commit_msg`)
+- Describes check_9n behavior: structured-pattern regex (cites actual regex shapes) + trivial-wrapper exemption + producer-side counterpart cross-reference
+- Mentions B-324/Gap A closure pattern: structured-pattern matching prevents false-positives on narrative mentions
+
+**Independent reviewer Agent A (`a06253a9505a07e50`)**: verdict SOUND-as-is (0 🔴 BLOCK + 0 actionable 🟡).
+
+Verified-OK by reviewer (all 4 cross-skill-consistency checks):
+- ✅ Same mechanism name across all 3 SKILLs: `tools/query_blindspots.py::check_9n_convention_registration`
+- ✅ Same threshold: "≥3 non-trivial public surfaces"
+- ✅ Same exemption: `main`/`cli_main` trivial wrappers
+- ✅ Same producer/harness division language
+- ✅ Same date stamp: "2026-05-17"
+
+Verified-OK by reviewer (all 4 code-fact checks):
+- ✅ Step 10 reference (Pitfall #9.n; CLAUDE.md L1247) matches
+- ✅ Threshold value `>=3` matches `tools/query_blindspots.py` L467
+- ✅ Trivial-wrapper names `main`/`cli_main` match L463
+- ✅ Structured-pattern regex shapes match L383 + L396
+
+**Verification**:
+- Targeted: 3 SKILL.md amendments verified via grep
+- Authoritative: pytest full → 2533 pass / 58 skip / 0 fail (unchanged from prior commit; doc-only)
+- Orchestrator smoke test on staged scope: expected 6/6 PASS
+
+**Files modified**: 6
+- `.claude/skills/udm-step-10-verifier/SKILL.md` (+1 paragraph; Step 3 cross-reference)
+- `.claude/skills/udm-progress-logger/SKILL.md` (+1 row in Step 1 per-build-type table)
+- `.claude/skills/udm-post-edit-verification/SKILL.md` (+1 paragraph in Workflow tooling subsection)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend)
+- `docs/migration/HANDOFF.md` (§14 prepend)
+- `docs/migration/_validation_log.md` (this entry)
+
+**Per-build-type tracker walk** (per just-updated udm-progress-logger Step 1):
+- BACKLOG.md → UNTOUCHED-AS-EXPECTED (no B-N change; this is SKILL alignment work)
+- CURRENT_STATE.md → UPDATED
+- HANDOFF.md → UPDATED
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (no new public surface; SKILL amendments only)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (no new code surface)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no code-build artifact)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (substantive SKILL alignment, not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+
+**Net delta**:
+- B-N: 0 NEW + 0 CLOSED (SKILL alignment work; no tracker B-N changes)
+- Pytest: unchanged (2533/58/0)
+- Files modified: 6
+- Multi-agent applications this session: 16 → 17 (this commit's reviewer)
+- Skills updated this commit: 3
+- Skills updated this session: 4 (udm-gap-check + udm-step-10-verifier + udm-progress-logger + udm-post-edit-verification)
+
+**Verdict**: 🟢 SKILL alignment cleanly delivered. The just-built mechanical layer (check_9n GLOSSARY parity) is now cross-referenced from the 3 producer-facing SKILLs that share its scope. Producers + reviewers now have consistent description of producer-side vs harness-side enforcement division.
+
+**Cumulative session metrics (63 commits across 2 days; +1 this commit pending)**:
+- B-N: 57 opened + 42 closed - 1 re-open = net 14 open
+- Pytest: 2533/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective layers: 10
+- Multi-agent applications: 17
+- Gap-prevention mechanical detectors: 4 (no change)
+- Skills updated this session: 4
+- D-N amendments this session: 2 (D62 + D111)
+- SKILL semver bumps this session: 1 (udm-post-edit-verification 1.0.0 → 1.1.0; this commit doesn't bump because amendment is small + within v1.1.0 scope)

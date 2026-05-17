@@ -82,6 +82,8 @@ For each new public NAME (function / class / constant):
 
 **🟡 finding if**: NAME not present in GLOSSARY.md OR NAME present but in wrong section OR EventType constant not in L325 family registry
 
+**Mechanical layer cross-reference (per 2026-05-17 check_9n GLOSSARY-parity extension)**: `tools/query_blindspots.py::check_9n_convention_registration` now mechanically enforces this at commit-msg hook time for tools with **≥3 non-trivial public surfaces** (excluding `main`/`cli_main` trivial wrappers). The Step 10 verifier (this skill) is the PRODUCER-side check; check_9n is the HARNESS-side enforcement. Both should fire on the same gap class — this skill catches it at producer-time (in-flight), check_9n catches it at commit-time (mechanical BLOCK). Tools with <3 non-trivial surfaces (operator-helper scripts) are exempt from the mechanical GLOSSARY-parity check but Step 10 verifier still recommends entries for completeness.
+
 ### Step 4 — Verify Last reviewed date bump
 
 For each tracker that was supposed to be updated (CLAUDE.md typically has a "Last reviewed" date OR section-level date stamps):
