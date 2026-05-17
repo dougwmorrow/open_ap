@@ -78,9 +78,9 @@ For each new public NAME (function / class / constant):
 - Search GLOSSARY.md for the NAME (case-sensitive)
 - For tools: verify entry in `## Round 4 CLI tool public surfaces` section (per the Round 4 cohort precedent)
 - For modules: verify entry in the relevant module-surface section
-- For EventType constants: verify mention in CLAUDE.md L325 CLI_* family registry (per B-269 follow-up)
+- For EventType constants: verify mention in CLAUDE.md L207 CLI_* family registry (per B-269 follow-up)
 
-**🟡 finding if**: NAME not present in GLOSSARY.md OR NAME present but in wrong section OR EventType constant not in L325 family registry
+**🟡 finding if**: NAME not present in GLOSSARY.md OR NAME present but in wrong section OR EventType constant not in L207 family registry
 
 **Mechanical layer cross-reference (per 2026-05-17 check_9n GLOSSARY-parity extension)**: `tools/query_blindspots.py::check_9n_convention_registration` now mechanically enforces this at commit-msg hook time for tools with **≥3 non-trivial public surfaces** (excluding `main`/`cli_main` trivial wrappers). The Step 10 verifier (this skill) is the PRODUCER-side check; check_9n is the HARNESS-side enforcement. Both should fire on the same gap class — this skill catches it at producer-time (in-flight), check_9n catches it at commit-time (mechanical BLOCK). Tools with <3 non-trivial surfaces (operator-helper scripts) are exempt from the mechanical GLOSSARY-parity check but Step 10 verifier still recommends entries for completeness.
 
@@ -126,12 +126,12 @@ Markdown file at `docs/migration/_agent_evolution/step-10-verifier-<commit_or_co
 - **Recommended fix**: Add row in GLOSSARY § <relevant section> citing `helper_fn` + 1-line purpose
 - **Why this matters**: Future agents searching GLOSSARY for `helper_fn` get zero hits; risk of duplicate authorship OR mis-import from a different module
 
-## CLI_* family registry check (CLAUDE.md L325)
+## CLI_* family registry check (CLAUDE.md L207)
 
 | EventType | Status |
 |---|---|
 | `CLI_NEW_TOOL` | ✅ registered |
-| `CLI_OTHER_NEW_TOOL` | 🟡 NOT in L325 family list |
+| `CLI_OTHER_NEW_TOOL` | 🟡 NOT in L207 family list |
 
 ## Recommendation: <FIX-INLINE / NO-ACTION>
 ```
@@ -143,7 +143,7 @@ Markdown file at `docs/migration/_agent_evolution/step-10-verifier-<commit_or_co
 - **Test fixtures** (`tests/fixtures/`): subject to Step 10 ONLY if the fixture introduces new shared public API (e.g., a fixture-factory function). DDL fixtures like `schema.sql` are exempt.
 - **Modified function body, signature unchanged**: NOT new public surface. Verdict: ✅ N/A.
 - **Modified function signature** (additive only per D92 forward-only): IS new public surface (new kwargs). Update CLAUDE.md Structure row's `surface:` list with the new signature signal (e.g., add the new kwarg name to surface inventory).
-- **EventType constants added** (`EVENT_TYPE = "CLI_NEW"`): require BOTH CLAUDE.md Structure (per-tool row) AND CLAUDE.md L325 CLI_* family registry update (per B-269).
+- **EventType constants added** (`EVENT_TYPE = "CLI_NEW"`): require BOTH CLAUDE.md Structure (per-tool row) AND CLAUDE.md L207 CLI_* family registry update (per B-269).
 
 ## Anti-patterns to detect
 
@@ -154,7 +154,7 @@ The verifier should explicitly catch these (each maps to a known prior recurrenc
 | New EventType constant in tool module; per-tool Structure row updated; CLI_* family registry text NOT updated | `146d97a` (verify_tier0_drift) | 5 (12 → 15 tools by Round 6 follow-up cohort; 15 → 16 by AppLaunchpad CLI_QUERY_BLINDSPOTS adoption 2026-05-16) |
 | New module landed; CLAUDE.md Structure row absent | Round 4.1 5-tool cohort 2026-05-14 afternoon | 3 (Round 4.1 + § 3.4 + § 4.7) |
 | New dataclass added to module's public surface; CLAUDE.md `surface:` list NOT extended | Round 3 Wave 2 (multiple modules) | observed in ad-hoc gap-checks |
-| EventType added; D76 audit-row contract honored; CLAUDE.md L325 registry text says old count | `146d97a` + 3 subsequent commits | 4 (B-269 evidence base) |
+| EventType added; D76 audit-row contract honored; CLAUDE.md L207 registry text says old count | `146d97a` + 3 subsequent commits | 4 (B-269 evidence base) |
 
 ## Composition
 
@@ -171,7 +171,7 @@ The verifier should explicitly catch these (each maps to a known prior recurrenc
 |---|---|
 | All Structure rows + GLOSSARY entries match new surface | HIGH ✅ CLEAN |
 | 1-2 minor gaps in surface lists (typo / wrong section) | MEDIUM 🟡 IN-FLIGHT |
-| Multiple modules with missing rows + missing GLOSSARY + missing L325 update | HIGH 🟡 IN-FLIGHT (escalate to udm-cascade-audit-evolver) |
+| Multiple modules with missing rows + missing GLOSSARY + missing L207 update | HIGH 🟡 IN-FLIGHT (escalate to udm-cascade-audit-evolver) |
 | Cohort is fix-only / private-only | HIGH ✅ N/A |
 
 ## Tier 0 stub (per D67)
@@ -181,7 +181,7 @@ The verifier should explicitly catch these (each maps to a known prior recurrenc
 - Empty-surface cohort verdicts ✅ N/A
 - Cohort with missing Structure row → 🟡 IN-FLIGHT
 - Cohort with missing GLOSSARY entry → 🟡 IN-FLIGHT
-- Cohort with missing L325 CLI_* family registry update → 🟡 IN-FLIGHT (separate per B-269)
+- Cohort with missing L207 CLI_* family registry update → 🟡 IN-FLIGHT (separate per B-269)
 - Underscore-prefixed-only cohort → ✅ N/A
 
 ## Cross-references

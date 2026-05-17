@@ -763,13 +763,13 @@ Public-API surface of newly-authored Round 4 CLI tool modules (5-tool parallel c
 | **run_all_checks** | `tools/pre_commit_checks.py` | Orchestrator that runs all 4 CHECKS on staged files; returns list[CheckResult] |
 | **CheckResult** | `tools/pre_commit_checks.py` | Dataclass: name + passed + severity (block/warn/info) + diagnostic; `to_dict()` for JSON |
 | **CHECKS** | `tools/pre_commit_checks.py` | Registry tuple of 4 check functions (query_blindspots / pytest_changed / markdown_cross_refs / cli_compliance_d74_d75_d76) |
-| **EVENT_TYPE** (`= "CLI_PRE_COMMIT_CHECKS"`) | `tools/pre_commit_checks.py` | 18th CLI_* family member per CLAUDE.md L197 (2026-05-16) |
+| **EVENT_TYPE** (`= "CLI_PRE_COMMIT_CHECKS"`) | `tools/pre_commit_checks.py` | 18th CLI_* family member per CLAUDE.md L207 (2026-05-16) |
 | **SOURCE_DIRS** | `tools/pre_commit_checks.py` | Tuple of source-code directory prefixes (tools/, data_load/, etc.); used by pytest+CLI checks to filter staged paths |
 | **CANONICAL_D_SOURCE / CANONICAL_B_SOURCE / CANONICAL_R_SOURCE / CANONICAL_RB_SOURCE / CANONICAL_SP_SOURCE** | `tools/pre_commit_checks.py` | Path constants to canonical D-N/B-N/R-N/RB-N/SP-N sources; used by markdown cross-ref check |
 | **main** | `tools/install_pre_commit_hook.py` | One-command installer for Mechanism C-1 git hooks (B-305 closure 2026-05-16); wraps `cli_main()`; D74 exit-code contract |
 | **cli_main** | `tools/install_pre_commit_hook.py` | argv parser + dispatcher; mutually-exclusive `--install / --uninstall / --check`; `--apply` flag per D75 dry-run-default; `--no-audit` flag; D74 exit codes |
 | **install / uninstall / check** | `tools/install_pre_commit_hook.py` | Action functions; each returns `(exit_code, diagnostic)` tuple |
-| **EVENT_TYPE** (`= "CLI_INSTALL_PRE_COMMIT_HOOK"`) | `tools/install_pre_commit_hook.py` | 17th CLI_* family member per CLAUDE.md L197 (2026-05-16) |
+| **EVENT_TYPE** (`= "CLI_INSTALL_PRE_COMMIT_HOOK"`) | `tools/install_pre_commit_hook.py` | 17th CLI_* family member per CLAUDE.md L207 (2026-05-16) |
 | **HOOK_FILES** (`= ("pre-commit", "commit-msg")`) | `tools/install_pre_commit_hook.py` | Expected hook file names verified before install |
 | **TARGET_CONFIG_VALUE** (`= ".githooks"`) | `tools/install_pre_commit_hook.py` | Target value for `git config core.hooksPath` per CLAUDE.md hard rule 14 step 7 |
 | **main** | `tools/query_blindspots.py` | Blindspot-ledger CLI scanner — wraps `query_blindspots()` for argparse + audit-row dispatch; AppLaunchpad §12.3 blindspot ledger pattern; D74/D75/D76 contract (2026-05-16 / AppLaunchpad adoption) |
@@ -778,7 +778,7 @@ Public-API surface of newly-authored Round 4 CLI tool modules (5-tool parallel c
 | **Match** | `tools/query_blindspots.py` | Per-finding dataclass — `entry_id / severity / location / snippet / diagnostic`; `to_dict()` for JSON serialization (2026-05-16) |
 | **QueryReport** | `tools/query_blindspots.py` | Aggregate-report dataclass — `scanned_files / entries_checked / matches / skipped_checks / exit_code`; `by_severity(sev)` accessor + `to_dict()` (2026-05-16) |
 | **CHECKS** | `tools/query_blindspots.py` | Registry dict mapping `entry_id` → check function; Phase 1: 4 of 15 rules implemented (`check_9j_b_item_status_render` / `check_9o_recursive_exemption` / `check_9n_convention_registration` / `check_9h_off_by_n_line_citation`); 11 remaining = Phase 2 work per B-295 sub-item 7 (2026-05-16) |
-| **EVENT_TYPE** (`= "CLI_QUERY_BLINDSPOTS"`) | `tools/query_blindspots.py` | Canonical D76 `PipelineEventLog.EventType` value; 16th CLI_* family member per CLAUDE.md L197 (2026-05-16; Pitfall #9.h cross-table-line-cite drift caught at instance-6 gap-check 570ac67-post-hoc; was stale "L325" pointing to SCD2 UdmActiveFlag Do-NOT rule) |
+| **EVENT_TYPE** (`= "CLI_QUERY_BLINDSPOTS"`) | `tools/query_blindspots.py` | Canonical D76 `PipelineEventLog.EventType` value; 16th CLI_* family member per CLAUDE.md L207 (2026-05-16; Pitfall #9.h cross-table-line-cite drift caught at instance-6 gap-check 570ac67-post-hoc; was stale "L325" pointing to SCD2 UdmActiveFlag Do-NOT rule) |
 | **EXIT_SUCCESS / EXIT_WARNING / EXIT_OPERATIONAL_FAILURE / EXIT_FATAL** (`= 0 / 1 / 2 / 3`) | `tools/query_blindspots.py` | D74 canonical exit-code contract; `--live` mode maps p0 → 2; dry-run default maps any match → 1 (2026-05-16) |
 | **SEVERITY_RANK** (`{p0: 3, p1: 2, p2: 1}`) | `tools/query_blindspots.py` | Severity-tier ranking for filter ordering + visual prioritization (2026-05-16) |
 | **LEDGER_PATH** | `tools/query_blindspots.py` | Default `docs/migration/blindspots/ledger.yml` path; overridable via `--ledger` (2026-05-16) |
@@ -794,18 +794,18 @@ Public-API surface of newly-authored Round 4 CLI tool modules (5-tool parallel c
 | **CLASS_SUBSTRATE / CLASS_TYPO / CLASS_WHITESPACE / CLASS_BADGE_FLIP / CLASS_POLISH / CLASS_SUBSTANTIVE** | `tools/cascade_classifier.py` | 6 classification label string constants (2026-05-16) |
 | **ANTI_TRIGGER_CLASSES** | `tools/cascade_classifier.py` | Frozenset of 4 anti-trigger labels (TYPO_ONLY / WHITESPACE_ONLY / BADGE_FLIP_ONLY / POLISH_QUEUE_ONLY) (2026-05-16) |
 | **TEST_SECTION_RE / GAP_SECTION_RE / REVIEW_SECTION_RE** | `tools/cascade_classifier.py` | Markdown header regex variants accepting `TEST` / `Tests` / `Verification — TEST` / `Pytest` / `Test plan` for TEST; similar variants for GAP / REVIEW (2026-05-16) |
-| **EVENT_TYPE** (`= "CLI_CASCADE_CLASSIFIER"`) | `tools/cascade_classifier.py` | 19th CLI_* family member per CLAUDE.md L197 (2026-05-16) |
+| **EVENT_TYPE** (`= "CLI_CASCADE_CLASSIFIER"`) | `tools/cascade_classifier.py` | 19th CLI_* family member per CLAUDE.md L207 (2026-05-16) |
 | **main** | `tools/generate_cascade_evidence.py` | Cascade-evidence template generator entry (B-317 Phase 2A friction reduction; 2026-05-16); wraps `cli_main()`; D74 exit-code contract |
 | **cli_main** | `tools/generate_cascade_evidence.py` | argv parser + dispatcher; `--output <file>` (default stdout) + `--json` + `--no-audit`; D74 exit codes |
 | **generate_template** | `tools/generate_cascade_evidence.py` | Programmatic entry — emits 3 template variants based on `CommitClassification`: ANTI_TRIGGER brief with SKIPPED / SUBSTANTIVE full G1-G6 scaffold / SUBSTRATE full + 6-reviewer-type scaffold (2026-05-16) |
-| **EVENT_TYPE** (`= "CLI_GENERATE_CASCADE_EVIDENCE"`) | `tools/generate_cascade_evidence.py` | 20th CLI_* family member per CLAUDE.md L197 (2026-05-16) |
+| **EVENT_TYPE** (`= "CLI_GENERATE_CASCADE_EVIDENCE"`) | `tools/generate_cascade_evidence.py` | 20th CLI_* family member per CLAUDE.md L207 (2026-05-16) |
 | **main** | `tools/audit_cascade_compliance.py` | Retroactive cascade-compliance audit entry (B-317 Phase 3 safety-net; 2026-05-16); wraps `cli_main()`; D74 exit-code contract |
 | **cli_main** | `tools/audit_cascade_compliance.py` | argv parser + dispatcher; `--n <N>` last N commits / `--json` / `--non-compliant-only` / `--no-audit` / `--dry-run`; D74 exit codes |
 | **audit_commits** | `tools/audit_cascade_compliance.py` | Programmatic entry — walks `git log -n N` + `git show -m --name-only`; classifies each commit via `classify_historical()` + checks cascade-evidence via `cascade_classifier.has_cascade_evidence(classification=)` (compositional pass-through per 2026-05-17 fix); returns `list[CommitAudit]` (2026-05-16; extended 2026-05-17) |
 | **classify_historical** | `tools/audit_cascade_compliance.py` | Reconstructs commit's classification from file list alone (no live git diff stats); 5 historical labels matching cascade_classifier strings: SUBSTRATE_EDIT / CANONICAL_SOURCE / POLISH_QUEUE_ONLY / TYPO_SMALL_MD / SUBSTANTIVE (2026-05-16) |
 | **CommitAudit** | `tools/audit_cascade_compliance.py` | Per-commit audit dataclass: `hash / subject / classification / cascade_required / has_evidence / missing_sections / is_compliant / file_count`; `to_dict()` for JSON (2026-05-16) |
 | **CLASS_SUBSTRATE_HIST / CLASS_CANONICAL_SOURCE / CLASS_POLISH / CLASS_TYPO_SMALL_MD / CLASS_SUBSTANTIVE** | `tools/audit_cascade_compliance.py` | 5 historical-classification label string constants matching cascade_classifier string values for compositional pass-through (2026-05-16) |
-| **EVENT_TYPE** (`= "CLI_AUDIT_CASCADE_COMPLIANCE"`) | `tools/audit_cascade_compliance.py` | 21st CLI_* family member per CLAUDE.md L197 (2026-05-16) |
+| **EVENT_TYPE** (`= "CLI_AUDIT_CASCADE_COMPLIANCE"`) | `tools/audit_cascade_compliance.py` | 21st CLI_* family member per CLAUDE.md L207 (2026-05-16) |
 | **REQUIRED_KWARGS** | `tools/required_kwargs_registry.py` | Dict mapping function name → required kwarg list (initial: `{"has_cascade_evidence": ["classification"]}`); per B-326 Phase 2 closure 2026-05-17 |
 | **ENFORCEMENT_DIRS** | `tools/required_kwargs_registry.py` | Tuple of directories scanned for callers (`("tools", ".claude/hooks")`); EXCLUDES test code (legitimate unit-testing without enforcement kwargs) |
 | **ScanResult** | `tools/required_kwargs_registry.py` | Dataclass: `function_name / required_kwargs / violations / files_scanned / enforcement_dirs`; `is_clean()` helper (2026-05-17) |

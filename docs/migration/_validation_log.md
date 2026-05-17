@@ -11592,7 +11592,7 @@ Plus reviewer-affirmed design choices:
 - _validation_log.md (universal): UPDATED (this entry)
 - CLAUDE.md Structure (conditional NEW public surface): UNTOUCHED-AS-EXPECTED (no new public surface; documentation-only; the Environment & Dependencies note is dep-context not Structure-list)
 - GLOSSARY.md (conditional NEW public surface): UNTOUCHED-AS-EXPECTED (same rationale)
-- CLAUDE.md L325 CLI_* family registry (conditional NEW EventType): UNTOUCHED-AS-EXPECTED (no new EventType)
+- CLAUDE.md L207 CLI_* family registry (conditional NEW EventType): UNTOUCHED-AS-EXPECTED (no new EventType) — note: this entry's prior "L325" citation was a Pitfall #9.k drift caught by 2nd-pass gap-analysis on `e773556` + corrected at carry-forward commit; same fix-cycle also resolved multi-site drift in `docs/migration/GLOSSARY.md` (6 occurrences L197 → L207) + `.claude/skills/udm-step-10-verifier/SKILL.md` (8 occurrences L325 → L207) per 2nd-pass design reviewer `a1399d9071a76269f` action-items #1 + #2 — original wrong value L325 (SCD2 `_build_scd2_insert` Do-NOT rule) was earlier "fixed" to L197 in GLOSSARY (a BLANK line; also wrong); L207 is the correct CLI_* family registry location (verified directly via Read)
 - 03_DECISIONS.md (conditional NEW D-number): UNTOUCHED-AS-EXPECTED
 - 05_RUNBOOKS.md (conditional NEW RB-N): UNTOUCHED-AS-EXPECTED
 - 04_EDGE_CASES.md (conditional NEW edge case): UNTOUCHED-AS-EXPECTED
@@ -11607,7 +11607,7 @@ Plus reviewer-affirmed design choices:
 **Pytest delta**: 2545/58/0 → 2545/58/0 (NO test changes; documentation + tracker hygiene only).
 
 **Cumulative session metrics**:
-- 66 commits across 2 days
+- 72 commits since 2026-05-15 (3-day span; corrected from prior commits' inherited "2 days" framing per 2nd-pass gap-analysis Pitfall #9.k catch — actual `git log --since="2026-05-15 00:00"` = 72; this commit `e773556` was the 12th commit on 2026-05-17)
 - B-N: 57 opened + 46 closed - 1 re-open = **net 10 open** (was 12)
 - Pytest: 2545/58/0 (unchanged)
 - Multi-agent applications: **19** (was 18; this commit's reviewer = 19th)
