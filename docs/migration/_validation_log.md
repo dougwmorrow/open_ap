@@ -10524,3 +10524,79 @@ The B-312 pattern is reusable across all full-file-scan checks. B-316 propagates
 - Mechanism C-1 enforcement points: 7 (6 pre-commit checks + 1 commit-msg cascade-evidence check)
 - Multi-agent team applications this session: 3 (B-313/B-314 cohort; B-316 retroactive cascade; Phase 1 design review)
 - B-312 pattern propagations: 2
+
+---
+
+### 2026-05-16 — Phase 2A LANDED (friction reduction; `tools/generate_cascade_evidence.py`)
+
+**Event type**: Phase 2 friction-reduction follow-up to B-317 Phase 1 closure; closes the "skip cascade because writing the evidence section feels like overhead" failure mode at producer side.
+
+**Trigger**: User-direction "Proceed with your suggested next steps" → HIGH/RECOMMENDED from prior runway: Phase 2 friction reduction.
+
+**Phase 2A work**:
+- Authored `tools/generate_cascade_evidence.py` (~210 lines after reviewer fixes): CLI tool emitting cascade-evidence section template based on staged-scope classification from cascade_classifier.
+- 3 template variants:
+  - ANTI_TRIGGER (TYPO / WHITESPACE / BADGE_FLIP / POLISH): brief template with SKIPPED text in all 3 sections + optional pytest-verdict note for code-touching anti-triggers
+  - SUBSTANTIVE: full template with G1-G6 audit scaffold matching udm-gap-check 6-category audit
+  - SUBSTRATE_EDIT: full template + REVIEW scaffold enumerating 6 reviewer types (udm-design-reviewer / udm-data-engineer-review / udm-checks-and-balances / udm-runbook-author / udm-edge-case-validator / udm-exemption-verifier); explicit "inline self-review NEVER valid for substrate" guidance
+- D74 exit codes (0 / 3). D75 read-only (no --dry-run; pure emission). D76 audit row to `_session_logs/cli_generate_cascade_evidence_<date>.log` with classification + exit code.
+- CLI: `--output <file>` (default stdout) / `--json` (classification JSON) / `--no-audit`.
+
+**Design reviewer Agent A (`a6f334f9331a2392f`)**: verdict SOUND-with-improvements (0 🔴 BLOCK + 6 🟡 IMPROVE).
+
+**Inline fixes applied (5 of 6 reviewer findings)**:
+1. Audit row records ACTUAL exit code (was hardwired EXIT_SUCCESS even on file-write failure → forensic gap; test `test_file_write_failure_emits_audit_row_with_fatal` pins).
+2. Audit row emitted on classify_commit exception path (was silent; UNKNOWN classification fabricated for forensic record; test `test_classify_commit_exception_returns_fatal` pins).
+3. SUBSTRATE template REVIEW scaffold enumerates 6 reviewer types (was 4; added udm-data-engineer-review + udm-exemption-verifier).
+4. SUBSTANTIVE template REVIEW scaffold clarifies inline self-review valid ONLY ≤50 LOC + no new public surface (closes Pitfall #9.o-class self-rationalization loophole).
+5. ANTI_TRIGGER TEST section adds optional pytest-verdict note for code-touching anti-triggers (was blanket SKIPPED).
+
+**Deferred as B-322** (LOW; WSJF 1.0): REPO_ROOT binding fragility — extract `_resolve_audit_dir()` helper to make test-injection point explicit. Cosmetic refactor; cosmetic only; doesn't affect correctness.
+
+**Tier 0 tests**: 14 total (12 initial + 2 reviewer-prompted assertions 13 + 14).
+- Module imports + public surface + EVENT_TYPE + exit codes
+- 3 template variants (ANTI_TRIGGER SKIPPED + SUBSTANTIVE G1-G6 + SUBSTRATE reviewer-spawn)
+- CLI --help + stdout emission + --output file + --json mode + audit-row
+- classify_commit exception path + file-write failure audit-row
+
+**Verification**:
+- Targeted: `pytest tests/tier0/test_generate_cascade_evidence.py` → 14/14 PASS
+- Authoritative: pytest full → 2489 pass / 58 skip / 0 fail (was 2475/58/0; +14 net)
+
+**Files modified**: 4
+- `tools/generate_cascade_evidence.py` (NEW; ~210 lines)
+- `tests/tier0/test_generate_cascade_evidence.py` (NEW; 14 tests)
+- `CLAUDE.md` (Structure row for generate_cascade_evidence.py)
+- `docs/migration/BACKLOG.md` (B-322 open)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend)
+- `docs/migration/HANDOFF.md` (§14 prepend)
+- `docs/migration/_validation_log.md` (this entry)
+
+(7 total — fixed count.)
+
+**Per-build-type tracker walk** (per udm-progress-logger Step 1):
+- BACKLOG.md → UPDATED (B-322 open)
+- CURRENT_STATE.md → UPDATED (L7 prepend)
+- HANDOFF.md → UPDATED (§14 prepend)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (Phase 2 is meta-tooling, not code-build status transition)
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UPDATED (generate_cascade_evidence.py row added)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (per Round 4 precedent, tool surfaces tracked in CLAUDE.md Structure; GLOSSARY for cross-tool concepts only)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (this is a recurring producer tool, invoked per commit; classification: Manual × Recurring; falls under "ad-hoc operator tools" category)
+
+**Net delta**:
+- B-N: 1 NEW (B-322) + 0 CLOSED = net +1 open (was 10; now 11)
+- Pytest: 2475 → 2489 (+14)
+- Files modified: 7
+- Mechanism C-1 effective layers: 7 detection + 1 friction-reduction = 8 total
+
+**Verdict**: 🟢 Phase 2A cleanly delivered. Friction reduction half of the B-317 architectural commitment now in place. Producer can invoke `python tools/generate_cascade_evidence.py` to get pre-classified template + fill in verdicts. Pairs with Phase 1A mechanical enforcement: enforcement detects skip, generator removes friction excuse.
+
+**Cumulative session metrics (45 commits across 2 days; +1 this commit pending)**:
+- B-N: 49 opened + 37 closed - 1 re-open = net 11 open
+- Pytest: 2489/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective enforcement-points: 7 detection + 1 friction-reduction
+- Multi-agent team applications this session: 4 (B-313/B-314; B-316 retro; Phase 1 review; Phase 2A review)
+- B-312 pattern propagations: 2
