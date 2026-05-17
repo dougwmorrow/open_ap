@@ -11614,4 +11614,45 @@ Plus reviewer-affirmed design choices:
 - Gap-prevention mechanical detectors: 5 (unchanged)
 - Skills updated this session: 4 (unchanged)
 - D-N amendments this session: 2 (unchanged)
+
+---
+
+### 2026-05-17 — B-331 OPENED (Pitfall #9.k line-anchor multi-site detection sub-step)
+
+**Trigger**: User-direction "Proceed with your recommended next steps." HIGH-confidence cascade trigger phrase. NO push/PR semantics → HOLD push by default. Picked smallest-scope LOW item from prior runway: open B-N for 3rd-pass reviewer action-item #4 (forward-prevention for Pitfall #9.k line-anchor multi-site drift sub-class).
+
+**B-N body**: B-331 (LOW; WSJF 1.8). Surfaced 2026-05-17 by 3rd-pass design reviewer Agent `a1399d9071a76269f` action-item #4 on commit `1c63ee3` carry-forward review.
+
+**3-instance empirical recurrence base** (now MET):
+- Instance 1: original CLI_* family registry citation "L325" (wrong; pointed to SCD2 `_build_scd2_insert` Do-NOT rule) landed across CLAUDE.md author session
+- Instance 2: earlier "fix" L325 → L197 (ALSO wrong; L197 is a BLANK line in CLAUDE.md) landed ONLY in GLOSSARY.md (6 occurrences) while SKILL.md retained L325; surfaced at instance-6 gap-check post-`570ac67`
+- Instance 3: current fix L197/L325 → L207 (actual correct CLI_* bullet line) surfaced multi-site by 2nd+3rd-pass cascade on `e773556` → unified at `1c63ee3`
+
+**Pattern**: when a line-anchor lands in a "fix" commit at ONE site, the fix-cycle does NOT mechanically grep for the OLD value across the rest of the corpus, leaving stale anchors at OTHER sites. Pitfall #9.k canonical taxonomy ("arithmetic-propagation drift") is the umbrella; line-anchor multi-site sub-pattern is a specific sub-class.
+
+**Proposed mechanism** (alternatives; reviewer prescription):
+1. Extend `udm-gap-check` skill G3 (canonical re-read) with explicit sub-step "for any line-anchor citation modified in current scope, run `grep -rn 'L<old_value>' docs/ .claude/` to detect stale references at other sites"
+2. Extend `udm-round-closeout` cascade with same sweep at round-close-out time
+3. Mechanical detector class in `tools/query_blindspots.py` ("9.q line-anchor consistency") pre-flight scanning for same line citation appearing with different values across canonical sources
+
+**Tracker walk per per-build-type checklist** (udm-progress-logger Step 1):
+- BACKLOG.md (universal): UPDATED (B-331 inserted at top of open-B-N section above B-319)
+- CURRENT_STATE.md (universal): UPDATED (L7 narrative prepend; "Earlier 2026-05-17:" backfill of B-326+B-330 + carry-forward + B-328+B-329 entries preserved)
+- HANDOFF.md (universal): UPDATED (§14 narrative prepend mirroring CURRENT_STATE)
+- CODE_BUILD_STATUS.md (universal): UNTOUCHED-AS-EXPECTED (no code-build state change; tracker-only B-N open commit)
+- _validation_log.md (universal): UPDATED (this entry)
+- All conditional rows: UNTOUCHED-AS-EXPECTED (no new public surface / EventType / D-N / RB-N / SP-N / edge case / risk change / phase status change / cosmetic / executable artifact / spec doc / sub-class formalization / skill — pure B-N open commit)
+
+**Classification**: SUBSTANTIVE (per `tools/cascade_classifier.py::classify_commit`; canonical-source files via audit_cascade_compliance but NOT in SUBSTRATE_FILES). Cascade required per hard rule 14 + B-318 tri-section discipline. Inline self-review acceptable for SUBSTANTIVE (vs SUBSTRATE_EDIT requiring independent reviewer).
+
+**Pytest delta**: 2545/58/0 unchanged (tracker-only commit).
+
+**Cumulative session metrics**:
+- 73 commits since 2026-05-15 (3-day span; `git log --since="2026-05-15 00:00" | wc -l` = 73; this commit will be commit #14 on 2026-05-17)
+- B-N: 57 opened + 46 closed - 1 re-open + 1 new (B-331) = **net 11 open** (was 10)
+- Pytest: 2545/58/0 (unchanged)
+- Multi-agent applications: 22 (unchanged; tracker-only commit; no reviewer spawned for SUBSTANTIVE class with inline self-review)
+- Gap-prevention mechanical detectors: 5 (unchanged)
+- Skills updated this session: 4 (unchanged)
+- D-N amendments this session: 2 (unchanged)
 - SKILL semver bumps this session: 1 (udm-post-edit-verification 1.0.0 → 1.1.0)
