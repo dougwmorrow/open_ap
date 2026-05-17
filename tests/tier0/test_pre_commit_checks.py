@@ -50,8 +50,8 @@ def test_exit_codes_per_d74():
 
 
 def test_checks_registry_complete():
-    """Assertion 5 (per B-309 Cycle 1 Improvement 1): CHECKS registry has 5 Phase 1 checks
-    (added lint_security_types per critical-review Cycle 1)."""
+    """Assertion 5 (per B-309 Cycle 1 + B-315): CHECKS registry has 6 Phase 1 checks
+    (B-315 adds check_gap_accountability as 6th check; Pitfall #9.p candidate)."""
     from tools.pre_commit_checks import (
         CHECKS,
         check_query_blindspots,
@@ -59,13 +59,15 @@ def test_checks_registry_complete():
         check_lint_security_types_changed_python_files,
         check_markdown_cross_refs,
         check_cli_compliance_d74_d75_d76,
+        check_gap_accountability,
     )
     assert check_query_blindspots in CHECKS
     assert check_pytest_changed_python_files in CHECKS
     assert check_lint_security_types_changed_python_files in CHECKS
     assert check_markdown_cross_refs in CHECKS
     assert check_cli_compliance_d74_d75_d76 in CHECKS
-    assert len(CHECKS) == 5
+    assert check_gap_accountability in CHECKS
+    assert len(CHECKS) == 6
 
 
 def test_check_result_shape():
@@ -82,12 +84,61 @@ def test_check_result_shape():
 
 
 def test_empty_staged_returns_passes():
-    """Assertion 7: with no staged files, all 5 checks return passed (info severity)."""
+    """Assertion 7: with no staged files, all 6 checks return passed (info severity)."""
     from tools.pre_commit_checks import run_all_checks
     results = run_all_checks(staged=[])
-    assert len(results) == 5
+    assert len(results) == 6
     for r in results:
         assert r.passed, f"{r.name} failed on empty input: {r.diagnostic}"
+
+
+def test_check_gap_accountability_no_relevant_files():
+    """Assertion 17 (per B-315): no .md/.py/.txt staged → info pass."""
+    from tools.pre_commit_checks import check_gap_accountability
+    result = check_gap_accountability(staged=["binary.bin"])
+    assert result.passed
+    assert result.severity == "info"
+
+
+def test_scan_for_unaddressed_gaps_paired_with_bnumber():
+    """Assertion 18 (per B-315): phrase paired with B-NNN within ±5 lines → no finding."""
+    from tools.pre_commit_checks import _scan_for_unaddressed_gaps
+    content = "We noticed a drift candidate here.\nFiled as B-315 in BACKLOG.\n"
+    findings = _scan_for_unaddressed_gaps(content, "fake.md")
+    assert findings == []
+
+
+def test_scan_for_unaddressed_gaps_paired_with_dismissal():
+    """Assertion 19 (per B-315): phrase paired with explicit dismissal → no finding."""
+    from tools.pre_commit_checks import _scan_for_unaddressed_gaps
+    content = "There's a B-N candidate here.\nDismissed: cosmetic only.\n"
+    findings = _scan_for_unaddressed_gaps(content, "fake.md")
+    assert findings == []
+
+
+def test_scan_for_unaddressed_gaps_unpaired_blocks():
+    """Assertion 20 (per B-315): phrase WITHOUT disposition within ±5 lines → finding."""
+    from tools.pre_commit_checks import _scan_for_unaddressed_gaps
+    content = "This is a drift candidate I noticed.\nMoving on to other work.\n"
+    findings = _scan_for_unaddressed_gaps(content, "fake.md")
+    assert len(findings) == 1
+    assert findings[0][1] == "drift candidate"
+
+
+def test_scan_for_unaddressed_gaps_allowlisted_file_skipped():
+    """Assertion 21 (per B-315): allowlisted substrate files skipped entirely."""
+    from tools.pre_commit_checks import _scan_for_unaddressed_gaps
+    content = "This is a drift candidate with no disposition near it.\n"
+    findings = _scan_for_unaddressed_gaps(content, "CLAUDE.md")
+    assert findings == []
+
+
+def test_scan_for_unaddressed_gaps_test_file_allowlisted():
+    """Assertion 22 (per B-315): tests/tier0/*.py allowlisted (test data fixtures)."""
+    from tools.pre_commit_checks import _scan_for_unaddressed_gaps
+    content = "phrase = 'drift candidate'\n# no disposition\n"
+    findings = _scan_for_unaddressed_gaps(content, "tests/tier0/test_something.py")
+    assert findings == []
 
 
 def test_check_lint_no_python_files():

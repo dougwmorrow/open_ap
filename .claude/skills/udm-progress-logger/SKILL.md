@@ -54,6 +54,22 @@ Whoever invokes this skill (the completing agent OR the main agent on its behalf
 
 Run all applicable items; produce a structured one-paragraph report at the end (NOT a separate doc).
 
+### Step 0 — Post-compaction tracker re-Read (MANDATORY at turn start before any Edit)
+
+**Why this step exists**: in long sessions that span Claude Code conversation-compaction events, agents lose Read-state for large tracker files. The Edit tool requires a `Read` in the **current context** before allowing modification — but after compaction, the prior session's Read-state is reset. System-reminders explicitly flag this with text like `Note: <path> was read before the last conversation was summarized, but the contents are too large to include. Use Read tool if you need to access it.` Empirical first-event evidence (commit `db77516` 2026-05-16): parent agent attempted Edit on `docs/migration/BACKLOG.md` post-compaction WITHOUT a fresh Read; Edit tool returned `<error><tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error></error>`; parent misread the error as success (skimming batched tool outputs) and proceeded several messages before discovering the failure via `git status`. By that time `CURRENT_STATE.md` had been prepended with claims of B-N closures that BACKLOG didn't yet reflect — temporary cross-tracker inconsistency. This step closes that gap by forcing a fresh Read + post-Edit verification cycle.
+
+**Procedure**:
+
+1. **Detection trigger (at turn start)**: scan all `<system-reminder>` blocks in the current turn for the canonical post-compaction phrase: `was read before the last conversation was summarized, but the contents are too large to include`. If found, enumerate the file path(s) named in the reminders. The trackers most commonly flagged are `docs/migration/CURRENT_STATE.md` and `docs/migration/BACKLOG.md` (both >25K tokens), but the trigger applies to ANY tracker the skill is about to Edit.
+
+2. **Mandatory fresh-Read action (BEFORE any Edit)**: BEFORE the first Edit call on each named file, perform a fresh `Read` in the current context. For files small enough to read fully, do an unbounded Read. For files too large to read fully (typical of CURRENT_STATE.md / BACKLOG.md), do a targeted Read using `offset` + `limit` over the exact line range to be edited; AND/OR run a `Grep` over the file to confirm the `old_string` Edit anchor is present and unique. Never rely on prior-session Read-state.
+
+3. **Post-Edit verification (after every Edit on a tracker file)**: after each successful-looking Edit tool call, run a one-line `Grep` to confirm the new content actually landed in the file (do NOT just trust the Edit tool's success message — `<error>` blocks in batched tool output can be skimmed past). Acceptable verification: `Grep` for a distinctive substring of the `new_string` text against the just-edited file; verdict must be ≥1 match. If the Grep returns zero matches, the Edit silently failed (most commonly due to stale-Read-state OR a non-unique `old_string`) — re-Read + retry.
+
+4. **Anti-pattern explicitly named**: claiming "UPDATED" or closure status for a tracker in a downstream artifact (commit message body / `_validation_log.md` entry / `CURRENT_STATE.md` narrative prepend / cascade-complete report) BEFORE verifying the upstream tracker Edit actually landed is **Pitfall #9.k arithmetic-propagation drift via stale-Edit-state**. The propagation goes downstream-from-a-nonexistent-upstream-write. The fix discipline is **verification before claim**: every "UPDATED" assertion in downstream content must be preceded by the Grep verification in step 3.
+
+5. **Composition**: Step 0 runs FIRST, BEFORE the per-build-type tracker walk in Step 1 + the Pitfall #9.j status-render discipline in Step 2 + the hard-rule checks in Step 3 + the `_validation_log.md` write in Step 4 + the report emit in Step 5. If Step 0 detection trigger fires zero post-compaction file flags, proceed directly to Step 1 (Step 0 is a no-op when no compaction occurred in the session — its cost is the trigger scan only).
+
 ### Step 1 — Identify which trackers the completion touches
 
 For the completed work, determine which of these are touched:
@@ -69,6 +85,7 @@ For the completed work, determine which of these are touched:
 | Risk surfaced | `RISKS.md` (new R-N) + `_validation_log.md` |
 | Cosmetic / readability landed | `POLISH_QUEUE.md` (close P-N or add P-N) + `_validation_log.md` (low-touch row) |
 | HANDOFF §8 directive landed | `HANDOFF.md` (§8 sub-class extension) + `_validation_log.md` |
+| Substantive multi-tracker session event (mirror of CURRENT_STATE narrative for fresh-agent onboarding) | `HANDOFF.md` (`## §14. Last updated` section — prepend a dated parenthetical narrative entry matching the CURRENT_STATE.md L7 pattern; pre-existing dated entries demoted to "Earlier <date>:" lines below). SKIP when: edit is doc-only metadata polish, single-tracker P-N closure, or already-mirrored from a prior commit in the same session. Empirical anchor: commit `570ac67` (2026-05-16) is the canonical example of correct application (D114 lock prepended; prior entries demoted) |
 | Skill / agent prompt evolution | `.claude/skills/<name>/SKILL.md` or `.claude/agents/<name>.md` + `_validation_log.md` (paired with `udm-agent-prompt-versioner` for semver) |
 
 ### Step 2 — Apply Pitfall #9.j status-render discipline

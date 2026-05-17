@@ -10138,3 +10138,76 @@ Hard rule 14 body extended with:
 - B-N: 40 opened + 31 closed - 1 re-open = net 8 open (was 8; B-302/B-306 closure offsets no opens this commit)
 - Pytest: 2436/58/0
 - Hook-bypass cycles since hook activation: 2 (cc7caad, 18c1772) → 0 (29ada67 + this commit)
+
+---
+
+### 2026-05-16 — B-313 + B-314 + B-315 CLOSED (meta-cohort; multi-agent team + deep-dive)
+
+**Event type**: meta-discipline cohort — 3 B-Ns closed in single commit addressing gaps surfaced in post-`db77516` self-evaluation.
+
+**Trigger**: User-direction "1. Use a multi-agent team to address both in a single follow-up. 2. Do a deep dive analysis as to how to ensure all identified gaps are acted on. Come up with a solution for this."
+
+**Multi-agent team**: 2 parallel background agents.
+- Agent A (`a52d43799b63ed3c1`): B-313 HANDOFF §14 prescription disambiguation. **Critical finding**: §14 anchor IS ACTIVE at HANDOFF L425 (commit `570ac67` is canonical-application example). The prior "UNTOUCHED-AS-EXPECTED" claim in `db77516` was producer misreading of CURRENT structure, not real absence. Path (iv) chosen: wording disambiguation rather than restructure. Both udm-progress-logger SKILL Step 1 + udm-next-step-cascade Step 1.4 tightened.
+- Agent B (`ad9240db937ea26ec`): B-314 post-compaction Step 0 directive. Authored ~25-line Step 0 procedure in udm-progress-logger SKILL.md (detection-trigger scan of `<system-reminder>` blocks for canonical post-compaction phrase + mandatory fresh-Read + post-Edit Grep verification + Pitfall #9.k anti-pattern naming via stale-Edit-state). Empirical anchor: `db77516` Edit failure pattern.
+
+**Closures**:
+- **B-313** (MEDIUM; WSJF 1.8): SKILL wording disambiguation
+- **B-314** (HIGH; WSJF 8.5): post-compaction Edit-state Step 0 directive
+- **B-315** (HIGH; WSJF 4.5): Phase 1 `check_gap_accountability` harness enforcement (parent-authored; deep-dive solution)
+
+**Deep-dive solution (B-315 architectural commitment)**:
+The recurring pattern: gap surfaces in PROSE → producer judgment-based conversion to B-N is optional/skippable → drift accumulates. Empirical evidence 2026-05-16: 3 events in single session (HANDOFF §14 drift + post-compaction issue + earlier silent-drop B-N candidates). Per Pitfall #9.o lesson: producer-judgment-based mechanisms are recursively vulnerable; only harness-automated invocation breaks the cycle.
+
+**Phase 1 mechanism**: 6th check `check_gap_accountability` in `tools/pre_commit_checks.py`. Scans NEW staged content (per B-312 freshness) for 17 gap-indicator phrases; each match requires paired disposition (B-NNN regex / P-NNN regex / explicit dismissal phrase "no B-N needed" / "cosmetic only" / "dismissed:" / "already tracked via") within ±5 lines. Substrate files (CLAUDE.md / HANDOFF.md / tools/exemption_phrases.py-style / tests/tier0/*) allowlisted. BLOCK semantic on unpaired phrases via Mechanism C-1 hook integration.
+
+**Phase 2 (deferred)**: independent verifier skill `udm-gap-accountability-verifier` for semantic-detection edge cases — ship only if Phase 1 false-positive/negative rate proves insufficient.
+
+**Pitfall #9.p candidate** (gap-surfaced-in-prose-not-converted-to-tracked-B-N): 3-event evidence base from this session; tracked via B-315 for formalization at 5-event base per HANDOFF §8 convention. Not formalized yet — awaiting 2+ more events.
+
+**Self-application discipline**: this very `_validation_log` entry pairs every gap-phrase with a B-N disposition or dismissal. The Phase 1 check's first test of working on its own authoring commit will be the commit landing this entry.
+
+**Verification**:
+- Targeted: `pytest tests/tier0/test_pre_commit_checks.py` → 22/22 PASS (was 16; +6 B-315 tests assertions 17-22)
+- Authoritative: pytest full → 2442 pass / 58 skip / 0 fail (was 2436/58/0; +6 net)
+
+**Files modified**: 7
+- `.claude/skills/udm-progress-logger/SKILL.md` (Agent A + Agent B both touched)
+- `.claude/skills/udm-next-step-cascade/SKILL.md` (Agent A + Agent B both touched)
+- `tools/pre_commit_checks.py` (+`check_gap_accountability` + 17 GAP_INDICATOR_PHRASES + allowlist + helpers; CHECKS registry 5→6)
+- `tests/tier0/test_pre_commit_checks.py` (+6 new tests; registry-length assertion updated)
+- `docs/migration/BACKLOG.md` (B-313 + B-314 + B-315 closure annotations)
+- `docs/migration/CURRENT_STATE.md` (L7 narrative prepended)
+- `docs/migration/HANDOFF.md` (§14 narrative prepended; **first per-`udm-progress-logger`-Step-1 application this session** — addresses B-313 forward-prevention discipline)
+- `docs/migration/_validation_log.md` (this entry)
+
+**Lines**: ~+400 / -15
+
+**Per-build-type tracker walk** (per udm-progress-logger Step 1):
+- BACKLOG.md → UPDATED (3 closures inline per Pitfall #9.j leading-badge flip)
+- CURRENT_STATE.md → UPDATED (L7 prepend)
+- HANDOFF.md → UPDATED (§14 prepend — this is the FIRST application of the just-disambiguated B-313 prescription)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no new code-build status transitions; B-315 is orchestrator check addition, not new tool artifact)
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (no new public surface; `check_gap_accountability` is internal to pre_commit_checks.py registry)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (same; private orchestrator function)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+
+**Net delta**:
+- B-N: 0 NEW + 3 CLOSED (B-313, B-314, B-315) = net -3 open (was 8; now 5)
+- Pytest: 2436 → 2442 (+6)
+- Files modified: 7
+
+**Verdict**: 🟢 Meta-cohort cleanly closed. Mechanism C-1 expanded from 5 to 6 orchestrator checks. The new check immediately enforces against this commit's own authoring — a self-applying test of whether the mechanism works on first contact. If commit passes hook clean, the discipline is operationally validated.
+
+**Hook self-verification**: this commit triggers all 6 checks including the new `check_gap_accountability`. If the narrative authoring honors the pairing contract (every gap-phrase + nearby B-N or dismissal), commit lands clean. If not, the hook BLOCKS with specific phrase + line number — exactly the discipline this commit codifies.
+
+**Lesson from this cohort**: producer self-evaluation surfaces real gaps reliably; the conversion gap-prose → tracked-B-N is where drift happens. The 3-event session base (HANDOFF §14 misread + post-compaction Edit-state + silent-drop recommendations) made the architectural commitment to harness enforcement non-optional.
+
+**Cumulative session metrics (40 commits across 2 days; +1 this commit pending)**:
+- B-N: 43 opened + 34 closed - 1 re-open = net 8 open
+- Pytest: 2442/58/0
+- Hook-bypass cycles since hook activation: 2 → 0 (this commit + prior 2)
+- Mechanism C-1 orchestrator checks: 5 → 6
+- Multi-agent team applications this session: 1 (this cohort; 2 parallel agents)

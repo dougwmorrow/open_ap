@@ -15,6 +15,11 @@ scan) to also enforce code quality + compliance:
 4. `check_cli_compliance_d74_d75_d76` — for NEW `tools/*.py` files, verify
    D74 exit codes + D75 `--dry-run` flag (if side-effecting) + D76 `EVENT_TYPE`
    constant present; BLOCK on missing
+5. `check_gap_accountability` (B-315; Pitfall #9.p candidate) — for NEW staged
+   content (per B-312 freshness), require every gap-indicator phrase ("should
+   be surfaced as B-N", "drift candidate", etc.) to be paired with a
+   disposition: B-NNN / P-NNN citation OR explicit dismissal. Substrate files
+   allowlisted. BLOCK on unpaired phrases.
 
 Per D74 exit-code contract:
 - 0: all checks passed
@@ -133,15 +138,16 @@ def _staged_diff_added_lines(file_path: str) -> str:
         result = subprocess.run(
             ["git", "diff", "--cached", "-U0", "--", file_path],
             capture_output=True, text=True, cwd=str(REPO_ROOT), check=False,
+            encoding="utf-8", errors="replace",
         )
-        if result.returncode != 0:
+        if result.returncode != 0 or not result.stdout:
             return ""
         added_lines = []
         for line in result.stdout.splitlines():
             if line.startswith("+") and not line.startswith("+++"):
                 added_lines.append(line[1:])
         return "\n".join(added_lines)
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError, UnicodeDecodeError):
         return ""
 
 
@@ -545,12 +551,161 @@ def check_lint_security_types_changed_python_files(staged: list[str]) -> CheckRe
                       f"{len(skipped)} tool(s) skipped:\n  " + "\n  ".join(skipped))
 
 
+# ---------------------------------------------------------------------------
+# Check 6: gap-accountability (per B-315 + Pitfall #9.p candidate)
+# ---------------------------------------------------------------------------
+
+GAP_INDICATOR_PHRASES = (
+    "should be surfaced as B-",
+    "should be surfaced as a B-",
+    "should open a B-N",
+    "should open a P-N",
+    "should be filed as B-",
+    "noted but not opened",
+    "I could have opened",
+    "drift candidate",
+    "B-N candidate",
+    "P-N candidate",
+    "Pitfall #9.k candidate",
+    "Pitfall #9.l candidate",
+    "Pitfall #9.m candidate",
+    "Pitfall #9.n candidate",
+    "Pitfall #9.o candidate",
+    "Pitfall #9.p candidate",
+    "WSJF candidate",
+)
+
+DISPOSITION_BNUMBER_RE = re.compile(r"\bB-?\d{1,4}\b")
+DISPOSITION_PNUMBER_RE = re.compile(r"\bP-?\d{1,4}\b")
+DISPOSITION_DISMISSAL_RE = re.compile(
+    r"(?:no\s+B-N\s+(?:needed|required)|dismiss(?:ed)?\s*[:\-]|"
+    r"cosmetic\s+only|not\s+a\s+real\s+gap|already\s+tracked\s+via)",
+    re.IGNORECASE,
+)
+
+GAP_ACCOUNTABILITY_ALLOWLIST = (
+    "CLAUDE.md",
+    "docs/migration/HANDOFF.md",
+    "docs/migration/CLAUDE_GOTCHAS.md",
+    "docs/migration/blindspots/ledger.yml",
+    "tools/exemption_phrases.py",
+    "tools/pre_commit_checks.py",
+    "tools/check_commit_msg.py",
+    "tools/query_blindspots.py",
+    ".claude/skills/udm-exemption-verifier/SKILL.md",
+    ".claude/skills/udm-gap-check/SKILL.md",
+    ".claude/skills/udm-progress-logger/SKILL.md",
+    ".claude/skills/udm-next-step-cascade/SKILL.md",
+    ".claude/skills/udm-post-edit-verification/SKILL.md",
+)
+
+
+def _is_allowlisted_for_gap_check(file_path: str) -> bool:
+    """Substrate files that legitimately enumerate gap-indicator phrases as data."""
+    norm = file_path.replace("\\", "/")
+    if norm in GAP_ACCOUNTABILITY_ALLOWLIST:
+        return True
+    if norm.startswith("tests/tier0/") and norm.endswith(".py"):
+        return True
+    if norm.startswith("tests/tier1/test_skill_"):
+        return True
+    return False
+
+
+def _scan_for_unaddressed_gaps(
+    content: str, file_path: str
+) -> list[tuple[str, str, int, str]]:
+    """For each gap-indicator phrase in `content`, verify a paired disposition
+    exists in same line OR within ±5 lines. Returns list of unpaired matches.
+
+    Tuple shape: (file_path, phrase, line_number, snippet).
+    """
+    if _is_allowlisted_for_gap_check(file_path):
+        return []
+    lines = content.splitlines()
+    findings: list[tuple[str, str, int, str]] = []
+    for i, line in enumerate(lines):
+        for phrase in GAP_INDICATOR_PHRASES:
+            if phrase.lower() not in line.lower():
+                continue
+            window_lo = max(0, i - 5)
+            window_hi = min(len(lines), i + 6)
+            window = "\n".join(lines[window_lo:window_hi])
+            if (DISPOSITION_BNUMBER_RE.search(window)
+                    or DISPOSITION_PNUMBER_RE.search(window)
+                    or DISPOSITION_DISMISSAL_RE.search(window)):
+                continue
+            snippet = line.strip()[:120]
+            findings.append((file_path, phrase, i + 1, snippet))
+            break
+    return findings
+
+
+def check_gap_accountability(staged: list[str]) -> CheckResult:
+    """Per B-315 forward-prevention (Pitfall #9.p candidate; 3-event base from
+    2026-05-16 session): every gap-indicator phrase in NEWLY-ADDED staged
+    content (per B-312 freshness) must be paired with a disposition signal:
+    cited B-NNN OR P-NNN OR explicit dismissal phrase ("no B-N needed",
+    "dismissed:", "cosmetic only", "not a real gap", "already tracked via").
+
+    Substrate files (CLAUDE.md / HANDOFF.md / tools/exemption_phrases.py /
+    test files) allowlisted — they legitimately enumerate these phrases as
+    data, not as in-flight surfaced gaps.
+
+    Closes the prose-surface drift pattern: "I notice X but don't open it"
+    that defeats producer judgment-based gap conversion (3 events 2026-05-16).
+    """
+    relevant_files = []
+    for f in staged:
+        norm = f.replace("\\", "/")
+        if not (norm.endswith(".md") or norm.endswith(".py") or norm.endswith(".txt")):
+            continue
+        if _is_allowlisted_for_gap_check(norm):
+            continue
+        relevant_files.append(norm)
+
+    if not relevant_files:
+        return CheckResult("gap_accountability", True, "info",
+                          "no non-allowlisted staged files; check skipped")
+
+    findings: list[tuple[str, str, int, str]] = []
+    added_files_set = _staged_added_files()
+    for f in relevant_files:
+        if f in added_files_set:
+            try:
+                scan_content = (REPO_ROOT / f).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+        else:
+            scan_content = _staged_diff_added_lines(f)
+            if not scan_content:
+                continue
+        findings.extend(_scan_for_unaddressed_gaps(scan_content, f))
+
+    if findings:
+        findings = findings[:15]
+        return CheckResult(
+            "gap_accountability", False, "block",
+            f"{len(findings)} unaddressed gap-indicator phrase(s) in NEW staged content "
+            f"(per B-315; Pitfall #9.p candidate):\n"
+            + "\n".join(f"  - {f}:{ln} phrase {p!r} (line: {snippet!r})"
+                       for f, p, ln, snippet in findings)
+            + "\n\nPair each phrase with a disposition: cite a B-NNN / P-NNN "
+              "within ±5 lines, OR explicitly dismiss "
+              "('no B-N needed; <reason>' / 'cosmetic only' / 'already tracked via X')."
+        )
+    return CheckResult("gap_accountability", True, "info",
+                      f"all gap-indicator phrases in {len(relevant_files)} staged file(s) "
+                      "paired with disposition (B-315 contract)")
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
     check_lint_security_types_changed_python_files,
     check_markdown_cross_refs,
     check_cli_compliance_d74_d75_d76,
+    check_gap_accountability,
 ]
 
 
