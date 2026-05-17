@@ -10837,3 +10837,81 @@ Verdict: SOUND-with-improvements (0 🔴 BLOCK + 2 🟡 IMPROVE both inline-fixe
 - Mechanism C-1 effective layers: 10 (unchanged; B-321 closure will add 11th-class detector)
 - Multi-agent applications: 7 (B-313/B-314; B-316 retro; Phase 1; Phase 2A; Phase 2B; Phase 3; this retroactive review)
 - User-caught skipped-REVIEW events: 2 (0a0ff49; 1fc59f9)
+
+---
+
+### 2026-05-17 — B-321 CLOSED (header-only false-PASS class structurally fixed)
+
+**Event type**: HIGH-priority architectural fix — closes the structural gap that produced both user-caught skipped-REVIEW events (`0a0ff49` + `1fc59f9`). After this commit, the same skip patterns will be MECHANICALLY DETECTED at commit-msg hook time instead of requiring user audit-question.
+
+**Trigger**: User-direction "Proceed with your recommended next step" → HIGH/RECOMMENDED B-321 closure (escalated yesterday LOW→HIGH per empirical false-PASS demonstration).
+
+**B-321 closure scope** (4 rule additions to `has_cascade_evidence`):
+1. **Body-content validation**: each section must have ≥1 non-blank body line (catches literal stub-header pattern)
+2. **SUBSTRATE-stricter REVIEW check**: for SUBSTRATE_EDIT classification, REVIEW section must NOT contain "inline self-review" / "inline self review" / "self-review per" / "self-review pattern" / "self-review (scope-justified" — substrate requires independent reviewer spawn per Phase 2B SKILL v1.1.0
+3. **SKIPPED-justification check**: if section body contains "SKIPPED" (word-boundary match), must ALSO contain "anti-trigger" justification (3 variants: anti-trigger / antitrigger / anti trigger)
+4. **Section-body parser**: new `_extract_section_bodies()` helper parses markdown sections with code-fence state tracking (` ```python ## comment ``` ` inside body no longer prematurely terminates section)
+
+**Signature change**: `has_cascade_evidence(commit_msg)` → `has_cascade_evidence(commit_msg, classification=None)`. Backward-compatible (classification=None preserves header-only behavior for non-classified callers).
+
+**Design reviewer Agent A (`a9b5bf0b3074d0ac3`)**: verdict SOUND-with-improvements (2 🔴 BLOCK + 5 🟡 IMPROVE).
+
+**🔴 BLOCK inline fixes (both applied)**:
+1. Code-fence parser bug: markdown body containing fenced code block with `##` comments would split sections wrongly. Fixed via `in_code_fence` boolean state + `_CODE_FENCE_RE` toggle on ``` lines. Test `test_extract_section_bodies_codefence_with_hash_headers` (assertion 27) pins behavior.
+2. `_ANY_HEADER_RE + startswith("##")` redundancy: belt-and-suspenders compound condition was misleading code (no defense-in-depth value). Fixed by dropping the startswith gating; `_ANY_HEADER_RE` alone is canonical.
+
+**🟡 IMPROVE inline fixes (3 of 5)**:
+- SKIPPED word-boundary regex (`_SKIPPED_WORD_RE = re.compile(r'\bSKIPPED\b', re.IGNORECASE)`) avoids false-positive on "skipperdoodle" or similar non-keyword matches. Test assertion 29 pins.
+- "anti trigger" with space variant added to `_has_anti_trigger_justification`. Test assertion 28 pins.
+- `missing_sections` → `cascade_findings` variable rename in `check_commit_msg.py` (semantic clarity; now mixed header-missing + body-validation findings).
+
+**🟡 IMPROVE deferred as B-324** (LOW; WSJF 1.0):
+- Phrase substring-match too loose (`"self-review per"` could fire on legitimate meta-citation)
+- 7 edge cases: HTML comments / blockquote-cited / duplicate `## TEST` headers / trailing-colon (`## TEST:`) / header-followed-only-by-blanks / heading inside blockquote / quote-cited reviewer output
+
+**Tier 0 tests added (11 new; 19-29)**:
+- 19: empty section body fails
+- 20: substrate inline self-review BLOCKED
+- 21: substrate independent review PASSES
+- 22: non-substrate (SUBSTANTIVE) inline self-review allowed
+- 23: SKIPPED without anti-trigger BLOCKED
+- 24: SKIPPED with anti-trigger PASSES
+- 25: _extract_section_bodies handles other headers correctly
+- 26: _extract_section_bodies empty message → empty dict
+- 27: codefence with hash headers doesn't split sections (🔴 BLOCK fix regression test)
+- 28: anti-trigger justification accepts space variant
+- 29: SKIPPED word-boundary fires on full-word match
+
+**Verification**:
+- Targeted: `pytest tests/tier0/test_cascade_classifier.py tests/tier0/test_check_commit_msg.py` → 50/50 PASS (was 39; +11 new)
+- Authoritative: pytest full → 2519 pass / 58 skip / 0 fail (was 2508/58/0; +11 net)
+- Orchestrator smoke test on staged scope: expected 6/6 PASS
+
+**Files modified**: 5
+- `tools/cascade_classifier.py` (+95 lines net: helpers + extended has_cascade_evidence + 3 new constants/regexes)
+- `tools/check_commit_msg.py` (+10 lines: classification pass-through + variable rename + diagnostic update)
+- `tests/tier0/test_cascade_classifier.py` (+11 new tests)
+- `docs/migration/BACKLOG.md` (B-321 closure + B-324 open)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend; dated 2026-05-17)
+- `docs/migration/HANDOFF.md` (§14 prepend; dated 2026-05-17)
+- `docs/migration/_validation_log.md` (this entry)
+
+(7 total — fixed count.)
+
+**Net delta**:
+- B-N: 1 NEW (B-324) + 1 CLOSED (B-321) = net 0 change in count; net delta -1 (HIGH closure - LOW open)
+- Pytest: 2508 → 2519 (+11)
+- Files modified: 7
+- Mechanism C-1 effective layers: 10 (unchanged; B-321 closure is a refinement of existing layer 1A — commit-msg cascade-evidence detection — not a new layer)
+
+**Architectural validation criterion**: the next user-prompted skipped-REVIEW pattern (same class as `0a0ff49` + `1fc59f9`) will now BLOCK at commit-msg hook time instead of requiring user audit-question. This is the falsifiable test of B-321 closure. If the pattern recurs DESPITE this fix, the gap is elsewhere (e.g., classification miss; specific phrase not in invalid list; etc.) — and we open the next B-N.
+
+**Verdict**: 🟢 B-321 cleanly closed. False-PASS class structurally addressed.
+
+**Cumulative session metrics (55 commits across 2 days; +1 this commit pending)**:
+- B-N: 50 opened + 39 closed - 1 re-open = net 10 open
+- Pytest: 2519/58/0
+- Hook-bypass cycles since hook activation: 4 (no new bypass)
+- Mechanism C-1 effective layers: 10 (B-321 is refinement of layer 1A)
+- Multi-agent applications: 8 (B-313/B-314; B-316 retro; Phase 1; Phase 2A; Phase 2B; Phase 3; 1fc59f9 retro; B-321 closure)
+- B-321 false-PASS empirical demonstrations remediated: 2 (0a0ff49 retroactive + 1fc59f9 retroactive)

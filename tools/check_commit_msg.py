@@ -129,7 +129,7 @@ def main(argv: list[str]) -> int:
     cascade_exit_code = EXIT_SUCCESS
     cascade_diag = ""
     cls = None
-    missing_sections: list[str] = []
+    cascade_findings: list[str] = []  # per reviewer 🟡 #4 rename: was `missing_sections`
     if classify_commit is not None and has_cascade_evidence is not None:
         try:
             cls = classify_commit()
@@ -138,13 +138,18 @@ def main(argv: list[str]) -> int:
                   "cascade-evidence check skipped this commit.", file=sys.stderr)
             cls = None
         if cls is not None and cls.cascade_required:
-            has_ev, missing_sections = has_cascade_evidence(actual_msg)
+            # Per B-321 closure: pass classification for substrate-stricter check
+            # + body-content validation (no more header-only false-PASS). Findings
+            # now include BOTH missing-headers AND body-validation failures.
+            has_ev, cascade_findings = has_cascade_evidence(
+                actual_msg, classification=cls.classification,
+            )
             if not has_ev:
                 cascade_exit_code = EXIT_BLOCKED
                 cascade_diag = (
-                    f"hard rule 14 cascade-evidence missing per B-317 "
+                    f"hard rule 14 cascade-evidence missing or invalid per B-317 + B-321 "
                     f"(commit classified as {cls.classification}: {cls.rationale}); "
-                    f"missing sections: {', '.join(missing_sections)}"
+                    f"findings: {'; '.join(cascade_findings)}"
                 )
 
     final_exit_code = EXIT_BLOCKED if (
@@ -155,7 +160,7 @@ def main(argv: list[str]) -> int:
         _emit_audit_row(
             commit_msg_path, matched_phrases, final_exit_code,
             classification=cls.classification if cls else None,
-            missing_sections=missing_sections,
+            missing_sections=cascade_findings,
         )
 
     if matched_phrases:

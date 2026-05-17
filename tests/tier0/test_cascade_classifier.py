@@ -205,6 +205,249 @@ def test_commit_classification_to_dict():
         assert key in d
 
 
+def test_has_cascade_evidence_empty_section_body_fails():
+    """Assertion 19 (per B-321): stub-header with empty body fails validation."""
+    from tools.cascade_classifier import has_cascade_evidence
+    msg = """build: change
+
+## TEST
+
+## GAP ANALYSIS
+clean
+
+## REVIEW
+sound
+"""
+    has_ev, findings = has_cascade_evidence(msg)
+    assert has_ev is False
+    assert any("TEST" in f and "body empty" in f for f in findings)
+
+
+def test_has_cascade_evidence_substrate_inline_self_review_blocks():
+    """Assertion 20 (per B-321 empirical escalation from 1fc59f9):
+    SUBSTRATE_EDIT with 'inline self-review' in REVIEW section BLOCKED."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTRATE
+    msg = """build: substrate change
+
+## TEST
+pytest 100/100 PASS
+
+## GAP ANALYSIS
+inline G1-G6 audit: CLEAN
+
+## REVIEW
+Reviewer: inline self-review per scope-justified pattern
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTRATE)
+    assert has_ev is False
+    assert any("inline self-review" in f.lower() and "INVALID" in f for f in findings)
+
+
+def test_has_cascade_evidence_substrate_independent_review_passes():
+    """Assertion 21 (per B-321): SUBSTRATE_EDIT with proper independent
+    reviewer agentId in REVIEW section PASSES."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTRATE
+    msg = """build: substrate change
+
+## TEST
+pytest 100/100 PASS
+
+## GAP ANALYSIS
+inline G1-G6 audit: CLEAN
+
+## REVIEW
+Spawned udm-design-reviewer agent (agentId abc12345); verdict SOUND.
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTRATE)
+    assert has_ev is True
+    assert findings == []
+
+
+def test_has_cascade_evidence_substantive_self_review_passes():
+    """Assertion 22 (per B-321): non-substrate (SUBSTANTIVE) commit with
+    'inline self-review' in REVIEW section is ALLOWED (substrate-stricter
+    check fires only when classification is SUBSTRATE_EDIT)."""
+    from tools.cascade_classifier import has_cascade_evidence, CLASS_SUBSTANTIVE
+    msg = """build: small substantive change
+
+## TEST
+pytest 100/100 PASS
+
+## GAP ANALYSIS
+inline G1-G6: CLEAN
+
+## REVIEW
+Inline self-review per scope-justified pattern (small scope; no new public surface).
+"""
+    has_ev, findings = has_cascade_evidence(msg, classification=CLASS_SUBSTANTIVE)
+    assert has_ev is True
+    assert findings == []
+
+
+def test_has_cascade_evidence_skipped_without_anti_trigger_fails():
+    """Assertion 23 (per B-321): SKIPPED content without anti-trigger
+    justification BLOCKED."""
+    from tools.cascade_classifier import has_cascade_evidence
+    msg = """build: change
+
+## TEST
+pytest PASS
+
+## GAP ANALYSIS
+SKIPPED.
+
+## REVIEW
+sound
+"""
+    has_ev, findings = has_cascade_evidence(msg)
+    assert has_ev is False
+    assert any("SKIPPED" in f and "anti-trigger" in f for f in findings)
+
+
+def test_has_cascade_evidence_skipped_with_anti_trigger_passes():
+    """Assertion 24 (per B-321): SKIPPED content paired with anti-trigger
+    justification PASSES."""
+    from tools.cascade_classifier import has_cascade_evidence
+    msg = """build: badge flip
+
+## TEST
+SKIPPED: BADGE_FLIP_ONLY anti-trigger (per cascade_classifier)
+
+## GAP ANALYSIS
+SKIPPED: BADGE_FLIP_ONLY anti-trigger
+
+## REVIEW
+SKIPPED: BADGE_FLIP_ONLY anti-trigger
+"""
+    has_ev, findings = has_cascade_evidence(msg)
+    assert has_ev is True
+    assert findings == []
+
+
+def test_extract_section_bodies_handles_other_headers():
+    """Assertion 25 (per B-321 internal): _extract_section_bodies treats
+    non-TEST/GAP/REVIEW '##' headers as section boundaries."""
+    from tools.cascade_classifier import _extract_section_bodies
+    msg = """## TEST
+test body line 1
+
+## Net delta
+- B-N: +1
+
+## GAP ANALYSIS
+gap body
+"""
+    sections = _extract_section_bodies(msg)
+    assert "TEST" in sections
+    assert "GAP ANALYSIS" in sections
+    # TEST body should end at "## Net delta" header
+    test_body_joined = "\n".join(sections["TEST"])
+    assert "test body line 1" in test_body_joined
+    assert "B-N: +1" not in test_body_joined
+
+
+def test_extract_section_bodies_empty_message():
+    """Assertion 26 (per B-321): empty commit message yields empty dict."""
+    from tools.cascade_classifier import _extract_section_bodies
+    sections = _extract_section_bodies("")
+    assert sections == {}
+
+
+def test_extract_section_bodies_codefence_with_hash_headers():
+    """Assertion 27 (per reviewer 🔴 BLOCK #1 fix): code-fenced block with `##`
+    comments inside TEST body does NOT prematurely terminate the section."""
+    from tools.cascade_classifier import _extract_section_bodies
+    msg = """## TEST
+pytest verdict
+
+```python
+## sample output
+result = 100
+```
+
+more test details
+
+## GAP ANALYSIS
+clean
+"""
+    sections = _extract_section_bodies(msg)
+    assert "TEST" in sections
+    assert "GAP ANALYSIS" in sections
+    test_body = "\n".join(sections["TEST"])
+    # The fenced `## sample output` should NOT have ended TEST
+    assert "sample output" in test_body
+    assert "more test details" in test_body
+    # GAP ANALYSIS body should NOT contain the fenced content
+    gap_body = "\n".join(sections["GAP ANALYSIS"])
+    assert "sample output" not in gap_body
+
+
+def test_anti_trigger_justification_accepts_space_variant():
+    """Assertion 28 (per reviewer 🟡 #3 fix): 'anti trigger' (space) is also accepted."""
+    from tools.cascade_classifier import _has_anti_trigger_justification
+    assert _has_anti_trigger_justification(["SKIPPED: anti trigger reason"]) is True
+    assert _has_anti_trigger_justification(["SKIPPED: anti-trigger reason"]) is True
+    assert _has_anti_trigger_justification(["SKIPPED: antitrigger reason"]) is True
+    assert _has_anti_trigger_justification(["SKIPPED: no reason given"]) is False
+
+
+def test_skipped_regex_avoids_mid_sentence_false_positive():
+    """Assertion 29 (per reviewer 🟡 #2 fix + B-321 self-dogfood discovery):
+    SKIPPED mid-sentence in legitimate narrative (e.g., 'no new tools; skipped'
+    OR 'pytest 2 skipped') does NOT trigger the anti-trigger requirement.
+    Only line-start SKIPPED or 'WORD: SKIPPED' pattern fires."""
+    from tools.cascade_classifier import has_cascade_evidence
+    msg_narrative_skipped = """## TEST
+pytest passed; cli_compliance: no new tools; skipped
+
+## GAP ANALYSIS
+inline G1-G6: CLEAN
+
+## REVIEW
+udm-design-reviewer: SOUND
+"""
+    has_ev, findings = has_cascade_evidence(msg_narrative_skipped)
+    # Mid-sentence "skipped" should NOT fire the SKIPPED check
+    assert has_ev is True
+    assert findings == []
+
+
+def test_skipped_line_start_does_fire_check():
+    """Assertion 30 (per reviewer 🟡 #2 fix): line-start SKIPPED DOES fire
+    the anti-trigger requirement (producer-claim pattern)."""
+    from tools.cascade_classifier import has_cascade_evidence
+    msg_line_start = """## TEST
+SKIPPED for some reason
+
+## GAP ANALYSIS
+clean
+
+## REVIEW
+sound
+"""
+    has_ev, findings = has_cascade_evidence(msg_line_start)
+    assert has_ev is False
+    assert any("SKIPPED" in f and "anti-trigger" in f for f in findings)
+
+
+def test_skipped_label_colon_pattern_does_fire_check():
+    """Assertion 31 (per reviewer 🟡 #2 fix): 'TEST: SKIPPED' label-colon
+    pattern DOES fire (canonical producer-claim format)."""
+    from tools.cascade_classifier import has_cascade_evidence
+    msg_label = """## TEST
+TEST: SKIPPED for some reason
+
+## GAP ANALYSIS
+clean
+
+## REVIEW
+sound
+"""
+    has_ev, findings = has_cascade_evidence(msg_label)
+    assert has_ev is False
+    assert any("SKIPPED" in f and "anti-trigger" in f for f in findings)
+
+
 def test_extended_substrate_enumeration_per_reviewer():
     """Assertion 19 (per reviewer 🟡 IMPROVE — design review of Phase 1 commit):
     extended substrate set covers Pattern F audit + .claude/hooks/ + discipline docs."""

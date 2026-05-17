@@ -337,19 +337,163 @@ REVIEW_SECTION_RE = re.compile(
 )
 
 
-def has_cascade_evidence(commit_msg: str) -> tuple[bool, list[str]]:
+_ANY_HEADER_RE = re.compile(r"^##+\s")
+_CODE_FENCE_RE = re.compile(r"^```")
+# SKIPPED detection per reviewer 🟡 IMPROVE #2 fix:
+# Match SKIPPED at line-start OR after a label-like "WORD: " prefix.
+# Avoids false-positive on legitimate narrative like "no new tools; skipped"
+# or "tools not installed; check skipped" or "pytest 2 skipped".
+_SKIPPED_WORD_RE = re.compile(
+    r"^\s*(?:[\w-]+\s*:\s*)?SKIPPED\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+_INVALID_SUBSTRATE_REVIEW_PHRASES = (
+    "inline self-review",
+    "inline self review",
+    "self-review per",
+    "self-review pattern",
+    "self-review (scope-justified",
+)
+
+
+def _extract_section_bodies(commit_msg: str) -> dict[str, list[str]]:
+    """Parse markdown sections. Returns {section_name: [body_lines]} where
+    section_name is normalized (TEST / GAP ANALYSIS / REVIEW). Body lines are
+    everything between this section's header and the next `##` header (or EOF).
+
+    Per reviewer 🔴 BLOCK fix: tracks code-fence state so ` ```python ## comment ``` `
+    inside a section body does NOT prematurely terminate the section.
+    """
+    sections: dict[str, list[str]] = {}
+    current_name: str | None = None
+    current_body: list[str] = []
+    in_code_fence = False
+
+    for line in commit_msg.splitlines():
+        # Toggle code-fence state on ``` lines (line included in body)
+        if _CODE_FENCE_RE.match(line):
+            in_code_fence = not in_code_fence
+            if current_name:
+                current_body.append(line)
+            continue
+
+        # Inside code fence: all lines are body content (don't parse as headers)
+        if in_code_fence:
+            if current_name:
+                current_body.append(line)
+            continue
+
+        # Outside code fence: check for canonical section headers
+        if TEST_SECTION_RE.match(line):
+            if current_name:
+                sections[current_name] = current_body
+            current_name = "TEST"
+            current_body = []
+            continue
+        if GAP_SECTION_RE.match(line):
+            if current_name:
+                sections[current_name] = current_body
+            current_name = "GAP ANALYSIS"
+            current_body = []
+            continue
+        if REVIEW_SECTION_RE.match(line):
+            if current_name:
+                sections[current_name] = current_body
+            current_name = "REVIEW"
+            current_body = []
+            continue
+        # Any OTHER `##` header ends the current section
+        # (per reviewer 🔴 #2 fix: dropped redundant startswith("##") gating;
+        # _ANY_HEADER_RE alone is the canonical check)
+        if _ANY_HEADER_RE.match(line):
+            if current_name:
+                sections[current_name] = current_body
+                current_name = None
+                current_body = []
+            continue
+        if current_name:
+            current_body.append(line)
+
+    if current_name:
+        sections[current_name] = current_body
+
+    return sections
+
+
+def _has_anti_trigger_justification(body_lines: list[str]) -> bool:
+    """Check if body contains explicit anti-trigger justification phrase.
+
+    Per reviewer 🟡 #3 fix: accepts space-variant 'anti trigger' too.
+    """
+    body_text = "\n".join(body_lines).lower()
+    return (
+        "anti-trigger" in body_text
+        or "antitrigger" in body_text
+        or "anti trigger" in body_text
+    )
+
+
+def has_cascade_evidence(
+    commit_msg: str, classification: str | None = None
+) -> tuple[bool, list[str]]:
     """Verify commit message has all 3 cascade sections per hard rule 14 + B-318.
 
-    Returns (all_present, list_of_missing_section_names).
+    Per B-321 closure (2026-05-17 escalation; body-content validation added):
+    - Header presence: each of `## TEST` / `## GAP ANALYSIS` / `## REVIEW` must match
+    - Body substance: each section must have ≥1 non-blank body line (catches stub headers)
+    - SUBSTRATE-stricter check: when classification == SUBSTRATE_EDIT, REVIEW section
+      must NOT contain "inline self-review" / "self-review per" / similar phrases
+      (substrate requires independent reviewer per Phase 2B SKILL v1.1.0)
+    - SKIPPED-justification check: if a section body contains "SKIPPED", body must
+      ALSO contain "anti-trigger" justification phrase
+
+    Returns (all_valid, list_of_findings). `findings` includes both missing-header
+    diagnostics AND body-validation failures.
     """
-    missing: list[str] = []
+    findings: list[str] = []
     if not TEST_SECTION_RE.search(commit_msg):
-        missing.append("TEST")
+        findings.append("TEST")
     if not GAP_SECTION_RE.search(commit_msg):
-        missing.append("GAP ANALYSIS")
+        findings.append("GAP ANALYSIS")
     if not REVIEW_SECTION_RE.search(commit_msg):
-        missing.append("REVIEW")
-    return (len(missing) == 0, missing)
+        findings.append("REVIEW")
+
+    # If any header is missing, return early (body checks moot)
+    if findings:
+        return (False, findings)
+
+    # Body-content validation per B-321
+    sections = _extract_section_bodies(commit_msg)
+    for section_name in ("TEST", "GAP ANALYSIS", "REVIEW"):
+        body = sections.get(section_name, [])
+        non_blank = [line for line in body if line.strip()]
+
+        if len(non_blank) < 1:
+            findings.append(f"{section_name}: body empty (per B-321 substance requirement)")
+            continue
+
+        body_text_lower = "\n".join(body).lower()
+
+        # Substrate-stricter check: REVIEW in SUBSTRATE_EDIT must not claim inline self-review
+        if (classification == CLASS_SUBSTRATE
+                and section_name == "REVIEW"
+                and any(p in body_text_lower for p in _INVALID_SUBSTRATE_REVIEW_PHRASES)):
+            findings.append(
+                "REVIEW: 'inline self-review' INVALID for SUBSTRATE_EDIT "
+                "(per Phase 2B SKILL v1.1.0; substrate requires independent reviewer spawn)"
+            )
+
+        # SKIPPED-justification check: SKIPPED in body must cite anti-trigger reason.
+        # Per reviewer 🟡 #2 fix: word-boundary regex avoids false-positive on
+        # legitimate pytest "skipped 2 tests" output.
+        body_text_raw = "\n".join(body)
+        if _SKIPPED_WORD_RE.search(body_text_raw) and not _has_anti_trigger_justification(body):
+            findings.append(
+                f"{section_name}: contains 'SKIPPED' without 'anti-trigger' justification "
+                "(per B-321; SKIPPED must cite specific anti-trigger reason)"
+            )
+
+    return (len(findings) == 0, findings)
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
