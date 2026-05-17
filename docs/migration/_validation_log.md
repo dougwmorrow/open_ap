@@ -10765,3 +10765,75 @@ The B-312 pattern is reusable across all full-file-scan checks. B-316 propagates
 - Multi-agent applications: 6 (B-313/B-314; B-316 retro; Phase 1 review; Phase 2A review; Phase 2B review; Phase 3 review)
 - SKILL semver bumps this session: 1
 - New tools authored this session: 3 (cascade_classifier; generate_cascade_evidence; audit_cascade_compliance)
+
+---
+
+### 2026-05-17 — Retroactive review of 1fc59f9 + B-321 priority bump + SESSION_RESUME accuracy fixes
+
+**Event type**: 2nd user-caught skipped-REVIEW in session (1st was `0a0ff49`). Retroactive remediation + empirical escalation of B-321 (header-only `has_cascade_evidence` limitation just demonstrated as active failure mode).
+
+**Trigger**: User audit-question "Do we need to do a gap analysis, review or test of the recent enhancements?" + AskUserQuestion answer "Spawn retroactive reviewer on 1fc59f9 + bump B-321 to HIGH (Recommended)".
+
+**Root cause acknowledgement**:
+- Commit `1fc59f9` (SESSION_RESUME.md retrospective + query_blindspots.py allowlist; SUBSTRATE_EDIT) skipped independent REVIEW under "Reviewer: inline self-review per scope-justified pattern" justification.
+- Phase 2B SKILL v1.1.0 explicitly states "inline self-review NEVER valid for SUBSTRATE_EDIT; independent spawn required".
+- `audit_cascade_compliance` reported PASS on `1fc59f9` because `has_cascade_evidence` regex matches header presence only, not body substance. The non-empty "## REVIEW\n<inline self-review text>" satisfies the regex but violates the SKILL discipline.
+- This is the SAME pattern that prompted B-317 originally (silent skip under rationalization); architecture composed correctly but the header-vs-substance gap was a known LOW B-321 — now empirically HIGH.
+
+**Retroactive review**: Agent A (`a77f5f501762d5473`) spawned on `1fc59f9`.
+
+Verdict: SOUND-with-improvements (0 🔴 BLOCK + 2 🟡 IMPROVE both inline-fixed).
+
+**🟡 IMPROVE inline fixes**:
+1. SESSION_RESUME L68 "New tools: 5" understated actual 10 new `tools/*.py` files this session. Fixed by enumerating 5 headline cascade-architecture tools + 5 supporting tools + adding "Total new `tools/*.py` files: 10" row. Also fixed "New tools authored (3)" section header to list both groups separately (3 B-317 architecture + 7 supporting).
+2. SESSION_RESUME L10 "~60 commits" inconsistent with precise "53 commits" L3. Fixed to "53 commits across 2 days" matching L3 exactly.
+
+**Verified-OK findings** (per reviewer):
+- All 4 B-317 phase commit hashes (c0ad9c6 / c662863 / dda1bd2 / 8dc0bd4) exist + descriptions accurate
+- Named 5 tools exist on disk at cited paths
+- Pytest 2508/58/0 count self-consistent across L5 + L63
+- Open B-N table (11 net) consistent with metrics table
+- Allowlist extension semantically tight + mirrors claude.md belt-and-suspenders pattern (one entry technically redundant but harmless)
+
+**B-321 priority bump (LOW → HIGH; WSJF 1.5 → 3.5)**:
+- Empirical demonstration: false PASS on `1fc59f9` proves header-only detection insufficient
+- Proposed fix scope:
+  (a) verify each section has ≥3 non-blank body lines
+  (b) for SUBSTRATE classification, detect "inline self-review" / "self-review" string + BLOCK
+  (c) detect "SKIPPED" content in SUBSTANTIVE classification + require anti-trigger justification
+  (d) add Tier 0 tests per rule
+- Closure target: next discipline-mechanism cycle (now HIGH priority architectural target)
+
+**Meta-finding (Pitfall pattern recurrence)**: 2nd user-caught skipped-REVIEW in same session. First at `0a0ff49` (prompted B-317 architecture); 2nd at `1fc59f9` (this remediation). Mechanism C-1 + Phase 2B SKILL discoverability + Phase 3 retroactive audit ALL composed correctly but failed to mechanically detect the substantive-content-vs-header-only gap. The B-321 closure is the next architectural priority — the gap is in the same enforcement layer that B-317 architecturally targets.
+
+**Verification**:
+- Targeted: SESSION_RESUME.md fixes verified via grep ("53 commits across 2 days" + "Total new `tools/*.py` files" both 1 match)
+- Authoritative: pytest unchanged (2508/58/0; doc-only edit + BACKLOG annotation)
+- Orchestrator smoke test on staged scope: expected 6/6 PASS
+
+**Files modified**: 4
+- `SESSION_RESUME.md` (3 inline fixes: ~60→53 + tool count enumeration + section header split)
+- `docs/migration/BACKLOG.md` (B-321 LOW→HIGH bump + empirical-escalation annotation)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend; dated 2026-05-17)
+- `docs/migration/HANDOFF.md` (§14 prepend; dated 2026-05-17)
+- `docs/migration/_validation_log.md` (this entry)
+
+(5 total — fixed count.)
+
+**Net delta**:
+- B-N: 0 NEW + 0 CLOSED (priority bump only on B-321; no closure) = no count change
+- B-N priority changes: B-321 LOW → HIGH
+- Pytest: unchanged (2508/58/0)
+- Files modified: 5
+
+**Verdict**: 🟢 Retroactive remediation cleanly applied. Reviewer SOUND-with-improvements; both IMPROVES inline-fixed. B-321 now correctly prioritized for next architectural cycle.
+
+**Open architectural gap (B-321)**: header-only `has_cascade_evidence` regex can be satisfied by stub content. Substrate-edit commits can still produce false-PASS audit outcomes. Next discipline-mechanism cycle should address (a) body-content threshold + (b) substrate-classification stricter check + (c) SKIPPED-text validation.
+
+**Cumulative session metrics (54 commits across 2 days)**:
+- B-N: 50 opened + 38 closed - 1 re-open = net 11 open
+- Pytest: 2508/58/0
+- Hook-bypass cycles since hook activation: 4 (no new bypass)
+- Mechanism C-1 effective layers: 10 (unchanged; B-321 closure will add 11th-class detector)
+- Multi-agent applications: 7 (B-313/B-314; B-316 retro; Phase 1; Phase 2A; Phase 2B; Phase 3; this retroactive review)
+- User-caught skipped-REVIEW events: 2 (0a0ff49; 1fc59f9)

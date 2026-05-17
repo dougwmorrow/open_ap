@@ -7,7 +7,7 @@
 
 ---
 
-## What shipped this session (~60 commits across 2 days)
+## What shipped this session (53 commits across 2 days)
 
 ### Major architectural delivery: B-317 Mechanism C-1 (5 of 6 phases complete)
 
@@ -24,10 +24,19 @@ Multi-layer structural fix closing the **silent cascade-skip class** that 6 prio
 
 **Mechanism C-1 architecture**: 6 → **10 effective layers** (9 enforcement + 1 retroactive audit).
 
-### New tools authored (3)
+### New tools authored — B-317 architecture (3 NEW; cascade-classifier family)
 - `tools/cascade_classifier.py` (~310 lines; 21 Tier 0 tests)
 - `tools/generate_cascade_evidence.py` (~210 lines; 14 Tier 0 tests)
 - `tools/audit_cascade_compliance.py` (~280 lines; 19 Tier 0 tests)
+
+### Other new tools (7) — Mechanism C-1 + AppLaunchpad + research
+- `tools/query_blindspots.py` — AppLaunchpad blindspot-ledger scanner
+- `tools/check_commit_msg.py` — commit-msg exemption-phrase + cascade-evidence enforcement
+- `tools/exemption_phrases.py` — canonical exemption-phrase substrate (dedupe per B-309)
+- `tools/install_pre_commit_hook.py` — one-command installer for Mechanism C-1 hooks
+- `tools/pre_commit_checks.py` — 6-check orchestrator (B-308 quality+compliance expansion)
+- `tools/measure_ccl_overhead.py` — markdown-refactor meta-tooling (Stage 1/2/3 token counts)
+- `tools/test_github_slug.py` — meta-tooling for §13.4 heading-slug stability validation
 
 ### Pre-B-317 work in this session
 
@@ -65,7 +74,9 @@ Multi-layer structural fix closing the **silent cascade-skip class** that 6 prio
 | B-N opened this session | 50 (49 net + 1 re-open: B-286) |
 | Net B-N delta | +11 open (mostly LOW-priority reviewer follow-ups: B-320 through B-323) |
 | Mechanism C-1 layers | 6 → 10 |
-| New tools | 5 (query_blindspots + cascade_classifier + check_commit_msg + generate_cascade_evidence + audit_cascade_compliance) |
+| New tools (headline cascade-architecture) | 5 (query_blindspots + cascade_classifier + check_commit_msg + generate_cascade_evidence + audit_cascade_compliance) |
+| New tools (supporting / orchestrator / research / library) | 5 (exemption_phrases + install_pre_commit_hook + measure_ccl_overhead + pre_commit_checks + test_github_slug) |
+| **Total new `tools/*.py` files** | **10** |
 | SKILL semver bumps | 1 (udm-post-edit-verification 1.0.0 → 1.1.0) |
 | New SKILLs | 1 (udm-exemption-verifier) |
 | New D-N | 1 (D114 AppLaunchpad blindspot-ledger adoption) |
