@@ -10915,3 +10915,65 @@ Verdict: SOUND-with-improvements (0 🔴 BLOCK + 2 🟡 IMPROVE both inline-fixe
 - Mechanism C-1 effective layers: 10 (B-321 is refinement of layer 1A)
 - Multi-agent applications: 8 (B-313/B-314; B-316 retro; Phase 1; Phase 2A; Phase 2B; Phase 3; 1fc59f9 retro; B-321 closure)
 - B-321 false-PASS empirical demonstrations remediated: 2 (0a0ff49 retroactive + 1fc59f9 retroactive)
+
+---
+
+### 2026-05-17 — B-292 CLOSED (D111 additive-amendment exemption extension)
+
+**Event type**: HIGH-priority MEDIUM-scope D-N body amendment; codifies precedent applied implicitly at 3 prior commit cycles.
+
+**Trigger**: User-direction "Proceed with your recommended next steps" → push-held per skill 1.7.1 (no push semantics in user trigger) → fall-through to next HIGH item B-292 (WSJF 3.0).
+
+**B-292 work**:
+- Appended single-paragraph "Additive-amendment exemption extension" to D111 body at `docs/migration/03_DECISIONS.md` L3160 (immediately after the existing "Decisions exempt from D111" paragraph).
+- Formalizes the pattern that has been applied IMPLICITLY at 3 prior commit cycles:
+  - B-285 closure (Pattern F audit on D62 amendment; commit `4112e92`)
+  - B-289 closure (D62 Evaluation heuristic addition; commit `983e73c`)
+  - Phase 2A CLAUDE.md hard rule 14 substrate-edit clause (commit `c0ad9c6`)
+- Specifies criteria: additive amendments to already-exempt D-Ns are themselves exempt from propose-then-attest cycle WHEN (a) amendment preserves original decision's semantics + (b) introduces no new operational-infra claims.
+- Distinguishing test: "operationally invisible" = no new operator-falsifiable claim. The amendment doesn't create a new fact about paths / schedules / topologies / etc.
+
+**Independent reviewer**: Agent A (`a2ba3b186dee52e93`) spawned per CANONICAL_SOURCE cascade requirement. Audit scope: scope-creep risk + precedent-citation accuracy + "operationally invisible" test rigor + D111-as-still-🟡-Proposed status consistency + format compliance.
+
+**Verification**:
+- Targeted: D111 body amendment landed via Edit at L3160 area; verified via `grep -n "Additive-amendment exemption"`
+- Authoritative: pytest full → 2521 pass / 58 skip / 0 fail (unchanged from prior commit; D-N body amendment is doc-only)
+- Orchestrator smoke test on staged scope: expected 6/6 PASS (cascade-evidence section structure verified via just-landed B-321 mechanical check)
+
+**Files modified**: 5
+- `docs/migration/03_DECISIONS.md` (+~7 lines; D111 body extension paragraph)
+- `docs/migration/BACKLOG.md` (B-292 closure annotation)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend dated 2026-05-17)
+- `docs/migration/HANDOFF.md` (§14 prepend dated 2026-05-17)
+- `docs/migration/_validation_log.md` (this entry)
+
+**Per-build-type tracker walk**:
+- 03_DECISIONS.md → UPDATED (D111 body extension; per per-build-type checklist "NEW D-number locked" row though this is AMENDMENT to existing 🟡 Proposed D-N; same handling)
+- BACKLOG.md → UPDATED (B-292 closure)
+- CURRENT_STATE.md → UPDATED (L7 prepend)
+- HANDOFF.md → UPDATED (§14 prepend)
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (no new public surface)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (same)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no code change)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+
+**Net delta**:
+- B-N: 0 NEW + 1 CLOSED (B-292) = net -1 open (was 11; now 10)
+- Pytest: unchanged (2521/58/0)
+- Files modified: 5
+- D-N amendments this session: 2 (D62 Evaluation heuristic via B-289 + D111 additive-amendment exemption via B-292)
+- Multi-agent applications this session: 9 (B-292 reviewer)
+
+**B-321 first non-self-authoring production validation**: this commit's tri-section cascade-evidence section validates against the just-landed B-321 mechanical check. The check correctly distinguishes between (a) producer-claim usage of SKIPPED (line-start or label-colon pattern) vs (b) mid-sentence narrative usage of "skipped" (incidental). No user audit-question needed.
+
+**Verdict**: 🟢 B-292 cleanly closed. Precedent gap formalized. D111 body now explicitly authorizes the pattern that was previously applied via analogy.
+
+**Cumulative session metrics (57 commits across 2 days; +1 this commit pending)**:
+- B-N: 51 opened + 40 closed - 1 re-open = net 10 open
+- Pytest: 2521/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective layers: 10 (B-321 refined layer 1A)
+- Multi-agent applications: 9 (B-292 reviewer)
+- D-N amendments this session: 2 (D62 + D111)
