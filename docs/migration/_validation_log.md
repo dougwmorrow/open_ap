@@ -11262,3 +11262,89 @@ The 2 user-caught skipped-REVIEW events (0a0ff49 + 1fc59f9) would now BLOCK at c
 - Mechanism C-1 effective layers: 10
 - Multi-agent applications: 14
 - Gap-prevention mechanical detectors authored or hardened: 4 (check_9n GLOSSARY parity + check_9n structured-pattern + caller-consistency Tier 0 + cascade_classifier citation-context)
+
+---
+
+### 2026-05-17 — 3-step cascade on recent gap-prevention enhancements (4 new LOW B-Ns)
+
+**Event type**: User-directed hard rule 14 cascade explicit invocation on the 2-commit structural-prevention work; both reviewers CLEAN/SOUND with forward-looking 🟡 findings opened as tracker hygiene.
+
+**Trigger**: User-direction "Run a gap analysis and review of the recent enhancements and tests."
+
+**Scope**: 2 commits (`6bb7fb1` structural-prevention sprint + `6072551` B-324 + Gap A + Gap N closure bundle).
+
+**TEST step**:
+- Authoritative: pytest 2533 pass / 58 skip / 0 fail
+- Dogfood: `audit_cascade_compliance --n 5` → 5/5 PASS (all recent commits compliant; including the 2-commit cascade scope)
+
+**GAP ANALYSIS (Agent A `a9d7064361c3e1bd4` udm-gap-check 6-category audit)**:
+- G1 cross-tracker drift: ✅ CLEAN (BACKLOG + CURRENT_STATE + HANDOFF + _validation_log all consistent)
+- G2 arithmetic-propagation: ✅ verified (test deltas +5 + +6 propagated correctly; full-suite count UNVERIFIABLE on Windows dev workstation due to oracledb/polars unavailable but limitation NOT discrepancy)
+- G3 canonical re-read: ✅ verified (reviewer agentIds + helper function locations + regex patterns match cited content)
+- G4 discipline-applied: ✅ CLEAN (both commits SUBSTRATE_EDIT; both spawned independent reviewers BEFORE commit; both reviewers found BLOCK findings → inline-fixed)
+- G5 convention-registration: ✅ CLEAN (4 new helpers all underscore-prefixed internal; no public surface)
+- G6 new B-N opportunities: 3 surfaced (Gap O citation-context + Gap P Windows pytest skew + Gap Q B-326 reactive-trigger)
+
+**DESIGN REVIEW (Agent B `af3e7deb9c874c0ef` architectural assessment)**:
+- Verdict: SOUND-with-improvements (0 🔴 BLOCK + 3 🟡 IMPROVE forward-looking)
+- Composition correctness: ✅ check_9n + has_cascade_evidence operate on disjoint inputs; no interaction; both enforcement callers verified passing classification kwarg
+- Citation context skips: ✅ backtick + blockquote + code-fence correctly excludes dominant false-positive class; quote-stripping correctly REMOVED per prior reviewer fix
+- Regex variants: ✅ verified against actual CLAUDE.md content (`main_small_tables.py` + `credentials_loader.py` both match)
+- 🟡 Regex completeness: misses colon-separator format (zero current cases; tracker-candidate)
+- 🟡 Citation-context completeness: HTML comments / markdown alt-text / link text / footnotes not covered (low-incidence; tracker-candidate)
+- 🟡 Test brittleness: fixtures hardcoded; no real-CLAUDE.md smoke test (tracker-candidate)
+- 🟡 Test classification: `test_has_cascade_evidence_all_callers_pass_classification` does directory traversal + file IO; arguably Tier 1 per D67 (tracker-candidate; performance acceptable but classification-wise mis-tiered)
+
+**B-Ns opened** (4 LOW WSJF; tracker-hygiene; no inline-fix needed because all forward-looking and current behavior is correct):
+- **B-327** (LOW; WSJF 1.5): citation-context coverage completeness (HTML comments + markdown alt/link + indented code + colon-separator regex)
+- **B-328** (LOW; WSJF 1.0): Windows dev-env pytest collection skew (oracledb/polars unavailable; document limitation)
+- **B-329** (LOW; WSJF 1.0): B-326 closure-target should be preventive/scheduled not reactive
+- **B-330** (LOW; WSJF 1.0): `test_has_cascade_evidence_all_callers_pass_classification` reclassify Tier 0 → Tier 1
+
+**No inline fixes applied** this commit (audit-only disposition). All 6 findings are forward-looking concerns / tracker hygiene — current behavior is correct; B-Ns track future opportunistic improvements.
+
+**Verified-OK confirmations** (cross-reviewer validation):
+- B-326 forward-prevention working: both enforcement callers (`check_commit_msg.py:144` + `audit_cascade_compliance.py:208`) pass classification kwarg as required by the Tier 0 grep-scan test
+- B-324 reviewer-corrected approach validated: quote-stripping removal was the right call; narrative claims using quotes correctly fire substrate-stricter check
+- Self-dogfood claim from commit `6072551`: VERIFIED empirically (query_blindspots on tools/query_blindspots.py + tools/cascade_classifier.py → 0 matches each; allowlist working)
+- Composition correctness: check_9n (commit-time source-file scan) and has_cascade_evidence (commit-msg scan) operate on disjoint inputs; no possible interaction
+
+**Verification (this commit)**:
+- Targeted: pytest unchanged (audit-only; tracker edits only)
+- Authoritative: pytest full → 2533 pass / 58 skip / 0 fail
+- Orchestrator smoke test on staged scope: 6/6 PASS expected (cascade-evidence section structure verified via B-321 check)
+
+**Files modified**: 4
+- `docs/migration/BACKLOG.md` (4 new B-Ns opened: B-327/B-328/B-329/B-330)
+- `docs/migration/CURRENT_STATE.md` (L7 prepend)
+- `docs/migration/HANDOFF.md` (§14 prepend)
+- `docs/migration/_validation_log.md` (this entry)
+
+**Per-build-type tracker walk**:
+- BACKLOG.md → UPDATED (4 new B-N opens)
+- CURRENT_STATE.md → UPDATED
+- HANDOFF.md → UPDATED
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (no new public surface)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (same)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no code change)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic; these are real-but-low B-Ns not P-Ns)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+
+**Net delta**:
+- B-N: 4 NEW (B-327 + B-328 + B-329 + B-330) + 0 CLOSED = net +4 open (was 10; now 14)
+- Pytest: unchanged (2533/58/0)
+- Files modified: 4
+- Multi-agent applications this session: 14 → 16 (this cascade spawned 2 parallel reviewers)
+- Gap-prevention mechanical detectors: 4 (unchanged; audit-only commit; no new detectors)
+
+**Verdict**: 🟢 3-step cascade cleanly delivered + 6 forward-looking findings tracked as 4 LOW B-Ns (tracker hygiene). The structural-prevention sprint of prior 2 commits validates SOUND under independent multi-reviewer audit — composition correct, regex pinned against real content, both enforcement callers compliant with new contract, self-dogfood empirically confirmed.
+
+**Cumulative session metrics (62 commits across 2 days; +1 this commit pending)**:
+- B-N: 57 opened + 42 closed - 1 re-open = net 14 open
+- Pytest: 2533/58/0
+- Hook-bypass cycles since hook activation: 4
+- Mechanism C-1 effective layers: 10
+- Multi-agent applications: 16
+- Gap-prevention mechanical detectors: 4 (no new this commit)
+- Tracker-hygiene B-Ns opened from cascade audits this session: 7 (B-320 / B-322 / B-323 / B-325 / B-327 / B-328 / B-329)
