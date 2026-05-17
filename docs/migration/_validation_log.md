@@ -10081,3 +10081,60 @@ Hard rule 14 body extended with:
 - (b) Push branch (19 commits) as draft PR
 - (c) Stop session + retrospective for next-session handoff
 - (d) Author Pitfall #9.o at next round close-out per `udm-subclass-accumulator` (B-286 closure target)
+
+---
+
+### 2026-05-16 — B-302 + B-306 CLOSED (LOW-priority completeness cohort)
+
+**Event type**: LOW-priority backlog closure (paired B-Ns; closure-target = same commit per LOW-cohort efficiency).
+
+**Trigger**: User-direction "Close LOW B-Ns for completeness."
+
+**Closures**:
+- **B-302** (`tests/tier0/test_skill_exemption_verifier.py` coverage gaps; WSJF 2.0): extended skill test suite from 11 → 15 assertions
+  - Assertion 12 `test_anti_triggers_enumerated` — verifies SKILL.md "Anti-triggers" section enumerates typo/trivial exclusions + NOT-firing semantics
+  - Assertion 13 `test_cost_discipline_ceiling_documented` — verifies "Cost discipline" section + "25 min" ceiling + "single-shot" / "per commit" qualifier
+  - Assertion 14 `test_cross_references_resolve` — walks cited paths (3 SKILL.md / canonical-doc cross-refs) + asserts on-disk file existence
+  - Assertion 15 `test_carve_out_distinguishes_output_from_authoring` — semantically verifies CRITICAL CARVE-OUT contains "ONLY to verifier OUTPUT" + "NOT exempt" + "SKILL.md AUTHORING commit" + "FULL hard rule 14 cascade" wording; catches the failure mode that prompted instance-8 formalization
+- **B-306** (Pre-commit hook audit-row per D76; WSJF 1.5): 2-part close
+  - Part A: removed `--no-audit` from `.githooks/pre-commit` orchestrator invocation; the existing `tools/pre_commit_checks.py::_emit_audit_row()` mechanism now activates per invocation, writing JSON payload to `_session_logs/cli_pre_commit_checks_<date>.log` per D76 contract
+  - Part B: added `_emit_audit_row()` to `tools/check_commit_msg.py` (mirrors orchestrator pattern); writes `_session_logs/cli_check_commit_msg_<date>.log` with payload `{event_type, ts, commit_msg_path, matched_phrases, exit_code}`; added `--no-audit` flag for testability; argv parsing strips `--`-prefixed flags before positional COMMIT_EDITMSG path
+  - 5 new Tier 0 tests in `test_check_commit_msg.py`: D74 exit codes (assertion 9) + EVENT_TYPE constant (assertion 10) + audit-row on clean message (11) + audit-row on blocked message (12) + `--no-audit` suppresses write (13)
+
+**Verification**:
+- `pytest tests/tier0/test_check_commit_msg.py tests/tier0/test_skill_exemption_verifier.py tests/tier0/test_pre_commit_checks.py` → 44/44 PASS (was 35; +9 new)
+- Full pytest authoritative: 2436 pass / 58 skip / 0 fail (was 2427/58/0; +9 net per the new B-302 + B-306 assertions)
+
+**Files modified**: 5
+- `tests/tier0/test_skill_exemption_verifier.py` (+4 tests)
+- `tests/tier0/test_check_commit_msg.py` (+5 tests)
+- `tools/check_commit_msg.py` (+`_emit_audit_row` + `--no-audit` + argv flag-strip)
+- `.githooks/pre-commit` (removed `--no-audit` from orchestrator invocation)
+- `docs/migration/BACKLOG.md` (both B-Ns closed inline per Pitfall #9.j)
+
+**Lines**: ~+150 / -5
+
+**Per-build-type tracker walk** (per `udm-progress-logger` checklist):
+- BACKLOG.md → UPDATED (B-302 + B-306 closure annotations + leading-badge flip 🟡 → ⚫)
+- CURRENT_STATE.md → UPDATED (L7 narrative prepended)
+- HANDOFF.md → UNTOUCHED-AS-EXPECTED (HANDOFF doesn't have an active per-session narrative section; CURRENT_STATE L7 is the canonical session-narrative anchor)
+- CODE_BUILD_STATUS.md → UNTOUCHED-AS-EXPECTED (no new code-build status transitions; B-302/B-306 are test + audit-row infrastructure work, not new code-build artifacts)
+- _validation_log.md → UPDATED (this entry)
+- CLAUDE.md Structure → UNTOUCHED-AS-EXPECTED (no new public surface; `_emit_audit_row` is private per underscore convention)
+- GLOSSARY.md → UNTOUCHED-AS-EXPECTED (same; private surface)
+- POLISH_QUEUE.md → UNTOUCHED-AS-EXPECTED (not cosmetic)
+- ONE_OFF_SCRIPTS.md → UNTOUCHED-AS-EXPECTED (no new executables)
+
+**Net delta**:
+- B-N: 0 NEW + 2 CLOSED (B-302, B-306) = net -2 open
+- Pytest: 2427 → 2436 (+9)
+- Files modified: 5
+
+**Verdict**: 🟢 LOW-priority cohort cleanly closed. Mechanism C-1 audit-row now D76-compliant on BOTH pre-commit and commit-msg hooks (was only orchestrator subprocess audit prior). Skill test suite now covers the carve-out semantic distinction that instance-8 introduced.
+
+**Hook self-verification**: this commit will pass through the active pre-commit + commit-msg hooks; per B-306 it is the FIRST commit to trigger per-invocation audit-row write for BOTH hooks.
+
+**Cumulative session metrics (39 commits across 2 days; +1 this commit pending)**:
+- B-N: 40 opened + 31 closed - 1 re-open = net 8 open (was 8; B-302/B-306 closure offsets no opens this commit)
+- Pytest: 2436/58/0
+- Hook-bypass cycles since hook activation: 2 (cc7caad, 18c1772) → 0 (29ada67 + this commit)

@@ -53,7 +53,10 @@ if [ ! -f "${ORCHESTRATOR}" ]; then
 fi
 
 # Invoke orchestrator
-${PYTHON} "${ORCHESTRATOR}" --no-audit
+# Per B-306 (2026-05-16): removed --no-audit; orchestrator now writes
+# per-invocation audit row to _session_logs/cli_pre_commit_checks_<date>.log
+# per D76 contract.
+${PYTHON} "${ORCHESTRATOR}"
 EXIT_CODE=$?
 
 # Per B-309 Cycle 1 Improvement 2: distinguish FATAL (3) vs BLOCKED (1)

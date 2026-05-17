@@ -75,3 +75,69 @@ def test_main_uses_canonical_phrases():
     assert "EXEMPTION_TRIGGER_PHRASES = [" not in content, (
         "check_commit_msg must NOT embed its own list (B-309 dedupe)"
     )
+
+
+def test_d74_exit_codes_present():
+    """Assertion 9 (per B-306): D74 exit-code constants present."""
+    import tools.check_commit_msg as ccm
+    assert ccm.EXIT_SUCCESS == 0
+    assert ccm.EXIT_BLOCKED == 1
+
+
+def test_event_type_constant():
+    """Assertion 10 (per B-306): EVENT_TYPE constant per D76 audit-row contract."""
+    import tools.check_commit_msg as ccm
+    assert ccm.EVENT_TYPE == "CLI_CHECK_COMMIT_MSG"
+
+
+def test_audit_row_written_on_clean_message(tmp_path, monkeypatch):
+    """Assertion 11 (per B-306): per-invocation audit row written when not --no-audit."""
+    import tools.check_commit_msg as ccm
+    audit_dir = tmp_path / "_session_logs"
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text("feat: clean commit\n", encoding="utf-8")
+
+    rc = ccm.main(["check_commit_msg.py", str(msg_path)])
+    assert rc == ccm.EXIT_SUCCESS
+    assert audit_dir.is_dir()
+    log_files = list(audit_dir.glob("cli_check_commit_msg_*.log"))
+    assert len(log_files) == 1
+    content = log_files[0].read_text(encoding="utf-8")
+    assert '"event_type": "CLI_CHECK_COMMIT_MSG"' in content
+    assert '"exit_code": 0' in content
+    assert '"matched_phrases": []' in content
+
+
+def test_audit_row_written_on_blocked_message(tmp_path, monkeypatch):
+    """Assertion 12 (per B-306): audit row captures matched phrases when BLOCKED."""
+    import tools.check_commit_msg as ccm
+    audit_dir = tmp_path / "_session_logs"
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text("docs: applying Layer N+1 termination\n", encoding="utf-8")
+
+    rc = ccm.main(["check_commit_msg.py", str(msg_path)])
+    assert rc == ccm.EXIT_BLOCKED
+    log_files = list(audit_dir.glob("cli_check_commit_msg_*.log"))
+    assert len(log_files) == 1
+    content = log_files[0].read_text(encoding="utf-8")
+    assert '"exit_code": 1' in content
+    assert "Layer N+1 termination" in content
+
+
+def test_no_audit_flag_skips_audit_write(tmp_path, monkeypatch):
+    """Assertion 13 (per B-306): --no-audit flag suppresses audit-row write."""
+    import tools.check_commit_msg as ccm
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text("feat: clean\n", encoding="utf-8")
+
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    assert rc == ccm.EXIT_SUCCESS
+    audit_dir = tmp_path / "_session_logs"
+    if audit_dir.is_dir():
+        assert not list(audit_dir.glob("cli_check_commit_msg_*.log"))

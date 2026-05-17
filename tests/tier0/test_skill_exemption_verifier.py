@@ -117,3 +117,60 @@ def test_composition_with_other_skills_documented(skill_content: str):
     assert "udm-post-edit-verification" in skill_content
     assert "udm-gap-check" in skill_content
     assert "Step 2.5" in skill_content
+
+
+def test_anti_triggers_enumerated(skill_content: str):
+    """Assertion 12 (per B-302 coverage gap closure): skill enumerates anti-triggers
+    (cases where skill does NOT fire). Must include trivial commits + full reviewer
+    evidence + commit-message-doesnt-claim-exemption."""
+    assert "Anti-triggers" in skill_content or "anti-triggers" in skill_content
+    assert "typo" in skill_content.lower() or "trivial" in skill_content.lower()
+    assert ("full independent reviewer evidence" in skill_content
+            or "NOT firing" in skill_content
+            or "does NOT fire" in skill_content)
+
+
+def test_cost_discipline_ceiling_documented(skill_content: str):
+    """Assertion 13 (per B-302 coverage gap closure): skill documents cost-discipline
+    ceiling for cumulative session usage (~25 min per skill cost-discipline section)."""
+    assert "Cost discipline" in skill_content or "cost discipline" in skill_content
+    assert "25 min" in skill_content or "ceiling" in skill_content
+    assert "single-shot" in skill_content.lower() or "per commit" in skill_content.lower()
+
+
+def test_cross_references_resolve(skill_content: str):
+    """Assertion 14 (per B-302 coverage gap closure): cited cross-references in
+    SKILL.md (paths to other skills + canonical sources) exist on disk."""
+    cited_paths = [
+        ".claude/skills/udm-post-edit-verification/SKILL.md",
+        ".claude/skills/udm-gap-check/SKILL.md",
+        "docs/migration/HANDOFF.md",
+    ]
+    for path_str in cited_paths:
+        if path_str in skill_content:
+            full_path = REPO_ROOT / path_str
+            assert full_path.is_file(), (
+                f"SKILL.md cites {path_str} but file doesn't exist on disk"
+            )
+
+
+def test_carve_out_distinguishes_output_from_authoring(skill_content: str):
+    """Assertion 15 (per B-302 coverage gap closure): CRITICAL CARVE-OUT (added at
+    instance-8 closure) must SEMANTICALLY distinguish 'verifier OUTPUT exemption'
+    from 'SKILL.md AUTHORING commit exemption'. Catches the failure mode where
+    parent misreads the clause as exempting authoring commits from cascade."""
+    assert "CRITICAL CARVE-OUT" in skill_content
+    assert ("ONLY to verifier OUTPUT" in skill_content
+            or "ONLY to the verifier OUTPUT" in skill_content
+            or "only to verifier OUTPUT" in skill_content), (
+        "CARVE-OUT must explicitly state exemption applies ONLY to verifier OUTPUT"
+    )
+    assert ("NOT exempt" in skill_content or "does NOT exempt" in skill_content), (
+        "CARVE-OUT must explicitly state SKILL.md authoring commit is NOT exempt"
+    )
+    assert "SKILL.md AUTHORING commit" in skill_content or "SKILL.md authoring commit" in skill_content
+    assert ("FULL independent gap-check" in skill_content
+            or "FULL hard-rule-14 cascade" in skill_content
+            or "FULL hard rule 14 cascade" in skill_content), (
+        "CARVE-OUT must specify the requirement is FULL cascade (not partial)"
+    )
