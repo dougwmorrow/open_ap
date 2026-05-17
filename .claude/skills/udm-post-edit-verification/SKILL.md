@@ -1,7 +1,7 @@
 ---
 name: udm-post-edit-verification
-version: 1.1.0
-description: Mandatory post-edit verification cascade per CLAUDE.md hard rule 14 — runs TEST + GAP ANALYSIS + REVIEW after ANY substantive update / enhancement / creation of an object (markdown file / code / SKILL.md / D-N body / runbook / SP / etc.) BEFORE commit. Closes the discipline-debt accumulation pattern that surfaced across this project's history (commit 521b68c stale-narrative-quotation; D.3/D.4 cumulative pragmatic exemptions documented in B-285 / B-286). Trigger: any substantive edit. Anti-trigger: trivial typo fixes (<5 lines + no semantic change) + tracker-only commits (BACKLOG strikethrough flip only). Per user-direction 2026-05-15. v1.1.0 (2026-05-16) per B-317 Phase 2B: adds tri-section labeling discipline (closes B-318) + Workflow tooling subsection citing tools/generate_cascade_evidence.py + tools/cascade_classifier.py + auto-spawn parallel-agent pattern for substrate edits.
+version: 1.2.0
+description: Mandatory post-edit verification cascade per CLAUDE.md hard rule 14 — runs TEST + GAP ANALYSIS + REVIEW after ANY substantive update / enhancement / creation of an object (markdown file / code / SKILL.md / D-N body / runbook / SP / etc.) BEFORE commit. Closes the discipline-debt accumulation pattern that surfaced across this project's history (commit 521b68c stale-narrative-quotation; D.3/D.4 cumulative pragmatic exemptions documented in B-285 / B-286). Trigger: any substantive edit. Anti-trigger: trivial typo fixes (<5 lines + no semantic change) + tracker-only commits (BACKLOG strikethrough flip only). Per user-direction 2026-05-15. v1.1.0 (2026-05-16) per B-317 Phase 2B: adds tri-section labeling discipline (closes B-318) + Workflow tooling subsection citing tools/generate_cascade_evidence.py + tools/cascade_classifier.py + auto-spawn parallel-agent pattern for substrate edits. v1.2.0 (2026-05-17) per B-331 opening: requires explicit `≤50 LOC + no-new-public-surface + no-SUBSTRATE_EDIT` citation whenever REVIEW section claims inline self-review (closes precedent-drift class surfaced by commit 63edcbc Q5 finding from 2nd-pass design reviewer a6b24c207dd9fdb75; 1st-event anchor for sub-class formalization).
 ---
 
 # UDM Post-Edit Verification
@@ -131,8 +131,33 @@ After cascade completes, parent agent MUST emit explicit tri-section markdown he
 
 ## REVIEW
 <scope-appropriate reviewer skill + agentId + verdict>
-<OR inline self-review (valid ONLY ≤50 LOC + no new public surface; NEVER valid for SUBSTRATE_EDIT)>
+<OR inline self-review — REQUIRED FORMAT per v1.2.0 (see Inline self-review citation discipline below)>
 ```
+
+**Inline self-review citation discipline (v1.2.0; closes B-331 precedent-drift class)**: When the REVIEW section claims inline self-review (instead of spawning an independent reviewer agent), the commit message MUST cite the threshold satisfaction explicitly. SUBSTANTIVE classification alone is NOT sufficient justification — the existing ≤50 LOC + no-new-public-surface + no-SUBSTRATE_EDIT carve-out conditions MUST be cited verbatim. Required format:
+
+```markdown
+## REVIEW
+Inline self-review (SUBSTANTIVE per cascade_classifier; +N/-M = K LOC total — within ≤50 threshold per SKILL v1.2.0 L<line>; no new public surface; no SUBSTRATE_EDIT classification).
+[then producer self-evaluation prose]
+```
+
+Where:
+- `K` = actual lines-changed count from `git diff --stat` (must be ≤50)
+- `"no new public surface"` = explicit statement (NOT implied; producer must verify no new exported function / class / constant / EventType)
+- `"no SUBSTRATE_EDIT"` = classification-based negation (must be verified against `tools/cascade_classifier.py::is_substrate_path()` for every file in the commit scope)
+
+**Anti-patterns (v1.2.0; explicit enumeration to prevent precedent drift)**:
+- ❌ `"Inline self-review acceptable for SUBSTANTIVE"` (alone — omits LOC + surface + SUBSTRATE_EDIT citations)
+- ❌ `"Inline self-review per SUBSTANTIVE classification"` (alone — same omission)
+- ❌ `"REVIEW: SKIPPED — SUBSTANTIVE classification"` (omits the carve-out conditions entirely)
+- ❌ `"REVIEW: inline (small change)"` (vague; no LOC count + no surface check)
+- ✅ `"Inline self-review (SUBSTANTIVE per cascade_classifier; 47 LOC within ≤50 threshold per SKILL v1.2.0 L<L>; no new public surface; no SUBSTRATE_EDIT classification)"`
+- ✅ `"Inline self-review (SUBSTANTIVE per cascade_classifier; +12/-3 = 15 LOC total — within ≤50 threshold per SKILL v1.2.0 L<L>; no new public surface verified via git diff; no SUBSTRATE_EDIT — only docs/migration/03_DECISIONS.md edited)"`
+
+**Empirical anchor**: commit `63edcbc` (B-331 opening) REVIEW section cited `"SUBSTANTIVE classification"` alone without ≤50 LOC + no-new-public-surface + no-SUBSTRATE_EDIT citations. 2nd-pass design reviewer agentId `a6b24c207dd9fdb75` Q5 finding flagged the precedent-drift risk: future producers may misread `"any SUBSTANTIVE permits inline self-review"` and apply to 200+ LOC commits. This is the **1st-event anchor** for sub-class formalization (4 more events needed for full HANDOFF §8 Pitfall #9 sub-class promotion per the 5-event convention).
+
+**Hard rule**: any commit with an inline-self-review REVIEW section that omits any of (LOC count + threshold citation + no-new-public-surface + no-SUBSTRATE_EDIT) is INVALID per v1.2.0. Treat as audit-trail gap; remediation = re-author REVIEW section with explicit citations OR spawn an independent reviewer agent.
 
 **For anti-trigger commits (TYPO_ONLY / WHITESPACE_ONLY / BADGE_FLIP_ONLY / POLISH_QUEUE_ONLY)**: each section may contain `SKIPPED: <classification> anti-trigger` text. Generator emits this scaffold automatically (see Workflow tooling subsection below).
 
@@ -281,6 +306,7 @@ This skill structurally prevents the pattern by making the cascade mandatory + a
 
 - User-direction 2026-05-15: "Turn this into a mandatory event. After updating, enhancing, or creating a new object such as markdown file or code, a test, gap analysis, and review must be run to check the latest updates."
 - User-direction 2026-05-16: "We need a complete solution to ensure this never happens again. Come up with an extensive plan." → B-317 Phase 1A + 1B + 2A + 2B (this v1.1.0 amendment).
+- 2nd-pass design reviewer 2026-05-17: agentId `a6b24c207dd9fdb75` on commit `63edcbc` Q5 finding → B-331 opening → this v1.2.0 amendment (precedent-drift forward-prevention for inline-self-review citation discipline).
 - **CLAUDE.md hard rule 14** (canonical home; binding directive) + substrate-edit clause (Phase 2A added 2026-05-16)
 - `udm-gap-check` SKILL.md (Step 2 invocation)
 - `udm-checks-and-balances` SKILL.md (Step 3 invocation for D-N + doc scopes)
@@ -296,6 +322,12 @@ This skill structurally prevents the pattern by making the cascade mandatory + a
 - B-317 (Phase 1A + 1B + 2A + 2B complete; closes silent cascade-skip class)
 - B-318 (tri-section labeling discipline; closed inline at v1.1.0 amendment)
 - Evidence base: commit `521b68c` + `3eef410` + `aee329c` + `a03a35c` discipline-debt accumulation events + commit `0a0ff49` (B-316 closure; silent cascade-skip empirical anchor)
+
+## Changelog
+
+- **v1.2.0** (2026-05-17) — per B-331 opening + 2nd-pass design reviewer agentId `a6b24c207dd9fdb75` Q5 finding on commit `63edcbc`. **MINOR (directive addition) per D98 semver discipline**: added explicit inline-self-review citation discipline at REVIEW section template — requires verbatim citation of `≤50 LOC + no-new-public-surface + no-SUBSTRATE_EDIT` carve-out conditions when claiming inline self-review (SUBSTANTIVE classification alone no longer sufficient). Added anti-pattern enumeration distinguishing ❌ omission patterns from ✅ compliant format. Empirical anchor: commit `63edcbc` REVIEW section cited "SUBSTANTIVE classification" alone → 2nd-pass reviewer flagged precedent-drift risk (future producers may misread "any SUBSTANTIVE permits inline self-review" and apply to 200+ LOC commits). 1st-event anchor for sub-class formalization (4 more events needed for full HANDOFF §8 Pitfall #9 sub-class promotion per 5-event convention).
+- **v1.1.0** (2026-05-16) — per B-317 Phase 2B + B-318 closure. **MINOR (directive addition) per D98**: added tri-section labeling discipline + Workflow tooling subsection (citing `tools/generate_cascade_evidence.py` + `tools/cascade_classifier.py` + `tools/check_commit_msg.py`) + auto-spawn parallel-agent pattern for substrate edits + SUBSTRATE override clarification at anti-trigger enumeration.
+- **v1.0.0** (2026-05-15) — initial authoring per user-direction "Turn this into a mandatory event. After updating, enhancing, or creating a new object such as markdown file or code, a test, gap analysis, and review must be run to check the latest updates." Establishes 3-step procedure (TEST + GAP ANALYSIS + REVIEW) + Step 2.5 exemption verification + composition matrix + anti-pattern documentation.
 
 ## Owner
 
