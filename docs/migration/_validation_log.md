@@ -2,6 +2,39 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — Cross-cohort review drift remediation (Pitfall #9.k arithmetic-propagation 95 → 98 NEW B-Ns)
+
+**Trigger**: user-direction "Run a gap analysis of the recent enhancements" 2026-05-18 → 4th formal `udm-cohort-review` invocation `a0461577f1ab9137d` on commits `ba487a8` + `e1a1449` returned 🟡 ISSUES verdict.
+
+**Scope**: 1 remediation cycle — narrative arithmetic propagation fix across 4 tracker mirrors + SESSION_RESUME refresh. 4 files modified: `docs/migration/CURRENT_STATE.md` (L7 narrative) + `docs/migration/HANDOFF.md` §14 (L427 narrative) + `docs/migration/_validation_log.md` (this entry + L32 B-469 entry) + `SESSION_RESUME.md` (L12 pytest + L14 cumulative + L15 closures).
+
+**Producer**: parent agent (this session).
+
+**Cross-cohort reviewer empirical anchor (1-event 2026-05-18)**: cross-cohort reviewer `a0461577f1ab9137d` applied Mechanism A Step 6 dual-regex verification (per B-490 closure) to count claims in cohort `ba487a8` + `e1a1449`. Primary regex `^- (~~)?\*\*B-[0-9]+\*\*` filtered to B-393-B-490 range returned 98 unique rows; secondary `seq 393 490 | comm` verification showed zero gaps. Narrative claim "95 NEW B-Ns" was stale by 3.
+
+**Root cause**: at B-488 closure (commit `8a5b133`), producer narrative said "**95 NEW B-Ns** (B-393-B-490; +3 from B-488 + B-489 + B-490 opens at start of cohort)" — the "+3" was acknowledged in the prose but NOT propagated to the headline rollup label (should have read "98 NEW B-Ns"). The drift carried forward mechanically through subsequent commits (B-490 + B-477 + B-469 cohorts) which all inherited "95" as a stale snapshot.
+
+**Meta-validation of Mechanism A Step 6**: this catch DIRECTLY validates the B-490 closure (Step 6 regex-completeness verification). Single-commit PRE-COMMIT reviewers at `a47a812` (B-490) + `ba487a8` (B-477) + `e1a1449` (B-469) ALL saw the stale "95" narrative without catching the drift — because single-commit scope doesn't readily expose cumulative-arithmetic-vs-actual-row-count mismatch. Cross-cohort review applying Step 6 dual-regex DOES expose it. The discipline is working as designed.
+
+**Inline-fix applied**:
+- `docs/migration/CURRENT_STATE.md:7` (most-recent narrative): "95 NEW B-Ns unchanged" → "98 NEW B-Ns (B-393-B-490; corrected from stale 95 per cross-cohort reviewer Step 6 catch)"
+- `docs/migration/HANDOFF.md:427` (§14 narrative): same correction
+- `docs/migration/_validation_log.md:32` (B-469 event entry): same correction
+- `SESSION_RESUME.md:14`: "91 NEW B-Ns (B-393-B-483)" → "98 NEW B-Ns (B-393-B-490)" (was frozen at abb7596 era; refreshed)
+- `SESSION_RESUME.md:15`: "10 B-Ns CLOSED" → "17 B-Ns CLOSED" with full closure enumeration including B-480/B-487 absorbed
+- `SESSION_RESUME.md:12`: pytest "2763" → "2798" (was frozen at abb7596 era)
+
+Historical narrative entries at `_validation_log.md:62,94,133,174` + `CURRENT_STATE.md:9,11,13,15` NOT retroactively rewritten — append-only timeline preserves snapshot-at-write-time context per Pitfall #9.k discipline (rewriting history is more confusing than informative; the canonical CURRENT count is what matters going forward).
+
+**Cumulative session delta UPDATED**: **98 NEW B-Ns** (B-393-B-490) / **17 B-Ns CLOSED multi-session arc** / 11 NEW R-Ns / 14 canonical edge case series / pytest 2798 unchanged this commit (narrative + tracker remediation only; no code changes).
+
+**Hard rule 14 cascade applied** (anti-trigger qualifying — pure narrative arithmetic remediation; no code path modified; no new public surface):
+- TEST: SKIPPED: anti-trigger (zero functional change; pure tracker arithmetic propagation per CLAUDE.md L437 inline-self-review clause).
+- GAP ANALYSIS: this commit IS the response to cross-cohort review verdict; reviewer's Step 6 verification IS the gap-check authority.
+- REVIEW: cross-cohort reviewer `a0461577f1ab9137d` (general-purpose subagent invoked via `udm-cohort-review` skill) served as the substantive independent reviewer driving this remediation per D55+D56. Mechanism A step 4 file-overlap full match: reviewer cited L32, L62, L94, L133 of _validation_log + L427/L429/L431 of HANDOFF + SESSION_RESUME L14 as drift locations; this commit fixes the CURRENT-state entries (L7 / L427 / L32) + SESSION_RESUME L12+L14+L15. Historical entries (L62/L94/L133) preserved per append-only discipline. Mechanism A step 5 quote-cite from reviewer Final verdict: "spawn remediation commit to fix arithmetic rollup 95→98 across all 4 tracker mirrors + SESSION_RESUME.md L14 + L223. Cohort body of work itself is ✅ CLEAN; remediation is purely tracker arithmetic propagation. No blockers; no new B-Ns required (this IS Pitfall #9.k by definition; recurrent class is well-tracked)."
+
+---
+
 ## 2026-05-18 — B-469 `_tier0_test_base.py` CLI tool factory pattern (MEDIUM WSJF 2.0; generalizes B-461 SKILL.md factory to CLI domain)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). B-469 was the highest-priority MEDIUM WSJF 2.0 item per Step 1.1 selection.
@@ -29,7 +62,7 @@ Append-only audit trail for all artifacts that pass through the `udm-checks-and-
 
 **Bulk-pin deferred**: Applying the factory to all ~24 CLI tools is a separate cohort. Each CLI tool test file would adopt the 3 factory baselines (typically 3 NEW assertions per file = ~72 NEW Tier 0 assertions across the CLI tool surface). Scope decision: keep B-469 minimal (factory + self-tests); future B-N candidate "B-469 bulk-pin SKILL.md + CLI cohort" tracks the application phase.
 
-**Cumulative session delta UPDATED at B-469 closure**: 95 NEW B-Ns UNCHANGED (B-469 was pre-existing open). **17 B-Ns CLOSED multi-session arc** (cumulative; 16 prior + B-469 this commit). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2787 → **2798 pass / 10 skip / 0 fail** (+11 from B-469 Tier 0 additions; full-suite scope verified live).
+**Cumulative session delta UPDATED at B-469 closure + cross-cohort-review-drift-catch**: **98 NEW B-Ns** (B-393-B-490; corrected from stale "95" per cross-cohort reviewer `a0461577f1ab9137d` Mechanism A Step 6 dual-regex verification — B-488/489/490 opens at `8a5b133` were not propagated to rollup label; canonical count = 82 baseline + 16 opens this session = 98). **17 B-Ns CLOSED multi-session arc** (cumulative; 16 prior + B-469 this commit). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2787 → **2798 pass / 10 skip / 0 fail** (+11 from B-469 Tier 0 additions; full-suite scope verified live).
 
 **Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tests/tier0/*` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md`):
 - TEST: pytest 2798 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 11/11 NEW B-469 assertions PASS in 0.25s. Smoke test verified: factory functions return callable / passing tests pass / failing scenarios raise AssertionError with diagnostic messages.

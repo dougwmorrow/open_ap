@@ -424,7 +424,7 @@ Per D60, this section appends one row per round during close-out. Read top-to-bo
 
 ## §14. Last updated
 
-2026-05-18 (**B-469 `_tier0_test_base.py` CLI tool factory pattern — generalizes B-461 SKILL.md factory to CLI domain**): NEW module with 3 factory functions (module_imports + event_type_constant + exit_codes; parameterized for EXIT_FATAL variance). 11 NEW Tier 0 self-test assertions. Bulk-pin of ~24 CLI tools deferred as separate cohort. **Cumulative**: 95 NEW B-Ns unchanged / **17 CLOSED** multi-session arc (+B-469) / pytest 2787 → **2798 pass / 10 skip / 0 fail** (+11).
+2026-05-18 (**B-469 `_tier0_test_base.py` CLI tool factory pattern — generalizes B-461 SKILL.md factory to CLI domain**): NEW module with 3 factory functions (module_imports + event_type_constant + exit_codes; parameterized for EXIT_FATAL variance). 11 NEW Tier 0 self-test assertions. Bulk-pin of ~24 CLI tools deferred as separate cohort. **Cumulative**: **98 NEW B-Ns** (B-393-B-490; corrected from stale "95" per cross-cohort reviewer `a0461577f1ab9137d` Step 6 catch — B-488/489/490 opens were not propagated to rollup label) / **17 CLOSED** multi-session arc (+B-469) / pytest 2787 → **2798 pass / 10 skip / 0 fail** (+11).
 
 Earlier 2026-05-18 (**B-477 InlineFixClaimVerificationCheck missing_entries kind verification — Pitfall #9.n claim class**): NEW `elif kind == "missing_entries"` branch in scan() + 2 NEW regex constants. Closes Pitfall #9.n false-negative class. Parser handles 4 canonical separators; identifiers <3 chars suppressed. 4 NEW Tier 0 assertions. **Cumulative**: 95 NEW B-Ns unchanged / **16 CLOSED** multi-session arc (+B-477) / pytest 2783 → **2787 pass / 10 skip / 0 fail** (+4).
 
