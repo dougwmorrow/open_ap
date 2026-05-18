@@ -11,7 +11,7 @@ arithmetic-detection LOGIC.
 
 This file's assertions cover:
   - File exists at canonical path + YAML frontmatter parses
-  - Version is v1.3.1 (B-453 closure target — G5-1 PATCH from Agent 61 cycle-6)
+  - Version is v1.3.2 (B-454 + B-455 joint closure target — cumulative-multi-claim + assertion-count PATCH)
   - Step 4.5 CROSS-DOCUMENT sweep still present (v1.2.0 carryover)
   - Step 4.5.1 INTRA-SENTENCE arithmetic contradiction detection present (v1.3.0)
   - Empirical anchor cites commit `e76078c` + finding `G3-K1`
@@ -21,9 +21,13 @@ This file's assertions cover:
   - New anti-pattern present
   - Changelog row for v1.3.0 present + cites B-448
   - Changelog row for v1.3.1 present + cites B-453 + Agent 61 G5-1 (added v1.3.1)
-  - Frontmatter version field is v1.3.1
+  - Frontmatter version field is v1.3.2
   - v1.3.1 regex MATCHES bold-form `**16 NEW R-Ns** (...)` (added v1.3.1)
   - v1.3.1 regex MATCHES non-bold-form `16 NEW R-Ns (...)` (added v1.3.1 backward-compat)
+  - Changelog row for v1.3.2 present + cites B-454 + B-455 + commit `6a2fb3f` + `995730c` (added v1.3.2)
+  - Cumulative-multi-claim coexistence sweep sub-bullet present (added v1.3.2 per B-454)
+  - Assertion-count + pre-existing-count sweep sub-bullet present (added v1.3.2 per B-455)
+  - B-454 + B-455 empirical anchors documented in Step 4.5.1 body (added v1.3.2)
 """
 from __future__ import annotations
 
@@ -48,15 +52,15 @@ def test_skill_file_exists() -> None:
     assert SKILL_PATH.is_file(), f"Expected SKILL.md at {SKILL_PATH}"
 
 
-def test_frontmatter_version_is_v1_3_1(skill_content: str) -> None:
-    """Assertion 2: frontmatter `version:` field is v1.3.1 per B-453 closure (G5-1 PATCH from Agent 61 cycle-6)."""
+def test_frontmatter_version_is_v1_3_2(skill_content: str) -> None:
+    """Assertion 2: frontmatter `version:` field is v1.3.2 per B-454 + B-455 joint closure (cumulative-multi-claim + assertion-count PATCH)."""
     assert skill_content.startswith("---\n"), "SKILL.md must open with --- delimiter"
     end_idx = skill_content.find("\n---\n", 4)
     assert end_idx > 0, "SKILL.md must close frontmatter with ---"
     frontmatter = skill_content[4:end_idx]
     assert "name: udm-progress-logger" in frontmatter, "frontmatter must declare name"
-    assert "version: v1.3.1" in frontmatter, (
-        "frontmatter must declare version: v1.3.1 (B-453 closure target — Agent 61 G5-1 PATCH)"
+    assert "version: v1.3.2" in frontmatter, (
+        "frontmatter must declare version: v1.3.2 (B-454 + B-455 joint closure target — PATCH)"
     )
 
 
@@ -357,4 +361,118 @@ def test_v1_3_1_regex_matches_non_bold_form(skill_content: str) -> None:
     assert len(b_n_matches) >= 1, (
         "v1.3.1 regex MUST match B-N family (e.g., '24 NEW B-Ns (...)') "
         "in addition to R-N family per `[BR]-Ns?` character class"
+    )
+
+
+def test_changelog_v1_3_2_row_present(skill_content: str) -> None:
+    """Assertion 21 (added v1.3.2): changelog row for v1.3.2 is present + cites B-454 + B-455 + empirical anchors.
+
+    Per D98 semver: PATCH-level revision (extends existing Step 4.5.1 directive scope; no new directive class).
+    Joint closure of B-454 (cumulative-multi-claim coexistence) + B-455 (assertion-count + pre-existing).
+    Empirical anchors: commit `6a2fb3f` (B-454 1st-event — `60 NEW B-Ns` + `61 NEW B-Ns` coexistence)
+    + commit `995730c` (B-455 1st-event — `14 new + 19 pre-existing` vs git-diff `+15 new + 18 pre-existing`).
+    """
+    assert "| v1.3.2 |" in skill_content, "Changelog must have v1.3.2 row (B-454 + B-455 joint closure)"
+    # The v1.3.2 row body must cite both B-Ns + both empirical anchors + PATCH level
+    v1_3_2_section = skill_content.split("| v1.3.2 |", 1)[1].split("\n", 1)[0]
+    assert "B-454" in v1_3_2_section, "v1.3.2 changelog row must cite B-454 (cumulative-multi-claim)"
+    assert "B-455" in v1_3_2_section, "v1.3.2 changelog row must cite B-455 (assertion-count)"
+    assert "6a2fb3f" in v1_3_2_section, (
+        "v1.3.2 changelog row must cite B-454 empirical anchor commit `6a2fb3f`"
+    )
+    assert "995730c" in v1_3_2_section, (
+        "v1.3.2 changelog row must cite B-455 empirical anchor commit `995730c`"
+    )
+    assert "PATCH" in v1_3_2_section, (
+        "v1.3.2 changelog row must declare 'PATCH' level per D98 (extends existing Step 4.5.1 scope; no new directive)"
+    )
+
+
+def test_cumulative_multi_claim_sub_bullet_present(skill_content: str) -> None:
+    """Assertion 22 (added v1.3.2 per B-454): Cumulative-multi-claim coexistence sweep sub-bullet present in Step 4.5.1.
+
+    Empirical anchor: commit `6a2fb3f` CURRENT_STATE L7 + HANDOFF L427 narrative had
+    `60 NEW B-Ns (B-393-B-452)` + `61 NEW B-Ns (B-393-B-453)` coexisting without temporal
+    demarcation (Agent 64 G1-1 finding). Forward-prevention extends Step 4.5.1 to flag
+    multi-match coexistence with shared lower-bound but differing upper-bound.
+    """
+    assert "Cumulative-multi-claim coexistence sweep" in skill_content, (
+        "Step 4.5.1 must contain v1.3.2 sub-bullet 'Cumulative-multi-claim coexistence sweep' per B-454"
+    )
+    assert "added v1.3.2 per B-454" in skill_content, (
+        "Cumulative-multi-claim sub-bullet must declare v1.3.2 origin + B-454 closure target"
+    )
+    # The sub-bullet must cite the empirical anchor (commit + finding ID)
+    assert "6a2fb3f" in skill_content, (
+        "Cumulative-multi-claim sub-bullet must cite empirical anchor commit `6a2fb3f`"
+    )
+    assert "G1-1" in skill_content, (
+        "Cumulative-multi-claim sub-bullet must cite Agent 64 finding G1-1"
+    )
+    # Must describe the temporal-disambiguation requirement
+    assert "temporal disambiguation" in skill_content or "temporal demarcation" in skill_content, (
+        "Cumulative-multi-claim sub-bullet must reference 'temporal disambiguation' requirement"
+    )
+
+
+def test_assertion_count_sub_bullet_present(skill_content: str) -> None:
+    """Assertion 23 (added v1.3.2 per B-455): Assertion-count + pre-existing-count sweep sub-bullet present in Step 4.5.1.
+
+    Empirical anchor: commit `995730c` (B-449 closure) narrative said `14 new + 19 pre-existing`
+    but git diff verified `+15 new + 18 pre-existing` (Agent 63 G3-K1 finding). Forward-prevention
+    extends Step 4.5.1 with explicit `git diff` + `git show HEAD` verification commands for
+    test-count narrative claims.
+    """
+    assert "Assertion-count + pre-existing-count sweep" in skill_content, (
+        "Step 4.5.1 must contain v1.3.2 sub-bullet 'Assertion-count + pre-existing-count sweep' per B-455"
+    )
+    assert "added v1.3.2 per B-455" in skill_content, (
+        "Assertion-count sub-bullet must declare v1.3.2 origin + B-455 closure target"
+    )
+    # The sub-bullet must cite the empirical anchor
+    assert "995730c" in skill_content, (
+        "Assertion-count sub-bullet must cite empirical anchor commit `995730c`"
+    )
+    # Must reference the canonical pattern regex variants
+    assert "assertions?" in skill_content, (
+        "Assertion-count sub-bullet must document the regex pattern variant covering 'assertions?'"
+    )
+    assert "pre-existing" in skill_content, (
+        "Assertion-count sub-bullet must document the 'pre-existing' regex pattern variant"
+    )
+    # Must reference git-diff verification mechanism
+    assert "git diff" in skill_content, (
+        "Assertion-count sub-bullet must reference 'git diff' as the canonical verification mechanism"
+    )
+
+
+def test_b454_b455_anchors_documented_in_step_4_5_1(skill_content: str) -> None:
+    """Assertion 24 (added v1.3.2): both B-454 + B-455 anchors documented in Step 4.5.1 body.
+
+    Joint v1.3.2 closure surface check — both forward-prevention extensions must be
+    co-located in Step 4.5.1 (not split across other sections) so producers reading
+    Step 4.5.1 see both checks in context. Meta-irony note from B-454 entry: v1.3.1
+    was authored to prevent the v1.3.0 failure-mode-class AND drift recurred 2 commits
+    after v1.3.1 landed — empirical evidence that detection coverage must keep
+    extending as new sub-pattern variants surface.
+    """
+    # Locate the Step 4.5.1 body region (between Step 4.5.1 heading and Step 5 heading)
+    step_4_5_1_idx = skill_content.find("### Step 4.5.1")
+    assert step_4_5_1_idx > 0, "Step 4.5.1 heading must exist"
+    step_5_idx = skill_content.find("### Step 5", step_4_5_1_idx)
+    assert step_5_idx > step_4_5_1_idx, "Step 5 heading must follow Step 4.5.1"
+    step_4_5_1_body = skill_content[step_4_5_1_idx:step_5_idx]
+    # Both v1.3.2 sub-bullets must be IN Step 4.5.1 body (not floating elsewhere)
+    assert "B-454" in step_4_5_1_body, (
+        "B-454 closure reference must appear WITHIN Step 4.5.1 body (cumulative-multi-claim sub-bullet)"
+    )
+    assert "B-455" in step_4_5_1_body, (
+        "B-455 closure reference must appear WITHIN Step 4.5.1 body (assertion-count sub-bullet)"
+    )
+    # The empirical anchor commits must also be IN Step 4.5.1 body
+    assert "6a2fb3f" in step_4_5_1_body, (
+        "B-454 empirical anchor commit `6a2fb3f` must appear within Step 4.5.1 body"
+    )
+    assert "995730c" in step_4_5_1_body, (
+        "B-455 empirical anchor commit `995730c` must appear within Step 4.5.1 body"
     )
