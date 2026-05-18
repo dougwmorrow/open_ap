@@ -838,27 +838,36 @@ def test_only_orphan_check_requires_backlog_diff():
 
 def test_exemption_phrase_check_scan_block_on_match():
     """B-459 Assertion 58: ExemptionPhraseCheck.scan() returns BLOCK CheckResult
-    on exemption-phrase match (preserves B-303 trigger-phrase BLOCK contract)."""
+    on exemption-phrase match (preserves B-303 trigger-phrase BLOCK contract).
+
+    Per B-467 (2026-05-18): scan() now accepts OrchestrationContext instead
+    of bare staged_diffs dict; this check ignores ctx (no external state needed)."""
     import tools.check_commit_msg as ccm
     check = ccm.ExemptionPhraseCheck()
-    result = check.scan("docs: applying Layer N+1 termination\n", {})
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan("docs: applying Layer N+1 termination\n", ctx)
     assert not result.passed
     assert any("Layer N+1 termination" in f for f in result.findings)
 
 
 def test_exemption_phrase_check_scan_pass_on_clean_msg():
     """B-459 Assertion 59: ExemptionPhraseCheck.scan() returns PASS on
-    clean commit message with no exemption phrase."""
+    clean commit message with no exemption phrase.
+
+    Per B-467 (2026-05-18): scan() now accepts OrchestrationContext."""
     import tools.check_commit_msg as ccm
     check = ccm.ExemptionPhraseCheck()
-    result = check.scan("feat: clean message\n", {})
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan("feat: clean message\n", ctx)
     assert result.passed
     assert result.findings == []
 
 
 def test_pytest_count_check_scan_pass_on_scoped_count():
     """B-459 Assertion 60: PytestCountDisambiguationCheck.scan() PASS on
-    scoped pytest count (preserves B-449 pass behavior post-migration)."""
+    scoped pytest count (preserves B-449 pass behavior post-migration).
+
+    Per B-467 (2026-05-18): scan() now accepts OrchestrationContext."""
     import tools.check_commit_msg as ccm
     check = ccm.PytestCountDisambiguationCheck()
     msg = (
@@ -866,25 +875,33 @@ def test_pytest_count_check_scan_pass_on_scoped_count():
         "## TEST\n"
         "- pytest tier0+tier1: 2418 pass / 10 skip / 0 fail (baseline preserved)\n"
     )
-    result = check.scan(msg, {})
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(msg, ctx)
     assert result.passed, f"Expected pass; findings: {result.findings}"
 
 
 def test_pytest_count_check_scan_warn_on_bare_count():
     """B-459 Assertion 61: PytestCountDisambiguationCheck.scan() WARN on
-    bare count (preserves B-449 WARN behavior post-migration)."""
+    bare count (preserves B-449 WARN behavior post-migration).
+
+    Per B-467 (2026-05-18): scan() now accepts OrchestrationContext."""
     import tools.check_commit_msg as ccm
     check = ccm.PytestCountDisambiguationCheck()
     msg = "feat: change\n\n## TEST\n- pytest 2418 pass\n"
-    result = check.scan(msg, {})
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(msg, ctx)
     assert not result.passed
     assert any("2418" in f for f in result.findings)
 
 
 def test_orphan_check_scan_pass_with_backlog_opening_in_staged_diffs():
     """B-459 Assertion 62: UnresolvedForwardPreventionCandidatesCheck.scan()
-    reads staged_diffs dict for BACKLOG.md content (preserves B-451 PASS
-    behavior when BACKLOG opening is present in staged diffs)."""
+    reads staged_diffs from OrchestrationContext for BACKLOG.md content
+    (preserves B-451 PASS behavior when BACKLOG opening is present in
+    staged diffs).
+
+    Per B-467 (2026-05-18): scan() now reads ctx.staged_diffs instead of bare
+    dict parameter; same lookup-by-key contract is preserved."""
     import tools.check_commit_msg as ccm
     check = ccm.UnresolvedForwardPreventionCandidatesCheck()
     msg = (
@@ -892,19 +909,24 @@ def test_orphan_check_scan_pass_with_backlog_opening_in_staged_diffs():
         "## GAP ANALYSIS\n"
         "- deferred (B-NEW-1 candidate for orphan tracking)\n"
     )
-    staged_diffs = {
-        "docs/migration/BACKLOG.md": (
-            "+- **B-451** (🟡 Open; MEDIUM; WSJF 1.5): orphan tracking check\n"
-        )
-    }
-    result = check.scan(msg, staged_diffs)
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={
+            "docs/migration/BACKLOG.md": (
+                "+- **B-451** (🟡 Open; MEDIUM; WSJF 1.5): orphan tracking check\n"
+            )
+        },
+        classification=None,
+    )
+    result = check.scan(msg, ctx)
     assert result.passed, f"Expected pass; findings: {result.findings}"
 
 
 def test_orphan_check_scan_warn_without_backlog_in_staged_diffs():
     """B-459 Assertion 63: UnresolvedForwardPreventionCandidatesCheck.scan()
     WARN when BACKLOG.md not in staged_diffs and orphan-candidate cited
-    (preserves B-451 WARN behavior post-migration)."""
+    (preserves B-451 WARN behavior post-migration).
+
+    Per B-467 (2026-05-18): scan() reads ctx.staged_diffs."""
     import tools.check_commit_msg as ccm
     check = ccm.UnresolvedForwardPreventionCandidatesCheck()
     msg = (
@@ -912,7 +934,11 @@ def test_orphan_check_scan_warn_without_backlog_in_staged_diffs():
         "## GAP ANALYSIS\n"
         "- deferred (B-NEW-1 candidate for orphan tracking)\n"
     )
-    result = check.scan(msg, {"docs/migration/BACKLOG.md": ""})
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": ""},
+        classification=None,
+    )
+    result = check.scan(msg, ctx)
     assert not result.passed
     assert any("orphan-candidate" in f for f in result.findings)
 
@@ -1053,7 +1079,10 @@ def test_collect_staged_diffs_only_fetches_for_required_checks():
 
 def test_top_level_compat_wrappers_preserved():
     """B-459 Assertion 69: top-level compatibility wrappers (the pre-B-459
-    public-surface functions) are preserved + delegate to subclass scan()."""
+    public-surface functions) are preserved + delegate to subclass scan().
+
+    Per B-467 (2026-05-18): scan() now accepts OrchestrationContext, and the
+    top-level wrappers construct an empty context for delegation."""
     import tools.check_commit_msg as ccm
     # Top-level wrappers must still exist
     assert callable(ccm.check_pytest_count_disambiguation)
@@ -1062,7 +1091,8 @@ def test_top_level_compat_wrappers_preserved():
     # same input (back-compat verification)
     msg = "feat: change\n\n## TEST\n- pytest 2471 pass\n"
     p1, f1 = ccm.check_pytest_count_disambiguation(msg)
-    res = ccm.PytestCountDisambiguationCheck().scan(msg, {})
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    res = ccm.PytestCountDisambiguationCheck().scan(msg, ctx)
     assert p1 == res.passed
     assert f1 == res.findings
 
@@ -1101,3 +1131,397 @@ def test_check_result_is_frozen_dataclass():
         # frozen=True -> attempting to mutate raises FrozenInstanceError
         # (which is a subclass of AttributeError in stdlib dataclasses)
         res.passed = False  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# B-466 closure: CommitMsgCheck.__init_subclass__ mechanical attribute validation
+# (Agent 72 design review 2026-05-18 Concern 1.1; closes opaque AttributeError
+# failure mode when subclass omits required class attribute)
+# ---------------------------------------------------------------------------
+
+
+def test_init_subclass_raises_on_missing_name():
+    """B-466 Assertion 72: subclass omitting `name` class attribute raises
+    TypeError at class-definition time (fail-fast)."""
+    import tools.check_commit_msg as ccm
+    with pytest.raises(TypeError) as exc_info:
+        class BrokenNoName(ccm.CommitMsgCheck):  # type: ignore[misc]
+            severity = "WARN"
+            requires_backlog_diff = False
+            def scan(self, commit_msg, ctx):
+                return ccm.CheckResult(passed=True, findings=[])
+    assert "name" in str(exc_info.value)
+
+
+def test_init_subclass_raises_on_missing_severity():
+    """B-466 Assertion 73: subclass omitting `severity` class attribute raises
+    TypeError at class-definition time."""
+    import tools.check_commit_msg as ccm
+    with pytest.raises(TypeError) as exc_info:
+        class BrokenNoSeverity(ccm.CommitMsgCheck):  # type: ignore[misc]
+            name = "broken_severity"
+            requires_backlog_diff = False
+            def scan(self, commit_msg, ctx):
+                return ccm.CheckResult(passed=True, findings=[])
+    assert "severity" in str(exc_info.value)
+
+
+def test_init_subclass_raises_on_missing_requires_backlog_diff():
+    """B-466 Assertion 74: subclass omitting `requires_backlog_diff` class
+    attribute raises TypeError at class-definition time."""
+    import tools.check_commit_msg as ccm
+    with pytest.raises(TypeError) as exc_info:
+        class BrokenNoBacklog(ccm.CommitMsgCheck):  # type: ignore[misc]
+            name = "broken_backlog"
+            severity = "WARN"
+            def scan(self, commit_msg, ctx):
+                return ccm.CheckResult(passed=True, findings=[])
+    assert "requires_backlog_diff" in str(exc_info.value)
+
+
+def test_init_subclass_error_message_cites_all_missing_attrs():
+    """B-466 Assertion 75: subclass omitting ALL 3 attrs has error message
+    listing all 3 missing attribute names (not just the first)."""
+    import tools.check_commit_msg as ccm
+    with pytest.raises(TypeError) as exc_info:
+        class BrokenAll(ccm.CommitMsgCheck):  # type: ignore[misc]
+            def scan(self, commit_msg, ctx):
+                return ccm.CheckResult(passed=True, findings=[])
+    err_text = str(exc_info.value)
+    assert "name" in err_text
+    assert "severity" in err_text
+    assert "requires_backlog_diff" in err_text
+    assert "BrokenAll" in err_text
+
+
+def test_init_subclass_passes_on_complete_subclass():
+    """B-466 Assertion 76: valid subclass with all 3 class attributes
+    instantiates cleanly (no TypeError raised)."""
+    import tools.check_commit_msg as ccm
+
+    class ValidCheck(ccm.CommitMsgCheck):
+        name = "valid_check"
+        severity: "Literal['WARN', 'BLOCK']" = "WARN"  # type: ignore[name-defined]  # noqa: F821
+        requires_backlog_diff = False
+        def scan(self, commit_msg, ctx):
+            return ccm.CheckResult(passed=True, findings=[])
+
+    instance = ValidCheck()
+    assert instance.name == "valid_check"
+    assert instance.severity == "WARN"
+    assert instance.requires_backlog_diff is False
+
+
+def test_init_subclass_canonical_4_subclasses_have_all_attrs():
+    """B-466 Assertion 77: the canonical 4 CHECKS subclasses each declare all
+    3 required class attributes (sanity check that B-459 migrations + B-466
+    validation co-exist; CHECKS instantiation does not raise)."""
+    import tools.check_commit_msg as ccm
+    # Module load already instantiated CHECKS; if any subclass were broken,
+    # import would have failed. Re-verify here for explicit pin.
+    assert len(ccm.CHECKS) == 4
+    for check in ccm.CHECKS:
+        assert hasattr(check, "name")
+        assert hasattr(check, "severity")
+        assert hasattr(check, "requires_backlog_diff")
+        assert check.name  # non-empty string
+
+
+# ---------------------------------------------------------------------------
+# B-467 closure: OrchestrationContext dataclass — batch classify_commit() once
+# (Agent 72 design review 2026-05-18 Concern 1.2; eliminates duplicate
+# git-subprocess invocation in main() + CascadeEvidenceCheck.scan())
+# ---------------------------------------------------------------------------
+
+
+def test_orchestration_context_is_frozen_dataclass():
+    """B-467 Assertion 78: OrchestrationContext is a frozen dataclass
+    (immutability prevents accidental mutation during check iteration)."""
+    import tools.check_commit_msg as ccm
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    with pytest.raises((AttributeError, Exception)):
+        # frozen=True -> attempting to mutate raises FrozenInstanceError
+        ctx.staged_diffs = {"foo": "bar"}  # type: ignore[misc]
+
+
+def test_orchestration_context_has_staged_diffs_and_classification():
+    """B-467 Assertion 79: OrchestrationContext has staged_diffs (dict) +
+    classification (CommitClassification | None) fields."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    cls = CommitClassification(CLASS_TYPO, "test", True, False, 1, 2)
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": "+ B-X opened"},
+        classification=cls,
+    )
+    assert ctx.staged_diffs == {"docs/migration/BACKLOG.md": "+ B-X opened"}
+    assert ctx.classification is cls
+
+
+def test_orchestration_context_default_classification_is_none():
+    """B-467 Assertion 80: classification defaults to None when not provided
+    (back-compat for callers that only need staged_diffs)."""
+    import tools.check_commit_msg as ccm
+    ctx = ccm.OrchestrationContext(staged_diffs={})
+    assert ctx.classification is None
+
+
+def test_build_orchestration_context_skips_classify_when_no_cascade_check(monkeypatch):
+    """B-467 Assertion 81: `_build_orchestration_context()` does NOT call
+    `classify_commit()` when no CascadeEvidenceCheck is in the checks list."""
+    import tools.check_commit_msg as ccm
+    call_count = {"n": 0}
+
+    def counting_classify():
+        call_count["n"] += 1
+        from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+        return CommitClassification(CLASS_TYPO, "test", True, False, 1, 2)
+    monkeypatch.setattr(ccm, "classify_commit", counting_classify)
+
+    # checks list WITHOUT CascadeEvidenceCheck -> classify_commit NOT called
+    no_cascade_checks = [
+        ccm.ExemptionPhraseCheck(),
+        ccm.PytestCountDisambiguationCheck(),
+    ]
+    ctx = ccm._build_orchestration_context(no_cascade_checks)
+    assert call_count["n"] == 0
+    assert ctx.classification is None
+
+
+def test_build_orchestration_context_calls_classify_when_cascade_check_present(monkeypatch):
+    """B-467 Assertion 82: `_build_orchestration_context()` DOES call
+    `classify_commit()` exactly ONCE when CascadeEvidenceCheck is in checks."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    call_count = {"n": 0}
+
+    def counting_classify():
+        call_count["n"] += 1
+        return CommitClassification(CLASS_TYPO, "test", True, False, 1, 2)
+    monkeypatch.setattr(ccm, "classify_commit", counting_classify)
+
+    cascade_aware_checks = [
+        ccm.ExemptionPhraseCheck(),
+        ccm.CascadeEvidenceCheck(),
+    ]
+    ctx = ccm._build_orchestration_context(cascade_aware_checks)
+    assert call_count["n"] == 1, "classify_commit should be called exactly once"
+    assert ctx.classification is not None
+    assert ctx.classification.classification == CLASS_TYPO
+
+
+def test_build_orchestration_context_handles_classify_exception_gracefully(monkeypatch):
+    """B-467 Assertion 83: `_build_orchestration_context()` swallows
+    classify_commit exceptions and returns classification=None."""
+    import tools.check_commit_msg as ccm
+
+    def failing_classify():
+        raise RuntimeError("simulated classifier failure")
+    monkeypatch.setattr(ccm, "classify_commit", failing_classify)
+
+    cascade_aware_checks = [ccm.CascadeEvidenceCheck()]
+    ctx = ccm._build_orchestration_context(cascade_aware_checks)
+    assert ctx.classification is None
+
+
+def test_cascade_evidence_check_reads_classification_from_ctx(monkeypatch):
+    """B-467 Assertion 84: CascadeEvidenceCheck.scan() reads ctx.classification
+    and does NOT recompute via classify_commit()."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_SUBSTANTIVE
+
+    call_count = {"n": 0}
+    def counting_classify():
+        call_count["n"] += 1
+        return CommitClassification(
+            CLASS_SUBSTANTIVE, "test", False, True, 5, 100
+        )
+    monkeypatch.setattr(ccm, "classify_commit", counting_classify)
+
+    # Construct ctx with classification pre-cached; scan() should read from ctx
+    # and NOT call counting_classify again
+    cls = CommitClassification(CLASS_SUBSTANTIVE, "test", False, True, 5, 100)
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=cls)
+    check = ccm.CascadeEvidenceCheck()
+    # cascade missing on bare commit msg -> WARN/BLOCK finding
+    result = check.scan("build: change\n\nNo cascade sections.\n", ctx)
+    assert not result.passed
+    # classify_commit should NOT have been called inside scan()
+    assert call_count["n"] == 0, (
+        "CascadeEvidenceCheck.scan should read ctx.classification, "
+        "not call classify_commit redundantly"
+    )
+
+
+def test_main_calls_classify_commit_only_once(tmp_path, monkeypatch):
+    """B-467 Assertion 85: main() invocation calls classify_commit() at most
+    ONCE (was 2 pre-B-467: once in main() for audit-row + once in
+    CascadeEvidenceCheck.scan())."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_SUBSTANTIVE
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+
+    call_count = {"n": 0}
+    def counting_classify():
+        call_count["n"] += 1
+        return CommitClassification(
+            CLASS_SUBSTANTIVE, "test", False, True, 5, 100
+        )
+    monkeypatch.setattr(ccm, "classify_commit", counting_classify)
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "build: substantive\n\n"
+        "## TEST\npytest passed\n\n"
+        "## GAP ANALYSIS\ninline G1-G6 CLEAN\n\n"
+        "## REVIEW\nSOUND\n",
+        encoding="utf-8",
+    )
+    ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    assert call_count["n"] == 1, (
+        f"classify_commit should be called exactly once per main() invocation; "
+        f"got {call_count['n']} calls"
+    )
+
+
+# ---------------------------------------------------------------------------
+# B-468 closure: CommitMsgCheck.render_findings_to_stderr() method
+# (Agent 72 design review 2026-05-18 Concern 1.3; eliminates per-check
+# stderr-emission copy-paste in main())
+# ---------------------------------------------------------------------------
+
+
+def test_render_findings_to_stderr_method_exists_on_abc():
+    """B-468 Assertion 86: render_findings_to_stderr is a public method on
+    CommitMsgCheck ABC (base class default)."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm.CommitMsgCheck, "render_findings_to_stderr")
+    assert callable(ccm.CommitMsgCheck.render_findings_to_stderr)
+
+
+def test_render_findings_default_emits_severity_prefix(capsys):
+    """B-468 Assertion 87: base class default render_findings_to_stderr emits
+    `[<severity>] <name>: <finding>` to stderr."""
+    import tools.check_commit_msg as ccm
+
+    class TestCheck(ccm.CommitMsgCheck):
+        name = "test_default_render"
+        severity: "Literal['WARN', 'BLOCK']" = "WARN"  # type: ignore[name-defined]  # noqa: F821
+        requires_backlog_diff = False
+        def scan(self, commit_msg, ctx):
+            return ccm.CheckResult(passed=True, findings=[])
+
+    TestCheck().render_findings_to_stderr(["finding 1", "finding 2"])
+    captured = capsys.readouterr()
+    assert "[WARN] test_default_render: finding 1" in captured.err
+    assert "[WARN] test_default_render: finding 2" in captured.err
+
+
+def test_render_findings_each_subclass_overrides_with_footer(capsys):
+    """B-468 Assertion 88: each of the 4 canonical subclasses overrides
+    render_findings_to_stderr to emit check-specific recommendation footer
+    text (preserves pre-B-468 main() L650-714 verbatim stderr output)."""
+    import tools.check_commit_msg as ccm
+
+    # ExemptionPhraseCheck — must emit "exemption-claim trigger phrases" header
+    ccm.ExemptionPhraseCheck().render_findings_to_stderr(["Layer N+1 termination"])
+    err1 = capsys.readouterr().err
+    assert "exemption-claim trigger phrases" in err1
+    assert "udm-exemption-verifier" in err1
+
+    # CascadeEvidenceCheck — must emit "Required structure" header
+    ccm.CascadeEvidenceCheck().render_findings_to_stderr(["cascade-evidence missing"])
+    err2 = capsys.readouterr().err
+    assert "Required structure" in err2
+    assert "## TEST" in err2
+    assert "## GAP ANALYSIS" in err2
+    assert "## REVIEW" in err2
+
+    # PytestCountDisambiguationCheck — must emit "Disambiguate" footer
+    ccm.PytestCountDisambiguationCheck().render_findings_to_stderr(
+        ["pytest count '2418' cited without scope indicator"]
+    )
+    err3 = capsys.readouterr().err
+    assert "Disambiguate" in err3
+    assert "tier0+tier1" in err3
+    assert "WARN (not BLOCK)" in err3
+
+    # UnresolvedForwardPreventionCandidatesCheck — must emit "Resolution options"
+    ccm.UnresolvedForwardPreventionCandidatesCheck().render_findings_to_stderr(
+        ["orphan-candidate phrase cited"]
+    )
+    err4 = capsys.readouterr().err
+    assert "Resolution options" in err4
+    assert "BACKLOG.md" in err4
+
+
+def test_main_iterates_render_findings_per_check_with_findings(tmp_path, monkeypatch, capsys):
+    """B-468 Assertion 89: main() iterates CHECKS registry calling
+    render_findings_to_stderr per check with findings (preserves stderr UX
+    while eliminating per-check copy-paste in main())."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    # Commit with pytest_count WARN finding
+    msg_path.write_text(
+        "docs: minor edit\n\n## TEST\n- pytest 2471 pass\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    captured = capsys.readouterr()
+    # The pytest-count check WARN footer should be emitted (per
+    # PytestCountDisambiguationCheck.render_findings_to_stderr override)
+    assert "Disambiguate by citing scope" in captured.err
+    assert "2471" in captured.err
+    assert rc == ccm.EXIT_SUCCESS  # WARN does not block
+
+
+def test_main_omits_render_findings_for_passed_checks(tmp_path, monkeypatch, capsys):
+    """B-468 Assertion 90: main() does NOT call render_findings_to_stderr for
+    checks that returned PASS (lean stderr output; no empty per-check noise)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text("feat: completely clean commit\n", encoding="utf-8")
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    captured = capsys.readouterr()
+    # No findings -> no per-check stderr emission
+    assert "Disambiguate" not in captured.err
+    assert "Resolution options" not in captured.err
+    assert "Required structure" not in captured.err
+    assert "exemption-claim trigger" not in captured.err
+    assert rc == ccm.EXIT_SUCCESS
+
+
+def test_block_severity_check_render_emits_blocked_header(tmp_path, monkeypatch, capsys):
+    """B-468 Assertion 91: BLOCK-severity check (exemption_phrase) renders
+    its [commit-msg BLOCKED] header via render_findings_to_stderr override
+    (preserves the user-visible BLOCK stderr signal)."""
+    import tools.check_commit_msg as ccm
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: applying Layer N+1 termination\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    captured = capsys.readouterr()
+    assert "commit-msg BLOCKED" in captured.err
+    assert "Layer N+1 termination" in captured.err
+    assert rc == ccm.EXIT_BLOCKED

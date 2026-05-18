@@ -36,6 +36,29 @@ The pre-existing top-level check functions (`check_pytest_count_disambiguation`
 delegations to the underlying subclass `scan()` calls for backward
 compatibility with existing Tier 0 test callers + any external imports.
 
+Per B-466 closure (2026-05-18; Agent 72 design review Concern 1.1):
+`CommitMsgCheck.__init_subclass__` mechanical attribute validation —
+verifies subclass declares `name` + `severity` + `requires_backlog_diff`
+class attributes at class-definition time (fail-fast). Closes the failure
+mode where a subclass omitting one of these attributes instantiates cleanly
+but raises opaque `AttributeError` at first orchestrator-iteration access.
+
+Per B-467 closure (2026-05-18; Agent 72 design review Concern 1.2):
+introduced `OrchestrationContext` frozen dataclass — batches both
+`staged_diffs` + `classification` once at orchestrator entry. Each
+`scan(commit_msg, ctx)` call reads `ctx.classification` instead of
+recomputing via `classify_commit()`. Generalizes `_collect_staged_diffs()`
+into clean abstraction; future checks (B-458 + B-464) compose cleanly
+without redundant subprocess invocations.
+
+Per B-468 closure (2026-05-18; Agent 72 design review Concern 1.3):
+`CommitMsgCheck.render_findings_to_stderr()` method — eliminates 4-way
+copy-paste of per-check stderr-emission boilerplate. Base default emits
+severity-prefixed findings; each subclass overrides with check-specific
+recommendation footer text. `main()` becomes `for check in CHECKS: if
+findings: check.render_findings_to_stderr(findings)`. Adding new checks
+(B-458 + B-464) no longer copy-pastes ~14 LOC stderr boilerplate per check.
+
 Usage (invoked by `.githooks/commit-msg` wrapper):
     python check_commit_msg.py <commit-msg-path> [--no-audit]
 
@@ -128,26 +151,58 @@ class CommitMsgCheck(ABC):
           JSON findings dict key), `severity` (WARN or BLOCK), and
           `requires_backlog_diff` (whether scan() reads `staged_diffs` for
           BACKLOG.md content).
-        - Implement `scan(commit_msg, staged_diffs)` returning a CheckResult.
+        - Implement `scan(commit_msg, ctx)` returning a CheckResult.
+        - Optionally override `render_findings_to_stderr(findings)` to emit
+          check-specific recommendation footer (default emits findings with
+          severity prefix).
 
     Orchestrator contract:
-        - Iterate `CHECKS` registry; pass commit_msg + staged_diffs to each
-          subclass instance's scan() method; collect findings under
+        - Iterate `CHECKS` registry; pass commit_msg + OrchestrationContext
+          to each subclass instance's scan() method; collect findings under
           check.name key in the audit-row findings dict; only severity=BLOCK
           contributes to final exit code.
+
+    Per B-466 (2026-05-18; Agent 72 Concern 1.1): `__init_subclass__`
+    validates required class attributes at class-definition time (fail-fast
+    instead of opaque runtime `AttributeError`).
     """
     name: str
     severity: Literal["WARN", "BLOCK"]
     requires_backlog_diff: bool
 
+    def __init_subclass__(cls, **kwargs):
+        """Per B-466 (2026-05-18; Agent 72 Concern 1.1): validate every
+        `CommitMsgCheck` subclass declares all 3 required class attributes
+        at class-definition time, NOT at first orchestrator access.
+
+        Without this hook, Python treats bare annotations as documentation
+        only — a broken subclass omitting `name = "..."` declaration would
+        instantiate cleanly but raise opaque `AttributeError: type object
+        '<X>' has no attribute 'name'` at first `check.name` access inside
+        `findings_by_check[check.name]` or `_collect_orchestration_context(checks)`.
+
+        Fail-fast at class-defn time gives the broken subclass author a
+        clear error message identifying which attribute is missing.
+        """
+        super().__init_subclass__(**kwargs)
+        required = ("name", "severity", "requires_backlog_diff")
+        missing = [attr for attr in required if not hasattr(cls, attr)]
+        if missing:
+            raise TypeError(
+                f"{cls.__name__} subclass of CommitMsgCheck missing required "
+                f"class attribute(s): {', '.join(missing)}. All "
+                f"CommitMsgCheck subclasses MUST declare name (str) + severity "
+                f"(Literal['WARN','BLOCK']) + requires_backlog_diff (bool)."
+            )
+
     @abstractmethod
-    def scan(self, commit_msg: str, staged_diffs: dict[str, str]) -> CheckResult:
-        """Execute check against commit message + optional staged diffs.
+    def scan(self, commit_msg: str, ctx: "OrchestrationContext") -> CheckResult:
+        """Execute check against commit message + orchestration context.
 
         Args:
             commit_msg: full commit-message text (TEST + GAP + REVIEW + body).
-            staged_diffs: dict mapping relative file path -> diff text;
-                only populated for files declared in requires_backlog_diff.
+            ctx: OrchestrationContext carrying batched external state
+                (staged_diffs dict + cached classification per B-467).
 
         Returns:
             CheckResult(passed=True, findings=[]) on clean; CheckResult(
@@ -155,15 +210,60 @@ class CommitMsgCheck(ABC):
         """
         ...
 
+    def render_findings_to_stderr(self, findings: list[str]) -> None:
+        """Per B-468 (2026-05-18; Agent 72 Concern 1.3): emit findings to
+        stderr with WARN/BLOCK-aware formatting.
+
+        Eliminates 4-way per-check stderr-emission copy-paste in `main()`.
+        Each subclass MAY override for check-specific recommendation footers;
+        default emits findings line-by-line with severity prefix.
+
+        Args:
+            findings: non-empty list of finding strings from scan().
+        """
+        for finding in findings:
+            print(f"[{self.severity}] {self.name}: {finding}", file=sys.stderr)
+
+
+@dataclass(frozen=True)
+class OrchestrationContext:
+    """Per B-467 (2026-05-18; Agent 72 Concern 1.2): shared context passed
+    to each `CommitMsgCheck.scan()` invocation.
+
+    Batches expensive external state (staged diffs + cascade classification)
+    ONCE at orchestrator entry; pass to all checks instead of having each
+    check independently recompute. Each `classify_commit()` call spawns a
+    `git diff --cached --name-status` subprocess; pre-B-467 main() called
+    classify_commit() twice per run (once for audit-row metadata; once
+    inside CascadeEvidenceCheck.scan()).
+
+    Generalizes `_collect_staged_diffs()` into a clean abstraction for future
+    checks (B-458 + B-464) that also need classification ambient.
+
+    Fields:
+        staged_diffs: dict mapping relative file path -> `git diff --cached`
+            output text. Only populated for files declared by checks via
+            `requires_backlog_diff=True` (currently just BACKLOG.md).
+        classification: cached result of `classify_commit()`; None if either
+            (a) no cascade-aware check is registered OR (b) classify failed.
+    """
+    staged_diffs: dict[str, str]
+    classification: "CommitClassification | None" = None  # noqa: F821 — forward ref
+
 
 def _collect_staged_diffs(checks: list[CommitMsgCheck]) -> dict[str, str]:
     """Collect `git diff --cached` for files required by enabled checks.
 
-    Used by orchestrator before iterating checks — avoids redundant
-    subprocess calls when multiple checks need the same diff.
+    Per B-459 — used by orchestrator before iterating checks; avoids
+    redundant subprocess calls when multiple checks need the same diff.
 
     Currently the only diff-needing file is `docs/migration/BACKLOG.md`
     (used by orphan-candidate check + future closure-annotation check).
+
+    Per B-467 (2026-05-18) — PRESERVED as public helper for back-compat
+    with Tier 0 assertion 68 (`test_collect_staged_diffs_only_fetches_for_required_checks`).
+    The B-467 `_build_orchestration_context()` orchestrator helper delegates
+    to this function for the staged_diffs portion.
     """
     needed_files: set[str] = set()
     if any(c.requires_backlog_diff for c in checks):
@@ -180,6 +280,42 @@ def _collect_staged_diffs(checks: list[CommitMsgCheck]) -> dict[str, str]:
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             diffs[path] = ""
     return diffs
+
+
+def _build_orchestration_context(
+    checks: list[CommitMsgCheck],
+) -> OrchestrationContext:
+    """Per B-467 (2026-05-18; Agent 72 Concern 1.2): build the canonical
+    `OrchestrationContext` passed to each `check.scan()` invocation.
+
+    Batches:
+        - staged_diffs (delegates to `_collect_staged_diffs()`)
+        - classification (single `classify_commit()` call IF any check is
+          cascade-aware; None otherwise)
+
+    Both subprocess calls (git-diff + classify_commit) happen ONCE here
+    rather than per-check + per-audit-row-build, eliminating redundant
+    git subprocess fan-out as more checks land.
+
+    A `CascadeEvidenceCheck` instance presence triggers the classify call.
+    If `classify_commit` is unavailable (import failed) OR raises, the
+    classification field is None — `CascadeEvidenceCheck.scan()` degrades
+    gracefully when classification is None (returns PASS per pre-existing
+    `classify_commit is None` guard).
+    """
+    diffs = _collect_staged_diffs(checks)
+    classification = None
+    if classify_commit is not None and any(
+        isinstance(c, CascadeEvidenceCheck) for c in checks
+    ):
+        try:
+            classification = classify_commit()
+        except Exception:  # noqa: BLE001 — degrade gracefully
+            classification = None
+    return OrchestrationContext(
+        staged_diffs=diffs,
+        classification=classification,
+    )
 
 
 # -------------------------------------------------------------------------
@@ -253,8 +389,13 @@ def check_pytest_count_disambiguation(commit_msg: str) -> tuple[bool, list[str]]
     delegates to `PytestCountDisambiguationCheck().scan()`. Preserved
     as a top-level function for backward compatibility with existing
     Tier 0 tests + any external callers.
+
+    Per B-467 (2026-05-18) — wrapper constructs an empty OrchestrationContext
+    for the subclass call. The check ignores ctx fields (no external state
+    needed), so any empty context is equivalent.
     """
-    result = PytestCountDisambiguationCheck().scan(commit_msg, {})
+    ctx = OrchestrationContext(staged_diffs={}, classification=None)
+    result = PytestCountDisambiguationCheck().scan(commit_msg, ctx)
     return result.passed, result.findings
 
 
@@ -342,7 +483,11 @@ def check_unresolved_forward_prevention_candidates(
             staged_backlog_diff = ""
 
     check = UnresolvedForwardPreventionCandidatesCheck()
-    res = check.scan(commit_msg, {"docs/migration/BACKLOG.md": staged_backlog_diff})
+    ctx = OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": staged_backlog_diff},
+        classification=None,
+    )
+    res = check.scan(commit_msg, ctx)
     return res.passed, res.findings
 
 
@@ -361,7 +506,7 @@ class ExemptionPhraseCheck(CommitMsgCheck):
     severity: Literal["WARN", "BLOCK"] = "BLOCK"
     requires_backlog_diff = False
 
-    def scan(self, commit_msg: str, staged_diffs: dict[str, str]) -> CheckResult:
+    def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
         if contains_exemption_phrase is None:
             return CheckResult(passed=True, findings=[])
         matched = contains_exemption_phrase(commit_msg)
@@ -369,26 +514,42 @@ class ExemptionPhraseCheck(CommitMsgCheck):
             return CheckResult(passed=False, findings=list(matched))
         return CheckResult(passed=True, findings=[])
 
+    def render_findings_to_stderr(self, findings: list[str]) -> None:
+        """Per B-468: emit exemption-phrase BLOCK boilerplate with reviewer-spawn
+        instruction footer (preserves pre-B-468 main() L650-663 verbatim text)."""
+        print("[commit-msg BLOCKED] commit message contains exemption-claim "
+              "trigger phrases:", file=sys.stderr)
+        for p in findings:
+            print(f"  - {p!r}", file=sys.stderr)
+        print("\nPer Mechanism C-1 + udm-exemption-verifier SKILL.md: spawn "
+              "udm-exemption-verifier reviewer (via Claude Code session) BEFORE "
+              "committing. Reviewer verdict VALID -> proceed; INVALID -> spawn "
+              "udm-gap-check per D56 second-pass; address findings; re-attempt "
+              "commit.", file=sys.stderr)
+        print("\nBypass with --no-verify is self-flagging exemption-claim that "
+              "reviewers should treat as quasi-audit-question trigger.",
+              file=sys.stderr)
+
 
 class CascadeEvidenceCheck(CommitMsgCheck):
     """Hard rule 14 cascade-evidence detection per B-317 Phase 1A + B-321.
 
     Classifies commit; if cascade_required=True, verifies presence of
     `## TEST` + `## GAP ANALYSIS` + `## REVIEW` sections + body validation.
+
+    Per B-467 (2026-05-18): reads `ctx.classification` instead of calling
+    `classify_commit()` redundantly inside scan(). The orchestrator
+    `_build_orchestration_context()` calls classify_commit() ONCE per main()
+    invocation (when CascadeEvidenceCheck is in CHECKS registry).
     """
     name = "cascade_evidence"
     severity: Literal["WARN", "BLOCK"] = "BLOCK"
     requires_backlog_diff = False
 
-    def scan(self, commit_msg: str, staged_diffs: dict[str, str]) -> CheckResult:
-        if classify_commit is None or has_cascade_evidence is None:
+    def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
+        if has_cascade_evidence is None:
             return CheckResult(passed=True, findings=[])
-        try:
-            cls = classify_commit()
-        except Exception as exc:  # noqa: BLE001 — degrade gracefully
-            print(f"[commit-msg WARN] cascade-classifier raised ({exc}); "
-                  "cascade-evidence check skipped this commit.", file=sys.stderr)
-            return CheckResult(passed=True, findings=[])
+        cls = ctx.classification
         if cls is None or not cls.cascade_required:
             return CheckResult(passed=True, findings=[])
         has_ev, findings = has_cascade_evidence(
@@ -404,6 +565,22 @@ class CascadeEvidenceCheck(CommitMsgCheck):
             )
         return CheckResult(passed=True, findings=[])
 
+    def render_findings_to_stderr(self, findings: list[str]) -> None:
+        """Per B-468: emit cascade-evidence BLOCK boilerplate with required
+        structure footer (preserves pre-B-468 main() L666-678 verbatim text)."""
+        cascade_diag = findings[0] if findings else "cascade-evidence missing"
+        print(f"\n[commit-msg BLOCKED] {cascade_diag}", file=sys.stderr)
+        print("\nRequired structure per hard rule 14 + B-318 tri-section discipline:", file=sys.stderr)
+        print("  ## TEST", file=sys.stderr)
+        print("  <pytest verdict / orchestrator smoke / behavioral test results>", file=sys.stderr)
+        print("  ## GAP ANALYSIS", file=sys.stderr)
+        print("  <udm-gap-check verdict OR inline G1-G6 audit OR SKIPPED: <specific anti-trigger reason>>", file=sys.stderr)
+        print("  ## REVIEW", file=sys.stderr)
+        print("  <udm-design-reviewer verdict OR inline self-review OR SKIPPED: <specific reason>>", file=sys.stderr)
+        print(f"\nIf this is an anti-trigger commit, include explicit 'SKIPPED: <anti-trigger>' "
+              "in each missing section. Bypass with --no-verify is self-flagging cascade-skip "
+              "that reviewers should treat as quasi-audit-question trigger.", file=sys.stderr)
+
 
 class PytestCountDisambiguationCheck(CommitMsgCheck):
     """B-449 pytest-count disambiguation WARN-only check.
@@ -416,7 +593,7 @@ class PytestCountDisambiguationCheck(CommitMsgCheck):
     severity: Literal["WARN", "BLOCK"] = "WARN"
     requires_backlog_diff = False
 
-    def scan(self, commit_msg: str, staged_diffs: dict[str, str]) -> CheckResult:
+    def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
         test_text = _extract_test_section_text(commit_msg)
         if test_text is None:
             return CheckResult(passed=True, findings=[])
@@ -452,6 +629,25 @@ class PytestCountDisambiguationCheck(CommitMsgCheck):
             return CheckResult(passed=False, findings=findings[:10])
         return CheckResult(passed=True, findings=[])
 
+    def render_findings_to_stderr(self, findings: list[str]) -> None:
+        """Per B-468: emit pytest-count WARN boilerplate with disambiguation
+        examples footer (preserves pre-B-468 main() L681-696 verbatim text)."""
+        print(f"\n[commit-msg WARN] {len(findings)} pytest count(s) "
+              "cited without scope disambiguation in TEST section "
+              "(per B-449; Agent 59 cycle-3 G3-K2 empirical anchor commit `e76078c`):",
+              file=sys.stderr)
+        for f in findings:
+            print(f"  - {f}", file=sys.stderr)
+        print("\nDisambiguate by citing scope alongside count, e.g.:", file=sys.stderr)
+        print("  - 'pytest tier0+tier1: 2418 pass / 10 skip / 0 fail'", file=sys.stderr)
+        print("  - 'pytest tests/tier0: 510/510 PASS'", file=sys.stderr)
+        print("  - 'pytest full-suite authoritative: 2471 pass / 10 skip / 0 fail'", file=sys.stderr)
+        print("  - 'pytest baseline preserved (2471 pass / 10 skip / 0 fail "
+              "from prior verification)'", file=sys.stderr)
+        print("This is a WARN (not BLOCK); commit will still proceed. "
+              "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
+              file=sys.stderr)
+
 
 class UnresolvedForwardPreventionCandidatesCheck(CommitMsgCheck):
     """B-451 orphan forward-prevention candidate tracking WARN-only check.
@@ -465,7 +661,7 @@ class UnresolvedForwardPreventionCandidatesCheck(CommitMsgCheck):
     severity: Literal["WARN", "BLOCK"] = "WARN"
     requires_backlog_diff = True
 
-    def scan(self, commit_msg: str, staged_diffs: dict[str, str]) -> CheckResult:
+    def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
         sanitized = _strip_code_blocks(commit_msg)
         if not sanitized.strip():
             return CheckResult(passed=True, findings=[])
@@ -489,7 +685,7 @@ class UnresolvedForwardPreventionCandidatesCheck(CommitMsgCheck):
         if _has_explicit_dismissal(sanitized):
             return CheckResult(passed=True, findings=[])
 
-        staged_backlog_diff = staged_diffs.get("docs/migration/BACKLOG.md", "")
+        staged_backlog_diff = ctx.staged_diffs.get("docs/migration/BACKLOG.md", "")
         backlog_opens_count = 0
         if staged_backlog_diff:
             backlog_opens_count = len(_BACKLOG_BN_OPEN_RE.findall(staged_backlog_diff))
@@ -507,6 +703,25 @@ class UnresolvedForwardPreventionCandidatesCheck(CommitMsgCheck):
                 "candidate(s); no explicit dismissal cited)"
             )
         return CheckResult(passed=False, findings=findings)
+
+    def render_findings_to_stderr(self, findings: list[str]) -> None:
+        """Per B-468: emit orphan-candidate WARN boilerplate with resolution-options
+        footer (preserves pre-B-468 main() L699-714 verbatim text)."""
+        print(f"\n[commit-msg WARN] {len(findings)} orphan "
+              "forward-prevention candidate(s) cited in commit-msg without "
+              "matching BACKLOG.md staged entry "
+              "(per B-451; Agent 59 cycle-3 G2-A empirical anchor commit `e76078c`):",
+              file=sys.stderr)
+        for f in findings:
+            print(f"  - {f}", file=sys.stderr)
+        print("\nResolution options:", file=sys.stderr)
+        print("  - Open a corresponding B-N entry in docs/migration/BACKLOG.md "
+              "(add to staged diff)", file=sys.stderr)
+        print("  - Cite explicit dismissal in commit-msg ('dismissed because X' / "
+              "'no B-N needed because Y' / 'deferred to commit abc1234')", file=sys.stderr)
+        print("This is a WARN (not BLOCK); commit will still proceed. "
+              "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
+              file=sys.stderr)
 
 
 # CHECKS registry per B-459 — single point of registration for orchestrator.
@@ -607,25 +822,20 @@ def main(argv: list[str]) -> int:
     # Per B-459 — orchestrator iterates CHECKS registry rather than calling
     # each check function inline. Findings collected by check.name; only
     # severity=BLOCK contributes to final exit code.
-    staged_diffs = _collect_staged_diffs(CHECKS)
-
-    # Capture classification once for audit-row metadata (per B-317 forensic
-    # audit). The CascadeEvidenceCheck.scan() also calls classify_commit()
-    # internally; this duplicate call is acceptable (cheap subprocess; both
-    # results match given idempotent git state for the commit).
-    cls = None
-    if classify_commit is not None:
-        try:
-            cls = classify_commit()
-        except Exception:  # noqa: BLE001
-            cls = None
+    #
+    # Per B-467 (2026-05-18) — `_build_orchestration_context()` batches both
+    # staged_diffs + classification ONCE per main() invocation. Previously
+    # main() called classify_commit() separately for audit-row metadata AND
+    # CascadeEvidenceCheck.scan() called it again — 2 subprocess invocations
+    # per run. Now both share the cached classification via ctx.classification.
+    ctx = _build_orchestration_context(CHECKS)
 
     findings_by_check: dict[str, list[str]] = {}
     block_exit = EXIT_SUCCESS
 
     for check in CHECKS:
         try:
-            result = check.scan(actual_msg, staged_diffs)
+            result = check.scan(actual_msg, ctx)
         except Exception as exc:  # noqa: BLE001 — degrade gracefully on any check failure
             print(f"[commit-msg WARN] {check.name} check raised ({exc}); "
                   "check skipped this commit.", file=sys.stderr)
@@ -640,78 +850,18 @@ def main(argv: list[str]) -> int:
             commit_msg_path,
             findings_by_check,
             block_exit,
-            classification=cls.classification if cls else None,
+            classification=ctx.classification.classification if ctx.classification else None,
         )
 
-    # Per-check stderr emission preserved verbatim from pre-B-459 messages so
-    # operator UX is unchanged. Each block guarded on findings presence for
-    # that specific check.
-
-    exemption_matched = findings_by_check.get("exemption_phrase", [])
-    if exemption_matched:
-        print("[commit-msg BLOCKED] commit message contains exemption-claim "
-              "trigger phrases:", file=sys.stderr)
-        for p in exemption_matched:
-            print(f"  - {p!r}", file=sys.stderr)
-        print("\nPer Mechanism C-1 + udm-exemption-verifier SKILL.md: spawn "
-              "udm-exemption-verifier reviewer (via Claude Code session) BEFORE "
-              "committing. Reviewer verdict VALID -> proceed; INVALID -> spawn "
-              "udm-gap-check per D56 second-pass; address findings; re-attempt "
-              "commit.", file=sys.stderr)
-        print("\nBypass with --no-verify is self-flagging exemption-claim that "
-              "reviewers should treat as quasi-audit-question trigger.",
-              file=sys.stderr)
-
-    cascade_findings = findings_by_check.get("cascade_evidence", [])
-    if cascade_findings:
-        cascade_diag = cascade_findings[0] if cascade_findings else "cascade-evidence missing"
-        print(f"\n[commit-msg BLOCKED] {cascade_diag}", file=sys.stderr)
-        print("\nRequired structure per hard rule 14 + B-318 tri-section discipline:", file=sys.stderr)
-        print("  ## TEST", file=sys.stderr)
-        print("  <pytest verdict / orchestrator smoke / behavioral test results>", file=sys.stderr)
-        print("  ## GAP ANALYSIS", file=sys.stderr)
-        print("  <udm-gap-check verdict OR inline G1-G6 audit OR SKIPPED: <specific anti-trigger reason>>", file=sys.stderr)
-        print("  ## REVIEW", file=sys.stderr)
-        print("  <udm-design-reviewer verdict OR inline self-review OR SKIPPED: <specific reason>>", file=sys.stderr)
-        print(f"\nIf this is an anti-trigger commit, include explicit 'SKIPPED: <anti-trigger>' "
-              "in each missing section. Bypass with --no-verify is self-flagging cascade-skip "
-              "that reviewers should treat as quasi-audit-question trigger.", file=sys.stderr)
-
-    pytest_count_findings = findings_by_check.get("pytest_count", [])
-    if pytest_count_findings:
-        print(f"\n[commit-msg WARN] {len(pytest_count_findings)} pytest count(s) "
-              "cited without scope disambiguation in TEST section "
-              "(per B-449; Agent 59 cycle-3 G3-K2 empirical anchor commit `e76078c`):",
-              file=sys.stderr)
-        for f in pytest_count_findings:
-            print(f"  - {f}", file=sys.stderr)
-        print("\nDisambiguate by citing scope alongside count, e.g.:", file=sys.stderr)
-        print("  - 'pytest tier0+tier1: 2418 pass / 10 skip / 0 fail'", file=sys.stderr)
-        print("  - 'pytest tests/tier0: 510/510 PASS'", file=sys.stderr)
-        print("  - 'pytest full-suite authoritative: 2471 pass / 10 skip / 0 fail'", file=sys.stderr)
-        print("  - 'pytest baseline preserved (2471 pass / 10 skip / 0 fail "
-              "from prior verification)'", file=sys.stderr)
-        print("This is a WARN (not BLOCK); commit will still proceed. "
-              "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
-              file=sys.stderr)
-
-    orphan_candidate_findings = findings_by_check.get("orphan_candidate", [])
-    if orphan_candidate_findings:
-        print(f"\n[commit-msg WARN] {len(orphan_candidate_findings)} orphan "
-              "forward-prevention candidate(s) cited in commit-msg without "
-              "matching BACKLOG.md staged entry "
-              "(per B-451; Agent 59 cycle-3 G2-A empirical anchor commit `e76078c`):",
-              file=sys.stderr)
-        for f in orphan_candidate_findings:
-            print(f"  - {f}", file=sys.stderr)
-        print("\nResolution options:", file=sys.stderr)
-        print("  - Open a corresponding B-N entry in docs/migration/BACKLOG.md "
-              "(add to staged diff)", file=sys.stderr)
-        print("  - Cite explicit dismissal in commit-msg ('dismissed because X' / "
-              "'no B-N needed because Y' / 'deferred to commit abc1234')", file=sys.stderr)
-        print("This is a WARN (not BLOCK); commit will still proceed. "
-              "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
-              file=sys.stderr)
+    # Per-check stderr emission per B-468 (2026-05-18; Agent 72 Concern 1.3):
+    # registry-iteration pattern replaces 4-way copy-paste. Each subclass owns
+    # its WARN/BLOCK boilerplate via `render_findings_to_stderr()`. Adding a
+    # new check (B-458 + B-464) requires NO main() edit — just append to CHECKS
+    # + override render_findings_to_stderr in the subclass.
+    for check in CHECKS:
+        findings = findings_by_check.get(check.name, [])
+        if findings:
+            check.render_findings_to_stderr(findings)
 
     return block_exit
 

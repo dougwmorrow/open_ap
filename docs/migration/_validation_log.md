@@ -2,6 +2,37 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-459 completion cohort (B-466 + B-467 + B-468) + B-465 GLOSSARY via 2-parallel-agent team
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps." 2026-05-18.
+
+**Scope**: 4 B-N closures (B-465 GLOSSARY + B-466 __init_subclass__ + B-467 OrchestrationContext + B-468 render_findings_to_stderr); +20 NEW Tier 0 assertions; 5 files modified.
+
+**2-parallel-agent team**:
+
+- **Agent A** (`afa1c32997f8df8cc`) — B-466 + B-467 + B-468 joint closure (B-459 completion cohort): All 3 architectural-debt B-Ns from Agent 72 design review of B-459 completed BEFORE B-458/B-464 implementations to avoid copy-paste accumulation. B-466 (LOW WSJF 1.5): `CommitMsgCheck.__init_subclass__` validation — verifies subclass declares all 3 required class attrs (`name` + `severity` + `requires_backlog_diff`) at class-definition time; raises TypeError with subclass name + missing attrs cited (fail-fast vs runtime AttributeError). B-467 (MEDIUM WSJF 2.0): `OrchestrationContext` frozen dataclass + `_build_orchestration_context(checks)` helper batches both `staged_diffs` + `classification` ONCE per main() entry — eliminates duplicate `classify_commit()` subprocess invocation (verified 2→1); `scan(msg, ctx)` signature migration across ABC + 4 subclasses + 7 pre-existing tests + 2 wrapper functions. B-468 (MEDIUM WSJF 2.0): `render_findings_to_stderr(findings)` method on CommitMsgCheck ABC + 4 subclass overrides preserving check-specific footers; main() L650-714 reduces from 4 nearly-identical stderr-emission blocks to single 4-line `for check in CHECKS: if findings: check.render_findings_to_stderr(findings)` registry-iteration. 20 NEW Tier 0 assertions added at `tests/tier0/test_check_commit_msg.py` (71 → 91 total) covering all 3 B-Ns + backward-compat preservation. CLAUDE.md L98 .githooks/ row updated for new signatures + assertion count.
+
+- **Agent B** (`a606ceff76db25825`) — B-465 closure (MEDIUM WSJF 2.0; GLOSSARY entries + name-collision resolution): 19 NEW GLOSSARY.md entries (11 `tools/check_commit_msg.py` B-459 public surface + 8 `tests/tier0/_skill_test_base.py` B-461 public surface). Module-disambiguation prose for `CheckResult` + `CHECKS` name-collisions with `tools/pre_commit_checks.py` (pre-existing 4-field CheckResult per L764 vs new 2-field CheckResult from B-459; cross-module ambiguous import resolution flagged as future-refactor candidate but no breaking rename per scope discipline). CLAUDE.md dedicated tools/ row DEFERRED per scope-management decision — existing L98 .githooks/ inline coverage substantive after B-459 closure + Agent 71 G1.2 fix; opening dedicated row would create redundancy. Mid-task arithmetic-drift self-caught + fixed pre-commit ("12 NEW" → "19 NEW (11+8)" per Pitfall #9.k v1.3.2 sweep self-application).
+
+**Cumulative session delta UPDATED at post-B-459-completion-cohort**: 77 NEW B-Ns UNCHANGED (B-393-B-469; no new opens — all 4 were pre-existing opens). 4 B-Ns CLOSED this cohort. 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2701 → **2721 pass / 10 skip / 0 fail** (+20 baseline = +20 B-466/467/468 Tier 0 additions; B-465 is GLOSSARY-only no test delta; matches sum per cascade Step 3.1 full-suite scope verified live by parent agent post-cohort).
+
+**Architectural debt RESOLVED from Agent 72 review**:
+- Concern 1.1 (`__init_subclass__` validation) — CLOSED via B-466
+- Concern 1.2 (duplicate `classify_commit()` subprocess) — CLOSED via B-467
+- Concern 1.3 (per-check stderr emission copy-paste) — CLOSED via B-468
+
+**Architectural debt STILL OPEN from Agent 72 review** (tracked as B-469):
+- Scope 3 cross-cutting opportunity (generalize `_skill_test_base.py` → `_tier0_test_base.py` for CLI tool baselines) — tracked B-469
+
+**B-458 + B-464 implementation path now substantially cleaner**: with `__init_subclass__` validation + `OrchestrationContext` + `render_findings_to_stderr`, B-458 (`ClosureAnnotationConsistencyCheck`) lands as ~50 LOC subclass + `CHECKS` registry append + `render_findings_to_stderr` override + Tier 0 tests; B-464 (narrative pytest-claim verification) same pattern.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — tools/check_commit_msg.py + CLAUDE.md + GLOSSARY.md + _validation_log.md all substrate):
+- TEST: pytest 2721 verified live per cascade Step 3.1; Agent A reports 91/91 Tier 0 PASS at test_check_commit_msg.py + grep verifications + backward-compat verified via 7-test migration
+- GAP ANALYSIS: per-agent G1-G6 inline audits + v1.3.2 self-application sweeps (Agent A clean; Agent B self-caught + fixed Pitfall #9.k drift mid-task)
+- REVIEW: pre-commit independent reviewer SPAWN per hard rule 14 substrate-edit clause for combined cohort commit; this entry composed by parent agent
+
+---
+
 ## 2026-05-18 — Architectural debt cohort (B-459 HIGH WSJF 3.0 + B-461 MEDIUM WSJF 2.0) via 2-parallel-agent team
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps. Use a multi-agent team if you think it will help." 2026-05-18.
