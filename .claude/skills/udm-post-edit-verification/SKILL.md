@@ -28,7 +28,7 @@ This skill is **always-mandatory** per CLAUDE.md hard rule 14 for any substantiv
 - BACKLOG.md strikethrough-only flip (B-N closure annotation; leading-badge flip per Pitfall #9.j)
 - Whitespace / line-ending normalization
 - POLISH_QUEUE P-N entry cosmetic edit
-- This very SKILL.md authoring (recursive trigger; bootstrap exemption documented)
+- ~~This very SKILL.md authoring (recursive trigger; bootstrap exemption documented)~~ **REMOVED 2026-05-17 per B-409 closure**: this anti-trigger directly CONTRADICTED `udm-exemption-verifier` SKILL.md CRITICAL CARVE-OUT (L62-68; added 2026-05-16 per Pitfall #9.o INSTANCE 8 closure) which states SKILL.md authoring commits are NOT exempt — they require full cascade evidence. Agents reading both produced incompatible policy verdicts (bootstrap-exempt vs cascade-required). The CARVE-OUT is the more recent and more authoritative source; aligned per Cohort B Agent 55 CB-4-C BLOCK finding 2026-05-17. SKILL.md authoring commits go through SUBSTRATE override (next paragraph) per `tools/cascade_classifier.py::is_substrate_path()` mechanical detection — no bootstrap exemption.
 
 **SUBSTRATE override (per Phase 2A; v1.1.0)**: anti-triggers above do NOT apply to substrate-edit commits. `tools/cascade_classifier.py::is_substrate_path()` mechanically detects substrate (CLAUDE.md / .claude/skills/udm-*/SKILL.md / .claude/agents/udm-*.md / `tools/pre_commit_checks.py` etc.) and classifies as `SUBSTRATE_EDIT` with `cascade_required=True` regardless of typo/whitespace/badge-flip appearance. Substrate-edits are high-risk by definition (they BREAK discipline if broken). Empirical: commit `0a0ff49` silently skipped cascade on substrate refactor.
 
