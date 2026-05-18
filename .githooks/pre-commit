@@ -1,0 +1,68 @@
+#!/bin/sh
+# pre-commit hook — Mechanism C-1 per B-301 + B-307 + B-308 + B-309 + B-310
+#
+# Cross-platform bash wrapper per B-310 Cycle 1 fix (2026-05-16): Windows
+# git-bash lacks `python3` in PATH (only `python` stub via Windows App Store +
+# `py` launcher). Bash wrapper detects available Python interpreter:
+#   1. Project venv (.venv/Scripts/python.exe on Windows; .venv/bin/python on Linux/Mac)
+#   2. `python3` (standard on Linux/Mac)
+#   3. `python` (some Windows installs)
+#   4. `py -3` (Windows Python launcher)
+# Fail-open with WARN if no interpreter found.
+#
+# Delegates to tools/pre_commit_checks.py orchestrator (5 checks per B-308 +
+# B-309 Cycle 1 Improvement 1: query_blindspots + pytest_changed +
+# lint_security_types + markdown_cross_refs + cli_compliance_d74_d75_d76).
+#
+# Per B-309 Cycle 1 Improvement 2: distinguishes FATAL (exit 3 — orchestrator
+# crashed; fail-open with WARN to prevent repo-wide commit lockup) from
+# BLOCKED (exit 1 — legitimate check failure; honor BLOCK semantic).
+#
+# Installation: `git config core.hooksPath .githooks` (one-time per clone;
+# OR `python tools/install_pre_commit_hook.py --install --apply`).
+#
+# Producer cannot bypass mechanically without `--no-verify` (self-flagging).
+#
+# Acknowledged limitations:
+# - Hook cannot invoke Claude API directly from git substrate
+# - Hook cannot enforce on its own authoring commit (chicken-and-egg)
+# - Hook bypassable via `--no-verify`; self-flagging only
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ORCHESTRATOR="${REPO_ROOT}/tools/pre_commit_checks.py"
+
+# Detect Python interpreter (cross-platform per B-310)
+if [ -x "${REPO_ROOT}/.venv/Scripts/python.exe" ]; then
+    PYTHON="${REPO_ROOT}/.venv/Scripts/python.exe"
+elif [ -x "${REPO_ROOT}/.venv/bin/python" ]; then
+    PYTHON="${REPO_ROOT}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON="python3"
+elif command -v py >/dev/null 2>&1; then
+    PYTHON="py -3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON="python"
+else
+    echo "[pre-commit WARN] no Python interpreter found (tried .venv / python3 / py / python); commit proceeding unchecked." >&2
+    exit 0
+fi
+
+if [ ! -f "${ORCHESTRATOR}" ]; then
+    echo "[pre-commit WARN] orchestrator not found at ${ORCHESTRATOR}; commit proceeding unchecked. Restore from git OR re-run after merge." >&2
+    exit 0
+fi
+
+# Invoke orchestrator
+# Per B-306 (2026-05-16): removed --no-audit; orchestrator now writes
+# per-invocation audit row to _session_logs/cli_pre_commit_checks_<date>.log
+# per D76 contract.
+${PYTHON} "${ORCHESTRATOR}"
+EXIT_CODE=$?
+
+# Per B-309 Cycle 1 Improvement 2: distinguish FATAL (3) vs BLOCKED (1)
+if [ "${EXIT_CODE}" = "3" ]; then
+    echo "[pre-commit WARN] orchestrator returned FATAL (exit 3); commit proceeding unchecked. Fix tools/pre_commit_checks.py before next commit to restore Mechanism C-1 enforcement." >&2
+    exit 0
+fi
+
+exit ${EXIT_CODE}

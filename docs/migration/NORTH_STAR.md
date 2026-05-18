@@ -95,6 +95,7 @@ When facing a design trade-off, walk the pillars in this order:
 - **D111** (operational-infra D-number discipline: start 🟡 Proposed; flip 🟢 after user-attestation + session boundary; 🟡 Proposed itself per the discipline it defines) — audit-grade + operationally stable
 - **D112** (Round-N.5 deep-dive plan timing = just-in-time at prior-phase close-out; formalizes B186; Phase 5 gated by B191 Snowflake-test-conclusion) — audit-grade + operationally stable
 - **D113** (POLISH_QUEUE.md cosmetic-tracker discipline; P-N scheme distinct from B-numbers; status legend matches BACKLOG.md per Pitfall #9.j; round-close-out skim + Pattern F audit coverage via skill updates; 🟢 Locked directly per D111 process-infra exemption analogous to D55/D60/D89-D91/D95-D99) — audit-grade + traceability (de-escalates sub-class of R28 cascade self-attestation gap)
+- **D114** (AppLaunchpad blindspot-ledger high-ROI subset adoption; executable form of HANDOFF §8 Pitfall #9 sub-classes 9.a-9.o; 7 specifically-locked sub-decisions; companion artifacts at `docs/migration/blindspots/` + `tools/query_blindspots.py` + `.claude/hooks/` ; 🟢 Locked directly per D111 process-infra exemption analogous to D62/D113/D55/D60/D89-D91/D95-D99) — operationally-stable + idempotent + audit-grade (shifts catch-time for Pitfall #9 sub-classes from post-hoc gap-check 1-4 day lag to producer-time validation 0-day lag; new R33 candidate risk: false-positive fatigue; partial mitigation R16 + de-escalates R28 sub-class)
 
 ## How to apply this in agent prompts
 

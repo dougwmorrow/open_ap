@@ -177,6 +177,61 @@ def _as_source_datetime(value: date | datetime | None) -> datetime | None:
     return dt.replace(microsecond=(dt.microsecond // 1000) * 1000)
 
 
+# ---------------------------------------------------------------------------
+# Internal: B-270 env-var-gated crash-injection harness (test-only)
+#
+# Tier 4 (Round 5 § 7 + docs/migration/06_TESTING.md) needs a deterministic
+# crash boundary BETWEEN ``_execute_bronze_updates(...label_suffix=...)``
+# (close-old versions) and ``_activate_new_versions(...)`` inside
+# :func:`run_scd2` — so a parent test process can SIGKILL this subprocess
+# and verify the in-flight orphan state (Flag=0, op∈{U,R}, both
+# UdmEndDateTime AND UdmSourceEndDate IS NULL per SCD2-P1-e) is recovered
+# by the NEXT run's ``_cleanup_orphaned_inactive_rows`` sweep. C7 canonical
+# crash injection point per Round 5 § 7 inventory.
+#
+# Contract:
+#   - Reads ``CRASH_INJECT_POINT`` env var; only fires when value matches
+#     the ``checkpoint`` argument (default ``"after_close_old"``).
+#   - Emits the canonical barrier token ``CLOSE_OLD_COMPLETE`` to stdout
+#     (flushed immediately) so the parent test process sees it before the
+#     sleep window opens.
+#   - Sleeps ``CRASH_INJECT_SLEEP_SECONDS`` seconds (default 10) so the
+#     parent has a deterministic window to SIGKILL this process before
+#     the activate step runs.
+#   - No-op when env var absent OR value doesn't match the checkpoint.
+#     Zero production cost (one ``os.environ.get`` lookup + branch).
+#   - NEVER raises — defensive try/except internal — pollution of the
+#     production path is the only failure mode we cannot accept.
+# ---------------------------------------------------------------------------
+
+
+def _crash_test_harness_c7(checkpoint: str = "after_close_old") -> None:
+    """B-270 closure: env-var-gated test-only crash injection point (C7).
+
+    Reads ``CRASH_INJECT_POINT`` env var; if its value matches
+    ``checkpoint``, emits the canonical barrier token
+    (``CLOSE_OLD_COMPLETE``) to stdout (flushed) and sleeps to give a
+    parent test process a deterministic window to SIGKILL this
+    subprocess between the close-old UPDATE and the activate-new UPDATE.
+    No-op when env var absent OR value doesn't match — zero production
+    cost. NEVER raises (defensive try/except internal).
+
+    Per docs/migration/06_TESTING.md Tier 4 + B-270 closure.
+    """
+    try:
+        import os, sys, time  # noqa: PLC0415 — lazy by design
+        if os.environ.get("CRASH_INJECT_POINT") != checkpoint:
+            return
+        print("CLOSE_OLD_COMPLETE", flush=True)
+        sleep_seconds = float(os.environ.get("CRASH_INJECT_SLEEP_SECONDS", "10"))
+        time.sleep(sleep_seconds)
+    except Exception:  # noqa: BLE001 — production path MUST NOT be polluted
+        # Defensive: env-var read or sleep failed for an unknown reason.
+        # Swallow — the test harness is opt-in and any failure means we
+        # silently degrade to "no-op", matching the env-var-absent case.
+        return
+
+
 @dataclass
 class SCD2Result:
     """Results from SCD2 promotion."""
@@ -532,6 +587,13 @@ def run_scd2(
             source_end_dt=delete_close_source_end,
             label_suffix="delete_close",
         )
+
+    # B-270: test-only crash injection point (C7) — fires only when
+    # CRASH_INJECT_POINT=after_close_old; no-op otherwise. Boundary
+    # between close-old (Step 2) and activate-new (Step 3) per the
+    # B-14 transient zero-active-row window — a crash here is the
+    # canonical "in-flight orphan" recovery target.
+    _crash_test_harness_c7()
 
     # --- Step 3: ACTIVATE — flip new versions to active (E-2/E-18) ---
     # New versions (operation="U"/"R") were inserted with UdmActiveFlag=0 to avoid

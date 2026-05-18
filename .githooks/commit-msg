@@ -1,0 +1,41 @@
+#!/bin/sh
+# commit-msg hook — Mechanism C-1 exemption-phrase check per B-307 + B-310
+#
+# Cross-platform bash wrapper per B-310 Cycle 1 fix (2026-05-16): Windows
+# git-bash lacks `python3` in PATH. Bash wrapper detects available Python
+# interpreter then invokes tools/check_commit_msg.py with COMMIT_EDITMSG path
+# as $1 (git commit-msg hook contract).
+#
+# Reliably handles ALL commit modes (interactive editor, git commit -m, -F file, --amend).
+#
+# Producer cannot bypass mechanically without `--no-verify` (self-flagging).
+#
+# Same installation as pre-commit (`git config core.hooksPath .githooks`);
+# both hooks activate atomically since they live in the same directory.
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CHECKER="${REPO_ROOT}/tools/check_commit_msg.py"
+
+# Detect Python interpreter (cross-platform per B-310)
+if [ -x "${REPO_ROOT}/.venv/Scripts/python.exe" ]; then
+    PYTHON="${REPO_ROOT}/.venv/Scripts/python.exe"
+elif [ -x "${REPO_ROOT}/.venv/bin/python" ]; then
+    PYTHON="${REPO_ROOT}/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON="python3"
+elif command -v py >/dev/null 2>&1; then
+    PYTHON="py -3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON="python"
+else
+    echo "[commit-msg WARN] no Python interpreter found; check skipped." >&2
+    exit 0
+fi
+
+if [ ! -f "${CHECKER}" ]; then
+    echo "[commit-msg WARN] checker not found at ${CHECKER}; check skipped." >&2
+    exit 0
+fi
+
+# Invoke checker with COMMIT_EDITMSG path as $1
+${PYTHON} "${CHECKER}" "$1"

@@ -1,0 +1,48 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "PowerShell",
+      "Read(C:/Users/bigba/Desktop/Test_Repo-main/**)",
+      "Write(C:/Users/bigba/Desktop/Test_Repo-main/**)",
+      "Edit(C:/Users/bigba/Desktop/Test_Repo-main/**)",
+      "Read(C:\\Users\\bigba\\Desktop\\Test_Repo-main\\**)",
+      "Write(C:\\Users\\bigba\\Desktop\\Test_Repo-main\\**)",
+      "Edit(C:\\Users\\bigba\\Desktop\\Test_Repo-main\\**)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".venv\\Scripts\\python.exe .claude\\hooks\\session-start-logger.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".venv\\Scripts\\python.exe .claude\\hooks\\protect-primary-docs.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".venv\\Scripts\\python.exe .claude\\hooks\\auto-verify-step-10.py"
+          }
+        ]
+      }
+    ]
+  }
+}

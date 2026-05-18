@@ -1,6 +1,6 @@
 ---
 name: udm-brainstorm
-description: Explores design alternatives for an open architectural question before code or schema is written. Use when a question has more than one defensible answer (e.g. "how should we represent X?", "what's the failure mode for Y?", "is Z the right scope?"). Force-enumerates options, names trade-offs, recommends one. Inspired by Superpowers brainstorm discipline; tailored to our decision/edge-case framework.
+description: Explores design alternatives for an open architectural question before code or schema is written. Use when a question has more than one defensible answer (e.g. "how should we represent X?", "what's the failure mode for Y?", "is Z the right scope?"). Force-enumerates options, names trade-offs, recommends one. Inspired by Superpowers `brainstorming` discipline (`obra/superpowers` v5.1.0 — https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md ; MIT licensed); evolved for UDM with NORTH_STAR pillar scoring + mandatory D-number / edge-case cross-ref + "It depends is not an answer" explicit-recommendation rule. See `docs/migration/_research/superpowers-framework-2026-05-15.md` §5 deep-dive comparison.
 ---
 
 # UDM Design Brainstorm
@@ -19,6 +19,7 @@ Use this skill when facing an open design question. Force three or more alternat
 
 Whoever invokes this skill (main agent or subagent) MUST have performed the Canonical Context Load (per `docs/migration/MULTI_AGENT_GUIDE.md` § Canonical Context Load) before generating alternatives.
 
+- **Stage 0 — Routing manifest** (recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3): `docs/migration/INDEX.md` — read FIRST when uncertain which downstream Stage 1+2+3 docs your task actually needs. Skip when: you already know which Stage 1+2+3 docs to load (typical for recurring task patterns).
 - **Stage 1 — Orientation** (mandatory, 4 reads): `NORTH_STAR.md` (re-read — every option must be scored against pillar implications), `HANDOFF.md`, `CURRENT_STATE.md`, `CHECKS_AND_BALANCES.md`
 - **Stage 2 — Risk + Backlog awareness** (mandatory): `RISKS.md` (each option may create / mitigate a risk), `BACKLOG.md`, `_validation_log.md`
 - **Stage 3 — Task-specific reads for this skill**: `03_DECISIONS.md` (existing decisions on the topic — DON'T re-decide); `04_EDGE_CASES.md` (related cases the option creates or solves)

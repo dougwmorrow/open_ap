@@ -1,0 +1,481 @@
+# UDM Project Blindspot Ledger
+#
+# Queryable + executable encoding of HANDOFF.md §8 Pitfall #9 sub-classes 9.a-9.o.
+#
+# Each entry's `detection_rule` describes (in Python pseudocode + grep-style regex)
+# what a context-scanner should check to surface drift BEFORE it ships.
+#
+# Schema:
+#   id              : kebab-case unique identifier
+#   class           : drift category (canonical-source-drift | discipline-not-applied | render-drift | etc.)
+#   severity        : p0 (blocks lock) | p1 (must fix before close-out) | p2 (deferrable to backlog)
+#   agents          : roles that should query this entry (producer | reviewer | parent | any)
+#   tags            : free-form labels for matching (sp-body / schema / build-cohort / commit-message / etc.)
+#   symptom         : 1-sentence description of what the drift looks like in practice
+#   detection_rule  : grep / scan / count check; expressed as pseudo-code + concrete regex when applicable
+#   remediation     : what to do once the rule fires
+#   evidence_base   : count of empirical occurrences observed
+#   evidence_first  : where the first occurrence was caught
+#   evidence_commits: list of commit hashes (when applicable)
+#   handoff_anchor  : line reference in HANDOFF.md §8 for the prose source
+#
+# Maintained per `docs/migration/blindspots/protocol.md`. New entries follow
+# 3-event threshold (HANDOFF §8 convention) before formalization.
+
+version: 1
+last_updated: 2026-05-16
+source: HANDOFF.md §8 Pitfall #9 sub-class accumulator (9.a-9.o)
+notes: |
+  Pitfall #9.a-9.h are CANONICAL-SOURCE-DRIFT class (the producer typed the wrong
+  thing because their working memory of canonical schema/spec was incomplete).
+  Pitfall #9.i-9.o are DISCIPLINE-NOT-APPLIED class (the producer skipped a
+  formalized check).
+
+  Sub-class IDs map directly to HANDOFF anchor names so a reader can jump from
+  ledger entry to the prose source. When the ledger and HANDOFF disagree, HANDOFF
+  is canonical and the ledger needs updating.
+
+entries:
+
+  - id: 9a-column-name-drift
+    class: canonical-source-drift
+    severity: p1
+    agents: [producer, reviewer]
+    tags: [schema, sp-body, runbook, decision-body]
+    symptom: |
+      Invented or misspelled column name on a canonical UDM table. Examples:
+      `LastHeartbeat` (canonical `LastHeartbeatAt`); `FailureReason` on
+      IdempotencyLedger (canonical `ErrorMessage`); `FileSizeBytes` on
+      ParquetSnapshotRegistry (canonical has `CompressedBytes` + `UncompressedBytes`).
+    detection_rule: |
+      For every column reference in a candidate artifact:
+        1. Extract `{Table}.{Column}` patterns via regex `\b([A-Z][A-Za-z]+)\.([A-Z][A-Za-z]+)\b`
+        2. Look up Table in phase1/01_database_schema.md canonical DDL section
+        3. Verify Column appears in canonical column list
+        4. If absent: FAIL with suggestion = closest fuzzy match (Levenshtein <= 3)
+    remediation: |
+      Re-read the canonical DDL section in phase1/01_database_schema.md for the
+      referenced table. Replace the drifted column name with the canonical name.
+      Add the table's column list to your working notes BEFORE the next edit so
+      memory drift doesn't recur in the same artifact.
+    evidence_base: 3
+    evidence_first: D49 v2->v3 review cycle
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 265"
+
+  - id: 9b-parameter-name-drift
+    class: canonical-source-drift
+    severity: p1
+    agents: [producer, reviewer]
+    tags: [sp-signature, sp-body, runbook, decision-body]
+    symptom: |
+      Invented SP parameter name OR drift on existing one. Examples:
+      `@Verdict` vs canonical SP-4 `@Action`; invented `@RetentionDate` on
+      SP-10 (canonical takes only `@DryRun`); invented `@TokenList` / `@SubjectId`
+      / `@ActorName` on anticipated CCPA SP before signature locked.
+    detection_rule: |
+      For every `@ParameterName` reference in candidate artifact:
+        1. Identify the SP name (`SP-N` or `General.ops.ProcXyz`)
+        2. Look up SP in phase1/01_database_schema.md SP section
+        3. Verify @ParameterName appears in canonical CREATE PROCEDURE signature
+        4. If absent: FAIL with suggestion = SP's canonical parameter list
+    remediation: |
+      Re-read canonical CREATE PROCEDURE signature in phase1/01_database_schema.md.
+      Replace drifted parameter name. Per D92 forward-only schema evolution: do
+      NOT rename existing parameters; add new parameters at end of list with
+      default values.
+    evidence_base: 3
+    evidence_first: Round 2 second-pass
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 266"
+
+  - id: 9c-enum-value-drift
+    class: canonical-source-drift
+    severity: p1
+    agents: [producer, reviewer]
+    tags: [sp-body, check-constraint, enum]
+    symptom: |
+      Invented enum value OR drift on existing one. Examples:
+      `STARTED` / `RUNNING` / `SUCCEEDED` vs canonical CK_PipelineEventLog_Status
+      IN ('IN_PROGRESS','SUCCESS','FAILED','SKIPPED'); SP-4 @Action values
+      'exit' / 'failover' vs canonical 'EXIT_SUCCEEDED' / 'EXIT_RUNNING_HEALTHY'
+      / 'PROCEED_FAILOVER'.
+    detection_rule: |
+      For every enum value reference:
+        1. Identify the enum context (column CHECK constraint OR SP @Action values)
+        2. Look up canonical allowed-values list in phase1/01_database_schema.md
+        3. Verify referenced value appears in canonical list
+        4. If absent: FAIL with canonical allowed-values list as suggestion
+    remediation: |
+      Re-read the CK_* CHECK constraint OR SP signature in canonical DDL.
+      Replace drifted value with canonical. Do NOT invent new enum values
+      without explicit D-number additive evolution per D40 / D92.
+    evidence_base: 3
+    evidence_first: Round 2 second-pass
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 267"
+
+  - id: 9d-type-width-drift
+    class: canonical-source-drift
+    severity: p1
+    agents: [producer, reviewer]
+    tags: [schema, sp-signature, dataclass]
+    symptom: |
+      Correct base type, wrong width. Example: `@PiiType NVARCHAR(50)` vs
+      canonical NVARCHAR(20).
+    detection_rule: |
+      For every `(N)VARCHAR(N)` / `DECIMAL(N,M)` / `DATETIME2(N)` / `NUMERIC(N,M)`
+      reference:
+        1. Identify the column or parameter (Table.Column or @Param)
+        2. Look up canonical width in phase1/01_database_schema.md
+        3. Verify width matches
+        4. If different: FAIL with canonical width as fix
+    remediation: |
+      Re-read canonical DDL for exact width. Replace drifted width with canonical.
+    evidence_base: 1
+    evidence_first: Round 3 second-pass
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 268"
+
+  - id: 9e-unicode-vs-ascii-type-drift
+    class: canonical-source-drift
+    severity: p1
+    agents: [producer, reviewer]
+    tags: [schema, sp-signature]
+    symptom: |
+      NVARCHAR swapped with VARCHAR (or vice versa). Also CHAR vs NCHAR,
+      TEXT vs NTEXT. Example: `@Token NVARCHAR(40)` vs canonical VARCHAR(40).
+    detection_rule: |
+      For every NVARCHAR / VARCHAR / NCHAR / CHAR / NTEXT / TEXT reference:
+        1. Identify the column or parameter
+        2. Look up canonical type in phase1/01_database_schema.md
+        3. Verify N-prefix presence matches canonical
+        4. If different: FAIL with canonical type
+    remediation: |
+      Re-read canonical DDL for exact type. Replace drifted type with canonical.
+      Note: token storage MAY use VARCHAR (ASCII-safe) but free-text fields
+      typically use NVARCHAR (Unicode-safe). Canonical choice is binding.
+    evidence_base: 1
+    evidence_first: Round 3 second-pass
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 269"
+
+  - id: 9f-cross-table-column-lift
+    class: canonical-source-drift
+    severity: p1
+    agents: [producer, reviewer]
+    tags: [schema, sp-body, decision-body]
+    symptom: |
+      Column name that exists on Table A applied to Table B where it doesn't
+      exist. Examples: `ServerRole` exists on PipelineEventLog but cited as
+      `PipelineExecutionGate.ServerRole` (canonical column is `ExecutingServer`);
+      invented `StatusChangedAt` / `StatusChangedBy` on ParquetSnapshotRegistry
+      (canonical has per-transition columns `LastVerifiedAt` / `PurgedAt` / etc.).
+    detection_rule: |
+      For every `{Table}.{Column}` reference:
+        1. Look up Table.Column in canonical DDL
+        2. If Column absent on Table BUT Column exists on a DIFFERENT table:
+           FAIL with cross-table lift warning ("Column X exists on Table Y, not Z")
+    remediation: |
+      Re-read both tables' canonical DDL. Identify which table is correct for
+      the cited context. Replace drifted reference with canonical column for
+      the intended table.
+    evidence_base: 2
+    evidence_first: Round 3 deep validation cycle 4
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 270"
+
+  - id: 9g-python-keyword-only-marker-drift
+    class: canonical-source-drift
+    severity: p2
+    agents: [producer, reviewer]
+    tags: [function-signature, python, build-cohort, spec-doc]
+    symptom: |
+      Round 3 module signatures use `def fn(*, ...)` per PEP 3102; Round 4 spec
+      citations dropped the `*,` marker. Example:
+      `verify_parquet_snapshot(registry_id, actor)` vs canonical
+      `verify_parquet_snapshot(*, registry_id, actor)`.
+    detection_rule: |
+      For every Python function-signature citation in spec docs / runbooks:
+        1. Extract `def fn_name(...)` patterns
+        2. Look up fn_name in canonical module source
+        3. Verify `*,` marker presence matches canonical
+        4. If canonical has `*,` but citation doesn't: FAIL with kwarg-only requirement
+    remediation: |
+      Re-read canonical function signature. Restore `*,` marker. Note: this
+      is a real semantic difference — callers without `*,` may pass positional
+      arguments that the canonical signature rejects.
+    evidence_base: 6
+    evidence_first: Round 4 cycle 3 (B95)
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 271"
+
+  - id: 9h-wrong-section-number-invented-description
+    class: canonical-source-drift
+    severity: p1
+    agents: [producer, reviewer]
+    tags: [cross-reference, spec-doc, runbook]
+    symptom: |
+      Producer cites `§ X.Y.Z` that doesn't exist OR cites wrong section with
+      invented narrative description. Example: cited "Round 2 § 5.3.5 (failover
+      acknowledgment narrative)" — canonical § 5.3.5 is "Per-AM/PM-cycle column
+      matrix"; failover narrative lives at § 5.4. Round 6 R6C4 sleeper-bug:
+      cited "Round 5 § 8 Q4 reconciliation lateness" — canonical Q4 is "Vault
+      key/token rotation proof (annual)".
+    detection_rule: |
+      For every `§ X.Y.Z` / `Round N § A` / `phase1/0X.md § Y` cross-reference:
+        1. Resolve the target doc + section number
+        2. Read the actual section heading at that location
+        3. If heading mismatch OR section doesn't exist: FAIL with actual heading
+        4. If citation includes narrative description, verify description matches
+           the actual section content (compare first 100 words)
+    remediation: |
+      Open the target doc. Find the correct section number for the cited
+      narrative. Update either the section number OR the narrative description
+      to match. Never both (one should anchor the other).
+    evidence_base: 3
+    evidence_first: Round 4 cycle 8 sleeper-bug stress test (B107)
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 272"
+
+  - id: 9i-process-discipline-claim-drift
+    class: discipline-not-applied
+    severity: p0
+    agents: [producer, reviewer, parent]
+    tags: [b-item, status-render, summary-count, forward-reference]
+    symptom: |
+      False-closure claims using B-number range as proxy for content; trailing
+      summary count drift (table row count != summary prose count after row
+      addition); stale B-range references; silent-omission of mandated triage
+      items; invented forward-reference (citing B141 before B141 is defined).
+    detection_rule: |
+      For every cycle-N edit that adds/removes a B-item OR changes a count:
+        1. Regex-sweep `B\d+-B\d+` across the doc; verify all bounds match
+           current upper-B-number
+        2. Verify every B-number cited as "closing" lives in this doc's
+           content (NOT inferred from range)
+        3. Verify every B-number proposed in prior round's § 11.2 + § 12.5
+           is classified in this round's § 12.1/§ 12.3/§ 12.4 (no silent omissions)
+        4. Verify trailing summary count prose matches table row count
+        5. Verify all forward-references either define cited B-number OR mark
+           as "candidate" / "future"
+    remediation: |
+      Run the 5-step producer self-check above. Fix mismatches inline.
+      If forward-reference introduced: define the B-number in this cycle OR
+      mark explicitly as "candidate".
+    evidence_base: 10
+    evidence_first: Round 5 cycles 1-4 (B120)
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 273"
+
+  - id: 9j-b-item-status-render-discipline
+    class: render-drift
+    severity: p2
+    agents: [producer]
+    tags: [b-item, badge, status-render, backlog]
+    symptom: |
+      B-item entries showing leading status badge (`🟡 Open`) AND inline
+      `**CLOSED YYYY-MM-DD**` annotation in the same row create render-discipline
+      drift. The inline annotation is canonical; the leading badge stale.
+    detection_rule: |
+      For every B-N row in BACKLOG.md (or any tracker):
+        1. Extract leading status badge (`🟡 Open` / `⚫ Closed` / etc.)
+        2. Search row body for inline `**CLOSED \d{4}-\d{2}-\d{2}**` annotation
+        3. If body has CLOSED annotation AND leading badge is Open (or vice
+           versa): FAIL
+        4. Inline annotation is canonical; leading badge should flip to match
+    remediation: |
+      Flip leading badge to match canonical inline annotation. Use exact
+      strikethrough format per BACKLOG convention.
+    evidence_base: 26
+    evidence_first: R6 unscoped Pattern F audit 2026-05-11
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 294"
+
+  - id: 9k-arithmetic-propagation-drift
+    class: discipline-not-applied
+    severity: p1
+    agents: [producer, reviewer]
+    tags: [count, total, summary-prose, cross-doc-cascade]
+    symptom: |
+      Count / total / sum / row-index updated in one location, parallel
+      references in other docs OR within the same doc's summary prose not
+      propagated.
+    detection_rule: |
+      For every cycle-N edit that modifies a count / row-index / aggregate:
+        1. Regex-sweep the doc for the OLD count value; verify zero remaining
+           stale references
+        2. Regex-sweep cross-doc cascade per D93 for the same count's mirrors
+        3. If edit invokes a count via prose ("13 cascade docs"), prefer
+           enumeration over count-only ("13 cascade docs: A, B, C, ...")
+    remediation: |
+      Update all stale references. Add enumeration where prose count exists
+      to make the count auditable.
+    evidence_base: 5
+    evidence_first: 2026-05-12 D113 cascade
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 296"
+
+  - id: 9l-canonical-schema-detail-working-memory-drift
+    class: canonical-source-drift
+    severity: p0
+    agents: [producer]
+    tags: [schema, sp-body, dataclass, wave-spawn-brief]
+    symptom: |
+      A fix or new artifact that references a canonical schema object drifts
+      because the producer relied on partial/stale/summary representations
+      rather than re-reading the canonical DDL section before authoring.
+      EXTENDED 2026-05-14: also covers canonical-spec-signature working-memory
+      drift at wave-spawn cadence (paraphrased function names / parameters /
+      return-value shapes in subagent briefs).
+    detection_rule: |
+      Before authoring a fix that references canonical schema columns / row
+      shapes / natural keys (SchemaContract / PiiVault / UdmTablesList /
+      PipelineEventLog / IdempotencyLedger / ParquetSnapshotRegistry / etc.):
+        1. Check producer's working notes for canonical DDL section read in
+           current cycle
+        2. If absent OR prior-cycle: FAIL with mandatory re-read directive
+      For wave-spawn briefs (subagent prompts):
+        1. Check brief for verbatim function signature from canonical spec
+        2. If paraphrased: FAIL with mandatory verbatim citation
+    remediation: |
+      Re-read canonical DDL section in phase1/01_database_schema.md (or
+      relevant phase1/0X_*.md spec) before authoring fix.
+      For wave-spawn briefs: cite canonical spec section number + signature
+      verbatim.
+    evidence_base: 9
+    evidence_first: 2026-05-12 Phase 2 R1 spec doc Pattern E cycles 2-6
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 298"
+
+  - id: 9m-discipline-not-applied-to-own-tracker
+    class: discipline-not-applied
+    severity: p1
+    agents: [producer, parent]
+    tags: [self-application, skill-authoring, tracker-authoring]
+    symptom: |
+      When a new tracker / discipline / convention is authored, the discipline
+      is NOT immediately applied to verify the tracker itself satisfies its
+      own rules.
+    detection_rule: |
+      For every commit authoring a new tracker / skill / D-number / discipline:
+        1. Identify the rule the new artifact imposes
+        2. Check the new artifact itself for compliance with that rule
+        3. If non-compliant: FAIL (e.g., new skill mandates _validation_log.md
+           rows; skill creation commit must include its own _validation_log row)
+    remediation: |
+      Apply the rule to the artifact that authored it. Verify pass before
+      claiming the discipline is locked.
+    evidence_base: 2
+    evidence_first: 2026-05-12 D113 POLISH_QUEUE lock
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 300"
+
+  - id: 9n-convention-registration-not-applied-to-new-build-artifacts
+    class: discipline-not-applied
+    severity: p1
+    agents: [producer]
+    tags: [step-10, claude-md, glossary, build-cohort]
+    symptom: |
+      After authoring a NEW module / tool / public surface, producer's
+      self-check Steps 1-9 don't include CLAUDE.md "Structure" subsection or
+      GLOSSARY public-surface registration — gaps caught only at post-hoc
+      gap-check (1-4 day lag).
+    detection_rule: |
+      For every commit adding a new module/tool/public surface in
+      tools/ data_load/ cdc/ scd2/ orchestration/ schema/ extract/ etc.:
+        1. Extract new public surface from git diff (new top-level def/class/
+           UPPERCASE constant; NOT underscore-prefixed)
+        2. Verify CLAUDE.md "Structure" subsection has the new file row
+        3. Verify GLOSSARY.md public-surface tables include the new exports
+        4. Verify Last reviewed date bumped
+        5. If new EventType constant: verify CLAUDE.md L325 CLI_* family
+           registry updated
+        6. If any missing: FAIL with registration directive (per Step 10)
+    remediation: |
+      Apply Step 10 inline before the gap-check. Register new artifact in
+      CLAUDE.md Structure + GLOSSARY + CLI_* family registry (if applicable).
+    evidence_base: 3
+    evidence_first: Wave 3 cohort gap-check F-6 2026-05-13
+    evidence_commits: []
+    handoff_anchor: "HANDOFF.md §8 line 304"
+
+  - id: 9o-recursive-exemption-rationalization
+    class: discipline-not-applied
+    severity: p0
+    agents: [parent, producer]
+    tags: [hard-rule-14, cascade-application, post-edit-verification, meta-commit]
+    symptom: |
+      Commit claims hard rule 14 cascade exemption via "paired-judgment Gate 2
+      covers META-COMMIT scope" OR similar recursive-coverage claim. Same skill
+      (typically udm-gap-check) deferred in N consecutive same-session commits
+      with VARIED pragmatic-exemption rationales.
+    detection_rule: |
+      For every commit message:
+        1. Check for phrases: "triple-counted review" | "recursive exemption" |
+           "Gate 2 covers" | "paired-judgment IS gap-check" | "by analogy"
+        2. If match: identify FILES that sub-agents cited as reviewed
+        3. Identify FILES modified by META-COMMIT
+        4. Compute overlap percentage
+        5. If overlap < 80% AND commit claims exemption: FAIL with anti-
+           rationalization clause invocation
+        6. If recursion-depth claim made: verify explicit termination citation
+           (Layer N+1 = legitimate termination)
+    remediation: |
+      Apply hard rule 14 cascade Step 2 (udm-gap-check) on the META-COMMIT
+      scope explicitly. Cite specific FILES reviewed by sub-agents vs FILES
+      modified by META-COMMIT. Justify recursion-depth + termination point
+      if claiming Layer N+1 exemption.
+    evidence_base: 5
+    evidence_first: 2026-05-15 commit 521b68c
+    evidence_commits:
+      - 521b68c
+      - 3eef410
+      - aee329c
+      - a03a35c
+      - 4112e92
+    handoff_anchor: "HANDOFF.md §8 line 302"
+
+# Auxiliary surface (per HANDOFF §8 line 275-279)
+#
+# Sub-classes above also apply to these surfaces; not formalized as separate
+# entries because evidence-base < 3-event threshold OR the surface is a
+# natural extension of an existing entry.
+#
+# - off_by_n_line_citations: covered by 9h (wrong section number) — extends to
+#   line range citations (e.g., L1472-1474 when canonical spans L1472-1476)
+# - datetime_numeric_precisions: covered by 9d (type-width drift) — extends to
+#   DATETIME2(3) vs (7); DECIMAL(18,2) vs (10,4)
+# - dataclass_field_names: covered by 9a (column-name drift) Python equivalent —
+#   invented field on a canonical dataclass (e.g., ParityReport.generated_at)
+
+auxiliary_surface:
+  off_by_n_line_citations:
+    covered_by: 9h-wrong-section-number-invented-description
+    note: "Extends section-number drift to L-range citations"
+  datetime_numeric_precisions:
+    covered_by: 9d-type-width-drift
+    note: "Same rule; precision is a width variant"
+  dataclass_field_names:
+    covered_by: 9a-column-name-drift
+    note: "Python dataclass field is the column equivalent"
+
+# Severity guidance
+#
+# p0: BLOCKS lock / 🟢 status flip. Must fix before commit. Cascade halts.
+# p1: must fix before round close-out. Can land in commit if tracked.
+# p2: deferrable to backlog. Open B-N at minimum.
+
+severity_guide:
+  p0: "Blocks lock / 🟢 status flip. Cascade halts."
+  p1: "Must fix before round close-out. Trackable in commit."
+  p2: "Deferrable to backlog. Open B-N at minimum."
+
+# Cross-references
+#
+# - HANDOFF.md §8 Pitfall #9: canonical prose source for all entries
+# - CLAUDE.md hard rules 9 / 11 / 13 / 14: discipline enforcement
+# - docs/migration/blindspots/protocol.md: how to query + add entries
+# - tools/query_blindspots.py: CLI scanner
+# - .claude/skills/udm-gap-check/SKILL.md: gap-check invocation pattern
+# - .claude/skills/udm-step-10-verifier/SKILL.md: in-flight Step 10 verification

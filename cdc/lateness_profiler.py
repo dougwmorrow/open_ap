@@ -358,6 +358,21 @@ def _compute_percentile(samples: list[float], percentile: float) -> float:
     returns the 99 cut-points dividing the data into 100 quantiles. The
     p-th percentile is the (p-1)-th cut-point (0-indexed).
 
+    Monotonicity invariant: ``statistics.quantiles()`` can produce
+    non-monotonic cuts when the input distribution clusters tightly
+    (multiple samples within a few ULPs of each other) due to floating-
+    point arithmetic order. Empirically observed at sample distributions
+    like ``[0.0]*27 + [29.7...]*3`` where cut[95] > cut[96] by ~7e-15
+    (~4 ULPs at value 29.7). The monotonicity-clip below enforces
+    ``cuts[i] >= cuts[i-1]`` so downstream LatenessReport invariants
+    (``p50 <= p90 <= p95 <= p99``) hold under any input distribution.
+
+    The clip is conservative — it pins each cut to the running max,
+    which IS the correct semantics for non-decreasing percentiles
+    (a higher quantile cannot mathematically be lower than a lower
+    quantile in a sorted distribution). The "drift" comes from FP
+    arithmetic, not from the underlying mathematics.
+
     :param samples: non-empty list of float lateness samples.
     :param percentile: one of ``50``, ``90``, ``95``, ``99``.
     """
@@ -371,6 +386,16 @@ def _compute_percentile(samples: list[float], percentile: float) -> float:
     # statistics.quantiles requires at least 2 samples.
     cuts = statistics.quantiles(samples, n=100, method="inclusive")
     # cuts has 99 elements: cuts[0] = p1, cuts[49] = p50, cuts[98] = p99.
+
+    # Monotonicity-clip: enforce cuts[i] >= cuts[i-1] to defend against
+    # FP precision violations in statistics.quantiles. See docstring above
+    # for empirical evidence + rationale. Mutates the local list in place;
+    # statistics.quantiles returns a fresh list each call so no shared
+    # state risk.
+    for i in range(1, len(cuts)):
+        if cuts[i] < cuts[i - 1]:
+            cuts[i] = cuts[i - 1]
+
     idx = int(percentile) - 1
     if idx < 0 or idx >= len(cuts):
         raise ValueError(

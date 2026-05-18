@@ -348,8 +348,8 @@ After restart, Bronze converges to the same final state as a clean run with the 
 
 ## Tier 5 — Audit / Compliance Verification
 
-**Run**: quarterly + ad hoc on auditor request.
-**Budget**: full business day with operator.
+**Run**: quarterly (Q1-Q9) + weekly (Q10 only — backup integrity per W-12 cadence) + ad hoc on auditor request.
+**Budget**: full business day with operator (quarterly cycle); ~30 minutes per Q10 weekly run.
 **Tool**: manual scripted procedures + reports.
 
 ### Q1 — Point-in-time query proof
@@ -388,14 +388,69 @@ Pick three random business dates in the last quarter. For each:
 
 Quarterly server failover rehearsal. Pass criteria documented in RB-7.
 
+### Q6 — CLI audit trail verification
+
+Extends the Q1-Q5 vault-side surface with operator-CLI audit-row coverage per Round 4 D76 contract. Closes phase1/05_tests.md § 8.2 Q6 spec.
+
+1. Pull last quarter's CLI rows: `SELECT BatchId, EventType, Metadata FROM General.ops.PipelineEventLog WHERE EventType LIKE 'CLI_%' AND CreatedAt >= DATEADD(quarter, -1, SYSUTCDATETIME())`
+2. Pick 3 random rows
+3. Parse `Metadata` JSON for each; verify `actor` is non-empty AND matches operator records (cross-reference HR / on-call rota for the row's date)
+4. For audit-justification-required CLIs (`CLI_DECRYPT_PII` / `CLI_PROCESS_CCPA_DELETION` / `CLI_ENFORCE_RETENTION`): verify `justification` is non-empty AND follows the per-CLI-spec pattern
+5. P5 compliance: scan `Metadata` JSON for plaintext PII patterns (SSN / credit-card / email-with-domain) — assert no matches
+
+### Q7 — Tier 0 drift audit
+
+Confirms the spec-vs-test contract enforced by `tools/verify_tier0_drift.py` (per B58) has not regressed since the prior quarter. Closes phase1/05_tests.md § 8.2 Q7 spec.
+
+1. Run `python -m tools.verify_tier0_drift` (writes `tests/audit_reports/tier0_drift_<date>.md`)
+2. Read the produced report; record overall verdict
+3. Assert overall ≤ 🟡 (no 🔴 modules); for any 🟡: investigate cause; either align tests with spec OR open B-N for spec-vs-test divergence
+4. Cross-reference any closed-or-deferred B-N from prior Q7 audits against the current report to confirm fixes landed
+5. File the report in this quarter's audit-report file (cite the verify_tier0_drift output path)
+
+### Q8 — Reviewer effectiveness ledger audit
+
+Verifies the Round 8 self-improvement loop (D95-D99) is functioning: false-clean rates stay within bounds and approved deltas land. Closes phase1/05_tests.md § 8.2 Q8 spec.
+
+1. Read `docs/migration/_reviewer_effectiveness.md` trend tables for the quarter
+2. For each specialty role, compute false-clean rate = % of cycles where the specialty returned ✅ but post-cycle review (gap-check / Pattern E next cycle / Pattern F audit) found 🔴 they should have caught
+3. Assert no role exceeds 25% over the quarter (per `udm-specialty-tuner` D95 RETIRE-OR-PAIR threshold); if exceeded, open B-N
+4. Read `docs/migration/_agent_evolution/<agent>-changelog.md` for each prompt-versioned agent; verify all approved deltas from prior round close-outs landed (semver bumps applied per D98)
+5. Note any specialty roles whose 6+-event evidence base shows false-clean rate >10% but ≤25% — REFINE candidate per D95
+
+### Q9 — CCPA deletion proof
+
+Verifies CCPA right-to-deletion (D30 + RB-10) is end-to-end honored: deletions logged, tokens unrecoverable post-deletion. Closes phase1/05_tests.md § 8.2 Q9 spec.
+
+1. Pick 1 historical CCPA request from last quarter: `SELECT TOP 1 RequestId, SubjectIdentifier, Justification, RequestedBy, Actor, RequestedAt FROM General.ops.CcpaDeletionLog WHERE RequestedAt >= DATEADD(quarter, -1, SYSUTCDATETIME()) ORDER BY NEWID()`
+2. Verify the row carries valid `RequestId` (UUID), non-empty `Justification`, non-empty `Actor` + `RequestedBy`
+3. Pick 1-3 tokens from the deletion's `TokenList` (queryable via `PiiVault` rows whose `DeletedPerRequest = RequestId`)
+4. For each token: invoke `python -m tools.decrypt_pii --token <T> --request-id <RequestId> --justification "Q9 quarterly audit"`
+5. Assert each returns `VERDICT_CCPA_DELETED` OR `VERDICT_NOT_FOUND` — never `VERDICT_DECRYPTED` (per RB-10 contract; CCPA-deleted tokens MUST be unrecoverable post-deletion)
+
+### Q10 — Backup integrity drill (weekly cadence)
+
+NOTE: only Tier 5 drill that runs **weekly**, not quarterly. Mirrors the W-12 vault restore test cadence noted in CLAUDE.md. Closes phase1/05_tests.md § 8.2 Q10 spec.
+
+1. Restore latest PiiVault backup to staging per backup runbook (cite the runbook in the drill report)
+2. Query 100 random tokens from staging: `SELECT TOP 100 TokenId, EncryptedPlaintext FROM Staging.ops.PiiVault ORDER BY NEWID()`
+3. Decrypt each via `python -m tools.decrypt_pii --token <T> --request-id <generated UUID> --justification "Q10 weekly backup integrity"` against the staging restore
+4. Cross-check decrypted plaintext against expected (independent reference dataset OR `PiiTokenProvenance` audit trail in production)
+5. Assert 100/100 match; on ANY mismatch: 🔴 incident — pause production CCPA / decrypt operations, file incident note in `RISKS.md`, investigate
+6. File weekly summary at `docs/migration/audit_reports/Q10_weekly_<YYYY-WW>.md` (separate from quarterly Q1-Q9 file per the cadence mismatch)
+
 ### Reporting
 
-Each quarter, file the audit verification report in `docs/migration/audit_reports/QYYYY_QN.md` with:
+Each quarter, file the audit verification report for Q1-Q9 in `docs/migration/audit_reports/QYYYY_QN.md` with:
 - Date executed
 - Operator + reviewer signatures
 - Per-question pass/fail
 - Any issues discovered + remediation taken
 - Next quarter's focus areas
+
+Q10 (weekly) files separately at `docs/migration/audit_reports/Q10_weekly_<YYYY-WW>.md` per its independent cadence.
+
+A starting template lives at `docs/migration/audit_reports/_TEMPLATE_quarterly.md` (quarterly Q1-Q9) + `docs/migration/audit_reports/_TEMPLATE_q10_weekly.md` (Q10).
 
 ---
 

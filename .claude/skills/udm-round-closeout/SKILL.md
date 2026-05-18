@@ -25,6 +25,7 @@ Per-round meta-skill that runs AFTER all per-artifact validations have completed
 
 Whoever invokes this skill (main agent or subagent) MUST have performed the Canonical Context Load (per `docs/migration/MULTI_AGENT_GUIDE.md` § Canonical Context Load) before applying this skill's discipline.
 
+- **Stage 0 — Routing manifest** (recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3): `docs/migration/INDEX.md` — read FIRST when uncertain which downstream Stage 1+2+3 docs your task actually needs. Skip when: you already know which Stage 1+2+3 docs to load (typical for recurring task patterns).
 - **Stage 1 — Orientation** (mandatory, 4 reads): `NORTH_STAR.md`, `HANDOFF.md`, `CURRENT_STATE.md`, `CHECKS_AND_BALANCES.md`
 - **Stage 2 — Risk + Backlog awareness** (mandatory): `RISKS.md`, `BACKLOG.md`, `_validation_log.md`
 - **Stage 2.5 — Polish queue skim** (recommended; introduced 2026-05-12 per D113): `POLISH_QUEUE.md` ← skim P-N items the closing round touched; convert any 🟡 Open items the round's substantive work covered into ⚫ CLOSED rows inline; NOT part of artifact-correctness validation (P-items are by construction NOT load-bearing on correctness)

@@ -1207,6 +1207,77 @@ Alternatives considered:
 
 ---
 
+### D62 — Amendment 2026-05-15 (D.3 of MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.5)
+
+**Status**: 🟢 Locked 2026-05-15 (additive amendment to original D62 body above; preserves Stage 1-4 protocol unchanged; adds Stage 0 + downstream-artifact cross-refs + discipline-floor extensions). Authored per D.3 of the markdown refactor effort. Lock authority: pipeline-lead Option A path approval ("B-273 → D.2 → D.3 → D.4") 2026-05-15.
+
+**Amendment scope**: ADDITIVE only — extends CCL with a recommended-not-mandatory Stage 0 routing-manifest read; cross-refs new downstream artifacts (PLANNING_DISCIPLINE.md / INDEX.md / `_refactor_log.md` / `_archive/` / CLAUDE_GOTCHAS.md) that didn't exist when D62 was originally locked; acknowledges numerical drift in §Affects skill/agent counts; codifies discipline-floor additions since lock. Original D62 Stage 1-4 semantics, Verification rule, Self-edit fallback, and Trivial-task exception remain unchanged + binding.
+
+#### Stage 0 — Routing manifest (NEW; recommended-not-mandatory)
+
+- **`docs/migration/INDEX.md`** — master routing manifest in llms.txt format; authored 2026-05-15 per D.2 Phase 1 task 1.3 + MARKDOWN_REFACTOR_PLAN.md §13.2. Read FIRST when uncertain which downstream Stage 1+2+3 docs your task actually needs. Skip when: you already know which Stage 1+2+3 docs you need (typical for experienced agents on recurring task patterns).
+
+**Why recommended-not-mandatory**: experienced agents on recurring tasks don't need INDEX.md routing — they already know which Stage 1 docs to load. Mandatory Stage 0 for ALL invocations would add overhead without proportional value. The recommendation gate captures the benefit (discoverability for novel task patterns + fresh-agent onboarding) without imposing the cost on every invocation.
+
+**Evaluation heuristic** (added 2026-05-16 per B-289 closure): If your task-type does not map to a known recurring pattern from prior rounds, treat Stage 0 as mandatory. Closes the asymmetry where experienced agents correctly skip Stage 0 on familiar work BUT fresh agents on novel task patterns may also skip (incorrectly). The recurring-pattern test: have you (or any prior agent on this branch) performed a task with this scope + artifact-set + invocation context within the last 3-5 rounds? If NO → Stage 0 mandatory; consult INDEX.md before proceeding.
+
+#### Downstream-artifact cross-refs added (per PLANNING_DISCIPLINE.md §1.4)
+
+Artifacts authored since D62 lock that the doctrine now references:
+
+- **`docs/migration/PLANNING_DISCIPLINE.md`** (authored 2026-05-15) — skill-selection matrix + sub-agent inheritance contract; binding per CLAUDE.md hard rule 13
+- **`docs/migration/INDEX.md`** (authored 2026-05-15) — CCL Stage 0 master routing manifest (see above)
+- **`docs/migration/_refactor_log.md`** (authored 2026-05-15) — append-only refactor audit trail per Option B belt-and-suspenders strategy
+- **`docs/migration/_archive/`** subdirectory (created 2026-05-15) — verbatim refactor archive home; recovery path without git archaeology
+- **`docs/migration/CLAUDE_GOTCHAS.md`** (authored 2026-05-15) — extracted gotcha sidecar per D.5 trim; active reference for B-N/E-N/V-N/W-N/OBS-N/SCD2-*/LT-*/DIAG-*/Item-* code-level lookups
+
+#### Discipline-floor additions since D62 lock (augment CCL without superseding)
+
+These extend the CCL protocol with structural disciplines added across Rounds 4-8 + this session:
+
+- **CLAUDE.md hard rule 13** (introduced 2026-05-15) — planning-session skill-activation discipline + sub-agent inheritance contract binding for ALL agents/skills/multi-agent-teams. CCL Stage 1+2 is still mandatory; hard rule 13 adds skill-selection discipline ON TOP.
+- **`superpowers-verification-before-completion`** (imported 2026-05-15 from `obra/superpowers` v5.1.0; MIT) — ALWAYS-MANDATORY pre-completion gate per PLANNING_DISCIPLINE.md §2.3. Iron Law: "NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE". Pairs with CCL: CCL ensures inputs are correct; verification-before-completion ensures outputs are real.
+- **`superpowers-systematic-debugging`** (imported 2026-05-15 from `obra/superpowers` v5.1.0) — ALWAYS-MANDATORY for any debugging scope. Iron Law: "NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST". Closes gap that no `udm-*` skill addresses structured debugging methodology.
+- **`superpowers-tdd`** (imported 2026-05-15) — OPTIONAL conditional for PS-3 TOOL scope. RED-GREEN-REFACTOR test-driven-development discipline.
+- **B-280 verbatim-extraction-safety** (formalized 2026-05-15 from D.5 trim Pitfall #9.l sub-pattern recurrence) — use `git show <pre-commit>:<file>` or `curl` for byte-exact content extraction. Avoid Write-tool re-typing of escape-sequence-bearing content (rendering pipeline can collapse ` `/` ` escape sequences to literal U+2028/U+2029 control characters — the exact BCP-corrupting pattern B-6 warns against).
+
+#### Numerical drift acknowledgment (per Pitfall #9.k arithmetic-propagation)
+
+Original D62 §Affects enumerated:
+- "all 8 skills in `.claude/skills/`" → as of 2026-05-15: **22+ project `udm-*` skills + 3 imported `superpowers-*` skills + multiple non-project skills = 25+ total**
+- "all 3 agents in `.claude/agents/`" → as of 2026-05-15: **5-7 project agents** (udm-design-reviewer, udm-test-author, udm-researcher, udm-cascade-auditor, udm-data-engineer-review, udm-checks-and-balances-agent)
+
+To be reconciled at next round close-out via `udm-cascade-audit-evolver` count-refresh (B-N candidate; pending recurrence-evidence per HANDOFF §8 sub-class accumulator). These drifts do NOT invalidate the original D62 discipline; they reflect organic accumulation of skills/agents across Rounds 4-8 + this session's planning-discipline + Superpowers partial-adoption work.
+
+#### Forward-strategy contract (per PLANNING_DISCIPLINE.md §1.5)
+
+Any future PS-2 DOC scope refactor (markdown trim / split / extract / relocate) MUST follow Option B belt-and-suspenders strategy:
+1. Always archive verbatim to `_archive/` via `git show <pre-commit>:<file>` byte-exact extraction
+2. Always cross-ref from active file to canonical destination(s)
+3. Always log to `_refactor_log.md` with full provenance
+4. Always preserve non-git recovery path
+
+#### Amendment cross-references
+
+- `MARKDOWN_REFACTOR_PLAN.md` §7.1 task 1.5 (D.3 task definition)
+- `MARKDOWN_REFACTOR_PLAN.md` §18 phase breakdown (D.0-D.6 sequence)
+- `INDEX.md` (CCL Stage 0 artifact)
+- `PLANNING_DISCIPLINE.md` §1.4 (downstream artifacts) + §1.5 (refactor-strategy contract) + §2.3 (always-mandatory skills extension)
+- `_refactor_log.md` (audit trail of all refactor events; binding template)
+- `MULTI_AGENT_GUIDE.md` §"Stage 0 — Routing manifest" subsection (added 2026-05-15 cross-ref to INDEX.md)
+- CLAUDE.md hard rule 13 (planning-session skill-activation; binding)
+- B-N closures this session: B-273 (F9.1 one-directional relaxation) + B-279 (research-grounding)
+- B-N opens this session: B-272 + B-274 through B-284 (12 cumulative)
+- Commits this session: ec1ced1 → 521b68c → 1b00755 → e15cd3a → bacfebe → c189432 → 7e2c606 → bd7e6e5 → c6aa546 → 4c6d11f → 395d22d (11 commits to D.3 amendment + this commit)
+
+**Amendment author**: Parent agent per D.3 cascade execution 2026-05-15 per user Option A path authorization.
+
+**Acceptance**: amendment locks 🟢 same-session per D111 process-infra exemption precedent (analogous to D55 / D60 / D89-D91 / D95-D99 / D113 — process-discipline meta-decisions don't gate on 🟡-first attestation when the discipline they encode is itself first-event-evidenced and pipeline-lead approved via Option A path).
+
+**Acceptance footnote (post-hoc 2026-05-16 per B-285 closure)**: The D111 exemption was applied to this additive amendment **by ANALOGY** to D111's enumerated exempt class (meta-process decisions / design patterns / schema-evolution discipline) — NOT by explicit text of D111. D111's body at `03_DECISIONS.md` L3154 enumerates the exempt class for ORIGINAL decisions; it does not explicitly enumerate "additive amendments to decisions already in the exempt class." The amendment's analogy is reasonable (additive amendments preserve original semantics + add no operational-infra claims) but the precedent was undocumented at lock time. **B-285 post-hoc reviewer pass 2026-05-16** closes the substantiation gap via paired Gate 2 invocation: udm-design-reviewer agent (13th cumulative sub-agent inheritance contract application) + udm-checks-and-balances 5-gate (14th application) — both verdicts integrated into `_validation_log.md` second-pass entry citing original D.3 lock at L8773. Pattern F convergent finding A-1 + post-hoc gap-check G4 finding closed via this review. **Follow-up tracking**: B-292 (open) tracks formal extension of D111 exempt-class to include additive amendments (closure target: next round close-out via udm-cascade-audit-evolver). Until B-292 closes, future additive D-N amendments invoking D111 exemption MUST cite both D111 + this footnote + the closure of B-285 as the precedent chain.
+
+---
+
 ## D63: `UdmTablesList` new column inventory + idempotent ALTER DDL
 
 **Status**: 🟢 Locked (after first-pass + mandatory second-pass + third-pass per D56 — see `_validation_log.md` 2026-05-10 Round 2 entries)
@@ -3086,6 +3157,8 @@ This decision **SUPERSEDES** the B156 advisory framing concern. The R7C1-5 advis
 
 **Decisions exempt from D111**: structural / architectural / schema-evolution / pillar-mapping decisions whose locked value is NOT falsifiable by operator query (e.g., "use Polars SCD2 with INSERT-first pattern" = design choice, not operational fact). Exempt class includes design patterns, edge-case mitigation, schema-evolution discipline, meta-process decisions like D111 itself.
 
+**Additive-amendment exemption extension (added 2026-05-17 per B-292 closure; codifies precedent established at B-285 Pattern F audit + B-289 D62 Evaluation heuristic addition + Phase 2A B-317 CLAUDE.md hard rule 14 substrate-edit clause)**: The exempt class above ALSO covers **additive amendments to decisions already in the exempt class** (note: ALL cited precedents amended OTHER exempt-class artifacts — D62 + CLAUDE.md hard rule 14 — NOT D111 itself), WHEN both conditions hold: **(a)** the amendment preserves the original decision's semantics; AND **(b)** the amendment introduces no new operational-infra claims (no new operator-falsifiable fact about paths / schedules / hostnames / deployment topologies / etc.). Pattern: when a locked structural/architectural/meta-process D-N gains a clarifying paragraph (e.g., D62 Evaluation heuristic addition per B-289 commit `983e73c`), a substrate-edit clause (e.g., CLAUDE.md hard rule 14 substrate-edit clause per B-317 Phase 2A commit `c0ad9c6`), or a footnote extension (e.g., D62 acceptance footnote per B-285 Pattern F audit commit `4112e92`), the amendment lands without requiring a fresh propose-then-attest cycle because the amendment is operationally invisible (test: would the amendment be falsifiable by an operator query against the running environment? If NO, it's exempt). This extension closes the precedent-citation gap that B-292 originally surfaced: the analogy was applied implicitly at 3 prior commit cycles without explicit D111 body authorization.
+
 D111 is a META-DISCIPLINE about WHEN to flip status — doesn't supersede prior operational-infra D-numbers retroactively. Existing 🟢 Locked operational-infra decisions stay locked per D92. D111 applies prospectively.
 
 **Rationale**:
@@ -3207,6 +3280,70 @@ Each plan covers canonical structure: Purpose + Why-this-phase-exists + For-engi
 **Risk delta** (per D61): No new R-numbers. ⬇️ DE-ESCALATED a sub-class of R28 (round-level cascade self-attestation gap) — pre-D113, cosmetic render-drift had no dedicated home, leaking into BACKLOG WSJF view OR ad-hoc `_validation_log.md` deferral lists OR silent rot; POLISH_QUEUE.md gives render-drift a typed substrate with closure mechanism. R01 strict-closure counter unchanged (D113 is process-discipline, not a Phase 0 deliverable).
 
 **See also**: `POLISH_QUEUE.md` + `HANDOFF.md` §8 Pitfall #9.j + D55 + D60 + D61 + D89-D91 + D92 + D95-D99 + D111 + B144 + `_validation_log.md` 2026-05-12 multi-agent cascade entry + 2026-05-12 residual-sweep entry + 2026-05-12 D113 lock entry (next).
+
+---
+
+## D114 — AppLaunchpad blindspot-ledger high-ROI subset adoption (🟢 Locked 2026-05-16)
+
+**Status**: 🟢 Locked 2026-05-16
+
+**Pillars served (per D61)**: operationally-stable (catches discipline-drift in-flight rather than post-hoc) + idempotent (executable + queryable discipline encoding) + auditable (every cascade event logged + ledger-validated)
+
+**Driver**: discipline-debt-accumulation pattern surfaced 5x in 2026-05-15→2026-05-16 session (commits `521b68c` / `3eef410` / `aee329c` / `a03a35c` / `4112e92` — see HANDOFF §8 Pitfall #9.o for full evidence base). Prose-only encoding of Pitfall #9 sub-classes in HANDOFF §8 required producer SELF-CHECK at the right moment; the 5-event empirical base proved producer self-check is necessary-but-insufficient. Catch-time lag = 1-4 days (post-hoc gap-check). User-direction "let's create an agentic system that triggers these events rather than relying on skills. Research how to use langchain or related python libraries" → research grounding via `_research/agentic-orchestration-architecture-2026-05-16.md` (35 citations) → user-provided AppLaunchpad source spec at `agentic-architecture.md` → gap analysis at `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` (18-section REUSE/ADAPT/SKIP/DECISION-NEEDED matrix) → user decisions D1-D6 (high-ROI subset only; no orchestrator / no substrate / no Slack).
+
+**Decision**: Adopt the high-ROI subset of AppLaunchpad's agentic-software-factory pattern, scoped to (a) blindspot ledger YAML encoding + protocol + CLI scanner per AppLaunchpad §12 Layer 3, and (b) conservative Claude Code hooks per AppLaunchpad §12 Layer 1. Defer full AppLaunchpad replica (orchestrator + event store + ingester + Slack + cockpit + substrate per AppLaunchpad §§ 5-13) unless and until the high-ROI subset proves durable value over ≥1 week of operator use.
+
+**Specifically locked**:
+
+1. **Blindspot ledger location**: `docs/migration/blindspots/{ledger.yml, protocol.md}` (per user D-answer choice "docs/migration/blindspots/ (Recommended)" 2026-05-16). REJECTED alternatives: AppLaunchpad source-spec convention `playbooks/blindspots/` (would split discipline-content from `docs/migration/` canonical tree); `.claude/blindspots/` (would obscure from human readers browsing docs).
+
+2. **Detection-rule implementation tier**: 4 of 15 rules implemented Phase 1 (`check_9j_b_item_status_render` + `check_9o_recursive_exemption` + `check_9n_convention_registration` + `check_9h_off_by_n_line_citation`). 11 remaining rules deferred to Phase 2 per B-295 sub-item 7 (require schema parsing OR multi-doc cross-reference infrastructure beyond pure-stdlib Phase 1 scope). Transparency-via-skipped-checks: CLI reports skipped entries explicitly per query invocation so producers know exactly which rules are not yet enforced.
+
+3. **Hook scope**: conservative (per user D-answer choice "Conservative (Recommended)" 2026-05-16). `PreToolUse` warn-only on 6 protected primary docs (`03_DECISIONS.md` / `NORTH_STAR.md` / `02_PHASES.md` / `CHECKS_AND_BALANCES.md` / `HANDOFF.md` / `CLAUDE.md`); `PostToolUse` auto-invoke `query_blindspots --file <relative_path>` on Edit/Write to source files only (10 source dirs: `tools/ data_load/ cdc/ scd2/ orchestration/ schema/ extract/ observability/ utils/ migrations/`; skips test files + docs + `.claude/`); `SessionStart` optional log to `_session_logs/` if directory exists. ALL hooks exit 0 (no blocking; warn-only per first-deployment safety). REJECTED alternatives: Aggressive (would fire on every Edit/Write to docs/migration/ adding noise to normal doc editing); Opt-in only (would defeat the discipline by making mechanism manual-trigger).
+
+4. **CLI execution classification**: Manual × Recurring + Automated-via-Claude-Code-hook (NEW category; not in existing canonical `ONE_OFF_SCRIPTS.md` / `phase1/02_configuration.md §5.1 Automic frozen-N` taxonomy). Tracked in `ONE_OFF_SCRIPTS.md §"Ad-hoc operator tools"` as closest fit; full classification rationale documented in that entry. Not Automic-scheduled (no fixed `*/N` schedule); not one-off (recurring); hook-driven invocation is novel to UDM as of D114.
+
+5. **Substrate**: dev-workstation only (Windows 11). `.venv\Scripts\python.exe` invocation in `.claude/settings.json` hooks. Mac/Linux dev workstations have known limitation (silent hook failure for `protect-primary-docs.py` and `session-start-logger.py`; `auto-verify-step-10.py` has `sys.executable` fallback). Per D103 security model, Claude Code is dev-workstation only; not on test/prod RHEL servers. Cross-platform hook support deferred per B-295 sub-item 15.
+
+6. **Audit row backing**: `_session_logs/cli_query_blindspots_<date>.log` JSON-line append-only (per `_emit_audit_row` in `tools/query_blindspots.py`). DB-side `General.ops.PipelineEventLog` `CLI_QUERY_BLINDSPOTS` event type registered in CLAUDE.md L197 CLI_* family registry (15 → 16) but NOT YET wired to DB write (Phase 2 work when SQL Server connectivity available outside production pipeline context).
+
+7. **Composition with existing discipline mechanisms**: AUGMENTS, does NOT replace. The ledger is one data source that `udm-gap-check` / `udm-step-10-verifier` / Pattern F audit / hard rule 14 cascade Step 2 can query. Future `udm-gap-check` SKILL.md update (B-295 sub-item not yet enumerated; Phase 2 candidate) will explicitly invoke the ledger as first check; current state = ledger callable but skill not yet wired to invoke it.
+
+**Trade-offs accepted**:
+
+- **NOT building full AppLaunchpad replica**: orchestrator + event store + ingester + vault frontmatter + Slack + cockpit + substrate are all deferred. The high-ROI subset addresses the 5-event Pitfall #9.o pattern via executable detection without the ~10-15-day infrastructure cost of full replica. If subset proves insufficient, full replica remains a clean re-evaluation point (the gap analysis at `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` is the resume-from-here artifact).
+
+- **4-of-15 detection rules implemented (Phase 1)**: 11 remaining rules registered in ledger but report as "skipped" in CLI output. Honest gap disclosure rather than false-completeness pretending. Phase 2 work to extend remaining rules sequenced after ≥1 week empirical use of Phase 1 4-rule subset.
+
+- **Warn-only hooks (no blocking)**: first-deployment safety preferred over enforcement. If false-positive rate proves low + signal proves valuable over time, future D-N could promote hooks from warn to block (e.g., `--live` mode default for pre-commit). Currently dev-workstation only per D103.
+
+- **DB-less audit row (file-based)**: dev-workstation has no `General.ops.PipelineEventLog` connectivity outside pipeline runs. `_session_logs/` JSON-line append serves as audit substrate. When pipeline-environment integration becomes scope-relevant, future D-N can promote audit-row writes to DB-side.
+
+- **Heuristic detection rules** (not semantic): regex + structural checks. Producer review distinguishes true vs false positives. Documented limitation in `protocol.md` §Limitations.
+
+- **Non-Pull-Based**: AppLaunchpad Principle D (Pull-not-Push) explicitly NOT adopted. UDM remains push-based (parent agent invokes skills when user types trigger phrase). Pull-based architecture requires orchestrator + substrate (deferred per #5 + user D-answer D2 SKIP).
+
+**Cross-references**:
+
+- AppLaunchpad source spec: `agentic-architecture.md` at repo root (920 lines; user-provided; §12 Layer 3 blindspot ledger pattern is the direct source for this adoption)
+- Research grounding: `_research/agentic-orchestration-architecture-2026-05-16.md` (35 primary-source citations; LangGraph vs CrewAI vs AutoGen vs Anthropic SDK comparison; recommends Claude Code native over LangGraph for this project's scope)
+- Gap analysis: `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` (18-section REUSE/ADAPT/SKIP/DECISION-NEEDED matrix; resume-from-here artifact if full-replica adoption ever resumed)
+- Implementation: `tools/query_blindspots.py` (574 lines per actual `wc -l` at 570ac67) + `docs/migration/blindspots/{ledger.yml, protocol.md}` (481 + 244 lines per actual `wc -l` at 570ac67; original D114 narrative had stale 379+220 counts from f699250 build-time per Pitfall #9.k arithmetic-propagation drift caught at instance-6 gap-check 570ac67-post-hoc) + `.claude/hooks/{protect-primary-docs.py, auto-verify-step-10.py, session-start-logger.py}` + `.claude/settings.json` hook handlers
+- Tests: `tests/tier0/test_query_blindspots.py` (9 tests) + `tests/tier1/test_query_blindspots_checks.py` (25 tests including 7 added at commit `d645cee` for B-295 sub-items 8 + 9 fixes)
+- Tracked closures: B-294 (this adoption itself; ⚫ CLOSED `f699250`) + B-293 (backfill from compacted-session gap surfaced by tool's first production run; ⚫ CLOSED `f699250`) + B-295 sub-items 8 + 9 (regex tightening + scope-awareness; ⚫ CLOSED `d645cee`)
+- Forward-tracked open work: B-295 16-item follow-up cohort (10 remaining sub-items as of D114 lock; 4-6 cycles forecast per user calibration question 2026-05-16)
+- Composition: CLAUDE.md hard rules 9 (progress-logger) / 11 (gap-check mandatory) / 13 (planning-discipline sub-agent inheritance) / 14 (post-edit verification cascade + anti-rationalization clause); HANDOFF §8 Pitfall #9.a-9.o canonical prose source; `udm-step-10-verifier` skill (composes with ledger 9.n check); `udm-gap-check` skill (Phase 2 will invoke ledger as first check); Pattern F `udm-cascade-auditor` (proposed Trigger H = ledger queries at round close-out per `_research/applaunchpad-udm-gap-analysis-2026-05-16.md` recommendation)
+- Per D62 + D113 + D89-D91 + D95-D99 precedent: process-infra D-number locks same-session as the discipline it formalizes; D111's 🟡-first operational-infra rule does NOT apply (process-discipline scope per D111 body text)
+
+**Reversibility**: reversible. If the high-ROI subset proves insufficient OR produces false-positive fatigue (R33 candidate per design-reviewer 2026-05-16) OR the operator burden exceeds benefit, future D-N can supersede D114 (retire `tools/query_blindspots.py` + hooks + `blindspots/` ledger; revert to prose-only HANDOFF §8 discipline). Pre-revert escape hatch: ledger remains valuable archival reference even if execution mechanism retired.
+
+**Risk delta (per D61)**:
+
+- **NEW R33 candidate**: blindspot-ledger false-positive fatigue. The 9.o + 9.h checks have inherent over-fire potential (descriptive vs applicative context distinction is heuristic). If operators learn to dismiss matches without review, detector loses credibility. Severity Low × Medium = 2. Mitigated empirically by B-295 sub-items 8 + 9 fix (10→1 match reduction on BACKLOG.md; 90% false-positive reduction); will revisit if pattern recurs after Phase 1 4-rule subset has ≥1 week operator use.
+- **MITIGATED R16 sub-class** (CCL compliance honor-system): `auto-verify-step-10.py` hook mechanically invokes the ledger on every source edit, shifting catch-time from honor-system post-hoc to at-edit-time for the 4 implemented checks. Partial mitigation (11 of 15 rules still unimplemented). R16 score unchanged but sub-class of catch-time concern partially addressed.
+- **DE-ESCALATED R28 sub-class** (cascade self-attestation gap): `protect-primary-docs.py` adds a low-friction reminder whenever a protected primary doc is edited, providing structural defense against unauthorized cascade edits. Not full mitigation of R28; de-escalates the subclass of "cascade edit proceeds without awareness."
+
+**See also**: `BACKLOG.md` B-293 / B-294 / B-295 + `_validation_log.md` 2026-05-16 entries (AppLaunchpad adoption + B-295 sub-items 8 + 9 closure) + HANDOFF §8 Pitfall #9.o + AppLaunchpad source spec `agentic-architecture.md` + research artifacts above + `_session_logs/cli_query_blindspots_<date>.log` (live audit trail).
 
 ---
 

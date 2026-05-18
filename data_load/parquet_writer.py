@@ -269,6 +269,57 @@ def _get_cursor_for():
 
 
 # ---------------------------------------------------------------------------
+# Internal: B-270 env-var-gated crash-injection harness (test-only)
+#
+# Tier 4 (Round 5 § 7 + docs/migration/06_TESTING.md) needs a deterministic
+# crash boundary AFTER the inflight Parquet write succeeds but BEFORE the
+# atomic rename — so a parent test process can SIGKILL this subprocess and
+# verify the inflight file remains on disk + no registry row was created
+# (C2 canonical crash injection point per Round 5 § 7 inventory).
+#
+# Contract:
+#   - Reads ``CRASH_INJECT_POINT`` env var; only fires when value matches
+#     the ``checkpoint`` argument (default ``"after_inflight_write"``).
+#   - Emits the canonical barrier token ``INFLIGHT_WRITE_DONE`` to stdout
+#     (flushed immediately) so the parent test process sees it before the
+#     sleep window opens.
+#   - Sleeps ``CRASH_INJECT_SLEEP_SECONDS`` seconds (default 10) so the
+#     parent has a deterministic window to SIGKILL this process before
+#     the rename happens.
+#   - No-op when env var absent OR value doesn't match the checkpoint.
+#     Zero production cost (one ``os.environ.get`` lookup + branch).
+#   - NEVER raises — defensive try/except internal — pollution of the
+#     production path is the only failure mode we cannot accept.
+# ---------------------------------------------------------------------------
+
+
+def _crash_test_harness_c2(checkpoint: str = "after_inflight_write") -> None:
+    """B-270 closure: env-var-gated test-only crash injection point (C2).
+
+    Reads ``CRASH_INJECT_POINT`` env var; if its value matches
+    ``checkpoint``, emits the canonical barrier token
+    (``INFLIGHT_WRITE_DONE``) to stdout (flushed) and sleeps to give a
+    parent test process a deterministic window to SIGKILL this
+    subprocess. No-op when env var absent OR value doesn't match — zero
+    production cost. NEVER raises (defensive try/except internal).
+
+    Per docs/migration/06_TESTING.md Tier 4 + B-270 closure.
+    """
+    try:
+        import os, sys, time  # noqa: PLC0415 — lazy by design
+        if os.environ.get("CRASH_INJECT_POINT") != checkpoint:
+            return
+        print("INFLIGHT_WRITE_DONE", flush=True)
+        sleep_seconds = float(os.environ.get("CRASH_INJECT_SLEEP_SECONDS", "10"))
+        time.sleep(sleep_seconds)
+    except Exception:  # noqa: BLE001 — production path MUST NOT be polluted
+        # Defensive: env-var read or sleep failed for an unknown reason.
+        # Swallow — the test harness is opt-in and any failure means we
+        # silently degrade to "no-op", matching the env-var-absent case.
+        return
+
+
+# ---------------------------------------------------------------------------
 # Internal: pyodbc UNIQUE-violation detection
 #
 # Mirrors ``utils.idempotency_ledger._is_unique_violation`` (kept in-module
@@ -699,6 +750,10 @@ def write_parquet_snapshot(
         statistics=PARQUET_STATISTICS,
         use_pyarrow=PARQUET_USE_PYARROW,
     )
+
+    # B-270: test-only crash injection point (C2) — fires only when
+    # CRASH_INJECT_POINT=after_inflight_write; no-op otherwise.
+    _crash_test_harness_c2()
 
     # ------------------------------------------------------------------
     # Step 4-5: atomic rename + parent fsync per D16.

@@ -191,10 +191,35 @@ logger = logging.getLogger(__name__)
 
 EXIT_SUCCESS = 0
 EXIT_WARNING = 1
+#: Alias for ``EXIT_WARNING`` — matches the canonical D74 + parent task-brief
+#: naming used in sibling tools (e.g. ``parquet_verify.EXIT_OPERATIONAL_FAILURE``).
+#: Per § 4 L159 the exit-1 tier is documented as "some rows skipped" which the
+#: parent task-brief names "operational warning"; both spellings are exported
+#: so downstream callers can use whichever name matches their context.
+EXIT_OPERATIONAL = EXIT_WARNING
 EXIT_FATAL = 2
 
 # D76 EventType registered in CLAUDE.md CLI_* family registry.
 EVENT_TYPE = "CLI_IMPORT_PII_INVENTORY"
+
+
+# ---------------------------------------------------------------------------
+# Public surface (per Step 10 udm-step-10-verifier discipline)
+# ---------------------------------------------------------------------------
+
+__all__ = [
+    # D76 EventType + D74 exit-code constants
+    "EVENT_TYPE",
+    "EXIT_SUCCESS",
+    "EXIT_WARNING",
+    "EXIT_OPERATIONAL",
+    "EXIT_FATAL",
+    # Entry points
+    "main",
+    "cli_main",
+    # Helpers (exported for test injection + composition)
+    "_build_parser",
+]
 
 
 # ---------------------------------------------------------------------------

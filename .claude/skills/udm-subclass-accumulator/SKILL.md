@@ -15,6 +15,7 @@ Third close-out analysis skill. Detects emerging Pitfall #9 sub-class patterns +
 
 ## Canonical Context Load (CCL) per D62
 
+- **Stage 0**: `docs/migration/INDEX.md` (routing manifest; recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3; read FIRST when uncertain which downstream Stage 1+2+3 docs your task needs; skip when you already know).
 - **Stage 1**: `NORTH_STAR.md` + `HANDOFF.md` (§8 sub-class accumulator) + `CURRENT_STATE.md` + `CHECKS_AND_BALANCES.md`
 - **Stage 2**: `RISKS.md` + `BACKLOG.md` + `_validation_log.md` (this round's entry + prior rounds for cross-round pattern matching)
 - **Stage 3**: `_reviewer_effectiveness.md` (specialty correlation); prior subclass-accumulator outputs at `docs/migration/_agent_evolution/subclass-accumulator-round*-*.md`

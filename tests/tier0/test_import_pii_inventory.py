@@ -535,3 +535,38 @@ def test_tier0_total_runtime_under_5s():
         f"Took {elapsed:.2f} s. Module is likely performing real I/O — "
         "check for missing mocks (pyodbc, csv file read, network)."
     )
+
+
+# Step 10 verifier discipline addition per B189 closure cohort 2026-05-17
+# (Worker B agentId a17541f3b4a4f68f6 added `__all__` + EXIT_OPERATIONAL alias;
+# this assertion validates Step 10 public-surface registration is correct +
+# alias resolves to canonical EXIT_WARNING value per D74).
+def test_tool_public_surface_and_exit_operational_alias():
+    """(h) Step 10 verifier: `__all__` exports + `EXIT_OPERATIONAL` alias
+    correctly resolved to `EXIT_WARNING` (= 1) per D74 exit-code contract.
+    Per B189 closure 2026-05-17 + Worker B `a17541f3b4a4f68f6` Step 10
+    registration additions.
+    """
+    mod = _load_module()
+
+    # __all__ public surface (Step 10 verifier compliance)
+    assert hasattr(mod, "__all__")
+    expected_exports = {
+        "EVENT_TYPE",
+        "EXIT_SUCCESS",
+        "EXIT_WARNING",
+        "EXIT_OPERATIONAL",
+        "EXIT_FATAL",
+        "main",
+        "cli_main",
+        "_build_parser",
+    }
+    actual_exports = set(mod.__all__)
+    assert expected_exports == actual_exports, (
+        f"__all__ drift detected. Expected: {expected_exports - actual_exports} "
+        f"missing; {actual_exports - expected_exports} extra."
+    )
+
+    # EXIT_OPERATIONAL alias resolves to EXIT_WARNING (= 1) per D74
+    assert mod.EXIT_OPERATIONAL == mod.EXIT_WARNING
+    assert mod.EXIT_OPERATIONAL == 1

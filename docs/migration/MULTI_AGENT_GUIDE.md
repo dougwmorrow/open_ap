@@ -241,6 +241,10 @@ Every custom subagent invocation (via the Agent tool) and every project-local sk
 
 D60 + D61 added per-discipline read requirements (HANDOFF, NORTH_STAR, RISKS, BACKLOG) to specific agents and skills, but lists drifted: some agents read 8 docs, some read 3, most skills read none. CCL standardizes the read protocol with a verification rule.
 
+### Stage 0 — Routing manifest (added 2026-05-15 per D.2 Phase 1 task 1.3 + MARKDOWN_REFACTOR_PLAN.md §13.2; recommended-not-mandatory)
+
+0. **`docs/migration/INDEX.md`** — master routing manifest (llms.txt format; ~126 lines; routing-by-intent NOT structural). Read FIRST when you're uncertain which downstream Stage 1+2+3 docs your task actually needs; INDEX provides per-file "task-relevant question this file answers" guidance to avoid loading docs that don't match your task. Skip when: you already know which Stage 1+2+3 docs you need (typical for experienced agents on recurring task patterns).
+
 ### Stage 1 — Orientation (mandatory, 4 reads, before any other Read or substantive tool call)
 
 1. `docs/migration/NORTH_STAR.md` — pillar priority for trade-off resolution

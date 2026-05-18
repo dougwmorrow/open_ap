@@ -1,6 +1,6 @@
 ---
 name: udm-planning
-description: Decomposes a UDM pipeline phase round into 2-5 minute tasks with verification criteria. Use at the start of each round, when scoping a sub-area, or when work feels too big to estimate. Inspired by Superpowers planning discipline; tailored to our six-step deep dive cycle (Plan → Validate → QA → Edge Cases → Validate Edge Cases → Sign-off).
+description: Decomposes a UDM pipeline phase round into 2-5 minute tasks with verification criteria. Use at the start of each round, when scoping a sub-area, or when work feels too big to estimate. Inspired by Superpowers `writing-plans` discipline (`obra/superpowers` v5.1.0 — https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md ; MIT licensed); evolved for UDM with per-task D-number + edge-case citation requirements + 6-step deep dive cycle mapping (Plan → Validate → QA → Edge Cases → Validate Edge Cases → Sign-off) + CCL Stage 1+2 precondition. Upstream version produces saved markdown at `docs/superpowers/plans/<date>.md`; project version produces in-session task tree. See `docs/migration/_research/superpowers-framework-2026-05-15.md` §5 deep-dive comparison.
 ---
 
 # UDM Round Planning
@@ -29,6 +29,7 @@ ROUND <N> — <topic>
 
 Whoever invokes this skill (main agent or subagent) MUST have performed the Canonical Context Load (per `docs/migration/MULTI_AGENT_GUIDE.md` § Canonical Context Load) before decomposing a round.
 
+- **Stage 0 — Routing manifest** (recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3): `docs/migration/INDEX.md` — read FIRST when uncertain which downstream Stage 1+2+3 docs your task actually needs. Skip when: you already know which Stage 1+2+3 docs to load (typical for recurring task patterns).
 - **Stage 1 — Orientation** (mandatory, 4 reads): `NORTH_STAR.md`, `HANDOFF.md`, `CURRENT_STATE.md`, `CHECKS_AND_BALANCES.md`
 - **Stage 2 — Risk + Backlog awareness** (mandatory): `RISKS.md`, `BACKLOG.md`, `_validation_log.md`
 - **Stage 3 — Task-specific reads for this skill**: `02_PHASES.md` (phase plan + deliverables); `PHASE_1_DEEP_DIVE_PLAN.md` (Phase 1 specifically); the current phase's `00_phase_overview.md` (e.g., `phase1/00_phase_overview.md` for Phase 1)

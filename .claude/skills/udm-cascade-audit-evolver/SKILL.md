@@ -19,6 +19,7 @@ Seventh skill, optional but recommended. Pattern F's discipline-evolution counte
 
 ## Canonical Context Load (CCL) per D62
 
+- **Stage 0**: `docs/migration/INDEX.md` (routing manifest; recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3; read FIRST when uncertain which downstream Stage 1+2+3 docs your task needs; skip when you already know).
 - **Stage 1**: `NORTH_STAR.md` + `HANDOFF.md` (§8 Pitfall #11 + §3 D89-D91) + `CURRENT_STATE.md` + `CHECKS_AND_BALANCES.md` (Pattern F discipline)
 - **Stage 2**: `RISKS.md` (R28 cascade self-attestation) + `BACKLOG.md` + `_validation_log.md` (this round's Pattern F entry)
 - **Stage 2.5**: `POLISH_QUEUE.md` (added 2026-05-12 per D113) ← skim 🟡 Open + ⚫ CLOSED P-N items from the closing round; cosmetic items closed inline OR newly surfaced are within Pattern F audit scope (Trigger E — convention registration sub-class — and Trigger B — closure-target audit — both apply to P-numbers analogously to B-numbers)

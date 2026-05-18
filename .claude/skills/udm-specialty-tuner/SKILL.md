@@ -20,6 +20,7 @@ Second close-out analysis skill. Identifies reviewer specialties with degrading 
 
 ## Canonical Context Load (CCL) per D62
 
+- **Stage 0**: `docs/migration/INDEX.md` (routing manifest; recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3; read FIRST when uncertain which downstream Stage 1+2+3 docs your task needs; skip when you already know).
 - **Stage 1**: `NORTH_STAR.md` + `HANDOFF.md` + `CURRENT_STATE.md` + `CHECKS_AND_BALANCES.md`
 - **Stage 2**: `RISKS.md` + `BACKLOG.md` + `_validation_log.md`
 - **Stage 3**: `_reviewer_effectiveness.md` (trend tables + per-round data); `MULTI_AGENT_GUIDE.md` § Pattern E (current specialty composition); reviewer agent prompts at `.claude/agents/udm-*.md`

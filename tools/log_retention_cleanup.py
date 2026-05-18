@@ -788,13 +788,18 @@ def main(
         )
 
     # Resolve general_db tag (matches B188 / B189 / B190 pattern).
+    # B-218 fix: per spec section 3.10 L1295 + D74, config absence is FATAL --
+    # do NOT fall back to a guess. Cannot DELETE rows on a config guess.
+    config_import_error: Exception | None = None
     if general_db is None:
         try:
             import utils.configuration as config  # type: ignore
 
             general_db = getattr(config, "GENERAL_DB", "General")
-        except Exception:  # noqa: BLE001
-            general_db = "General"
+        except ImportError as exc:
+            # Capture; surface as FATAL after result-dict init below.
+            config_import_error = exc
+            general_db = "General"  # provisional for audit-row write only
 
     # ---- Compute cutoffs (naive-UTC per CDC-NOW-MS / SCD2-P1-f invariant) ----
     cutoff_debug_info = (started_at - timedelta(days=debug_info_days)).replace(
@@ -822,6 +827,31 @@ def main(
         "completed_at": None,
         "errors": [],
     }
+
+    # B-218 fix: if config import failed earlier, surface as FATAL per spec
+    # section 3.10 L1295. Result dict is now initialized; write audit row + return.
+    if config_import_error is not None:
+        result["exit_code"] = EXIT_FATAL
+        result["error_type"] = "LogRetentionConfigError"
+        result["error_message"] = f"utils.configuration unavailable: {config_import_error}"
+        result["errors"].append(f"config import failed: {config_import_error}")
+        result["completed_at"] = datetime.now(
+            timezone.utc
+        ).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if not quiet:
+            print(
+                f"FATAL: utils.configuration unavailable: {config_import_error}",
+                file=sys.stderr,
+            )
+        _write_audit_row(
+            result,
+            status="FAILED",
+            error_message=str(config_import_error)[:4000],
+            cursor_factory=audit_cursor_factory,
+            general_db=general_db,
+            skip=no_audit_event,
+        )
+        return result
 
     # ---- Resolve connection factory ----
     if general_cursor_factory is None:

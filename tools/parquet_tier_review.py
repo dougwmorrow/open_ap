@@ -883,6 +883,70 @@ def _validate_args_main(
 
 
 # ---------------------------------------------------------------------------
+# Internal: B-270 env-var-gated crash-injection harness (test-only)
+#
+# Tier 4 (Round 5 § 7 + docs/migration/06_TESTING.md) needs a deterministic
+# crash boundary BETWEEN consecutive ``_apply_transition`` calls in the
+# main --apply batch loop — so a parent test process can SIGKILL this
+# subprocess after N transitions have completed and verify that the
+# already-transitioned rows are durable in the registry while the
+# remaining rows are untouched (registry state-machine atomicity per
+# Round 3 § 1.3 ParquetSnapshotRegistry state machine). C11 canonical
+# crash injection point per Round 5 § 7 inventory.
+#
+# Contract:
+#   - Reads ``CRASH_INJECT_POINT`` env var; only fires when value matches
+#     ``f"after_n_transitions_{n}"`` where ``n`` is the running count of
+#     transitions completed in the loop.
+#   - Emits the canonical barrier token ``f"TRANSITIONS_DONE_{n}"`` to
+#     stdout (flushed immediately) so the parent test process sees the
+#     specific N before the sleep window opens.
+#   - Sleeps ``CRASH_INJECT_SLEEP_SECONDS`` seconds (default 10) so the
+#     parent has a deterministic window to SIGKILL this process before
+#     the next transition runs.
+#   - No-op when env var absent OR value does not match the per-N
+#     checkpoint. Zero production cost (one ``os.environ.get`` lookup +
+#     one f-string format + branch).
+#   - NEVER raises — defensive try/except internal — pollution of the
+#     production path is the only failure mode we cannot accept.
+# ---------------------------------------------------------------------------
+
+
+def _crash_test_harness_c11(n: int) -> None:
+    """B-270 closure: env-var-gated test-only crash injection point (C11).
+
+    Reads ``CRASH_INJECT_POINT`` env var; if its value matches
+    ``f"after_n_transitions_{n}"``, emits the canonical barrier token
+    ``f"TRANSITIONS_DONE_{n}"`` to stdout (flushed) and sleeps to give a
+    parent test process a deterministic window to SIGKILL this
+    subprocess after N transitions have completed. No-op when env var
+    absent OR value does not match the per-N checkpoint — zero production
+    cost. NEVER raises (defensive try/except internal).
+
+    :param n: Running count of transitions completed in the loop. The
+        first call passes ``n=1``, second ``n=2``, etc. Both the
+        checkpoint name and the barrier token incorporate this value
+        so the parent test process can pick a specific transition
+        boundary to crash at.
+
+    Per docs/migration/06_TESTING.md Tier 4 + B-270 closure.
+    """
+    try:
+        import os, sys, time  # noqa: PLC0415 — lazy by design
+        expected_checkpoint = "after_n_transitions_" + str(n)
+        if os.environ.get("CRASH_INJECT_POINT") != expected_checkpoint:
+            return
+        print("TRANSITIONS_DONE_" + str(n), flush=True)
+        sleep_seconds = float(os.environ.get("CRASH_INJECT_SLEEP_SECONDS", "10"))
+        time.sleep(sleep_seconds)
+    except Exception:  # noqa: BLE001 — production path MUST NOT be polluted
+        # Defensive: env-var read or sleep failed for an unknown reason.
+        # Swallow — the test harness is opt-in and any failure means we
+        # silently degrade to "no-op", matching the env-var-absent case.
+        return
+
+
+# ---------------------------------------------------------------------------
 # Top-level main() — programmatic entry point
 # ---------------------------------------------------------------------------
 
@@ -1154,6 +1218,11 @@ def main(
 
         # ---- Apply per-row transitions in --apply mode ----
         if apply and to_status is not None and report_rows:
+            # B-270: running counter of successful transitions for the
+            # C11 crash-injection harness. Increments after EACH success;
+            # the harness only fires when CRASH_INJECT_POINT matches the
+            # per-N checkpoint (no-op in production runs).
+            _transition_count = 0
             for report_row in report_rows:
                 row_id = report_row["RegistryId"]
                 # Find the matching raw row dict (carries the canonical
@@ -1183,6 +1252,12 @@ def main(
                 )
                 if success:
                     result["rows_transitioned"] += 1
+                    _transition_count += 1
+                    # B-270: test-only crash injection point (C11) —
+                    # fires only when CRASH_INJECT_POINT matches
+                    # f"after_n_transitions_{_transition_count}"; no-op
+                    # otherwise.
+                    _crash_test_harness_c11(_transition_count)
                 else:
                     result["rows_failed"] += 1
                     report_row["error_message"] = err

@@ -1,5 +1,6 @@
 ---
 name: udm-progress-logger
+version: v1.1.0
 description: Logs the completion of substantive work to the canonical progress trackers (BACKLOG.md, _validation_log.md, ONE_OFF_SCRIPTS.md, POLISH_QUEUE.md, HANDOFF.md) IMMEDIATELY when the work completes. Use AFTER any agent / sub-agent / multi-agent team finishes substantive work — closing a B-item, landing a fix-cycle, locking a decision (D-number), authoring a runbook (RB-N), authoring a stored procedure (SP-N), building a tool, or completing a multi-unit build cohort. Distinct from udm-round-closeout (round-aggregate cadence) and udm-post-build-verify (test cadence) — this skill is the per-completion cadence that fills the mid-round tracker-drift gap. Per user-direction 2026-05-12 "make it a skill to ensure that all agents, sub-agents and multi-agent teams keep our progress tracked."
 ---
 
@@ -43,6 +44,7 @@ The trigger is ANY substantive completion; the skill is intentionally cheap so o
 
 Whoever invokes this skill (the completing agent OR the main agent on its behalf) MUST have performed the Canonical Context Load before logging. If the completing agent didn't run a full CCL because it was a narrow-scope worker (e.g., a Pattern B build agent that read only its target spec), the MAIN agent assumes CCL responsibility and logs on the worker's behalf.
 
+- **Stage 0 — Routing manifest** (recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3): `docs/migration/INDEX.md` — read FIRST when uncertain which downstream Stage 1+2+3 docs your task actually needs. Skip when: you already know which Stage 1+2+3 docs to load (typical for recurring task patterns).
 - **Stage 1 — Orientation** (mandatory, 4 reads if not already done this session): `NORTH_STAR.md`, `HANDOFF.md`, `CURRENT_STATE.md`, `CHECKS_AND_BALANCES.md`
 - **Stage 2 — Tracker awareness** (mandatory): `BACKLOG.md`, `_validation_log.md` — the two trackers always touched
 - **Stage 2.5 — Conditional trackers** (read IF the completion touches them): `CODE_BUILD_STATUS.md` (if code module / tool / migration build — required per Hard Rule 7), `ONE_OFF_SCRIPTS.md` (if migration / one-time tool), `POLISH_QUEUE.md` (if cosmetic), `RISKS.md` (if risk delta), `03_DECISIONS.md` (if decision lock)
@@ -52,6 +54,22 @@ Whoever invokes this skill (the completing agent OR the main agent on its behalf
 ## The log-write checklist
 
 Run all applicable items; produce a structured one-paragraph report at the end (NOT a separate doc).
+
+### Step 0 — Post-compaction tracker re-Read (MANDATORY at turn start before any Edit)
+
+**Why this step exists**: in long sessions that span Claude Code conversation-compaction events, agents lose Read-state for large tracker files. The Edit tool requires a `Read` in the **current context** before allowing modification — but after compaction, the prior session's Read-state is reset. System-reminders explicitly flag this with text like `Note: <path> was read before the last conversation was summarized, but the contents are too large to include. Use Read tool if you need to access it.` Empirical first-event evidence (commit `db77516` 2026-05-16): parent agent attempted Edit on `docs/migration/BACKLOG.md` post-compaction WITHOUT a fresh Read; Edit tool returned `<error><tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error></error>`; parent misread the error as success (skimming batched tool outputs) and proceeded several messages before discovering the failure via `git status`. By that time `CURRENT_STATE.md` had been prepended with claims of B-N closures that BACKLOG didn't yet reflect — temporary cross-tracker inconsistency. This step closes that gap by forcing a fresh Read + post-Edit verification cycle.
+
+**Procedure**:
+
+1. **Detection trigger (at turn start)**: scan all `<system-reminder>` blocks in the current turn for the canonical post-compaction phrase: `was read before the last conversation was summarized, but the contents are too large to include`. If found, enumerate the file path(s) named in the reminders. The trackers most commonly flagged are `docs/migration/CURRENT_STATE.md` and `docs/migration/BACKLOG.md` (both >25K tokens), but the trigger applies to ANY tracker the skill is about to Edit.
+
+2. **Mandatory fresh-Read action (BEFORE any Edit)**: BEFORE the first Edit call on each named file, perform a fresh `Read` in the current context. For files small enough to read fully, do an unbounded Read. For files too large to read fully (typical of CURRENT_STATE.md / BACKLOG.md), do a targeted Read using `offset` + `limit` over the exact line range to be edited; AND/OR run a `Grep` over the file to confirm the `old_string` Edit anchor is present and unique. Never rely on prior-session Read-state.
+
+3. **Post-Edit verification (after every Edit on a tracker file)**: after each successful-looking Edit tool call, run a one-line `Grep` to confirm the new content actually landed in the file (do NOT just trust the Edit tool's success message — `<error>` blocks in batched tool output can be skimmed past). Acceptable verification: `Grep` for a distinctive substring of the `new_string` text against the just-edited file; verdict must be ≥1 match. If the Grep returns zero matches, the Edit silently failed (most commonly due to stale-Read-state OR a non-unique `old_string`) — re-Read + retry.
+
+4. **Anti-pattern explicitly named**: claiming "UPDATED" or closure status for a tracker in a downstream artifact (commit message body / `_validation_log.md` entry / `CURRENT_STATE.md` narrative prepend / cascade-complete report) BEFORE verifying the upstream tracker Edit actually landed is **Pitfall #9.k arithmetic-propagation drift via stale-Edit-state**. The propagation goes downstream-from-a-nonexistent-upstream-write. The fix discipline is **verification before claim**: every "UPDATED" assertion in downstream content must be preceded by the Grep verification in step 3.
+
+5. **Composition**: Step 0 runs FIRST, BEFORE the per-build-type tracker walk in Step 1 + the Pitfall #9.j status-render discipline in Step 2 + the hard-rule checks in Step 3 + the `_validation_log.md` write in Step 4 + the report emit in Step 5. If Step 0 detection trigger fires zero post-compaction file flags, proceed directly to Step 1 (Step 0 is a no-op when no compaction occurred in the session — its cost is the trigger scan only).
 
 ### Step 1 — Identify which trackers the completion touches
 
@@ -64,10 +82,13 @@ For the completed work, determine which of these are touched:
 | Decision lock | `03_DECISIONS.md` (🟡 → 🟢) + `BACKLOG.md` (if B-item drove the decision) + `_validation_log.md` |
 | Runbook authoring | `05_RUNBOOKS.md` (new RB-N) + `BACKLOG.md` (if B-item) + `_validation_log.md` |
 | **Code module / tool / migration built** (REQUIRED tracker update — see hard rule 7 below) | **`CODE_BUILD_STATUS.md` (per-unit row state transition ⬜ → 🟡 → 🟢 → ✅)** + `ONE_OFF_SCRIPTS.md` (if migration / one-time tool per `udm-execution-classifier`) + `BACKLOG.md` (close B-item) + `_validation_log.md` |
+| **NEW `tools/*.py` with ≥3 non-trivial public surfaces** (added 2026-05-17 per check_9n GLOSSARY-parity extension) | **`CLAUDE.md` Structure section row** AND **`GLOSSARY.md` public-surface entries** (per-name rows in module-surface table; per Step 10 + Pitfall #9.n discipline). Mechanically enforced by `tools/query_blindspots.py::check_9n_convention_registration` at commit-msg hook (BLOCKS if GLOSSARY missing for substantial tools). Trivial-wrapper tools (only `main`+`cli_main` surfaces) exempt from mechanical GLOSSARY-parity check but recommended for completeness |
+| **NEW `tools/*.py` with `EVENT_TYPE = "CLI_*"` constant** (promoted from CONDITIONAL → MANDATORY 2026-05-17 per B189 closure cohort empirical-drift remediation) | **MANDATORY: when authoring a new `tools/*.py` with `EVENT_TYPE = 'CLI_*'` constant, CLAUDE.md L207 CLI_* family registry update is MANDATORY in the SAME COMMIT.** The L207 registry text (`**CLI_\*** (N tools) — ...`) must enumerate the new EventType + bump the count. Companion mechanical enforcement: `tools/pre_commit_checks.py::check_cli_registry_sync` (8th orchestrator check; just landed today; mechanically BLOCKS commit if L207 entry missing). Empirical anchor: B189 closure cohort 2026-05-17 surfaced 4-tool drift (3 B-317 cascade tools `CLI_CASCADE_CLASSIFIER` + `CLI_GENERATE_CASCADE_EVIDENCE` + `CLI_AUDIT_CASCADE_COMPLIANCE` + 1 B189 tool `CLI_IMPORT_PII_INVENTORY` absent from L207 for 1-5 days). Two-layer defense: producer-side (this row + `udm-step-10-verifier` Step 3) + harness-side (`check_cli_registry_sync` BLOCKS at hook time) |
 | Edge case discovery | `04_EDGE_CASES.md` (new M/S/I/N/P/G/D/F/V/DP/T/SI entry) + `BACKLOG.md` (if B-item) + `_validation_log.md` |
 | Risk surfaced | `RISKS.md` (new R-N) + `_validation_log.md` |
 | Cosmetic / readability landed | `POLISH_QUEUE.md` (close P-N or add P-N) + `_validation_log.md` (low-touch row) |
 | HANDOFF §8 directive landed | `HANDOFF.md` (§8 sub-class extension) + `_validation_log.md` |
+| Substantive multi-tracker session event (mirror of CURRENT_STATE narrative for fresh-agent onboarding) | `HANDOFF.md` (`## §14. Last updated` section — prepend a dated parenthetical narrative entry matching the CURRENT_STATE.md L7 pattern; pre-existing dated entries demoted to "Earlier <date>:" lines below). SKIP when: edit is doc-only metadata polish, single-tracker P-N closure, or already-mirrored from a prior commit in the same session. Empirical anchor: commit `570ac67` (2026-05-16) is the canonical example of correct application (D114 lock prepended; prior entries demoted) |
 | Skill / agent prompt evolution | `.claude/skills/<name>/SKILL.md` or `.claude/agents/<name>.md` + `_validation_log.md` (paired with `udm-agent-prompt-versioner` for semver) |
 
 ### Step 2 — Apply Pitfall #9.j status-render discipline
@@ -202,3 +223,10 @@ This skill fills the gap between per-artifact (which validates) and per-round (w
 Owner: pipeline lead (skill definition); every agent + sub-agent + multi-agent team that completes substantive work (skill invoker).
 
 Authored 2026-05-12 per user-direction "make it a skill to ensure that all agents, sub-agents and multi-agent teams keep our progress tracked." Empirical gap evidence: 2026-05-12 8-unit build cohort closure pattern (main agent had to close B-items in a separate post-cohort turn after build agents themselves didn't update trackers).
+
+## Changelog (per D98 semver discipline)
+
+| Version | Date | Change | Trigger |
+|---|---|---|---|
+| v1.0.0 | 2026-05-12 | Initial authoring per user-direction (per-completion tracker-update skill) | Empirical 8-unit cohort tracker-drift evidence |
+| v1.1.0 | 2026-05-17 | MINOR — directive strengthening: Step 1 table row for `tools/*.py` with `EVENT_TYPE = "CLI_*"` promoted from CONDITIONAL to MANDATORY (CLAUDE.md L207 CLI_* family registry update required in same commit). Companion to harness-side mechanical enforcement at `tools/pre_commit_checks.py::check_cli_registry_sync` (8th orchestrator check) landing same day. | B189 closure cohort 2026-05-17 surfaced 4-tool drift (3 B-317 cascade tools + 1 B189 tool absent from L207 for 1-5 days) — paired producer-side + harness-side defense per Option A plan |

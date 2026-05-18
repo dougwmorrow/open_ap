@@ -779,8 +779,21 @@ def _resolve_test_file(
 
         file_exists = _default_exists
     candidates = [module_name]
+    # B-266: strip tools_ prefix.
     if module_name.startswith("tools_"):
         candidates.append(module_name[len("tools_"):])
+    # B-267: rewrite <X>_verifier -> verify_<X>. Apply to all current
+    # candidates so it stacks with the B-266 strip (e.g.
+    # tools_server_parity_verifier -> server_parity_verifier (B-266)
+    # -> verify_server_parity (B-267)).
+    verifier_suffix = "_verifier"
+    additional: list[str] = []
+    for cn in candidates:
+        if cn.endswith(verifier_suffix):
+            base = cn[: -len(verifier_suffix)]
+            if base:
+                additional.append(f"verify_{base}")
+    candidates.extend(additional)
     for d in tier0_dirs:
         for cn in candidates:
             candidate = project_root / d / f"test_{cn}.py"

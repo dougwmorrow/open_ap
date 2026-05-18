@@ -15,6 +15,7 @@ Fifth close-out analysis skill. Tracks artifact-complexity-vs-convergence-cycles
 
 ## Canonical Context Load (CCL) per D62
 
+- **Stage 0**: `docs/migration/INDEX.md` (routing manifest; recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3; read FIRST when uncertain which downstream Stage 1+2+3 docs your task needs; skip when you already know).
 - **Stage 1**: `NORTH_STAR.md` + `HANDOFF.md` (§12 round history) + `CURRENT_STATE.md` + `CHECKS_AND_BALANCES.md` (D72 termination rule)
 - **Stage 2**: `RISKS.md` + `BACKLOG.md` (B129 carryover-compounding monitor) + `_validation_log.md`
 - **Stage 3**: `_reviewer_effectiveness.md` (cycle counts per round); HANDOFF §12 round history (artifact size + cycle count); prior cycle-cadence-optimizer outputs
