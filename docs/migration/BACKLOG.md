@@ -363,6 +363,98 @@ Plan-local placeholder mapping: B-PL-1 = B-393 / B-PL-2 = B-394 / B-PL-3 = B-395
 
 - **B-407** (🟡 Open; LOW; WSJF 1.0): **CCL self-check fallback verification mechanism** — narrow-scope workers (e.g., Pattern B build agents per `udm-progress-logger` SKILL.md L197-L204) operate under CCL self-edit fallback; no verification prevents agent from falsely citing "fallback applied" while silently skipping CCL entirely. Build verification check (Tier 1 OR Mechanism C-1 extension) for fallback-claim authenticity. Phase 3. Source: optimization plan B-PL-15 per Agent 53 Section B missing-item.
 
+## UDM Skills audit cohort items B-408-B-447 — added 2026-05-17 per `UDM_SKILLS_AUDIT_AND_OPTIMIZATION_PLAN_2026-05-17.md` §3 + 4-cohort multi-agent review (Agents 54-57)
+
+Multi-agent provenance: Cohort A `ac39fc45ef25e0c85` (orchestration; 6 skills) + Cohort B `affb781343d488944` (validation; 7 skills) + Cohort C `a04182d383ed73aa0` (artifact authoring; 5 skills) + Cohort D `a05648d24c8f7fa0a` (self-improvement; 6 skills) = 24 of 25 udm-* skills reviewed (udm-progress-logger excluded — dedicated plan at commit `4d7dee8`). R-Ns mapped to R44-R49.
+
+### CRITICAL Phase 1 (highest-WSJF; ~155 LOC; ~1 cycle)
+
+- **B-408** (🟡 Open; **CRITICAL**; WSJF 5.0): **Atomic 4-skill series-list fix** — udm-round-closeout Section 3 + udm-checks-and-balances Gate 3 + udm-edge-case-validator series table L66-L75 + Stage 3 CCL text L25 + udm-gap-check Category 3 (9.a-9.m → 9.a-9.o). ALL frozen at 9 series (M/S/I/N/P/G/D/F/V) vs canonical 14 (M/S/I/N/P/G/D/F/V/DP/T/SI/SE/PL). Every Gate 3 walk + every Category 3 sweep silently incomplete since Round 6 (DP added) and most-recent sub-classes (9.n + 9.o) NOT covered by ANY skill-embedded list. Single atomic commit prevents re-drift. Phase 1. Source: Cohort A + Cohort B convergent (Agents 54 + 55).
+
+- **B-409** (🟡 Open; **CRITICAL**; WSJF 5.0): **Resolve udm-post-edit-verification anti-trigger CONTRADICTION with udm-exemption-verifier CRITICAL CARVE-OUT on SKILL.md authoring commits** — udm-post-edit-verification L25-32 says "this very SKILL.md authoring (recursive trigger; bootstrap exemption)" but udm-exemption-verifier CARVE-OUT at L62-68 says SKILL.md authoring commits NOT exempt. Agents read both → incompatible policy execution. Phase 1. Source: Cohort B Agent 55 CB-4-C.
+
+- **B-410** (🟡 Open; **CRITICAL**; WSJF 5.0): **Windows collection-skew (B-328) guidance in udm-post-build-verify Step 2** — oracledb/polars ImportError exemption path per CLAUDE.md B-328 (production extractor modules typically NOT installed on Windows dev workstations; treat as ADVISORY not BLOCKING; proceed to Step 3 with CI-authoritative count as ground truth). Phase 1. Source: Cohort A Agent 54 PBV-1.
+
+- **B-411** (🟡 Open; **CRITICAL**; WSJF 4.0): **udm-subclass-accumulator keyword table extension for sub-classes 9.k-9.o + add CLAUDE.md to CCL Stage 3** — current keyword table covers 9.a-9.j only; missing arithmetic-propagation/canonical-schema-detail/discipline-not-applied/convention-registration/recursive-exemption keywords. Prevents false-new-sub-class proposals at next round close-out invocation. Phase 1. Source: Cohort D Agent 57 §D.3.
+
+- **B-412** (🟡 Open; HIGH; WSJF 4.0): **udm-context-loader PS-9 SELF row extension** — Step 3 scope-conditional table currently says "None (Stage 1+2 brief sufficient)" for PS-9 SELF row; skill-review sessions require 04_EDGE_CASES.md + CLAUDE.md at Stage 3 (this very session's audit demonstrated the need). Phase 1. Source: Cohort B Agent 55 CB-7-A.
+
+- **B-413** (🟡 Open; HIGH; WSJF 4.0): **Locked-D-number guard for udm-brainstorm** (BS-2) — recommendation MUST NOT contradict a 🟢 locked D-N without explicit supersession process per D92 forward-only. Currently hard rule 4 is advisory; elevate to enforcement clause. Phase 1. Source: Cohort A Agent 54 BS-2.
+
+- **B-414** (🟡 Open; HIGH; WSJF 4.0): **udm-exemption-verifier CRITICAL CARVE-OUT presence assertion in Tier 0 stub** — CARVE-OUT at L62-68 is load-bearing for Pitfall #9.o instance-8 prevention; if silently removed, the discipline regression is undetectable. Tier 0 test must assert CARVE-OUT presence. Phase 1. Source: Cohort B Agent 55 CB-6-E.
+
+- **B-415** (🟡 Open; HIGH; WSJF 4.0): **udm-round-closeout HANDOFF §14 update in Section 6 HANDOFF checklist** (RC-7) — udm-next-step-cascade Step 1.4 enforces HANDOFF §14 update with explicit UNTOUCHED-AS-EXPECTED justification; udm-round-closeout omits this requirement; asymmetry creates discipline gap. Phase 1. Source: Cohort A Agent 54 RC-7.
+
+### HIGH Phase 2 (D98 cascade + critical coupling; ~200 LOC; ~2 cycles)
+
+- **B-416** (🟡 Open; HIGH; WSJF 3.5): **D98 `version:` frontmatter cascade** — add to 8+ skills missing it: udm-next-step-cascade + udm-round-closeout + udm-brainstorm + udm-planning + udm-post-build-verify + udm-checks-and-balances + udm-edge-case-validator + udm-gap-check + udm-exemption-verifier + appropriate changelog section. Closes D98 self-application gap (Pitfall #9.m instance × 8+). Phase 2. Source: Cohorts A + B convergent.
+
+- **B-417** (🟡 Open; HIGH; WSJF 3.0): **Resolve B23 (NEXT_AVAILABLE B-number computation) in udm-checks-and-balances backlog-surfacing section** — B23 open since Phase 1 R3; literal placeholder `B<NEXT_AVAILABLE>` with no computation guidance; supply grep mechanic (`grep -cE "^- \\*\\*B-" BACKLOG.md` OR similar). Phase 2. Source: Cohort B Agent 55 CB-1-B.
+
+- **B-418** (🟡 Open; HIGH; WSJF 3.0): **udm-step-10-verifier Step 3 split into Step 3a (GLOSSARY) + Step 3b (L207 CLI_* registry)** — current conflation causes producer to stop at GLOSSARY-clean without checking L207 family registry; split allows each to independently surface failure. Phase 2. Source: Cohort B Agent 55 CB-5-C.
+
+- **B-419** (🟡 Open; HIGH; WSJF 3.0): **udm-data-engineer-review checklist extension — SCD2-P1-e in-flight orphan predicate** (BOTH `UdmEndDateTime IS NULL` AND `UdmSourceEndDate IS NULL`) — current SCD2 invariants checklist L52-L59 missing this; CLAUDE.md Do-NOT rule requires BOTH predicates. Phase 2. Source: Cohort C Agent 56 §C.4 finding 1.
+
+- **B-420** (🟡 Open; HIGH; WSJF 3.0): **udm-data-engineer-review checklist extension — CDC source verification section** — add Concurrency-section-adjacent items: CDC_VERIFY_STRICT_ON_FAILURE default protection + CDC_VERIFY_MAX_CANDIDATES ceiling protection + CDC_NOW_MS invariant (per Phase 2 Do-NOT rules). Phase 2. Source: Cohort C Agent 56 §C.4 findings 2-3.
+
+- **B-421** (🟡 Open; HIGH; WSJF 3.0): **udm-data-engineer-review checklist extension — D116 Parquet `udm_pipeline_version` key check** — Parquet specifics checklist L69-L76 missing D116 metadata schema requirement; replay engine fails to interpret old files without it. Phase 2. Source: Cohort C Agent 56 §C.4 finding 4.
+
+- **B-422** (🟡 Open; HIGH; WSJF 3.0): **udm-gap-check CCL self-check fallback vs Hard rule 7 tension** — Hard rule 7 says "first content-substantive tool call MUST hit a Stage 1 doc"; fallback explicitly permits partial-CCL reviewer; clarify that fallback's Stage 1 minimum SATISFIES Hard rule 7. Phase 2. Source: Cohort B Agent 55 CB-3-C.
+
+- **B-423** (🟡 Open; HIGH; WSJF 3.0): **udm-next-step-cascade git push failure error-handling path** (NSC-4) — Step 1.7.1 specifies happy path only; add failure path "if `git push` returns non-zero exit code, surface error + manual-push URL; do NOT retry automatically; cascade-complete report still emits." Phase 2. Source: Cohort A Agent 54 NSC-4.
+
+- **B-424** (🟡 Open; HIGH; WSJF 3.0): **udm-planning-session-startup quoted-context anti-trigger** (PSS-1) — trigger phrases inside backticks, blockquotes, or markdown code fences excluded from trigger detection. Phase 2. Source: Cohort A Agent 54 PSS-1.
+
+- **B-425** (🟡 Open; HIGH; WSJF 3.0): **udm-round-closeout Section 10 FREEZE-state guard at top** (RC-3) — check FREEZE state before running 10.1-10.7; skip with explicit FREEZE-reason citation. Phase 2. Source: Cohort A Agent 54 RC-3.
+
+- **B-426** (🟡 Open; HIGH; WSJF 3.0): **NORTH_STAR.md write-side cascade rule in udm-decision-recorder cross-doc checklist** — add as item 11; closes B-297 recurrence pattern (NORTH_STAR omission at D62+ decision lock). Phase 2. Source: Cohort C Agent 56 §C.1 finding 1.
+
+- **B-427** (🟡 Open; HIGH; WSJF 3.0): **NORTH_STAR.md write-side Do-NOT rule in CLAUDE.md** — forward-prevention: "Do NOT merge a D62+ decision without updating NORTH_STAR.md pillar-mapping row." 3rd recurrence anchor. Phase 2. Source: Cohort C Agent 56 §C.6 observation 2.
+
+- **B-428** (🟡 Open; HIGH; WSJF 2.5): **Escalate B-298 (udm-execution-classifier hook-automated category) WSJF 1.5 → 2.5** — B-298 open since 2026-05-16; D114 already locked + hook artifacts already live; current WSJF underweighted given deployment status. Phase 2. Source: Cohort C Agent 56 §C.3 finding 1.
+
+- **B-429** (🟡 Open; HIGH; WSJF 3.0): **udm-step-10-verifier Step 1 skip-rule exception for fixture-factory functions** (CB-5-A) — current Step 1 blanket "skip if under tests/" causes mis-skipping of fixture-factory functions with shared public API; add parenthetical exception. Phase 2. Source: Cohort B Agent 55 CB-5-A.
+
+- **B-430** (🟡 Open; MEDIUM; WSJF 2.0): **Extend udm-exemption-verifier trigger detection to exclude legitimate verifier-evidence-citing commits** (CB-6-C) — B-303's "EXEMPTION VALID" phrase triggers hook on commits that PROPERLY cite a verifier VALID verdict in CASCADE-EVIDENCE section; add exclusion clause. Phase 2. Source: Cohort B Agent 55 CB-6-C.
+
+### MEDIUM Phase 3 (Tier 0 + composition + integration tests; ~500 LOC; ~2-3 cycles)
+
+- **B-431** (🟡 Open; MEDIUM; WSJF 1.5): **Tier 0 stub authoring batch — 10+ skills missing implementations** (4 Cohort B + 6 Cohort D); lightweight structure-verification tests; ~30 LOC each; D67 compliance. Phase 3. Source: Cohorts B + D convergent.
+
+- **B-432** (🟡 Open; MEDIUM; WSJF 2.0): **Bind skills to udm-planning's 6-step cycle steps** (UP-7) — name udm-design-reviewer at Step 3 QA + udm-edge-case-validator at Step 4 + udm-checks-and-balances at Step 6 Sign-off. Phase 3. Source: Cohort A Agent 54 UP-7.
+
+- **B-433** (🟡 Open; MEDIUM; WSJF 1.5): **udm-runbook-author cross-doc update checklist + RB-N monotonic numbering + udm-execution-classifier coupling** — currently absent; mirror udm-decision-recorder pattern. Phase 3. Source: Cohort C Agent 56 §C.2 findings 1-3.
+
+- **B-434** (🟡 Open; MEDIUM; WSJF 2.0): **udm-post-edit-verification SQL SP / migration TEST table row** (CB-4-A) — Step 1 TEST table currently undefined for SQL artifact type; add row for SP body / migration script verification (BCP CSV contract + SchemaContract row + SCD2 invariants). Phase 3. Source: Cohort B Agent 55 CB-4-A.
+
+- **B-435** (🟡 Open; MEDIUM; WSJF 2.0): **udm-brainstorm composition table** (BS-4 cohort) — currently absent; include udm-researcher + udm-decision-recorder + udm-gap-check. Phase 3. Source: Cohort A Agent 54 §A.4 BS-6.
+
+- **B-436** (🟡 Open; MEDIUM; WSJF 1.0): **udm-decision-recorder + udm-execution-classifier coupling** — sentence after cross-doc checklist: "If decision introduces executable artifact, invoke udm-execution-classifier." Phase 3. Source: Cohort C Agent 56 §C.6 observation 3.
+
+- **B-437** (🟡 Open; MEDIUM; WSJF 1.5): **udm-retrospective-collector specialty enum + Phase 2+ round-naming** — add "cascade-audit" specialty OR document Pattern F mode framing; specify P2-R1 round naming convention for cross-phase monotonic-counter handling. Phase 3. Source: Cohort D Agent 57 §D.1.
+
+- **B-438** (🟡 Open; LOW; WSJF 1.0): **Per-round per-specialty schema in `_reviewer_effectiveness.md`** — supports udm-specialty-tuner "3-round declining trend" FREEZE detection + R31 condition #1 mechanical testability. Phase 3. Source: Cohort D Agent 57 §D.2.
+
+- **B-439** (🟡 Open; MEDIUM; WSJF 2.0): **udm-producer-checklist-evolver CLAUDE.md §14 in lookup procedure** — current lookup at L31 only reads HANDOFF §8 but sub-classes 9.k-9.o live in CLAUDE.md §14; coordinate with B-411 cohort. Phase 3. Source: Cohort D Agent 57 §D.4.
+
+- **B-440** (🟡 Open; MEDIUM; WSJF 1.5): **udm-cascade-audit-evolver Round 8 close-out candidate list refresh + CCL Stage 4 specialty correlation fix** — add B176 Pattern F Trigger J; fix Stage 4 grep to use `mode: "Pattern-F-Layer-2-paired"` instead of non-existent "cascade-audit" specialty. Phase 3. Source: Cohort D Agent 57 §D.5.
+
+- **B-441** (🟡 Open; HIGH; WSJF 3.0): **udm-agent-prompt-versioner target_agent scope clarification** — current scope `.claude/agents/<name>.md`; cascade-audit-evolver proposes Trigger G additions to `tools/verify_cascade.py` which has no application path. Either expand target_agent scope OR define separate application path for non-agent-file deltas. Phase 3. Source: Cohort D Agent 57 §D.6.
+
+- **B-442** (🟡 Open; LOW; WSJF 0.5): **udm-cycle-cadence-optimizer Tier δ output template sub-section + carryover trend floor** — output template missing Tier δ structure; carryover trend "monotonically rising 3+ rounds" needs floor (e.g., ≥5 items/round). Phase 3. Source: Cohort C Agent 56 §C.5 findings 1+4.
+
+### LOW Phase 4 (polish + cosmetics)
+
+- **B-443** (🟡 Open; LOW; WSJF 1.5): **Sub-agent spawn ordering guard for udm-planning-session-startup** (PSS-3) — Step 3 user approval MUST precede any Agent tool call spawned during the session. Phase 4. Source: Cohort A Agent 54 PSS-3.
+
+- **B-444** (🟡 Open; LOW; WSJF 1.5): **udm-context-loader CCL token baseline refresh** from current repo state (CB-7-F) — current baseline at `_research/ccl-baseline-2026-05-15.md` is 2+ weeks stale; refresh to accurately represent current savings case. Phase 4. Source: Cohort B Agent 55 CB-7-F.
+
+- **B-445** (🟡 Open; LOW; WSJF 1.0): **Cross-skill composition diagram standardization** — ensure all 25 udm-* skills have a consistent composition table OR diagram showing inter-skill dependencies. Phase 4. Source: Cohorts A + C convergent.
+
+- **B-446** (🟡 Open; LOW; WSJF 1.0): **Phase 2+ round-naming convention propagation** across skills with `round<N>` file naming output (udm-retrospective-collector + udm-subclass-accumulator + udm-specialty-tuner + udm-cycle-cadence-optimizer + udm-cascade-audit-evolver + udm-agent-prompt-versioner). Phase 4. Source: Cohort D Agent 57 cross-cohort observation.
+
+- **B-447** (🟡 Open; LOW; WSJF 1.0): **udm-cascade-audit-evolver output file on NO-ACTION rounds** — with verdict explicitly stated; downstream Stage 4 reads don't silently fail. Phase 4. Source: Cohort D Agent 57 §D.5 finding 3.
+
 - **B-352** (🟡 Open; LOW; WSJF 1.0): **MULTI-TABLE-REPLAY edge cases (MULTI-TABLE-EC1 through EC4)** authoring in 04_EDGE_CASES.md per G2 implementation (multi-table FK-aware replay). Cases: missing-snapshot-for-batch-id / dependency-cycle / cross-table-batch-id-misalignment / replay-partial-failure-cross-table-window. Full context: `docs/migration/D2_GAP_RESOLUTION_PLAN_2026-05-17.md` §3.5 + §6. Closure target: Phase 3 R1 close-out. Source: G2 gap-resolution plan 2026-05-17.
 
 - **B-351** (🟡 Open; LOW; WSJF 1.0): **CCPA-REPLAY edge cases (CCPA-REPLAY-EC1 through EC4)** authoring in 04_EDGE_CASES.md per G1 implementation (CCPA + Parquet replay). Cases: multi-deletion-events-same-subject / legal-hold-override-CCPA-delete / subject-deletion-plus-token-reuse / synthesized-Flag2-vs-natural-Flag2-distinguishability. Full context: `docs/migration/D2_GAP_RESOLUTION_PLAN_2026-05-17.md` §2.6 + §6. Closure target: Phase 2 R1 close-out. Source: G1 gap-resolution plan 2026-05-17.
