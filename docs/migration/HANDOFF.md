@@ -424,7 +424,9 @@ Per D60, this section appends one row per round during close-out. Read top-to-bo
 
 ## §14. Last updated
 
-2026-05-18 (**B-493 query_blindspots check_9o allowlist extension for `_session_snapshots/` — recurring self-firing class closure**): ~9 LOC + 2 Tier 1 assertions; closed early (vs 2nd-event) because recurrence is structurally predictable on every future udm-session-compactor invocation. **Cumulative**: **100 → 101 NEW B-Ns** (B-393-B-493) / **25 CLOSED** (+B-493) / pytest 2825 → **2827 pass / 10 skip / 0 fail** (+2).
+2026-05-18 (**udm-session-compactor loose-end tie-up cohort — CLAUDE.md discoverability cross-ref + B-494 Phase 2 tracking**): CLAUDE.md hard rule 14 extended with session-state compression extension citation (parallel to udm-cohort-review at B-483); B-494 opened for Phase 2 token-tracking subsystem tracking (defer-trigger per skill Owner section). **Cumulative**: **101 → 102 NEW B-Ns** (B-393-B-494) / 25 CLOSED unchanged / pytest 2827 unchanged.
+
+Earlier 2026-05-18 (**B-493 query_blindspots check_9o allowlist extension for `_session_snapshots/` — recurring self-firing class closure**): ~9 LOC + 2 Tier 1 assertions; closed early (vs 2nd-event) because recurrence is structurally predictable on every future udm-session-compactor invocation. **Cumulative**: **100 → 101 NEW B-Ns** (B-393-B-493) / **25 CLOSED** (+B-493) / pytest 2825 → **2827 pass / 10 skip / 0 fail** (+2).
 
 Earlier 2026-05-18 (**B-492 `udm-session-compactor` skill Phase 1 — session-state compression discipline**): NEW skill `.claude/skills/udm-session-compactor/SKILL.md` authoring `docs/migration/_session_snapshots/<YYYY-MM-DD>-<commit-hash-prefix-7>.md` with 5 canonical sections (Active work context / Completed deliverables / Open runway / **Deeper insights** as differentiator vs SESSION_RESUME.md / Pointer-back cross-refs). Phase 2 (token-tracking) deferred per claude-code-guide research — hooks cannot access Claude Code token counts (anthropics/claude-code#34340). 8 NEW Tier 0 assertions. GLOSSARY entries added. **Cumulative**: **99 → 100 NEW B-Ns** (B-393-B-492) / **24 CLOSED** (+B-492) / pytest 2817 → **2825 pass / 10 skip / 0 fail** (+8).
 

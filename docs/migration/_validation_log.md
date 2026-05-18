@@ -2,6 +2,28 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — udm-session-compactor loose-end tie-up cohort (CLAUDE.md discoverability cross-ref + B-494 Phase 2 tracking)
+
+**Trigger**: pipeline-lead "Let's move onto tieing up any loose ends with regard to udm-session-compactor" 2026-05-18 — explicit tie-up directive.
+
+**Scope**: 2 substantive changes — (a) CLAUDE.md hard rule 14 discoverability extension citation + (b) B-494 Phase 2 tracking opened in BACKLOG.
+
+**Producer**: parent agent.
+
+**Changes**:
+
+1. **CLAUDE.md hard rule 14 — "Session-state compression discipline extension" citation** added parallel to existing "Cross-cohort review discipline extension" (B-483). Citation includes: (a) trigger phrase enumeration ("compress the session" / "snapshot the session" / etc.); (b) auto-trigger candidates (before SESSION_RESUME.md write at session pause/close + before anticipated compaction event when ≥10 substantive commits OR ≥3 new skills/agents OR ≥1 architectural-layer addition); (c) snapshot path `docs/migration/_session_snapshots/<YYYY-MM-DD>-<commit-hash-prefix-7>.md` with 5 canonical sections; (d) 1-event empirical anchor (this session compaction + SESSION_RESUME.md L10-L15 stale-arithmetic class uncaught for 2-3 cohorts surfaced by gap-check reviewer `ab45539c33d1cebd1` G2 finding); (e) Phase 1 (manual) vs Phase 2 (deferred) scope discipline citation with anthropics/claude-code#34340 blocker; (f) composition with 5 canonical composers (udm-progress-logger + udm-cohort-review + udm-round-closeout + udm-gap-check + SESSION_RESUME.md). Closes the discoverability gap where future agents reading CLAUDE.md hard rules would see udm-cohort-review extension but not udm-session-compactor.
+
+2. **B-494 opened in BACKLOG** (🟡 Open; LOW; WSJF 1.5) for Phase 2 token-tracking subsystem tracking. Defer-trigger criteria documented per skill SKILL.md Owner section: build only after Phase 1 invocations ≥3 + user signal for auto-triggering OR actual context-compaction event causes downstream agent confusion. Blockers documented: anthropics/claude-code#34340 feature request for `CLAUDE_CONTEXT_USED` / `CLAUDE_CONTEXT_MAX` env vars in hooks. Workaround complexity: parsing `~/.claude/projects/<slug>/<session-uuid>.jsonl` + Token Counting API subprocess invocations (~500ms-2s latency; rate-limited). ~2-3 days build effort estimate.
+
+**Empirical anchor for tie-up cohort**: pipeline-lead direction "tie up any loose ends" 2026-05-18 — explicit delegation to wrap up udm-session-compactor scope before pivoting away from meta-discipline work.
+
+**Tests**: pytest 2827 baseline preserved (no code changes; CLAUDE.md + BACKLOG.md + tracker mirrors only).
+
+**Cumulative session delta UPDATED at loose-end tie-up cohort**: **101 → 102 NEW B-Ns** (B-393-B-494) / 25 B-Ns CLOSED unchanged (no closures this cohort) / pytest 2827 / 10 skip / 0 fail unchanged.
+
+**Status**: substrate-edit per hard rule 14 (CLAUDE.md is canonical substrate per `tools/cascade_classifier.py::SUBSTRATE_FILES`) — PRE-COMMIT reviewer to be spawned before commit lands.
+
 ## 2026-05-18 — B-493 closure: `tools/query_blindspots.py::check_9o` substrate-file allowlist extension for `_session_snapshots/`
 
 **Trigger**: pipeline-lead "Let's not discuss UDM pipeline SCD2 + parquet loading. Let's move onto tieing up any loose ends with regard to udm-session-compactor" 2026-05-18 — explicit tie-up directive scoped to udm-session-compactor.
