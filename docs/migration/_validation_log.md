@@ -2,6 +2,41 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — First production invocation of `udm-session-compactor` (Phase 1 manual-trigger validation)
+
+**Trigger**: pipeline-lead "Let's proceed with your primary objective or tie up any loose ends before moving on" 2026-05-18 — context: user pivoting to UDM pipeline SCD2 + Parquet load testing in parallel Claude session. Cascade Step 1 execution: PRIMARY recommended item from prior turn was "First production invocation of `udm-session-compactor` — author the session arc's first `_session_snapshots/2026-05-18-1233bc8.md` to validate the Phase 1 workflow."
+
+**Scope**: 1 new artifact authored — `docs/migration/_session_snapshots/2026-05-18-1233bc8.md` (~280 LOC; 5 canonical sections per skill v1.0.0 procedure spec). NOT a B-N closure (B-492 was the skill-authoring closure; this is the skill's first PRODUCTION INVOCATION validating workflow value before token-tracking Phase 2 defer-trigger consideration).
+
+**Producer**: parent agent (this session arc — multi-session B-393 → B-492).
+
+**Empirical validation event**: confirms Phase 1 workflow viability before considering Phase 2 token-tracking investment (defer-trigger per skill SKILL.md: build Phase 2 only after invocations ≥3 with proven workflow value). This is invocation #1; awaiting #2 + #3 trigger events.
+
+**Snapshot artifact summary** (5 canonical sections):
+- **§1 Active work context**: branch `round-6-post-merge-tracking` / commit `1233bc8` / pivot-pending pipeline-lead direction / 5 open B-Ns in flight (all LOW WSJF deferred per defer-trigger criteria)
+- **§2 Completed deliverables**: 24 B-Ns closed multi-session / 4 chronological commits (1233bc8 → c781c9b → 9e8281a → ee2f3e7) / pytest 2780 baseline → 2825 (+45 across arc) / 2 new skills (udm-cohort-review + udm-session-compactor) / 1 new tracker (_false_positive_log.md) / 2 new Tier 0 scaffolding modules
+- **§3 Open runway**: 6 deferred LOW-WSJF B-Ns + pipeline-lead-blocked Phase 2-4 UDM Skills Audit cluster (32 B-Ns) + POLISH_QUEUE P-21/22/23 + Phase 2 of udm-session-compactor itself
+- **§4 Deeper insights** (THE differentiator): 4 architectural decisions documented (Phase 1/2 split / 4-layer FP prevention / SUBSTRATE_EDIT clause / 1-vs-2-event empirical threshold); 4 cross-cohort patterns; 2 convergence-discipline events; 4 rejected alternatives with rationale; 6 reviewer-finding context rows; 8 Pitfall #9 sub-class evidence-base table
+- **§5 Pointer-back cross-refs**: canonical trackers with line-anchors / 7 skill files relevant / 4 tools relevant / recent commits chronological / 2 BACKLOG sections to scan first
+
+**Insights preserved beyond SESSION_RESUME.md scope** (the differentiator):
+- WHY behind Phase 1/2 scope split (`anthropics/claude-code#34340` feature request blocker + Token Counting API latency tradeoffs)
+- WHY behind 4-layer FP prevention architecture (each layer addresses structurally distinct failure mode)
+- WHY behind 1-event vs 2-event empirical threshold (balances eager-tracking with restrained-architecture)
+- HONOR-SYSTEM SURFACE REDUCTION arc pattern: Mechanism A → B → C-1 increment shifts enforcement from producer-judgment to harness-automation
+- MECHANICAL vs PRODUCER substrate distinction: hooks + tools are mechanical; SKILL.md + canonical trackers are producer
+
+**Output contract compliance verification**:
+- ✅ Top-level YAML frontmatter with 3 canonical fields (`snapshot_date / commit_hash / session_arc_scope`)
+- ✅ All 5 section headers present (`## §1` through `## §5`)
+- ✅ Minimum 1 entry per section (all 5 substantively populated)
+- ✅ Footer with next-snapshot trigger criteria (5 conditions enumerated)
+- ✅ Followed by this `_validation_log.md` entry per skill output contract step 1
+- ✅ No new tracking-worthy items surfaced beyond existing trackers → no BACKLOG.md row needed per output contract step 2
+- ✅ Report to user planned per output contract step 3
+
+**Status**: ⚫ COMPLETE — first production invocation of udm-session-compactor v1.0.0 validates Phase 1 workflow.
+
 ## 2026-05-18 — B-492 `udm-session-compactor` skill (Phase 1 manual-trigger scope; MEDIUM WSJF 3.0; session-state compression discipline layer)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 fires `udm-next-step-cascade` skill. Prior turn recommended building Phase 1 `udm-session-compactor` (~1 day scope). Cascade Step 1 execution.
