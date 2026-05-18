@@ -175,7 +175,7 @@ T+12.5s: scd2/engine.run_scd2(
 | SCD2 input | Tokenized in-memory df | Tokenized in-memory df (unchanged) | same as Phase A |
 | Bronze content | Tokens (unchanged) | Tokens (unchanged) | Tokens (unchanged) |
 
-**Net effect for Phase A**: Parquet contains source-exact plaintext PII; Bronze contains tokens (unchanged). Compensating control for Parquet plaintext: D103 13-layer security model + filesystem ACLs + `/debi` boundary + no-Claude-on-prod (R36 ⚪ 2).
+**Net effect for Phase A**: Parquet contains source-exact plaintext PII; Bronze contains tokens (unchanged). Compensating control for Parquet plaintext: D103 13-layer security model + filesystem ACLs + `/debi` boundary + no-Claude-on-prod (R36 🟡 3 — re-scored 2026-05-17 per D56 2nd-pass cohort design-reviewer Agent 46 E4 finding; returns to ⚪ 2 when 3 compensating controls verified per §8.1 item 7).
 
 ---
 
@@ -238,7 +238,7 @@ pq.write_table(
 
 ```sql
 -- Migration: migrations/add_extraction_timestamps_to_parquet_registry.py
--- D92 forward-only ALTER + joint SchemaContract row INSERT per D40 + Round 7 § 4.5 pattern (per B-387)
+-- D92 forward-only ALTER + joint SchemaContract row INSERT per D40 + Round 7 § 2.5 canonical INSERT pattern (per B-387; corrected at D72 cycle-3 gap-check Agent 49 finding 9.l — uses canonical SchemaContract columns: SourceName / ObjectName / ColumnName / ContractKey / ContractValue / EffectiveFrom / CreatedBy / Notes — NOT the non-canonical columns previously authored)
 
 BEGIN TRANSACTION;
 
@@ -246,23 +246,23 @@ ALTER TABLE General.ops.ParquetSnapshotRegistry
 ADD ExtractionQueryStartedAt DATETIME2(3) NULL,
     ExtractionQueryCompletedAt DATETIME2(3) NULL;
 
-INSERT INTO General.ops.SchemaContract (
-    SourceName, ObjectName, ColumnName, ContractKey,
-    DataType, IsNullable, EffectiveFrom, EffectiveTo,
-    SupersededBy, AppliedBy, AppliedAt, MigrationScript
-) VALUES
-('General', 'ParquetSnapshotRegistry', 'ExtractionQueryStartedAt', 'd116_extraction_started_at_v1',
- 'DATETIME2(3)', 1, SYSUTCDATETIME(), NULL, NULL,
- SUSER_SNAME(), SYSUTCDATETIME(), 'add_extraction_timestamps_to_parquet_registry.py'),
-('General', 'ParquetSnapshotRegistry', 'ExtractionQueryCompletedAt', 'd116_extraction_completed_at_v1',
- 'DATETIME2(3)', 1, SYSUTCDATETIME(), NULL, NULL,
- SUSER_SNAME(), SYSUTCDATETIME(), 'add_extraction_timestamps_to_parquet_registry.py');
+INSERT INTO General.ops.SchemaContract
+    (SourceName, ObjectName, ColumnName, ContractKey, ContractValue, EffectiveFrom, CreatedBy, Notes)
+VALUES
+    ('General', 'ParquetSnapshotRegistry', 'ExtractionQueryStartedAt', 'd116_extraction_started_at_v1',
+     '{"new_column": "ExtractionQueryStartedAt", "type": "DATETIME2(3)", "nullable": true, "evolution_round": "Phase A R1", "closes": "B-387", "migration_script": "add_extraction_timestamps_to_parquet_registry.py", "audit_log_event_type": "MIGRATION_D116_EXTRACTION_STARTED_AT"}',
+     SYSUTCDATETIME(), SUSER_SNAME(),
+     'D116 forward-only additive ALTER per Phase A tokenization-timing reorder. Captures source-query start time for source-exactness audit per user HARD REQUIREMENT 2026-05-17. NULL on pre-D116 rows acceptable; new rows post-migration MUST be populated by parquet_writer.write_snapshot().'),
+    ('General', 'ParquetSnapshotRegistry', 'ExtractionQueryCompletedAt', 'd116_extraction_completed_at_v1',
+     '{"new_column": "ExtractionQueryCompletedAt", "type": "DATETIME2(3)", "nullable": true, "evolution_round": "Phase A R1", "closes": "B-387", "migration_script": "add_extraction_timestamps_to_parquet_registry.py", "audit_log_event_type": "MIGRATION_D116_EXTRACTION_COMPLETED_AT"}',
+     SYSUTCDATETIME(), SUSER_SNAME(),
+     'D116 forward-only additive ALTER per Phase A tokenization-timing reorder. Captures DataFrame materialization completion time for source-exactness audit. Pair with ExtractionQueryStartedAt for extraction duration computation. NULL on pre-D116 rows acceptable.');
 
 COMMIT TRANSACTION;
 
 -- Backfill for existing rows: NULL is acceptable (pre-D116 rows have no recorded timestamps)
 -- New rows post-migration MUST be populated by parquet_writer
--- Idempotency per B-379: migration script wraps ALTER in TRY/CATCH on duplicate-column error; SchemaContract INSERT is keyed on ContractKey unique; re-run is no-op
+-- Idempotency per B-379: migration script wraps ALTER in TRY/CATCH on duplicate-column error; SchemaContract INSERT is keyed on (SourceName, ObjectName, ColumnName, ContractKey, EffectiveFrom) per IX_SchemaContract_Active filtered unique index; re-run is no-op
 ```
 
 ### §4.4 Reading extraction timestamps (operator query)
@@ -308,7 +308,7 @@ print(f"{source_table}: extracted at {extracted_at}, {row_count} rows, encryptio
 | `tests/tier1/test_parquet_source_exactness.py` (NEW; extended scope) | Includes REPLAY-path acceptance test per SE-9: Parquet → tokenize → SCD2 chain produces IDENTICAL Bronze output to original-extraction → tokenize → SCD2 chain | +100 lines on top of B-373 base | B-373 (extended scope) |
 | `data_load/parquet_writer.py` | **EXTENSION**: WRITER PATH SWITCH from Polars-native `df.write_parquet(use_pyarrow=False)` → pyarrow `pq.write_table()` to support `key_value_metadata` (Polars Rust writer does NOT support PME schema metadata). **Behavioral consequence**: SHA-256 hash of Parquet file CHANGES (different internal encoding between Polars-native vs pyarrow writer for identical data); `ParquetSnapshotRegistry.ContentChecksum` values from pre-Phase-A Polars-native files are NOT comparable to post-Phase-A pyarrow files. Greenfield project per `02_PHASES.md` L5 → no migration needed; operator awareness only. D45.2 contract preservation table: ZSTD-3 → `pq.write_table(compression='zstd', compression_level=3)`; statistics enabled → `pq.write_table(write_statistics=True)`; sort order → applied at in-memory step (NOT Parquet per SE-7); Hive partition layout preserved via `pq.write_to_dataset(partition_cols=...)`. **NEW**: `os.chmod(0o440)` after atomic rename per design-reviewer E1 (compensating control for R36 Phase A plaintext PII; current umask 0644 = world-readable security regression vs stated control). | additional ~50 lines on top of base | B-356 + R36 mitigation |
 | `migrations/add_extraction_timestamps_to_parquet_registry.py` | EXTENDED: includes SchemaContract row INSERT per D40 + Round 7 § 4.5 joint migration pattern (per gap-check G3 9.l + B-387) | +30 lines on top of base | B-387 |
-| **TOTAL** | | ~980 lines | 12 B-Ns (B-356/366/367/371/373/374/375/376/380/383/386/387) |
+| **TOTAL** | | ~980 lines | 10 B-Ns inline-cited in table (B-356/366/367/371/373/374/375/380/383/387); cross-cutting B-376 (test fixture migration audit) + B-386 (GLOSSARY.md update) span the build cycle without file-specific rows |
 
 **Effort estimate**: ~3-4 cycles for Phase A R1 (vs original plan's 6-9 cycles for PME-inclusive version). Greenfield advantage preserved.
 
@@ -353,7 +353,7 @@ Phase A writes plaintext PII to Parquet (no PME — that's Phase B). Compensatin
 | 12 | Network isolation | Parquet directories not network-exported beyond replication path |
 | 13 | Image-bake check | test/prod RHEL has NO Claude installed |
 
-**Risk posture**: Equivalent to current `/etc/pipeline/.env` plaintext credentials posture per D103. R36 (Low × Medium = 2 ⚪) acceptable for Phase A. Phase B PME closes the compliance gap per R5 EDPB Guidelines 02/2025 + crypto-shredding pattern.
+**Risk posture**: R36 (Low × High = 3 🟡; **re-scored 2026-05-17 per D56 2nd-pass cohort design-reviewer Agent 46 E4 finding**; original framing "equivalent to /etc/pipeline/.env posture" was INVALID because PII data IS the harm on access vs passwords which require active exploitation, AND H drive Parquet under default umask 0644 is world-readable vs `.env` at mode 0400). Returns to ⚪ 2 when 3 compensating controls verified per §8.1 item 7: `os.chmod(0o440)` after Parquet atomic rename + auditd H drive watch per B-381 + backup tape encryption verified. Phase B PME closes the irreversibility gap per R5 EDPB Guidelines 02/2025 + crypto-shredding pattern.
 
 ---
 
@@ -423,7 +423,7 @@ Phase A writes plaintext PII to Parquet (no PME — that's Phase B). Compensatin
 
 ### §9.4 R-Ns Phase A scope
 
-- **R36** ⚪ 2 (NEW; plaintext PII in Phase A Parquet; compensating D103) — accepted for Phase A; closes when Phase B PME lands
+- **R36** 🟡 3 (re-scored 2026-05-17 per D56 2nd-pass; plaintext PII in Phase A Parquet; compensating D103 IF 3 controls verified) — gated on §8.1 item 7 (chmod 0440 + auditd H drive + backup tape encryption); returns to ⚪ 2 when verified; full closure when Phase B PME lands
 - **R37** ⚪ 1 (NEW; Parquet metadata schema drift) — mitigated by `udm_pipeline_version` key + B-373 test
 
 ### §9.5 SE-N edge case series (Phase A binding invariants)
@@ -467,8 +467,8 @@ Phase B will layer the following ON TOP of Phase A (additive; Phase A's D115/D11
 - [x] Original plan inline-superseded (header added per §11.3 below)
 - [x] D115 + D116 opened as 🟡 Proposed in 03_DECISIONS.md
 - [x] B-353 through B-390 opened in BACKLOG.md (24 from initial cohort at `7cb7659` + 14 from D56 2nd-pass remediation this commit)
-- [x] R34-R37 opened in RISKS.md
-- [x] SE1-SE8 added to 04_EDGE_CASES.md (NEW SE-N series)
+- [x] R34-R38 opened in RISKS.md (R38 added at D56 2nd-pass remediation per compliance-determination gap)
+- [x] SE1-SE10 added to 04_EDGE_CASES.md (NEW SE-N series; SE9 replay-path tokenization + SE10 column-order added at D56 2nd-pass remediation)
 - [x] CURRENT_STATE L7 + HANDOFF §14 narrative prepended
 - [x] _validation_log.md event row appended
 - [ ] Spawn independent gap-check on THIS Phase A plan (per D55+D56 second-pass)
@@ -504,7 +504,7 @@ Reason for supersession:
 - `docs/migration/D2_GAP_RESOLUTION_PLAN_2026-05-17.md` (D2 implementation gaps; orthogonal to Phase A scope; remain valid)
 - `docs/migration/03_DECISIONS.md` D2 + D6 (partially superseded by D115) + D15 + D16 + D18 + D25 + D102 + D103 + D107 + D110 + D115 (NEW 🟡) + D116 (NEW 🟡)
 - `docs/migration/04_EDGE_CASES.md` SE-N series (NEW SE1-SE7 for Phase A; SE8 deferred)
-- `docs/migration/RISKS.md` R34-R37 (NEW; R34/R35 Phase B-related; R36/R37 Phase A-active)
+- `docs/migration/RISKS.md` R34-R38 (NEW; R34/R35 Phase B-related; R36/R37/R38 Phase A-active; R36 re-scored 🟡 3 at D56 2nd-pass; R38 NEW for Phase A compliance gap)
 - `docs/migration/BACKLOG.md` B-353 through B-390 (38 NEW B-Ns total: 24 from initial cohort + 14 from 2nd-pass remediation; Phase A-active: B-356/366/367/370/371/373/374/375/376/377/379/380/381/382/383/384/385/386/387/390; Phase B: remainder; B-388 + B-389 = forward-prevention discipline)
 - CLAUDE.md hard rule 14 anti-rationalization clause — Phase A/B split satisfies "explicit anti-trigger claim with justification" via gap-check Agent 45 cohort evidence
 - `phase1/01c_data_flow_walkthrough.md` § 3 (current canonical flow; will be cascaded per B-371)
