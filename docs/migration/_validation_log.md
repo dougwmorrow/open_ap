@@ -2,6 +2,45 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-483 cross-cohort review discipline layer (HIGH WSJF 3.0; systematic single-commit-scope gap closure)
+
+**Trigger**: user-direction 2026-05-18 "Proceed with B-483" following acceptance of proposal authored at prior turn ("Come up with a proposal to address this gap").
+
+**Scope**: 1 B-N closure (B-483) — new skill authoring + CLAUDE.md hard rule 11 extension + Tier 0 tests. 4 files modified: `.claude/skills/udm-cohort-review/SKILL.md` (NEW; 198 LOC) + `tests/tier0/test_skill_cohort_review.py` (NEW; 10 assertions) + `CLAUDE.md` (hard rule 11 cross-cohort review discipline extension) + `docs/migration/BACKLOG.md` (B-483 open + close annotation) + `docs/migration/CURRENT_STATE.md` + `docs/migration/HANDOFF.md` §14 + `docs/migration/_validation_log.md` (this entry).
+
+**Producer**: parent agent (this session).
+
+**Empirical evidence base (1-event 2026-05-18)**: cross-cohort reviewer `aa320fb75f55a5471` (general-purpose subagent invoked at user-direction "Run a gap analysis or review to see if there are any issues with the recent enhancements") surfaced **3 🔴 + 2 NEW B-Ns** across ccf21a2 + 133b212 + 9983bee cohort that 3 prior single-commit reviewers (PRE-COMMIT design-reviewer × 2 + udm-gap-check × 1) ALL missed by construction. Specific failures: (1) Pitfall #9.k arithmetic-propagation drift RECURRENCE — gap-check at 9983bee fixed drift but re-introduced it by opening B-480 in same commit (invisible to single-commit scope); (2) CLAUDE.md L98 line-count drift Pitfall #9.h — `127 lines per actual wc -l` claim TRUE at authoring time but BECAME false post-multiple-refactors (invisible to single-commit scope); (3) stale forward-reference "future check addition like B-458" after B-458 closed in same commit (cohort-2 reviewer flagged + producer deferred; cross-cohort caught the carry-over).
+
+**6 failure-mode classes ONLY visible cross-cohort** (canonical scopes §1-§6 in new skill):
+1. Compositional drift across cohort (e.g., B-482 `_fetch_staged_content` orchestrator-bypass seed)
+2. Test-coverage gap interactions (e.g., `inline_fix_claim × closure_annotation` interaction gap)
+3. Architectural fragmentation accumulation
+4. Cumulative arithmetic propagation drift (e.g., Pitfall #9.k recurrence 9983bee → 9e8291a)
+5. Stale forward-references post-cohort (e.g., "future check like B-458" stale post-133b212)
+6. New-B-N calibration drift (e.g., B-478 + B-480 partial semantic overlap)
+
+**Implementation**: `.claude/skills/udm-cohort-review/SKILL.md` (198 LOC) — YAML frontmatter + Why-this-skill-exists section + When-to-invoke + Trigger-phrases + Anti-triggers + 6-scope procedure (§1-§6 mirroring `aa320fb75f55a5471` empirical-anchor reviewer prompt) + Composition with other skills table + Output contract template + Edge cases + Tier 0 stub directive + Cross-references. CLAUDE.md hard rule 11 extended with cross-cohort review discipline citation. Skill auto-loaded by Claude system (verified via system-reminder skill catalogue: "udm-cohort-review: Cross-cohort review discipline layer per B-483 closure 2026-05-18 ...").
+
+**Tier 0 coverage**: `tests/tier0/test_skill_cohort_review.py` — 10 NEW assertions using B-461 `_skill_test_base.py` factory pattern (2 baseline factory-generated `test_skill_file_exists` + `test_frontmatter_name` + 8 skill-specific: required-section-headers / six-scope-procedure-headers / trigger-phrases / empirical-anchor-cited / composition-table / six-failure-mode-classes / output-contract-verdict-template / anti-trigger-warns-against-overlap). 10/10 PASS in 0.28s.
+
+**Composition with existing review layers** (table in SKILL.md):
+- Complementary to `udm-gap-check` (hard rule 11; per-commit scope)
+- Complementary to `udm-design-reviewer` (hard rule 14; substrate-edit single-commit)
+- Complementary to `udm-cascade-auditor` Pattern F (D89-D91; round-aggregate)
+- Composition point: `udm-round-closeout` at round close-out runs BOTH this skill (final cohort) + Pattern F (round-aggregate) before round 🟢 lock
+
+**Cumulative session delta UPDATED at B-483 closure**: **91 NEW B-Ns** (B-393-B-483; +1 from B-483 open + close this commit) / **10 B-Ns CLOSED multi-session arc** (B-465+B-466+B-467+B-468 prior session + B-470+B-471+B-472+B-458+B-475+B-483 this session) / 11 NEW R-Ns / 14 canonical edge case series / pytest 2753 → **2763 pass / 10 skip / 0 fail** (+10 from B-483 Tier 0 additions; full-suite scope verified live by parent agent post-cohort: tier0+tier1+unit+property+regression).
+
+**Pitfall #9.m discipline-applied-to-its-own-tracker satisfaction**: skill authored 2026-05-18 + first informal invocation already occurred 2026-05-18 (at user prompt "Run a gap analysis or review" that motivated the skill — reviewer `aa320fb75f55a5471` ran the 6-scope protocol manually). Discipline applied to its own empirical anchor pre-formalization; formalized at this commit.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `.claude/skills/udm-cohort-review/SKILL.md` + `CLAUDE.md` + `tests/tier0/*` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md` all substrate per `tools/cascade_classifier.py::SUBSTRATE_FILES`):
+- TEST: pytest 2763 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression; 10 NEW Tier 0 assertions at `test_skill_cohort_review.py` PASS in 0.28s; skill module auto-loaded by Claude system per system-reminder catalogue listing.
+- GAP ANALYSIS: 6-category G1-G6 audit scheduled post-commit per udm-gap-check discipline (Step 2 in any cascade Step protocol).
+- REVIEW: PRE-COMMIT independent reviewer spawn via udm-design-reviewer agent BEFORE commit per hard rule 14 substrate-edit clause (producer cannot self-review on SUBSTRATE_EDIT commits).
+
+---
+
 ## 2026-05-18 — B-458 + B-475 cohort (MEDIUM WSJF 2.5 + 2.0; 10th orchestrator check + B-470 coverage gap)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps." 2026-05-18 (udm-next-step-cascade Step 1).
