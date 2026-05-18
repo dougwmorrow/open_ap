@@ -791,20 +791,19 @@ def test_checks_registry_present():
 
 
 def test_each_check_has_unique_name():
-    """B-459 Assertion 53 (updated B-470 + B-458 2026-05-18): each CHECKS
-    entry has a unique name attribute. Canonical name set evolved 4 → 5 → 6
-    via B-470 (`inline_fix_claim`) + B-458 (`closure_annotation`) closures."""
+    """B-459 Assertion 53 (updated B-470 + B-458 + B-464 2026-05-18): each
+    CHECKS entry has a unique name. Canonical name set evolved 4 → 5 → 6 → 7
+    via B-470 (`inline_fix_claim`) + B-458 (`closure_annotation`) + B-464
+    (`narrative_pytest_claim`) closures."""
     import tools.check_commit_msg as ccm
     names = [c.name for c in ccm.CHECKS]
     assert len(names) == len(set(names)), f"Duplicate check names: {names}"
-    canonical_b459_names = {
+    canonical_b464_names = {
         "exemption_phrase", "cascade_evidence", "pytest_count", "orphan_candidate",
+        "inline_fix_claim", "closure_annotation", "narrative_pytest_claim",
     }
-    canonical_b458_names = canonical_b459_names | {
-        "inline_fix_claim", "closure_annotation",
-    }
-    assert set(names) == canonical_b458_names, (
-        f"CHECKS names must equal {canonical_b458_names}; got {set(names)}"
+    assert set(names) == canonical_b464_names, (
+        f"CHECKS names must equal {canonical_b464_names}; got {set(names)}"
     )
 
 
@@ -836,7 +835,7 @@ def test_block_checks_are_exemption_and_cascade():
     assert by_severity["BLOCK"] == {"exemption_phrase", "cascade_evidence"}
     assert by_severity["WARN"] == {
         "pytest_count", "orphan_candidate", "inline_fix_claim",
-        "closure_annotation",
+        "closure_annotation", "narrative_pytest_claim",
     }
 
 
@@ -2260,3 +2259,158 @@ def test_closure_annotation_check_via_main_orchestrator(tmp_path, monkeypatch, c
     assert "B-458" in captured.err
     assert "B-409" in captured.err
     assert "B-414" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# B-464 closure: NarrativePytestClaimVerificationCheck — anomalously high
+# skip-count detection (META-IRONY pattern 1f74b72: 62 cited / 10 actual)
+# ---------------------------------------------------------------------------
+
+
+def test_narrative_pytest_check_registered_in_checks():
+    """B-464 Assertion 124: NarrativePytestClaimVerificationCheck registered
+    in CHECKS list as the 7th check + severity=WARN + requires_backlog_diff
+    False + requires_classification False."""
+    import tools.check_commit_msg as ccm
+    names = [c.name for c in ccm.CHECKS]
+    assert "narrative_pytest_claim" in names
+    check = next(c for c in ccm.CHECKS if c.name == "narrative_pytest_claim")
+    assert check.severity == "WARN"
+    assert check.requires_backlog_diff is False
+    assert check.requires_classification is False
+    assert len(ccm.CHECKS) >= 7  # forward-compat lower bound
+
+
+def test_narrative_pytest_check_passes_on_no_triplet():
+    """B-464 Assertion 125: commits with no pytest count claims return PASS."""
+    import tools.check_commit_msg as ccm
+    commit_msg = "feat: ordinary commit\n\nNo pytest count narrative.\n"
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_narrative_pytest_check_passes_on_normal_skip_count():
+    """B-464 Assertion 126: commits citing `N pass / M skip` where M is
+    within project baseline range return PASS (no anomaly)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = "build: cohort closure\n\npytest 2763 pass / 10 skip / 0 fail.\n"
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_narrative_pytest_check_warns_on_anomalous_skip_count():
+    """B-464 Assertion 127: commits citing `N pass / M skip` where M exceeds
+    anomaly threshold (20) return WARN finding (the EXACT 1f74b72 META-IRONY
+    pattern: 62 skip cited / 10 actual)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = "docs: cohort closure\n\npytest 2664 pass / 62 skip / 0 fail.\n"
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is False
+    assert len(result.findings) == 1
+    # Finding cites the anomalous count + empirical anchor
+    assert "62" in result.findings[0]
+    assert "1f74b72" in result.findings[0]
+    assert "B-464" in result.findings[0]
+
+
+def test_narrative_pytest_check_threshold_boundary_at_20():
+    """B-464 Assertion 128: threshold is exclusive (skip=20 PASSES, skip=21
+    triggers WARN). Pins the boundary against silent threshold drift."""
+    import tools.check_commit_msg as ccm
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+
+    msg_at_threshold = "build: \n\npytest 1000 pass / 20 skip / 0 fail.\n"
+    result_at = check.scan(msg_at_threshold, ctx)
+    assert result_at.passed is True, "skip=20 should NOT trigger (boundary)"
+
+    msg_above_threshold = "build: \n\npytest 1000 pass / 21 skip / 0 fail.\n"
+    result_above = check.scan(msg_above_threshold, ctx)
+    assert result_above.passed is False, "skip=21 should trigger WARN"
+
+
+def test_narrative_pytest_check_skips_code_blocks():
+    """B-464 Assertion 129: pytest triplets inside fenced code blocks are
+    stripped via `_strip_code_blocks` and do NOT trigger WARN (preserves
+    canonical pattern shared with B-449 + B-451 + B-458 checks)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: work\n\n"
+        "Example output from prior commit:\n"
+        "```\n"
+        "pytest 1000 pass / 100 skip / 0 fail (verbatim historical output)\n"
+        "```\n"
+        "Body without anomalous claim.\n"
+    )
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+
+
+def test_narrative_pytest_check_skips_blockquote_lines():
+    """B-464 Assertion 130: pytest triplets inside markdown blockquote lines
+    (`>` prefix) are NOT treated as new claims — quoted reviewer-output of
+    historical counts should not trigger false positives."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: substantive work\n\n"
+        "Reviewer cited:\n"
+        "> Per prior cycle: pytest 2664 pass / 62 skip / 0 fail (historical).\n"
+        "\n"
+        "Body without anomalous claims.\n"
+    )
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_narrative_pytest_check_render_findings_emits_warn_footer(capsys):
+    """B-464 Assertion 131: render_findings_to_stderr emits `[commit-msg WARN]`
+    header + 1f74b72 empirical-anchor reference + re-verify recommendation."""
+    import tools.check_commit_msg as ccm
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    check.render_findings_to_stderr([
+        "pytest skip-count 62 (line 3) exceeds anomaly threshold 20...",
+    ])
+    err = capsys.readouterr().err
+    assert "[commit-msg WARN]" in err
+    assert "B-464" in err
+    assert "1f74b72" in err
+    assert "Re-verify pytest counts" in err
+    assert "WARN (not BLOCK)" in err
+
+
+def test_narrative_pytest_check_via_main_orchestrator(tmp_path, monkeypatch, capsys):
+    """B-464 Assertion 132: end-to-end via main() — commit-msg with anomalous
+    skip-count produces WARN finding but does NOT BLOCK (exit code 0)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: meta-irony pattern\n\npytest 2664 pass / 62 skip / 0 fail.\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    captured = capsys.readouterr()
+    # WARN-only; does NOT block (exit 0)
+    assert rc == ccm.EXIT_SUCCESS
+    assert "B-464" in captured.err
+    assert "62" in captured.err

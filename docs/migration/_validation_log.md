@@ -2,6 +2,40 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-464 narrative pytest-claim verification (MEDIUM WSJF 2.0; 7th CommitMsgCheck subclass; Mechanism C-1 layer empirically complete)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). Recommendation: B-464 per prior SESSION_RESUME runway + cascade-complete report.
+
+**Scope**: 1 B-N closure (B-464) — new CommitMsgCheck subclass + Tier 0 tests + tracker updates. 7 files modified: `tools/check_commit_msg.py` + `tests/tier0/test_check_commit_msg.py` + `CLAUDE.md` + `docs/migration/BACKLOG.md` + `docs/migration/GLOSSARY.md` + `docs/migration/CURRENT_STATE.md` + `docs/migration/HANDOFF.md` + `docs/migration/_validation_log.md` (this entry).
+
+**Producer**: parent agent (this session).
+
+**B-464** (MEDIUM WSJF 2.0; 1st-event empirical anchor commit `1f74b72`): `NarrativePytestClaimVerificationCheck` 7th CommitMsgCheck subclass. WARN-severity heuristic narrative pytest-claim verification — catches anomalously high skip-counts indicating copy-paste-stale narrative. Empirical META-IRONY pattern at 1f74b72: cited `2664 pass / 62 skip` in 4 locations; actual cascade scope returned `2664 pass / 10 skip` (6.2x skip-count drift; root cause copy-paste-stale narrative from prior pytest run with different scope). Detection: `_PYTEST_FULL_TRIPLET_RE` matches `\b(?P<pass>\d{2,5})\s*pass[/,]\s*(?P<skip>\d{1,4})\s*skip(?:\s*[/,]\s*(?P<fail>\d{1,3})\s*fail)?` (case-insensitive; "/" or "," separator; named capture groups for forensic logging). `_PYTEST_SKIP_ANOMALY_THRESHOLD = 20` (2x project baseline ~10). Threshold boundary exclusive (skip=20 PASS; skip=21 WARN). Code-block + blockquote suppression via existing `_strip_code_blocks` + `_is_inside_blockquote` helpers (canonical pattern from B-449 + B-451 + B-458). Findings cap 10; finding text cites line number + anomaly threshold + project baseline + canonical re-verify command + B-464 closure + empirical anchor commit. WARN-only per WSJF MEDIUM (matches B-449 + B-451 + B-470 + B-458 contract). Orthogonal-failure-mode complement to B-449 PytestCountDisambiguationCheck — B-449 catches missing-scope; B-464 catches anomalous-value. Subprocess `pytest --collect-only -q` approach considered + rejected (~5-10s overhead per commit exceeds reasonable hook latency; heuristic threshold sufficient at current scale; future B-N may add dynamic-baseline verification if heuristic threshold proves insufficient). 9 NEW Tier 0 assertions (124-132 — registered-in-CHECKS / passes-on-no-triplet / passes-on-normal-skip-count / warns-on-anomalous-skip-count / threshold-boundary-at-20 / skips-code-blocks / skips-blockquote-lines / render-emits-warn-footer / end-to-end-via-main-orchestrator).
+
+**Mechanism C-1 commit-msg layer architecture EMPIRICALLY COMPLETE**: 7 CommitMsgCheck subclasses now cover all observed failure-mode classes through 2026-05-18:
+- `ExemptionPhraseCheck` (BLOCK; 12-phrase exemption detection)
+- `CascadeEvidenceCheck` (BLOCK; hard rule 14 tri-section validation)
+- `PytestCountDisambiguationCheck` (WARN; B-449 missing-scope)
+- `UnresolvedForwardPreventionCandidatesCheck` (WARN; B-451 orphan-candidates)
+- `InlineFixClaimVerificationCheck` (WARN; B-470 claim-vs-reality drift)
+- `ClosureAnnotationConsistencyCheck` (WARN; B-458 retrospective closure claims)
+- `NarrativePytestClaimVerificationCheck` (WARN; B-464 anomalous skip-count) ← NEW
+- 132 Tier 0 assertions pin abstraction + all 7 subclasses (was 71 pre-B-459-cohort)
+- Future check additions land via single subclass + CHECKS append per B-459 abstraction (B-466 init_subclass validation + B-467 OrchestrationContext + B-468 render_findings_to_stderr + B-471 severity-value validation + B-472 declarative requires_classification)
+
+**Cumulative session delta UPDATED at B-464 closure**: 91 NEW B-Ns UNCHANGED (B-393-B-483; B-464 was pre-existing open; no new opens this commit). **11 B-Ns CLOSED multi-session arc** (cumulative; 10 prior + B-464 this commit: B-465+B-466+B-467+B-468 prior session + B-470+B-471+B-472+B-458+B-475+B-483 + **B-464** this session). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2763 → **2772 pass / 10 skip / 0 fail** (+9 from B-464 Tier 0 additions; full-suite scope verified live: tier0+tier1+unit+property+regression).
+
+**Pitfall #9.j leading-badge self-application**: B-464 BACKLOG entry leading badge `(⚫ CLOSED 2026-05-18; MEDIUM; WSJF 2.0)` correctly rendered with strikethrough body + inline closure mechanism — recursive self-consistency verified on the EXACT discipline (B-458 + B-470) designed to catch this drift class.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/test_check_commit_msg.py` + `CLAUDE.md` + `GLOSSARY.md` + `_validation_log.md` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` all substrate per `tools/cascade_classifier.py::SUBSTRATE_FILES`):
+- TEST: pytest 2772 verified live per cascade Step 3.1 — `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression -q` returned `2772 passed, 10 skipped in 55.38s` scope=tier0+tier1+unit+property+regression. 132 Tier 0 assertions at `test_check_commit_msg.py` (was 123 pre-cohort; +9 B-464). Smoke-test verified: anomalous case (62 skip) → WARN; normal case (10 skip) → PASS; threshold boundary at 20 (=20 PASS; =21 WARN); code-block + blockquote suppression preserved.
+- GAP ANALYSIS: udm-next-step-cascade Step 2 gap-check scheduled post-commit (Layer 2a udm-step-10-verifier + Layer 2b parent-agent broader gap reflection across 6 categories).
+- REVIEW: PRE-COMMIT independent reviewer `a9159d38e14a31f4f` (general-purpose subagent) — VERDICT: **VALID-WITH-CONCERNS** (no 🔴 BLOCK). 6 scopes walked: §1 implementation correctness ✅ (regex sound + threshold exclusive boundary + suppression preserved) + 🟡 dead-store concern fixed inline; §2 back-compat ✅; §3 test coverage ✅; §4 Pitfall #9.j leading-badge ✅ (recursive self-consistency on the EXACT discipline designed to catch this); §5 CLAUDE.md/GLOSSARY ✅ + 🟡 GLOSSARY phrasing drift fixed inline ("Findings sorted by line number" → "Findings emitted in line-number order (natural iteration)"); §6 architectural 🟡 threshold-rigidity (B-486 candidate opened LOW WSJF 1.0; defer until empirical threshold drift). Mechanism A step 5 quote-cite: "All 6 scopes pass mechanically. Three 🟡 cosmetic + one 🟡 architectural-rigidity (B-N candidate). Commit may proceed."
+
+**Cumulative session delta UPDATED at reviewer-surfaced opens**: 91 → **92 NEW B-Ns** (B-393-B-486; +1 from B-486 open per reviewer Concern 6.1).
+
+---
+
 ## 2026-05-18 — B-483 cross-cohort review discipline layer (HIGH WSJF 3.0; systematic single-commit-scope gap closure)
 
 **Trigger**: user-direction 2026-05-18 "Proceed with B-483" following acceptance of proposal authored at prior turn ("Come up with a proposal to address this gap").

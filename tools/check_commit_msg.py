@@ -1214,6 +1214,147 @@ class ClosureAnnotationConsistencyCheck(CommitMsgCheck):
         )
 
 
+# -------------------------------------------------------------------------
+# B-464 closure: narrative pytest-claim verification (skip-count anomaly)
+# -------------------------------------------------------------------------
+# Empirical anchor commit `1f74b72` (META-IRONY surfaced by Agent 69 2026-05-18):
+# narrative cited "2664 pass / 62 skip" in 4 locations but actual cascade
+# scope (tier0+tier1+unit+property+regression) returns "2664 pass / 10 skip".
+# The PASS count was correct; the SKIP count was wrong by 6.2x. Root cause:
+# copy-paste of stale narrative from prior commit before the test suite's
+# skip-count baseline changed.
+#
+# This check composes with B-449 (pytest-count scope-disambiguation) as
+# orthogonal failure-mode coverage:
+#   - B-449 catches pytest counts WITHOUT scope-indicator (ambiguity)
+#   - B-464 catches pytest counts WITH anomalous skip-count (accuracy)
+#
+# Heuristic strategy: hardcoded skip-count threshold = 20 (2x current
+# baseline 10). False-positive rate near zero since project's actual skip
+# count grows slowly. Future B-N may add subprocess-baseline verification
+# (run `pytest --collect-only -q` at commit time + parse "N collected").
+# Current heuristic is bounded-cost (regex-only); subprocess approach has
+# ~5-10s overhead per commit which exceeds reasonable hook latency.
+
+# Regex extracts `N pass / M skip [/ K fail]` patterns. The "/" separator
+# is canonical per project convention; tolerates whitespace variation.
+# Captures pass-count + skip-count for threshold check.
+_PYTEST_FULL_TRIPLET_RE = re.compile(
+    r"\b(?P<pass>\d{2,5})\s*(?:pass(?:ed)?|PASS(?:ED)?)"
+    r"\s*[/,]\s*"
+    r"(?P<skip>\d{1,4})\s*(?:skip(?:ped)?|SKIP(?:PED)?)"
+    r"(?:\s*[/,]\s*(?P<fail>\d{1,3})\s*(?:fail(?:ed|ing)?|FAIL(?:ED)?))?",
+    re.IGNORECASE,
+)
+
+# Skip-count anomaly threshold. Project's actual baseline at 2026-05-18 is
+# 10 skipped (tier0+tier1+unit+property+regression scope). Threshold = 20
+# permits 2x baseline before WARN; catches 1f74b72-class drift (62 cited).
+_PYTEST_SKIP_ANOMALY_THRESHOLD = 20
+
+
+class NarrativePytestClaimVerificationCheck(CommitMsgCheck):
+    """B-464 closure (2026-05-18): narrative pytest-claim verification —
+    catches anomalously high skip-counts indicating copy-paste-stale
+    narrative or arithmetic error.
+
+    Empirical anchor: commit `1f74b72` cited `2664 pass / 62 skip` in 4
+    locations but actual cascade Step 3.1 scope returned `2664 pass /
+    10 skip`. The 62 was a copy-paste from a prior pytest run with
+    different scope (likely including Tier 4 crash-tests which add ~52
+    module-level skips on dev workstations).
+
+    Detection logic (heuristic; WARN-only):
+        - Sanitize commit-msg via `_strip_code_blocks` (preserves canonical
+          B-449/B-451/B-458 pattern).
+        - Find `N pass / M skip [/ K fail]` triplet patterns.
+        - WARN per match where `M > _PYTEST_SKIP_ANOMALY_THRESHOLD` (20).
+        - Cite empirical anchor + suggest re-verification.
+
+    Severity: WARN per WSJF MEDIUM (matches B-449 + B-451 + B-470 + B-458
+    contract). Conservative threshold (2x baseline) keeps false-positive
+    rate near zero; project's actual skip count is stable at ~10.
+
+    Composes orthogonally with B-449 PytestCountDisambiguationCheck —
+    B-449 catches missing-scope; B-464 catches anomalous-value.
+    """
+    name = "narrative_pytest_claim"
+    severity: Literal["WARN", "BLOCK"] = "WARN"
+    requires_backlog_diff = False
+    requires_classification = False
+
+    def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
+        sanitized = _strip_code_blocks(commit_msg)
+        if not sanitized.strip():
+            return CheckResult(passed=True, findings=[])
+
+        # Iterate per-line so we can report line numbers (helpful diagnostic)
+        lines = sanitized.splitlines()
+        findings: list[str] = []
+        seen_lines: set[int] = set()
+
+        for i, line in enumerate(lines):
+            if _is_inside_blockquote(lines, i):
+                continue
+            for m in _PYTEST_FULL_TRIPLET_RE.finditer(line):
+                skip_count = int(m.group("skip"))
+                if skip_count <= _PYTEST_SKIP_ANOMALY_THRESHOLD:
+                    continue
+                if i in seen_lines:
+                    continue
+                seen_lines.add(i)
+                snippet = line.strip()[:120]
+                findings.append(
+                    f"pytest skip-count {skip_count!r} (line {i+1}) exceeds "
+                    f"anomaly threshold {_PYTEST_SKIP_ANOMALY_THRESHOLD} "
+                    f"(project baseline ~10 for full-suite scope). "
+                    f"Empirical anchor commit `1f74b72` per B-464 closure "
+                    f"2026-05-18 — META-IRONY pattern (62 skip cited / 10 "
+                    f"actual). Re-verify via `pytest -q --no-header | tail -3` "
+                    f"on cited scope OR update narrative to match actual count. "
+                    f"Snippet: {snippet!r}"
+                )
+
+        if findings:
+            return CheckResult(passed=False, findings=findings[:10])
+        return CheckResult(passed=True, findings=[])
+
+    def render_findings_to_stderr(self, findings: list[str]) -> None:
+        """Per B-468: emit narrative-pytest-claim WARN boilerplate with
+        re-verification recommendation footer."""
+        print(
+            f"\n[commit-msg WARN] {len(findings)} pytest count claim(s) with "
+            "anomalously high skip-count in commit-msg "
+            "(per B-464; 1st-event empirical anchor commit `1f74b72`):",
+            file=sys.stderr,
+        )
+        for f in findings:
+            print(f"  - {f}", file=sys.stderr)
+        print("\nResolution options:", file=sys.stderr)
+        print(
+            "  - Re-verify pytest counts: "
+            "`.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 "
+            "tests/unit tests/property tests/regression -q --no-header 2>&1 "
+            "| tail -3`",
+            file=sys.stderr,
+        )
+        print(
+            "  - Update narrative to match actual count (likely copy-paste "
+            "from prior commit before suite grew)",
+            file=sys.stderr,
+        )
+        print(
+            "  - If skip-count is legitimately high (e.g., Tier 4 crash-tests "
+            "included), cite explicit scope (e.g., 'with-crash-tier')",
+            file=sys.stderr,
+        )
+        print(
+            "This is a WARN (not BLOCK); commit will still proceed. "
+            "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
+            file=sys.stderr,
+        )
+
+
 # CHECKS registry per B-459 — single point of registration for orchestrator.
 # Order matters only for stderr-emission deterministic display; audit-row
 # JSON keys are independent.
@@ -1224,6 +1365,7 @@ CHECKS: list[CommitMsgCheck] = [
     UnresolvedForwardPreventionCandidatesCheck(),
     InlineFixClaimVerificationCheck(),  # B-470 closure 2026-05-18
     ClosureAnnotationConsistencyCheck(),  # B-458 closure 2026-05-18
+    NarrativePytestClaimVerificationCheck(),  # B-464 closure 2026-05-18
 ]
 
 
