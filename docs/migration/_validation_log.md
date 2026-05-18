@@ -2,6 +2,34 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — Cleanup cohort B-476 + B-479 + B-486 (LOW WSJF; pre-UDM-pipeline-pivot runway clear)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps. We need to finish up anything before moving onto our next UDM pipeline updates." 2026-05-18. User running pipeline tests (SCD2 + parquet load) in parallel; cleanup cohort minimizes outstanding small B-Ns before pivot.
+
+**Scope**: 3 B-N closures batched (B-476 + B-479 + B-486) — all LOW WSJF trivial fixes. 5 files modified: `tools/check_commit_msg.py` (B-479 subprocess.run encoding + B-486 env-configurable threshold + os import added) + `tests/tier0/test_check_commit_msg.py` (B-476 docstring fix + 4 NEW assertions for B-479/B-486) + `docs/migration/BACKLOG.md` (3 closure annotations) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + `CLAUDE.md` (L98 assertion count 145 → 149) + this entry.
+
+**Producer**: parent agent (this session).
+
+**B-476 implementation** (LOW WSJF 1.0; test docstring accuracy):
+- `tests/tier0/test_check_commit_msg.py:1178` — added `requires_classification = False` to `BrokenNoSeverity` test class. Pre-B-476 the test class omitted BOTH `severity` AND `requires_classification` (post-B-472 __init_subclass__ requires both), making the test's "missing severity in isolation" claim ambiguous. Option A applied per BACKLOG spec (cleaner isolation; 1-line additive).
+
+**B-479 implementation** (LOW WSJF 0.5; subprocess encoding safety):
+- `tools/check_commit_msg.py:318,599,956` — added explicit `encoding="utf-8"` kwarg to all 3 `subprocess.run()` calls (`_collect_staged_diffs` + back-compat orphan-candidate wrapper + `_fetch_staged_content`). Pre-B-479 `text=True` without explicit encoding defaulted to system codepage (CP1252 on Windows; UTF-8 on RHEL); would mangle Unicode markers like `⚫` in git diff output on Windows-dev workstations causing `_BACKLOG_CLOSURE_ANNOTATION_RE` + `_is_empirical_anchor_context()` to miss legitimate matches. Now explicit UTF-8 enforced regardless of host system. +1 Tier 0 assertion 146 (source-grep pin against silent removal).
+
+**B-486 implementation** (LOW WSJF 1.0; env-configurable threshold):
+- `tools/check_commit_msg.py` — NEW `_resolve_pytest_skip_threshold()` helper at L1389 reads `PYTEST_SKIP_ANOMALY_THRESHOLD` env var with graceful fallback to canonical 20 on absent/invalid (non-int/negative) value. `_PYTEST_SKIP_ANOMALY_THRESHOLD` constant now resolved at module-load time from helper. `os` import added to top-of-module. Operator override pathway: `PYTEST_SKIP_ANOMALY_THRESHOLD=50 git commit ...` accommodates organic project skip-count growth (Tier 4 crash-tests adding ~52 skips on Linux CI). +3 Tier 0 assertions (147-149: default 20 / env=50 override / invalid env fallback to 20). Option (b) JSON sidecar baseline DEFERRED (heavier refactor; opportunistic at next round close-out).
+
+**Cumulative session delta UPDATED at cleanup cohort closure**: 98 NEW B-Ns UNCHANGED (B-476 + B-479 + B-486 all pre-existing opens). **21 B-Ns CLOSED multi-session arc** (cumulative; 18 prior + 3 this cohort: B-476 + B-479 + B-486). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2803 → **2807 pass / 10 skip / 0 fail** (+4 from B-479 + B-486 Tier 0 additions; B-476 is 1-line test docstring fix with no NEW assertion).
+
+**Runway state post-cleanup**: explicitly-deferred items remain (B-460 udm-progress-logger v2.0.0 MAJOR / B-462 + B-463 query_blindspots forward-prevention / B-473 required_diffs tuple generalization / B-474 GLOSSARY criterion / B-484 udm-cohort-reviewer agent / B-485 cohort-review effectiveness ledger). Pipeline-lead-blocked Phase 2-4 UDM Skills Audit (B-416-B-447; 32 B-Ns) waiting on explicit authorization. Architectural items B-481 (wc -l forward-prevention) + B-482 (OrchestrationContext.staged_files extension) remain LOW priority deferred. POLISH_QUEUE P-21 + P-22 + P-23 (3 LOW cosmetic). Branch ready for UDM pipeline pivot per user direction.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/*` + `CLAUDE.md` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md`):
+- TEST: pytest 2807 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 149 Tier 0 assertions at `test_check_commit_msg.py`. Smoke test verified all 3 fixes: B-479 encoding count, B-486 default/override/invalid fallback paths, B-476 isolation.
+- GAP ANALYSIS: producer-side 6-category G1-G6 audit applied — G1 leading-badges correct, G2 arithmetic propagated 4 mirrors, G3 implementation matches BACKLOG, G4 udm-progress-logger applied, G5 N/A (no new public surface; modifications to existing `_PYTEST_SKIP_ANOMALY_THRESHOLD` + subprocess.run kwargs), G6 0 new B-N opportunities.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
 ## 2026-05-18 — B-489 `_false_positive_log.md` discipline tracker (LOW WSJF 1.5; Layer 4 of false-positive prevention architecture)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). B-489 selected as highest-priority LOW WSJF 1.5 (vs B-486 / B-481 / B-478 / B-479 / B-486 LOW WSJF 1.0).

@@ -1173,6 +1173,10 @@ def test_init_subclass_raises_on_missing_severity():
         class BrokenNoSeverity(ccm.CommitMsgCheck):  # type: ignore[misc]
             name = "broken_severity"
             requires_backlog_diff = False
+            # Per B-476 closure 2026-05-18: explicitly declare requires_classification
+            # so this test isolates the "missing severity" assertion (post-B-472
+            # CommitMsgCheck.__init_subclass__ requires this attribute).
+            requires_classification = False
             def scan(self, commit_msg, ctx):
                 return ccm.CheckResult(passed=True, findings=[])
     assert "severity" in str(exc_info.value)
@@ -2680,3 +2684,74 @@ def test_inline_fix_check_missing_entries_handles_multiple_separators():
             if tok.strip()
         ]
         assert result == expected, f"Input {input_str!r} -> {result} (expected {expected})"
+
+
+# ---------------------------------------------------------------------------
+# B-479 closure: subprocess.run encoding='utf-8' explicit declaration
+# (Windows-dev safety for Unicode markers in git diff output)
+# ---------------------------------------------------------------------------
+
+
+def test_b479_subprocess_run_calls_have_explicit_utf8_encoding():
+    """B-479 Assertion 146: all 3 subprocess.run calls in check_commit_msg.py
+    declare explicit `encoding="utf-8"` per B-479 closure. Catches silent
+    drift where future refactor removes the encoding parameter (which would
+    re-introduce Windows-dev false-negative class on Unicode emoji markers
+    like ⚫ in git diff output)."""
+    import inspect
+    import tools.check_commit_msg as ccm
+    source = inspect.getsource(ccm)
+    # 3 subprocess.run calls: _collect_staged_diffs (L318) + back-compat
+    # wrapper (L599) + _fetch_staged_content (L956). Each should have
+    # encoding="utf-8". Count source occurrences as proxy.
+    # Note: count includes 2 inline comments ("encoding='utf-8'" references)
+    # plus the 3 kwarg declarations = 5 total expected.
+    assert source.count('encoding="utf-8"') >= 3, (
+        f"Expected ≥3 `encoding=\"utf-8\"` declarations in check_commit_msg.py "
+        f"per B-479 closure (subprocess.run x 3); found {source.count(chr(34) + 'encoding=' + chr(34))}. "
+        f"Silent removal would re-introduce Windows-dev false-negative class."
+    )
+
+
+# ---------------------------------------------------------------------------
+# B-486 closure: env-configurable _PYTEST_SKIP_ANOMALY_THRESHOLD
+# (operator-override accommodates organic project skip-count growth)
+# ---------------------------------------------------------------------------
+
+
+def test_b486_threshold_default_is_20(monkeypatch):
+    """B-486 Assertion 147: default `_PYTEST_SKIP_ANOMALY_THRESHOLD` = 20
+    when env var unset (canonical D74 baseline)."""
+    import importlib
+    import tools.check_commit_msg
+    monkeypatch.delenv("PYTEST_SKIP_ANOMALY_THRESHOLD", raising=False)
+    importlib.reload(tools.check_commit_msg)
+    assert tools.check_commit_msg._PYTEST_SKIP_ANOMALY_THRESHOLD == 20
+
+
+def test_b486_threshold_env_override_valid_int(monkeypatch):
+    """B-486 Assertion 148: env var `PYTEST_SKIP_ANOMALY_THRESHOLD=50`
+    overrides default. Pins operator-override pathway."""
+    import importlib
+    import tools.check_commit_msg
+    monkeypatch.setenv("PYTEST_SKIP_ANOMALY_THRESHOLD", "50")
+    importlib.reload(tools.check_commit_msg)
+    assert tools.check_commit_msg._PYTEST_SKIP_ANOMALY_THRESHOLD == 50
+
+
+def test_b486_threshold_env_invalid_falls_back_to_default(monkeypatch):
+    """B-486 Assertion 149: invalid env value (non-int / negative) gracefully
+    falls back to canonical 20 (defense against operator typo or shell drift)."""
+    import importlib
+    import tools.check_commit_msg
+    monkeypatch.setenv("PYTEST_SKIP_ANOMALY_THRESHOLD", "not-an-int")
+    importlib.reload(tools.check_commit_msg)
+    assert tools.check_commit_msg._PYTEST_SKIP_ANOMALY_THRESHOLD == 20
+
+    monkeypatch.setenv("PYTEST_SKIP_ANOMALY_THRESHOLD", "-5")
+    importlib.reload(tools.check_commit_msg)
+    assert tools.check_commit_msg._PYTEST_SKIP_ANOMALY_THRESHOLD == 20
+
+    # Cleanup: restore module to canonical state
+    monkeypatch.delenv("PYTEST_SKIP_ANOMALY_THRESHOLD", raising=False)
+    importlib.reload(tools.check_commit_msg)

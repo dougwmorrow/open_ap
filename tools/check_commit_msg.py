@@ -70,6 +70,7 @@ Exit codes:
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -319,6 +320,7 @@ def _collect_staged_diffs(checks: list[CommitMsgCheck]) -> dict[str, str]:
                 ["git", "diff", "--cached", "--", path],
                 capture_output=True, text=True, check=False, timeout=10,
                 cwd=REPO_ROOT,
+                encoding="utf-8",  # B-479: explicit UTF-8 for Windows-dev safety (else system codepage CP1252 default would mangle Unicode markers like ⚫)
             )
             diffs[path] = result.stdout if result.returncode == 0 else ""
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -599,6 +601,7 @@ def check_unresolved_forward_prevention_candidates(
             result = subprocess.run(
                 ["git", "diff", "--cached", "docs/migration/BACKLOG.md"],
                 capture_output=True, text=True, timeout=10, cwd=REPO_ROOT,
+                encoding="utf-8",  # B-479: explicit UTF-8 for Windows-dev safety
             )
             staged_backlog_diff = result.stdout if result.returncode == 0 else ""
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -957,6 +960,7 @@ def _fetch_staged_content(path: str) -> str:
             ["git", "show", f":{path}"],
             capture_output=True, text=True, check=False, timeout=10,
             cwd=REPO_ROOT,
+            encoding="utf-8",  # B-479: explicit UTF-8 for Windows-dev safety (else system codepage CP1252 default would mangle Unicode markers in target file content)
         )
         return result.stdout if result.returncode == 0 else ""
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -1374,7 +1378,25 @@ _PYTEST_FULL_TRIPLET_RE = re.compile(
 # Skip-count anomaly threshold. Project's actual baseline at 2026-05-18 is
 # 10 skipped (tier0+tier1+unit+property+regression scope). Threshold = 20
 # permits 2x baseline before WARN; catches 1f74b72-class drift (62 cited).
-_PYTEST_SKIP_ANOMALY_THRESHOLD = 20
+#
+# Per B-486 closure 2026-05-18: env-configurable via PYTEST_SKIP_ANOMALY_THRESHOLD
+# operator-override. Defaults to canonical 20; allows accommodation of organic
+# project growth (e.g., Tier 4 crash-tests landing on Linux CI add ~52 skips)
+# without code edit. Invalid env values (non-int) silently fall back to default.
+def _resolve_pytest_skip_threshold() -> int:
+    """Per B-486 closure 2026-05-18: parse PYTEST_SKIP_ANOMALY_THRESHOLD env
+    var with graceful fallback. Returns canonical 20 on absent / invalid value."""
+    raw = os.environ.get("PYTEST_SKIP_ANOMALY_THRESHOLD", "20")
+    try:
+        value = int(raw)
+        if value < 0:
+            return 20  # negative threshold nonsensical; fall back to canonical
+        return value
+    except (ValueError, TypeError):
+        return 20
+
+
+_PYTEST_SKIP_ANOMALY_THRESHOLD = _resolve_pytest_skip_threshold()
 
 
 class NarrativePytestClaimVerificationCheck(CommitMsgCheck):
