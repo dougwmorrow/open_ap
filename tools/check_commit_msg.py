@@ -21,6 +21,20 @@ without cross-referencing prior baseline messages. Closure target:
 Mechanism C-1 Phase 2 extension; warn-only per WSJF MEDIUM (escalation to
 BLOCK reserved for pipeline-lead after false-positive baseline period).
 
+Per B-451 closure (2026-05-18; Agent 59 cycle-3 D72 convergence finding G2-A):
+adds `check_unresolved_forward_prevention_candidates` — WARN-only check that
+scans GAP ANALYSIS + REVIEW + body for orphan-candidate phrasings (e.g.
+"deferred (B-N candidate for X)" / "tracked as B-N TBD") and verifies either
+(a) BACKLOG.md staged diff opens a NEW B-N entry, OR (b) commit-msg cites
+explicit dismissal/deferral target. Empirical anchor commit `e76078c` GAP
+ANALYSIS mentioned "B-409 + B-414 commit-message cascade-evidence audit"
+deferred candidate without corresponding BACKLOG opening (Agent 59 G2-A
+finding). Closure target: Mechanism C-1 Phase 2 extension; warn-only per
+WSJF MEDIUM. NOTE: home-file choice rationale — although BACKLOG B-451 text
+named `tools/pre_commit_checks.py`, that orchestrator runs BEFORE commit-msg
+is finalized (cannot read COMMIT_EDITMSG). The check NEEDS commit-msg
+content + BACKLOG.md staged diff; commit-msg hook timing satisfies both.
+
 Usage (invoked by `.githooks/commit-msg` wrapper):
     python check_commit_msg.py <commit-msg-path> [--no-audit]
 
@@ -33,6 +47,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -195,6 +210,176 @@ def check_pytest_count_disambiguation(commit_msg: str) -> tuple[bool, list[str]]
     return True, []
 
 
+# -------------------------------------------------------------------------
+# B-451 closure: unresolved forward-prevention candidate tracking check
+# -------------------------------------------------------------------------
+# Empirical anchor commit `e76078c` (Agent 59 cycle-3 D72 convergence finding
+# G2-A): commit GAP ANALYSIS section mentioned "B-409 + B-414 commit-message
+# cascade-evidence audit" deferred candidate but no corresponding BACKLOG.md
+# entry was opened in same commit. Forward-prevention: scan commit-msg for
+# orphan-candidate trigger phrases + verify BACKLOG.md staged diff opens
+# corresponding B-N OR explicit dismissal cited.
+#
+# Patterns chosen to match real-history orphan phrasing without false-positive
+# on retrospective citation context (e.g., quoting prior B-N closure
+# annotation). Each pattern anchored to forward-deferral verb phrasing
+# ("deferred (B-N candidate" / "tracked as B-N TBD" / "future B-N candidate").
+# Bare "B-NEW-1 candidate" / "deferred candidate" forms covered by a separate
+# lower-precision regex; reviewer can extend tuple at maintenance.
+
+_ORPHAN_CANDIDATE_PHRASE_PATTERNS = (
+    # Form: "deferred (B-N candidate for X)" or "deferred (B-NEW-1 candidate)"
+    re.compile(r"\bdeferred\s*\(\s*B-(?:NEW-)?N?\d*\s*candidate\b", re.IGNORECASE),
+    # Form: "tracked as B-N TBD" or "tracked as B-NEW-1 TBD"
+    re.compile(r"\btracked\s+as\s+B-(?:NEW-)?N?\d*\s+TBD\b", re.IGNORECASE),
+    # Form: "B-N TBD" / "B-NEW-N TBD" (bare TBD form)
+    re.compile(r"\bB-(?:NEW-)?N\d*\s+TBD\b", re.IGNORECASE),
+    # Form: "tracked via .* B-N opening" (forward-cite without B-N number)
+    re.compile(r"\btracked\s+via\s+.*\bB-N\s+opening\b", re.IGNORECASE),
+    # Form: "forward-prevention B-N candidate"
+    re.compile(r"\bforward-?prevention\s+B-N\s+candidate\b", re.IGNORECASE),
+    # Form: "future B-N candidate" (future-cycle orphan)
+    re.compile(r"\bfuture\s+B-N\s+candidate\b", re.IGNORECASE),
+    # Form: "BNcand-N" (explicit cand syntax per project history at `e76078c`)
+    re.compile(r"\bBNcand-\d+\b"),
+    # Form: "B-N candidate for X" (generic candidate phrasing without explicit number)
+    re.compile(r"\bB-N\s+candidate\s+for\b", re.IGNORECASE),
+)
+
+# Detect NEW B-N entries added in BACKLOG.md staged diff. Match lines like:
+#   +- **B-451** (🟡 Open; ...
+#   +**B-451** (🟡 Open; ...
+# Conservative: require the leading-badge "Open" status indicator so we only
+# count actual B-N OPENINGS (not strikethrough closures or retrospective edits).
+_BACKLOG_BN_OPEN_RE = re.compile(
+    r"^\+\s*(?:[-*]\s*)?\*\*B-(\d+)\*\*\s*\([^)]*?Open\b",
+    re.MULTILINE,
+)
+
+# Explicit-dismissal phrases — when commit-msg cites WHY a candidate is NOT
+# being opened, the check passes for that candidate. Order matters for
+# diagnostic specificity.
+_DISMISSAL_PHRASES = (
+    "dismissed because",
+    "dismissed per",
+    "no b-n needed because",
+    "no B-N needed because",
+    "no B-N required because",
+    "deferred to commit",  # explicit deferral target
+    "deferred to <commit",
+    "deferred to next commit",
+    "out of scope per",
+    "already tracked by b-",  # references existing B-N opening
+    "already tracked at b-",
+    "already opened at b-",
+    "supersedes b-",
+)
+
+
+def _has_explicit_dismissal(text: str) -> bool:
+    """True if `text` contains a recognized dismissal / deferral-target phrase
+    (case-insensitive). When present, orphan-candidate matches in same scope
+    are PASS (not WARN)."""
+    lower = text.lower()
+    return any(phrase in lower for phrase in _DISMISSAL_PHRASES)
+
+
+def _is_inside_blockquote(lines: list[str], idx: int) -> bool:
+    """True if `lines[idx]` is inside a markdown blockquote context (line starts
+    with `>` or the immediately preceding line does and current is continuation).
+    Used to suppress false-positive on quoted verbatim Agent reviewer output."""
+    if idx >= len(lines):
+        return False
+    if lines[idx].lstrip().startswith(">"):
+        return True
+    return False
+
+
+def check_unresolved_forward_prevention_candidates(
+    commit_msg: str,
+    staged_backlog_diff: str | None = None,
+) -> tuple[bool, list[str]]:
+    """Per B-451 closure (Agent 59 cycle-3 D72 convergence finding G2-A):
+    scan commit-msg GAP ANALYSIS + REVIEW + body for orphan-candidate
+    phrasings + verify corresponding BACKLOG.md staged diff opens a NEW B-N
+    OR explicit dismissal cited.
+
+    Args:
+        commit_msg: full commit-message text
+        staged_backlog_diff: optional pre-fetched git diff --cached output for
+            docs/migration/BACKLOG.md; if None, attempts subprocess call.
+            Pass empty string "" to indicate no BACKLOG.md staged.
+
+    Returns (passed: bool, findings: list[str]) tuple — mirrors the
+    has_cascade_evidence() signature for caller convenience.
+
+    Detection logic:
+    1. Strip fenced code blocks (verbatim Agent output is acceptable)
+    2. Scan GAP ANALYSIS + REVIEW + commit body for orphan-candidate patterns
+    3. Suppress matches inside blockquote (`> ...`) lines — those are
+       retrospective citations of prior commits, not new orphan claims
+    4. For each unsuppressed orphan-candidate match, verify EITHER:
+       (a) BACKLOG.md staged diff opens at least one NEW B-N entry, OR
+       (b) commit-msg cites explicit dismissal / deferral-target phrasing
+    5. WARN (not BLOCK) on each unmatched orphan-candidate phrase
+    """
+    sanitized = _strip_code_blocks(commit_msg)
+    if not sanitized.strip():
+        return True, []
+
+    lines = sanitized.splitlines()
+    orphan_matches: list[tuple[int, str, str]] = []  # (line_idx, snippet, pattern)
+
+    for i, line in enumerate(lines):
+        if _is_inside_blockquote(lines, i):
+            continue
+        for pat in _ORPHAN_CANDIDATE_PHRASE_PATTERNS:
+            m = pat.search(line)
+            if m:
+                snippet = line.strip()[:120]
+                orphan_matches.append((i, snippet, pat.pattern))
+                break  # one match per line suffices
+
+    if not orphan_matches:
+        return True, []
+
+    # Check for explicit dismissal in whole commit-msg
+    if _has_explicit_dismissal(sanitized):
+        # Dismissal phrasing globally satisfies — no per-match BACKLOG opening required
+        return True, []
+
+    # Check BACKLOG.md staged diff for NEW B-N openings
+    backlog_opens_count = 0
+    if staged_backlog_diff is None:
+        try:
+            result = subprocess.run(
+                ["git", "diff", "--cached", "docs/migration/BACKLOG.md"],
+                capture_output=True, text=True, timeout=10, cwd=REPO_ROOT,
+            )
+            staged_backlog_diff = result.stdout if result.returncode == 0 else ""
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            staged_backlog_diff = ""
+
+    if staged_backlog_diff:
+        backlog_opens_count = len(_BACKLOG_BN_OPEN_RE.findall(staged_backlog_diff))
+
+    if backlog_opens_count >= len(orphan_matches):
+        # Sufficient BACKLOG openings for all orphan-candidates
+        return True, []
+
+    # Some orphans are unmatched — WARN
+    findings: list[str] = []
+    unmatched = len(orphan_matches) - backlog_opens_count
+    for idx, (line_idx, snippet, _pat) in enumerate(orphan_matches[:10]):
+        findings.append(
+            f"orphan-candidate phrase cited (line {line_idx+1}): {snippet!r} "
+            f"— {unmatched} unresolved (found {backlog_opens_count} new B-N "
+            f"opening(s) in staged BACKLOG diff vs {len(orphan_matches)} "
+            "candidate(s); no explicit dismissal cited)"
+        )
+    return False, findings
+
+
 def _emit_audit_row(
     commit_msg_path: Path,
     matched_phrases: list[str],
@@ -202,6 +387,7 @@ def _emit_audit_row(
     classification: str | None = None,
     missing_sections: list[str] | None = None,
     pytest_count_findings: list[str] | None = None,
+    orphan_candidate_findings: list[str] | None = None,
 ) -> None:
     """Per-invocation audit row per D76 + B-306 + B-317 + B-449.
 
@@ -212,6 +398,10 @@ def _emit_audit_row(
     Per B-449 (2026-05-18): pytest_count_findings included so forensic audit
     can trace WARN-only discipline-drift events even though they do not affect
     exit_code (escalation to BLOCK reserved for pipeline-lead).
+
+    Per B-451 (2026-05-18): orphan_candidate_findings included so forensic
+    audit can trace unresolved-forward-prevention-candidate WARN events.
+    Same WARN-only semantic as B-449 — does NOT affect exit_code.
     """
     audit_dir = REPO_ROOT / "_session_logs"
     try:
@@ -227,6 +417,7 @@ def _emit_audit_row(
         "classification": classification,
         "missing_sections": missing_sections or [],
         "pytest_count_findings": pytest_count_findings or [],
+        "orphan_candidate_findings": orphan_candidate_findings or [],
         "exit_code": exit_code,
     }
     try:
@@ -316,6 +507,16 @@ def main(argv: list[str]) -> int:
         print(f"[commit-msg WARN] pytest-count disambiguation check raised ({exc}); "
               "WARN-only check skipped this commit.", file=sys.stderr)
 
+    # Per B-451 (2026-05-18; Agent 59 cycle-3 D72 convergence finding G2-A):
+    # orphan-candidate forward-prevention tracking — WARN-only (same WSJF
+    # MEDIUM rationale as B-449; pipeline-lead can escalate after baseline).
+    orphan_candidate_findings: list[str] = []
+    try:
+        _orphan_ok, orphan_candidate_findings = check_unresolved_forward_prevention_candidates(actual_msg)
+    except Exception as exc:  # noqa: BLE001 — degrade gracefully
+        print(f"[commit-msg WARN] orphan-candidate tracking check raised ({exc}); "
+              "WARN-only check skipped this commit.", file=sys.stderr)
+
     final_exit_code = EXIT_BLOCKED if (
         exemption_exit_code == EXIT_BLOCKED or cascade_exit_code == EXIT_BLOCKED
     ) else EXIT_SUCCESS
@@ -326,6 +527,7 @@ def main(argv: list[str]) -> int:
             classification=cls.classification if cls else None,
             missing_sections=cascade_findings,
             pytest_count_findings=pytest_count_findings,
+            orphan_candidate_findings=orphan_candidate_findings,
         )
 
     if matched_phrases:
@@ -371,6 +573,27 @@ def main(argv: list[str]) -> int:
         print("  - 'pytest full-suite authoritative: 2471 pass / 10 skip / 0 fail'", file=sys.stderr)
         print("  - 'pytest baseline preserved (2471 pass / 10 skip / 0 fail "
               "from prior verification)'", file=sys.stderr)
+        print("This is a WARN (not BLOCK); commit will still proceed. "
+              "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
+              file=sys.stderr)
+
+    # Per B-451: orphan-candidate forward-prevention WARN block (NOT a BLOCK).
+    # Helps producer notice when GAP ANALYSIS / REVIEW cites a deferred
+    # candidate without corresponding BACKLOG opening — closes the orphan
+    # tracking class surfaced by Agent 59 G2-A at commit `e76078c`.
+    if orphan_candidate_findings:
+        print(f"\n[commit-msg WARN] {len(orphan_candidate_findings)} orphan "
+              "forward-prevention candidate(s) cited in commit-msg without "
+              "matching BACKLOG.md staged entry "
+              "(per B-451; Agent 59 cycle-3 G2-A empirical anchor commit `e76078c`):",
+              file=sys.stderr)
+        for f in orphan_candidate_findings:
+            print(f"  - {f}", file=sys.stderr)
+        print("\nResolution options:", file=sys.stderr)
+        print("  - Open a corresponding B-N entry in docs/migration/BACKLOG.md "
+              "(add to staged diff)", file=sys.stderr)
+        print("  - Cite explicit dismissal in commit-msg ('dismissed because X' / "
+              "'no B-N needed because Y' / 'deferred to commit abc1234')", file=sys.stderr)
         print("This is a WARN (not BLOCK); commit will still proceed. "
               "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
               file=sys.stderr)

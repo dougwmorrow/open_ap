@@ -496,3 +496,247 @@ def test_pytest_count_disambiguation_module_level_regex_present():
     assert "full-suite" in indicators
     assert "baseline preserved" in indicators
     assert "python -m pytest" in indicators
+
+
+# ---------------------------------------------------------------------------
+# B-451 closure: unresolved forward-prevention candidate tracking check
+# (Agent 59 cycle-3 D72 convergence finding G2-A; empirical anchor commit
+# `e76078c` GAP ANALYSIS section mentioned "B-409 + B-414 commit-message
+# cascade-evidence audit" deferred candidate without corresponding BACKLOG
+# opening)
+# ---------------------------------------------------------------------------
+
+def test_orphan_candidate_check_function_exists():
+    """B-451 Assertion 32: check_unresolved_forward_prevention_candidates present."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "check_unresolved_forward_prevention_candidates")
+    assert callable(ccm.check_unresolved_forward_prevention_candidates)
+
+
+def test_orphan_candidate_check_module_level_constants_present():
+    """B-451 Assertion 33: module-level patterns + dismissal phrases exposed
+    as public-surface for inspection + extensibility."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "_ORPHAN_CANDIDATE_PHRASE_PATTERNS")
+    assert hasattr(ccm, "_BACKLOG_BN_OPEN_RE")
+    assert hasattr(ccm, "_DISMISSAL_PHRASES")
+    assert hasattr(ccm, "_has_explicit_dismissal")
+    # Spot-check dismissal phrases
+    assert "dismissed because" in ccm._DISMISSAL_PHRASES
+    assert "deferred to commit" in ccm._DISMISSAL_PHRASES
+    assert "no B-N needed because" in ccm._DISMISSAL_PHRASES
+
+
+def test_orphan_candidate_with_backlog_opening_passes():
+    """B-451 Assertion 34: orphan-candidate phrase + matching BACKLOG diff
+    opening B-N → PASS."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "feat: change\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for orphan tracking)\n"
+    )
+    backlog_diff = (
+        "+- **B-451** (🟡 Open; MEDIUM; WSJF 1.5): orphan tracking check\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, backlog_diff)
+    assert passed, f"Expected pass; findings: {findings}"
+    assert findings == []
+
+
+def test_orphan_candidate_without_backlog_warns():
+    """B-451 Assertion 35: orphan-candidate phrase + NO BACKLOG diff → WARN."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "feat: change\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for orphan tracking)\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, "")
+    assert not passed, "Expected WARN"
+    assert len(findings) >= 1
+    assert "orphan-candidate" in findings[0]
+
+
+def test_orphan_candidate_tracked_as_tbd_with_backlog_passes():
+    """B-451 Assertion 36: 'tracked as B-N TBD' phrase + BACKLOG diff → PASS."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "build: extension\n\n"
+        "## REVIEW\n"
+        "- tracked as B-NEW-1 TBD pending validation\n"
+    )
+    backlog_diff = (
+        "+- **B-452** (🟡 Open; LOW; WSJF 1.0): validation tracking\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, backlog_diff)
+    assert passed, f"Expected pass; findings: {findings}"
+
+
+def test_orphan_candidate_multiple_with_only_one_backlog_warns():
+    """B-451 Assertion 37: 2 orphan phrases + only 1 BACKLOG opening → WARN
+    (insufficient coverage)."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "feat: cohort\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for foo)\n"
+        "- deferred (B-NEW-2 candidate for bar)\n"
+    )
+    backlog_diff = (
+        "+- **B-451** (🟡 Open; MEDIUM; WSJF 1.5): foo check\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, backlog_diff)
+    assert not passed
+    assert len(findings) >= 1
+    assert "unresolved" in findings[0].lower()
+
+
+def test_orphan_candidate_explicit_dismissal_passes():
+    """B-451 Assertion 38: orphan phrase + explicit 'dismissed because X' → PASS."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "feat: change\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for X) — dismissed because superseded by D-99\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, "")
+    assert passed, f"Expected pass; findings: {findings}"
+
+
+def test_orphan_candidate_explicit_deferral_target_passes():
+    """B-451 Assertion 39: orphan phrase + explicit 'deferred to commit abc1234' → PASS."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "feat: change\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for Y); deferred to commit abc1234 next sprint\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, "")
+    assert passed, f"Expected pass; findings: {findings}"
+
+
+def test_orphan_candidate_inside_code_block_passes():
+    """B-451 Assertion 40: orphan phrase INSIDE fenced code block → PASS
+    (verbatim Agent reviewer output is acceptable; not a producer-authored claim)."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "feat: change\n\n"
+        "## REVIEW\n"
+        "Quoting Agent A reviewer output:\n"
+        "```\n"
+        "deferred (B-NEW-1 candidate for X)\n"
+        "```\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, "")
+    assert passed, f"Expected pass for code-block orphan; findings: {findings}"
+
+
+def test_orphan_candidate_inside_blockquote_passes():
+    """B-451 Assertion 41: orphan phrase inside markdown blockquote (`> ...`)
+    → PASS (retrospective citation of prior commit's text, not new orphan)."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "feat: change\n\n"
+        "## REVIEW\n"
+        "> deferred (B-NEW-1 candidate for X) — prior commit text\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, "")
+    assert passed, f"Expected pass for blockquote orphan; findings: {findings}"
+
+
+def test_orphan_candidate_empirical_anchor_e76078c_warns():
+    """B-451 Assertion 42 (EMPIRICAL ANCHOR per Agent 59 cycle-3 G2-A):
+    reproduces the actual GAP ANALYSIS section pattern from commit `e76078c`
+    that mentioned 'B-409 + B-414 commit-message cascade-evidence audit'
+    deferred candidate without corresponding BACKLOG opening → WARN."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "remediation(round-6): close Agent 58 gap-check 5 findings\n\n"
+        "## GAP ANALYSIS\n\n"
+        "G5: B-409 + B-414 commit-message cascade-evidence audit "
+        "tracked as B-N TBD pending validation cycle.\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, "")
+    assert not passed
+    assert len(findings) >= 1
+
+
+def test_orphan_candidate_no_phrases_passes():
+    """B-451 Assertion 43: commit-msg with NO orphan-candidate phrases → PASS."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "feat: clean change\n\n"
+        "## GAP ANALYSIS\n"
+        "All checks PASS; no orphans.\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, "")
+    assert passed
+    assert findings == []
+
+
+def test_orphan_candidate_warn_does_not_block(tmp_path, monkeypatch):
+    """B-451 Assertion 44 (CRITICAL): WARN-only contract — orphan-candidate
+    finding must NOT cause exit BLOCK. Verifies WSJF MEDIUM warn-only spec."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    # Force empty BACKLOG diff so subprocess returns "" deterministically
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: minor edit\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for X)\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    assert rc == ccm.EXIT_SUCCESS, "Orphan-candidate WARN must NOT block exit"
+
+
+def test_orphan_candidate_audit_row_includes_findings(tmp_path, monkeypatch):
+    """B-451 Assertion 45: orphan_candidate_findings included in audit-row
+    JSON for forensic correlation (matches pytest_count_findings pattern)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: minor edit\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for X)\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path)])
+    assert rc == ccm.EXIT_SUCCESS  # WARN does not block
+    log_files = list((tmp_path / "_session_logs").glob("cli_check_commit_msg_*.log"))
+    assert len(log_files) == 1
+    content = log_files[0].read_text(encoding="utf-8")
+    assert "orphan_candidate_findings" in content
+
+
+def test_orphan_candidate_bncand_n_pattern_warns():
+    """B-451 Assertion 46: 'BNcand-N' explicit cand syntax (per project history
+    at commit `e76078c`) → WARN when no BACKLOG opening + no dismissal."""
+    from tools.check_commit_msg import check_unresolved_forward_prevention_candidates
+    msg = (
+        "feat: change\n\n"
+        "## REVIEW\n"
+        "- BNcand-1 for future tracker enhancement\n"
+    )
+    passed, findings = check_unresolved_forward_prevention_candidates(msg, "")
+    assert not passed
+    assert len(findings) >= 1
