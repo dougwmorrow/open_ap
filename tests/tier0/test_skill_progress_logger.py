@@ -11,7 +11,7 @@ arithmetic-detection LOGIC.
 
 This file's assertions cover:
   - File exists at canonical path + YAML frontmatter parses
-  - Version is v1.3.0 (B-448 closure target)
+  - Version is v1.3.1 (B-453 closure target — G5-1 PATCH from Agent 61 cycle-6)
   - Step 4.5 CROSS-DOCUMENT sweep still present (v1.2.0 carryover)
   - Step 4.5.1 INTRA-SENTENCE arithmetic contradiction detection present (v1.3.0)
   - Empirical anchor cites commit `e76078c` + finding `G3-K1`
@@ -20,7 +20,10 @@ This file's assertions cover:
   - Hard rule 9 (intra-sentence sweep) added v1.3.0
   - New anti-pattern present
   - Changelog row for v1.3.0 present + cites B-448
-  - Frontmatter version field is v1.3.0
+  - Changelog row for v1.3.1 present + cites B-453 + Agent 61 G5-1 (added v1.3.1)
+  - Frontmatter version field is v1.3.1
+  - v1.3.1 regex MATCHES bold-form `**16 NEW R-Ns** (...)` (added v1.3.1)
+  - v1.3.1 regex MATCHES non-bold-form `16 NEW R-Ns (...)` (added v1.3.1 backward-compat)
 """
 from __future__ import annotations
 
@@ -45,15 +48,15 @@ def test_skill_file_exists() -> None:
     assert SKILL_PATH.is_file(), f"Expected SKILL.md at {SKILL_PATH}"
 
 
-def test_frontmatter_version_is_v1_3_0(skill_content: str) -> None:
-    """Assertion 2: frontmatter `version:` field is v1.3.0 per B-448 closure."""
+def test_frontmatter_version_is_v1_3_1(skill_content: str) -> None:
+    """Assertion 2: frontmatter `version:` field is v1.3.1 per B-453 closure (G5-1 PATCH from Agent 61 cycle-6)."""
     assert skill_content.startswith("---\n"), "SKILL.md must open with --- delimiter"
     end_idx = skill_content.find("\n---\n", 4)
     assert end_idx > 0, "SKILL.md must close frontmatter with ---"
     frontmatter = skill_content[4:end_idx]
     assert "name: udm-progress-logger" in frontmatter, "frontmatter must declare name"
-    assert "version: v1.3.0" in frontmatter, (
-        "frontmatter must declare version: v1.3.0 (B-448 closure target)"
+    assert "version: v1.3.1" in frontmatter, (
+        "frontmatter must declare version: v1.3.1 (B-453 closure target — Agent 61 G5-1 PATCH)"
     )
 
 
@@ -101,10 +104,16 @@ def test_worked_example_with_16_r_ns_pattern_present(skill_content: str) -> None
 
 
 def test_regex_pattern_documented(skill_content: str) -> None:
-    """Assertion 7: the trigger regex is documented for producer reference."""
-    # Look for the canonical regex pattern in the Step 4.5.1 body
-    assert r"\b(\d+)" in skill_content, (
-        "Step 4.5.1 must document the trigger regex `\\b(\\d+)\\s+NEW\\s+[BR]-Ns?`"
+    """Assertion 7: the trigger regex is documented for producer reference.
+
+    v1.3.1 (B-453 / Agent 61 G5-1 PATCH): regex updated from `\\b(\\d+)` word-boundary
+    anchor (which markdown `**` breaks) to `(?:\\*\\*)?(\\d+)(?:\\*\\*)?` optional bold
+    markers wrapping the count + suffix to handle bolded narrative forms.
+    """
+    # Look for the v1.3.1 canonical regex pattern in the Step 4.5.1 body
+    assert r"(?:\*\*)?(\d+)(?:\*\*)?" in skill_content, (
+        "Step 4.5.1 must document the v1.3.1 trigger regex with optional bold markers "
+        "`(?:\\*\\*)?(\\d+)(?:\\*\\*)?\\s+NEW\\s+[BR]-Ns?(?:\\*\\*)?`"
     )
     assert "NEW" in skill_content and "[BR]-Ns" in skill_content, (
         "Trigger regex must reference NEW + [BR]-N pattern"
@@ -222,18 +231,24 @@ def test_positive_inconsistent_example_documented(skill_content: str) -> None:
     )
 
 
-def test_skill_self_application_to_v1_3_0_authoring(skill_content: str) -> None:
-    """Assertion 17 (meta — Pitfall #9.m self-application check): the v1.3.0 SKILL.md
+def test_skill_self_application_to_v1_3_1_authoring(skill_content: str) -> None:
+    """Assertion 17 (meta — Pitfall #9.m self-application check): the v1.3.1 SKILL.md
     edit must NOT itself contain an INTRA-SENTENCE arithmetic contradiction in
     its own newly-authored content. The discipline being added MUST be applied
     to its own authoring commit (anti-meta-irony check).
 
-    Specifically: any 'N NEW X' phrasings in the v1.3.0 changelog row or
+    Specifically: any 'N NEW X' phrasings in the v1.3.0/v1.3.1 changelog rows or
     Step 4.5.1 body must be internally consistent.
+
+    v1.3.1 update: scan uses the v1.3.1 canonical regex (superset of v1.3.0) which
+    covers BOTH bold + non-bold narrative forms. This closes the recursive
+    forward-correctness gap that Agent 61 G5-1 finding identified — the meta-
+    self-application check itself was using the broken v1.3.0 regex.
     """
-    # Scan Step 4.5.1 body + v1.3.0 changelog row for "N NEW [BR]-Ns (...)" patterns
+    # Scan Step 4.5.1 body + v1.3.0/v1.3.1 changelog rows for "N NEW [BR]-Ns (...)" patterns
+    # Use the v1.3.1 regex (superset of v1.3.0 — covers bold + non-bold)
     trigger_pattern = re.compile(
-        r"\b(\d+)\s+NEW\s+[BR]-Ns?\s*\(([^)]*)\)",
+        r"(?:\*\*)?(\d+)(?:\*\*)?\s+NEW\s+[BR]-Ns?(?:\*\*)?\s*\(([^)]*)\)",
         re.IGNORECASE,
     )
     matches = trigger_pattern.findall(skill_content)
@@ -244,4 +259,102 @@ def test_skill_self_application_to_v1_3_0_authoring(skill_content: str) -> None:
     assert len(anchor_matches) >= 1, (
         "Empirical anchor '16 NEW R-Ns (R39-R49 ...)' must be cited verbatim "
         "in worked example — found: " + str(matches)
+    )
+
+
+def test_changelog_v1_3_1_row_present(skill_content: str) -> None:
+    """Assertion 18 (added v1.3.1): changelog row for v1.3.1 is present + cites B-453 + Agent 61 G5-1.
+
+    Per D98 semver: PATCH-level revision (forward-correctness fix; no new scope).
+    Empirical anchor: Agent 61 cycle-6 D72 ✅ CLEAN convergence finding G5-1 — v1.3.0
+    Step 4.5.1 regex `\\b(\\d+)\\s+NEW\\s+[BR]-Ns?` word-boundary anchor breaks on
+    markdown `**` markup so the very empirical anchor (`**16 NEW R-Ns**`) it cites
+    would NOT have been detected by v1.3.0's own regex. v1.3.1 fixes via optional
+    bold markers wrapping count + suffix.
+    """
+    assert "| v1.3.1 |" in skill_content, "Changelog must have v1.3.1 row (B-453 closure)"
+    # The v1.3.1 row body must cite B-453 + Agent 61 + G5-1 + PATCH
+    v1_3_1_section = skill_content.split("| v1.3.1 |", 1)[1].split("\n", 1)[0]
+    assert "B-453" in v1_3_1_section, "v1.3.1 changelog row must cite B-453"
+    assert "Agent 61" in v1_3_1_section, "v1.3.1 changelog row must cite Agent 61 (G5-1 finder)"
+    assert "G5-1" in v1_3_1_section, "v1.3.1 changelog row must cite finding G5-1"
+    assert "PATCH" in v1_3_1_section, (
+        "v1.3.1 changelog row must declare 'PATCH' level per D98 (forward-correctness; no scope)"
+    )
+
+
+def test_v1_3_1_regex_matches_bold_form(skill_content: str) -> None:
+    """Assertion 19 (added v1.3.1): the v1.3.1 regex MUST match bold-form narrative `**16 NEW R-Ns** (...)`.
+
+    Empirical anchor: commit `e76078c` 2026-05-17 narrative in CURRENT_STATE.md L7 +
+    HANDOFF.md L427 was the bold-form `**16 NEW R-Ns** (R39-R49 — R39-R43 + R44-R49)`.
+    v1.3.0's `\\b(\\d+)` regex would NOT match this (the `\\b` word-boundary anchor is
+    broken by the preceding `**`). v1.3.1's `(?:\\*\\*)?(\\d+)(?:\\*\\*)?` covers
+    BOTH bold positions (whole-phrase bold `**16 NEW R-Ns**` + count-only bold
+    `**16** NEW R-Ns`), validated against synthetic and observed narrative samples.
+
+    This assertion mechanically validates Agent 61 G5-1 finding — the v1.3.0 regex
+    failure mode is reproducible AND the v1.3.1 regex fixes it.
+    """
+    # Use the v1.3.1 canonical regex per Step 4.5.1
+    v1_3_1_regex = re.compile(
+        r"(?:\*\*)?(\d+)(?:\*\*)?\s+NEW\s+[BR]-Ns?(?:\*\*)?\s*\(([^)]*)\)",
+        re.IGNORECASE,
+    )
+    # Synthetic bold-form sample matching the empirical anchor narrative form
+    bold_sample = "**16 NEW R-Ns** (R39-R49 — R39-R43 + R44-R49)"
+    matches = v1_3_1_regex.findall(bold_sample)
+    assert len(matches) >= 1, (
+        "v1.3.1 regex MUST match bold-form '**16 NEW R-Ns** (...)' per Agent 61 G5-1 "
+        "(v1.3.0 regex would NOT have matched this — the very empirical anchor)"
+    )
+    assert matches[0][0] == "16", (
+        f"v1.3.1 regex MUST capture headline integer '16' from bold-form, "
+        f"got: {matches[0][0]!r}"
+    )
+    assert "R39-R49" in matches[0][1], (
+        f"v1.3.1 regex MUST capture parenthetical body containing R39-R49, "
+        f"got: {matches[0][1]!r}"
+    )
+
+    # Also test count-only bold form (less common but observed in wild)
+    count_bold_sample = "**16** NEW R-Ns (R39-R49 — R39-R43 + R44-R49)"
+    count_bold_matches = v1_3_1_regex.findall(count_bold_sample)
+    assert len(count_bold_matches) >= 1, (
+        "v1.3.1 regex MUST match count-only bold form '**16** NEW R-Ns (...)' "
+        "(covers narrative variant)"
+    )
+
+
+def test_v1_3_1_regex_matches_non_bold_form(skill_content: str) -> None:
+    """Assertion 20 (added v1.3.1): the v1.3.1 regex MUST match non-bold-form (backward compat).
+
+    Backward-compatibility verification: v1.3.1 regex must STILL match the plain
+    non-bold form that v1.3.0 matched. The PATCH adds coverage; it does NOT remove
+    any prior coverage. If v1.3.1 regex failed on plain form, it would be a
+    regression masquerading as a fix.
+    """
+    # Use the v1.3.1 canonical regex per Step 4.5.1
+    v1_3_1_regex = re.compile(
+        r"(?:\*\*)?(\d+)(?:\*\*)?\s+NEW\s+[BR]-Ns?(?:\*\*)?\s*\(([^)]*)\)",
+        re.IGNORECASE,
+    )
+    # Plain non-bold sample (the v1.3.0 originally-handled form)
+    plain_sample = "16 NEW R-Ns (R39-R49 — R39-R43 + R44-R49)"
+    matches = v1_3_1_regex.findall(plain_sample)
+    assert len(matches) >= 1, (
+        "v1.3.1 regex MUST still match plain non-bold form '16 NEW R-Ns (...)' "
+        "(backward compat — PATCH adds bold-form coverage; does NOT remove plain coverage)"
+    )
+    assert matches[0][0] == "16", (
+        f"v1.3.1 regex MUST capture headline integer '16' from plain form, "
+        f"got: {matches[0][0]!r}"
+    )
+
+    # Also test B-Ns variant (the regex must cover BOTH B-N and R-N families)
+    b_n_plain = "24 NEW B-Ns (B-393-B-416)"
+    b_n_matches = v1_3_1_regex.findall(b_n_plain)
+    assert len(b_n_matches) >= 1, (
+        "v1.3.1 regex MUST match B-N family (e.g., '24 NEW B-Ns (...)') "
+        "in addition to R-N family per `[BR]-Ns?` character class"
     )
