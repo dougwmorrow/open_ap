@@ -2,6 +2,37 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-478 shared-CLOSED chain detection (LOW WSJF 0.5; ClosureAnnotationConsistencyCheck extension)
+
+**Trigger**: pipeline-lead "Make a final push into Github. After that proceed with your recommended next steps." 2026-05-18. Branch already up-to-date with origin at trigger; recommended-next-step per cascade Step 1.1 (smallest scope among remaining LOW priority items; B-482 deferred as larger-scope architectural).
+
+**Scope**: 1 B-N closure (B-478) — shared-CLOSED chain detection at `ClosureAnnotationConsistencyCheck.scan()` + 2 NEW regex constants + 3 Tier 0 assertions. 5 files modified: `tools/check_commit_msg.py` (chain walk logic + 2 regex constants) + `tests/tier0/test_check_commit_msg.py` (+3 assertions; 149 → 152) + `CLAUDE.md` (L98 assertion count + cohort delta) + `docs/migration/BACKLOG.md` (closure annotation) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical anchor**: commit `20fe33a` cited `B-409 + B-414 CLOSED` in subject + body. Pre-B-478 regex `_CLOSURE_CLAIM_RE` bare-form alternation only matched B-414 (the B-N adjacent to CLOSED); B-409 missed because not directly adjacent to CLOSED. PRE-COMMIT reviewer `a56030f11be41025b` Scope 1a finding 2026-05-18 surfaced this as B-478 candidate.
+
+**B-478 implementation**:
+- NEW `_BN_REFERENCE_RE = re.compile(r"\bB-(\d+)\b")` — matches single B-N reference for prefix-scan
+- NEW `_SHARED_CLOSED_SEPARATOR_RE = re.compile(r"^\s*(?:[+,;&]|\band\b)\s*$", re.IGNORECASE)` — validates 5 canonical chain separators (`+` / `,` / `;` / `&` / ` and ` / ` AND `)
+- `ClosureAnnotationConsistencyCheck.scan()` extended — after bare-form match (`m.group(2)`), walk backward through prefix B-N references; for each preceding B-N, check separator between previous-match-end and current-match-start; if separator matches `_SHARED_CLOSED_SEPARATOR_RE`, add preceding B-N to claimed dict; chain breaks at first non-canonical separator. Bold-form match (`m.group(1)`) does NOT trigger chain walk (each `**B-NNN CLOSED**` is independently bolded).
+
+**Tier 0 coverage**: 3 NEW assertions at `tests/tier0/test_check_commit_msg.py`:
+- Assertion 150 (`test_b478_shared_closed_chain_catches_both_bns`): empirical 20fe33a pattern — `B-409 + B-414 CLOSED` with only B-408 annotated → both B-409 AND B-414 produce findings (pre-B-478 only B-414)
+- Assertion 151 (`test_b478_chain_separators_all_canonical_supported`): 5 separator-variants tested (+, /, ;, and, 3-chain "B-100 + B-200 + B-300 CLOSED")
+- Assertion 152 (`test_b478_chain_break_on_invalid_separator`): non-canonical separator "blah" breaks chain (B-200 fires, B-100 does NOT — prevents over-capture)
+
+**Architectural choice rationale**: regex-extension approach (e.g., `\b(B-\d+(?:\s*[+,;&]\s*B-\d+)+)\s+CLOSED\b`) considered + rejected. Reasons: (a) single-regex with multi-capture group would require post-match identifier extraction anyway; (b) backward chain walk after primary match is cleaner separation (find anchor → walk back to chain) than greedy multi-capture; (c) extending existing regex risks breaking the bold-form alternation match-group semantics; (d) post-match approach localizes the new logic to the scan() loop body rather than the module-level regex (easier to reason about + test in isolation).
+
+**Cumulative session delta UPDATED at B-478 closure**: 98 NEW B-Ns UNCHANGED (B-478 pre-existing open). **22 B-Ns CLOSED multi-session arc** (cumulative; 21 prior + B-478). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2807 → **2810 pass / 10 skip / 0 fail** (+3 from B-478 Tier 0 additions).
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/*` + `CLAUDE.md` + 4 tracker mirrors):
+- TEST: pytest 2810 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 152 Tier 0 assertions at `test_check_commit_msg.py`. Smoke test verified empirical anchor pattern: `B-409 + B-414 CLOSED` produces 2 findings (both B-Ns captured).
+- GAP ANALYSIS: producer-side 6-category G1-G6 audit applied — G1 leading-badge correct, G2 arithmetic propagated 4 mirrors + CLAUDE.md L98, G3 implementation matches BACKLOG, G4 udm-progress-logger applied, G5 N/A (additive to existing regex constant set; no NEW orthogonal public surface), G6 0 new B-N opportunities surfaced.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
 ## 2026-05-18 — Cleanup cohort B-476 + B-479 + B-486 (LOW WSJF; pre-UDM-pipeline-pivot runway clear)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps. We need to finish up anything before moving onto our next UDM pipeline updates." 2026-05-18. User running pipeline tests (SCD2 + parquet load) in parallel; cleanup cohort minimizes outstanding small B-Ns before pivot.

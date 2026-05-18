@@ -2755,3 +2755,96 @@ def test_b486_threshold_env_invalid_falls_back_to_default(monkeypatch):
     # Cleanup: restore module to canonical state
     monkeypatch.delenv("PYTEST_SKIP_ANOMALY_THRESHOLD", raising=False)
     importlib.reload(tools.check_commit_msg)
+
+
+# ---------------------------------------------------------------------------
+# B-478 closure: shared-CLOSED chain detection in ClosureAnnotationConsistencyCheck
+# (extends _CLOSURE_CLAIM_RE bare-form match with backward chain walk)
+# ---------------------------------------------------------------------------
+
+
+def test_b478_shared_closed_chain_catches_both_bns():
+    """B-478 Assertion 150: empirical anchor commit `20fe33a` pattern
+    `B-409 + B-414 CLOSED` — the bare-form regex matches `B-414 CLOSED`;
+    chain detection walks backward through `+` separator + captures B-409.
+    Both B-Ns now claimed; B-409 + B-414 both flagged if absent from BACKLOG."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "docs(round-6): B-409 + B-414 CLOSED + B-408 closure annotation\n"
+        "\n"
+        "Body text.\n"
+    )
+    # BACKLOG only annotates B-408 (not B-409 or B-414)
+    backlog_diff = (
+        "diff --git a/docs/migration/BACKLOG.md b/docs/migration/BACKLOG.md\n"
+        "+- **B-408** (⚫ CLOSED 2026-05-17; ...): foo\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is False
+    # Both B-409 AND B-414 should produce findings (pre-B-478 only B-414)
+    assert len(result.findings) == 2
+    finding_text = "\n".join(result.findings)
+    assert "B-409" in finding_text
+    assert "B-414" in finding_text
+
+
+def test_b478_chain_separators_all_canonical_supported():
+    """B-478 Assertion 151: canonical chain separators all supported
+    (+ / , / ; / and). Each separator-variant produces correct chain walk."""
+    import tools.check_commit_msg as ccm
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    backlog_empty = (
+        "diff --git a/docs/migration/BACKLOG.md b/docs/migration/BACKLOG.md\n"
+        "+- **B-999** (⚫ CLOSED 2026-05-18; ...): unrelated\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_empty},
+        classification=None,
+    )
+
+    # Test each separator variant (canonical 5-separator tuple per
+    # _SHARED_CLOSED_SEPARATOR_RE: + / , / ; / & / and)
+    test_cases = [
+        ("B-100 + B-200 CLOSED", {"B-100", "B-200"}),
+        ("B-100, B-200 CLOSED", {"B-100", "B-200"}),
+        ("B-100; B-200 CLOSED", {"B-100", "B-200"}),
+        ("B-100 & B-200 CLOSED", {"B-100", "B-200"}),  # ampersand separator
+        ("B-100 and B-200 CLOSED", {"B-100", "B-200"}),
+        ("B-100 + B-200 + B-300 CLOSED", {"B-100", "B-200", "B-300"}),  # 3-chain
+    ]
+    for input_text, expected_bns in test_cases:
+        commit_msg = f"docs: {input_text}\n\nBody.\n"
+        result = check.scan(commit_msg, ctx)
+        # All listed B-Ns should be flagged (none annotated; only B-999 in BACKLOG)
+        finding_text = "\n".join(result.findings)
+        for bn in expected_bns:
+            assert bn in finding_text, (
+                f"Input {input_text!r}: expected {bn} in findings; got {finding_text!r}"
+            )
+
+
+def test_b478_chain_break_on_invalid_separator():
+    """B-478 Assertion 152: chain walk STOPS at non-canonical separator
+    (prevents over-capture of unrelated B-N references on same line)."""
+    import tools.check_commit_msg as ccm
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    backlog = (
+        "diff --git a/docs/migration/BACKLOG.md b/docs/migration/BACKLOG.md\n"
+        "+- **B-999** (⚫ CLOSED 2026-05-18; ...): unrelated\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog},
+        classification=None,
+    )
+    # B-100 is NOT in a valid chain with B-200 (separator is "blah" not + /,/etc.)
+    commit_msg = "docs: B-100 blah B-200 CLOSED\n\nBody.\n"
+    result = check.scan(commit_msg, ctx)
+    finding_text = "\n".join(result.findings)
+    # B-200 should fire (adjacent to CLOSED); B-100 should NOT (chain broken)
+    assert "B-200" in finding_text
+    assert "B-100" not in finding_text

@@ -4,7 +4,9 @@ This is the resume-from-here pointer. If a session is interrupted, read this fil
 
 ## Last updated
 
-2026-05-18 (**Cleanup cohort — B-476 + B-479 + B-486 trivial closures pre-UDM-pipeline-pivot**): Per pipeline-lead direction "finish up anything before moving onto our next UDM pipeline updates". 3 LOW WSJF closures batched in single commit:
+2026-05-18 (**B-478 shared-CLOSED chain detection — ClosureAnnotationConsistencyCheck extension**): NEW shared-CLOSED backward chain walk added to `ClosureAnnotationConsistencyCheck.scan()` at `tools/check_commit_msg.py`. Post-match prefix walk through 5 canonical chain separators (`+` / `,` / `;` / `&` / ` and `) captures preceding B-Ns. Catches empirical 20fe33a pattern `B-409 + B-414 CLOSED` where pre-B-478 regex only caught B-414. 2 NEW regex constants + 3 NEW Tier 0 assertions (150-152). Approach: backward post-match walk (not regex extension) cleaner than alternation; bold-form does NOT chain. **Cumulative session delta UPDATED at B-478**: **98 NEW B-Ns** unchanged (B-478 pre-existing open) / **22 B-Ns CLOSED multi-session arc** (21 prior + B-478) / 11 NEW R-Ns / 14 canonical edge case series / pytest 2807 → **2810 pass / 10 skip / 0 fail** (+3).
+
+Earlier 2026-05-18 (**Cleanup cohort — B-476 + B-479 + B-486 trivial closures pre-UDM-pipeline-pivot**): Per pipeline-lead direction "finish up anything before moving onto our next UDM pipeline updates". 3 LOW WSJF closures batched in single commit:
 - **B-476** (LOW WSJF 1.0): Test docstring accuracy at `BrokenNoSeverity` class — added `requires_classification = False` for clean isolation per Option A (post-B-472 attribute requirement).
 - **B-479** (LOW WSJF 0.5): Added explicit `encoding="utf-8"` to all 3 `subprocess.run()` calls in `tools/check_commit_msg.py` — closes Windows-dev false-negative class on Unicode markers in git diff output (RHEL production unaffected; UTF-8 default).
 - **B-486** (LOW WSJF 1.0): Env-configurable `_PYTEST_SKIP_ANOMALY_THRESHOLD` via new `_resolve_pytest_skip_threshold()` helper — operator override pathway for `PYTEST_SKIP_ANOMALY_THRESHOLD` env var; graceful fallback to canonical 20 on absent / invalid value.

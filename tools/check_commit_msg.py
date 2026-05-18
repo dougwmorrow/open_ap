@@ -1225,6 +1225,19 @@ _BACKLOG_CLOSURE_ANNOTATION_RE = re.compile(
     re.MULTILINE,
 )
 
+# Per B-478 closure 2026-05-18: shared-CLOSED chain detection regex.
+# Matches a single B-N reference (e.g., "B-409") for back-walk through
+# prefix when shared-CLOSED pattern like "B-409 + B-414 CLOSED" is detected.
+_BN_REFERENCE_RE = re.compile(r"\bB-(\d+)\b")
+
+# Per B-478 closure 2026-05-18: valid chain separators between B-N references
+# in a shared-CLOSED pattern. Supports `+` / `,` / `;` / `&` / ` and ` /
+# ` AND `. Whitespace-flexible. Empirical anchor commit `20fe33a` used `+`.
+_SHARED_CLOSED_SEPARATOR_RE = re.compile(
+    r"^\s*(?:[+,;&]|\band\b)\s*$",
+    re.IGNORECASE,
+)
+
 
 class ClosureAnnotationConsistencyCheck(CommitMsgCheck):
     """B-458 closure (2026-05-18): retrospective-closure-without-BACKLOG-
@@ -1276,6 +1289,28 @@ class ClosureAnnotationConsistencyCheck(CommitMsgCheck):
                     bn = f"B-{bn_num}"
                     if bn not in claimed:
                         claimed[bn] = i + 1
+                    # Per B-478 closure 2026-05-18: shared-CLOSED chain
+                    # detection. When bare-form matches "B-414 CLOSED" but the
+                    # commit-msg cites "B-409 + B-414 CLOSED" (canonical
+                    # 20fe33a pattern), the bare-form regex only catches the
+                    # B-N adjacent to "CLOSED" (B-414). Walk backward through
+                    # the prefix to capture preceding B-N references that are
+                    # separated from the matched B-N by canonical chain
+                    # separators (+ / , / ; / & / and). Bold-form `**B-NNN
+                    # CLOSED**` does not chain (each is independently bolded).
+                    if m.group(2):  # bare-form match (group 2 = bare B-N)
+                        prefix = line[: m.start()]
+                        prev_matches = list(_BN_REFERENCE_RE.finditer(prefix))
+                        last_pos = m.start()
+                        for prev_match in reversed(prev_matches):
+                            between = line[prev_match.end() : last_pos]
+                            if _SHARED_CLOSED_SEPARATOR_RE.match(between):
+                                prev_bn = f"B-{prev_match.group(1)}"
+                                if prev_bn not in claimed:
+                                    claimed[prev_bn] = i + 1
+                                last_pos = prev_match.start()
+                            else:
+                                break  # chain broken; stop walking back
 
         if not claimed:
             return CheckResult(passed=True, findings=[])

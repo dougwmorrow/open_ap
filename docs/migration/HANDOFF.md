@@ -424,7 +424,9 @@ Per D60, this section appends one row per round during close-out. Read top-to-bo
 
 ## §14. Last updated
 
-2026-05-18 (**Cleanup cohort — B-476 + B-479 + B-486 trivial closures pre-UDM-pipeline-pivot**): 3 LOW closures batched (Pitfall #9.j/k/l discipline polish): B-476 test docstring accuracy + B-479 subprocess.run encoding='utf-8' for Windows-dev safety + B-486 env-configurable threshold. 4 NEW Tier 0 assertions. **Cumulative**: 98 NEW B-Ns / **21 B-Ns CLOSED** multi-session arc / pytest 2803 → **2807 pass / 10 skip / 0 fail**.
+2026-05-18 (**B-478 shared-CLOSED chain detection — ClosureAnnotationConsistencyCheck extension**): NEW backward post-match chain walk catches `B-409 + B-414 CLOSED` empirical pattern. 2 NEW regex constants + 3 NEW Tier 0 assertions. **Cumulative**: 98 NEW B-Ns / **22 CLOSED** (+B-478) / pytest 2807 → **2810 pass / 10 skip / 0 fail** (+3).
+
+Earlier 2026-05-18 (**Cleanup cohort — B-476 + B-479 + B-486 trivial closures pre-UDM-pipeline-pivot**): 3 LOW closures batched (Pitfall #9.j/k/l discipline polish): B-476 test docstring accuracy + B-479 subprocess.run encoding='utf-8' for Windows-dev safety + B-486 env-configurable threshold. 4 NEW Tier 0 assertions. **Cumulative**: 98 NEW B-Ns / **21 B-Ns CLOSED** multi-session arc / pytest 2803 → **2807 pass / 10 skip / 0 fail**.
 
 Earlier 2026-05-18 (**B-489 `_false_positive_log.md` discipline tracker — Layer 4 of false-positive prevention architecture COMPLETE**): NEW `docs/migration/_false_positive_log.md` (~180 LOC) parallel to `_validation_log.md` + `_reviewer_effectiveness.md`. 7-field schema per event; seeded with 4 historical events (FP-1 through FP-4). Aggregation discipline integrated with round close-out cascade. 5 NEW Tier 0 assertions. **Architecture milestone**: 4-layer false-positive prevention complete (severity / shared helper B-488 / methodology Step 6 B-490 / accumulation tracker B-489). **Cumulative**: **98 NEW B-Ns** / **18 B-Ns CLOSED** multi-session arc (+B-489) / pytest 2798 → **2803 pass / 10 skip / 0 fail** (+5).
 
