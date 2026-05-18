@@ -1,4 +1,4 @@
-# Markdown Refactor + Agent Traversal System — Plan
+﻿# Markdown Refactor + Agent Traversal System — Plan
 
 **Status**: 🟢 **LOCKED 2026-05-15** — pipeline-lead approved all 4 binary 🔴 BLOCKING questions (Q-1 / Q-2 / Q-12 / Q-23) with Recommended defaults; sign-off attestation at §12; Phase 1 execution authorized. **HOWEVER**: D.0 reconnaissance (per §7.1 task 1.1) surfaced an empirical impasse for Phase D.1 (`_validation_log.md` archive cascade) — at 2026-04-15 cutoff, **zero entries qualify for archive** (earliest log entry is 2026-05-09; all 125 entries are within the 30-day retention window). Q-2 approval stands as policy; Phase D.1 execution requires a follow-up pipeline-lead decision (defer until entries age / aggressive-retention override / different split strategy). Tracked as **B-272** in BACKLOG. **Plan-prior history**: research-grounded + empirical-validation-complete + 3 critical-failure mitigations APPLIED inline + 3 BLOCKERS CLOSED inline (B-3 verify_cascade.py glob fix; B-4 §7.1 task 1.1 literal cutoff date 2026-04-15; B-5 §10.A Q-N classification table 4 🔴 / 8 🟡 / 12 ⚪) + §18 phase breakdown reference. **REVISED 2026-05-15 (4th revision)** with: (a) §3.6 research synthesis #1; (b) §10b independent gap audit; (c) §13 Option A deep-dive (research #2); (d) §15 cross-domain synthesis (research #3-5; 3 parallel artifacts); (e) **§16 long-term maintenance + governance (NEW)** addressing user Q1-Q3 directives; (f) **EMPIRICAL VALIDATION COMPLETE** — Q-22 em-dash test resolved via `tools/test_github_slug.py` + `_research/em-dash-slug-test-2026-05-15.md` (binding revision: colon-form `## D15: Title` mandatory); Q-13 token cost measurement resolved via `tools/measure_ccl_overhead.py` + `_research/ccl-baseline-2026-05-15.md` (CCL Stage 1+2 = 362K tokens = 181% of 200K window; `_validation_log.md` alone = 115% of window; archive cascade promoted to Phase 1.0 immediate priority); (g) 19 cumulative open questions Q-8 through Q-26 (Q-13 + Q-22 RESOLVED; 17 remaining for pipeline-lead). Backing research: **6 udm-researcher artifacts** + **2 empirical-test deliverables** at `_research/` + `tools/` (~50 cumulative findings; ~70 primary sources; medium-high confidence + 2 P0 empirical results). Plan now ~1080 lines — recommend split at next refactor cycle. Companion: `NEW_REPO_STARTER_TEMPLATE.md` (greenfield template per Q-24).
 
@@ -7,6 +7,32 @@
 **Driver**: User direction 2026-05-15 — "files at 6000 or more lines of code seems too much. ... we should come up with a quality plan. Specifically, we refactor markdown files and come to with a system to better traverse this repository for agents."
 
 **Scope**: Plan-only deliverable. NO file refactors, NO splits, NO traversal-system implementation in this commit. Per the project's standing D55 + D56 + D60 discipline ("plan → validate → execute → record → lock"), this plan is the artifact under review; execution requires user approval and a separate work-cycle.
+
+---
+
+## §0. Planning session provenance
+
+**RETROACTIVE BACKFILL per B-391 closure 2026-05-17** (authored BEFORE udm-planning-session-startup skill discipline was formalized 2026-05-15 per CLAUDE.md hard rule 13; Pitfall #9.m discipline-applied-retroactively). Original plan authored 2026-05-15 at commit `832b594` (initial REVISED version); this §0 section backfills the audit trail for which planning-discipline skills WOULD HAVE BEEN applied per the matrix at `docs/migration/PLANNING_DISCIPLINE.md` §2 for scope PS-2 DOC + PS-1 ARCH.
+
+**Note on temporal proximity**: this plan's authoring (2026-05-15) is THE empirical event that surfaced the planning-discipline gap which led to `udm-planning-session-startup` skill creation + CLAUDE.md hard rule 13 codification on the same date. The 4 skills `udm-design-reviewer` / `udm-checks-and-balances` / `udm-execution-classifier` / `udm-decision-recorder` were not invoked at original authoring; independent `udm-gap-check` reviewer on remediation commit `1b00755` caught the omissions post-hoc. This plan's revision history (4 revisions per its own header) reflects iterative remediation; the §0 backfill below records what WOULD HAVE BEEN invoked had the discipline existed at session start.
+
+**Scope**: PS-2 DOC (primary; markdown refactor / split / extract / relocate planning) + PS-1 ARCH (secondary; CCL doctrine + INDEX architecture touches pipeline-wide convention)
+
+**Skills that WOULD HAVE BEEN invoked at session start** (per matrix lookup; not invoked at original authoring time because skill discipline didn't exist; recorded here for audit trail consistency):
+
+| Skill | Rationale per matrix |
+|---|---|
+| `udm-checks-and-balances` (skill) | PS-2 DOC mandatory at session start — 5-gate validation orchestration per D55 for plan attestation |
+| `udm-researcher` (agent) | PS-2 DOC mandatory at session start — primary-source grounding (was retroactively applied via 6 research artifacts at `_research/` per plan header L3 "Backing research: 6 udm-researcher artifacts") |
+| `udm-execution-classifier` (skill) | PS-2 DOC conditional — fired by introduction of 2 new tools (`test_github_slug.py`, `measure_ccl_overhead.py`); retroactively classified ad-hoc in CLAUDE.md after the fact per Pitfall #9.m evidence |
+| `udm-cascade-audit-evolver` (skill) | PS-2 DOC conditional — fired if Pattern F changes (matrix entry); plan §16 governance touches Pattern F cadence |
+| `udm-decision-recorder` (skill) | PS-2 DOC conditional + PS-1 ARCH conditional — fired by D-N candidates (refactor decision Q-23 hygiene rules; deferred to next round close-out per plan §10.A without explicit tracker until B-274 was opened during remediation) |
+| `udm-design-reviewer` (agent) | PS-1 ARCH (secondary scope) mandatory at session start — architectural review for CCL doctrine + INDEX architecture; was retroactively addressed via §10b independent gap audit |
+| `udm-gap-check` (skill) | Always-mandatory at attestation per CLAUDE.md hard rule 11 — independent reviewer was invoked post-hoc on commit `1b00755` (caught the 4 missing skills) |
+| `udm-progress-logger` (skill) | Always-mandatory throughout per CLAUDE.md hard rule 9 — tracker discipline |
+| `udm-step-10-verifier` (skill) | Always-mandatory if new public surface introduced — 2 new tools = new public surface |
+
+**Note**: This §0 section was added 2026-05-17 to satisfy hard rule 13 + the `check_planning_provenance` Mechanism C-1 pre-commit hook (introduced 2026-05-16 per B-275-class closure). Future revisions to this plan MUST update §0 per `udm-planning-session-startup` Step 5 contract; this backfill establishes the baseline audit trail. This plan's authoring is the empirical 1-event evidence base cited at PLANNING_DISCIPLINE.md §1.1 for why the discipline was created.
 
 ---
 
@@ -672,7 +698,7 @@ Research-validated pattern: **`NN_SCOPE_{qualifier}.md`** — semantic-functiona
 - [03_DECISIONS_phase1.md](03_DECISIONS_phase1.md) — D51-D95 pipeline design + validation discipline + round close-out. Read if your task references D51-D95.
 - [03_DECISIONS_phase2_onwards.md](03_DECISIONS_phase2_onwards.md) — D96+ security model + SQL naming + deployment. Read if your task references D96+.
 
-## Edge cases (M/S/I/N/P/G/D/F/V series)
+## Edge cases (M/S/I/N/P/G/D/F/V/DP/T/SI/SE series)
 
 - [04_EDGE_CASES.md](04_EDGE_CASES.md) — All edge case series. Read if your task validates against documented edge cases per D55 Gate 3.
 

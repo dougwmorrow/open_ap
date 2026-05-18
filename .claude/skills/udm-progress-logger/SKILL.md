@@ -1,6 +1,6 @@
 ---
 name: udm-progress-logger
-version: v1.2.0
+version: v1.3.0
 description: Logs the completion of substantive work to the canonical progress trackers (BACKLOG.md, _validation_log.md, ONE_OFF_SCRIPTS.md, POLISH_QUEUE.md, HANDOFF.md) IMMEDIATELY when the work completes. Use AFTER any agent / sub-agent / multi-agent team finishes substantive work — closing a B-item, landing a fix-cycle, locking a decision (D-number), authoring a runbook (RB-N), authoring a stored procedure (SP-N), building a tool, or completing a multi-unit build cohort. Distinct from udm-round-closeout (round-aggregate cadence) and udm-post-build-verify (test cadence) — this skill is the per-completion cadence that fills the mid-round tracker-drift gap. Per user-direction 2026-05-12 "make it a skill to ensure that all agents, sub-agents and multi-agent teams keep our progress tracked."
 ---
 
@@ -144,6 +144,42 @@ After the `_validation_log.md` row is written, BEFORE the report is produced: gr
 
 **Why this Step exists**: D72 6-cycle ladder on Phase A plan (2026-05-17) empirically demonstrated that the skill's own work product (tracker narrative updates) is the highest-recurrence site for Pitfall #9.k arithmetic-propagation drift. Cycles 2+3 had 5+ instances; cycle-3 remediation introduced 3 more new instances (the "fix introduces same bug class" failure mode). This Step is the producer-side mechanical mitigation; it composes with `tools/pre_commit_checks.py` markdown_cross_refs (harness-side) but covers a different scope (cross-ref check verifies refs RESOLVE; this Step verifies refs are NUMERICALLY current).
 
+### Step 4.5.1 — INTRA-SENTENCE arithmetic contradiction detection (added v1.3.0 per B-448 forward-prevention)
+
+Step 4.5 above catches **CROSS-DOCUMENT** propagation drift (one tracker updated; other trackers stale). Step 4.5.1 catches the **complementary** failure mode: a SINGLE sentence whose headline integer contradicts its own parenthetical breakdown. The breakdown explains the headline; if they disagree, the sentence is internally inconsistent regardless of cross-document state.
+
+**Empirical anchor (1st-event)**: cycle-4 cascade `e76078c` (2026-05-17) — cycle-2 remediation narrative said `"16 NEW R-Ns (R39-R49 — R39-R43 from udm-progress-logger plan + R44-R49 from skills audit plan)"`. The parenthetical breakdown: R39-R43 = 5 R-Ns, R44-R49 = 6 R-Ns, sum = 11. The headline: 16. Contradiction within ONE sentence; appeared in BOTH `CURRENT_STATE.md` L7 + `HANDOFF.md` L427 narratives. Surfaced by Agent 59 (a486e54e49f829a77) cycle-3 D72 convergence check as finding G3-K1. Producer self-check Step 9 (Pitfall #9.m discipline-applied-to-its-own-tracker) did NOT fire on the discipline-application commit itself — exactly the failure mode this skill exists to mechanically prevent.
+
+**Trigger pattern**: scan canonical narrative docs (CURRENT_STATE.md L7 + HANDOFF.md §14 + the very `_validation_log.md` entry being written) for the regex:
+
+```
+\b(\d+)\s+NEW\s+[BR]-Ns?\s*\(([^)]*)\)
+```
+
+Case-insensitive; matches `"16 NEW R-Ns (...)"` / `"24 new B-Ns (...)"` / `"5 NEW B-N (...)"` variants. Extract the captured headline integer + parenthetical body.
+
+**Verification procedure** — for each match:
+
+| Parenthetical form | Detection rule | Pass condition |
+|---|---|---|
+| **Single range** — `[BR]-(\d+)-[BR]-(\d+)` (e.g., `R39-R49`) | Compute `high - low + 1` = expected count | Equals headline integer |
+| **Sum of ranges** — `[BR]-A-[BR]-B + [BR]-C-[BR]-D` (e.g., `R39-R43 + R44-R49`) | Compute `(B-A+1) + (D-C+1)` = expected count | Equals headline integer |
+| **Range with sub-range citation** — `[BR]-A-[BR]-Z — [BR]-A-[BR]-B + [BR]-C-[BR]-D` (e.g., `R39-R49 — R39-R43 + R44-R49`) | BOTH the outer range AND the sum of sub-ranges must independently equal headline | Both checks pass |
+| **No structured form** (e.g., free-text justification) | No mechanical check possible | Skip (manual review only) |
+
+**Worked example — the empirical anchor**:
+- Input sentence: `"16 NEW R-Ns (R39-R49 — R39-R43 from udm-progress-logger plan + R44-R49 from skills audit plan)"`
+- Headline integer: `16`
+- Parenthetical body: `"R39-R49 — R39-R43 from udm-progress-logger plan + R44-R49 from skills audit plan"`
+- Outer range `R39-R49`: 49 - 39 + 1 = **11**
+- Sub-range sum `R39-R43 + R44-R49`: (43-39+1) + (49-44+1) = 5 + 6 = **11**
+- Outer range and sub-range sum agree (11 = 11) ✅ — but BOTH contradict headline (`16` ≠ `11`) ❌
+- **Action**: producer self-flag + correct the headline to `11` OR correct the parenthetical breakdown to span 16 R-Ns
+
+**Composition with Step 4.5**: run AFTER Step 4.5 cross-document sweep. The two checks defend at different scopes — Step 4.5 verifies the SAME number across multiple narratives is current; Step 4.5.1 verifies the parts SUM to the whole within a single sentence. Both must pass before Step 5 report is produced.
+
+**Verification mechanism**: after the inline corrections, re-grep the sentence with the regex above; the headline + parenthetical sums must match arithmetically. Cite the verification step + sums in the report.
+
 ### Step 5 — Produce the report
 
 The skill's return value is a 4-6 line report:
@@ -169,6 +205,7 @@ Brief is the goal. The detail lives in `_validation_log.md`; the report exists f
 6. **One skill invocation per completion event.** If a multi-unit cohort finishes, ONE invocation logs ALL units (multi-row block in `_validation_log.md`); not N invocations. **Partial cohort failure handling** (added 2026-05-12 per F-2 validation finding): if a multi-unit cohort partially fails (e.g., 3 of 5 units 🟢; 2 units 🔴), log the 🟢 units immediately with their canonical closure mechanism + log the 🔴 units in the same `_validation_log.md` block with `Outcome: 🔴` + open a B-N item per failing unit OR aggregate B-N if the failures share root cause. Do NOT defer the 🟢 logging while waiting for the 🔴 units to resolve — that's the gap this skill exists to close. The 🔴 units' B-N entries then become the natural carryover for the next session.
 7. **No code-build 🟢 without `CODE_BUILD_STATUS.md` row state transition.** Every code module / tool / migration that reaches 🟢 Built MUST appear with its 🟢 build date + test pass-count in the corresponding `CODE_BUILD_STATUS.md` per-unit table (Round 4 tools / Round 3 modules / Migrations / etc.). State transitions ⬜ → 🟡 → 🟢 → ✅ are inline edits with date + mechanism. Authored 2026-05-12 per user-direction "tracking progress on completing the coding tasks" to fill the gap that hard rules 4 + 5 alone don't cover (B-N + ONE_OFF_SCRIPTS only catch one-off scripts; the broader codebase needs visibility into Round 3 modules + Round 4 tools + Round 6 modules + Phase 2+ extensions). The tracker is at `docs/migration/CODE_BUILD_STATUS.md`.
 8. **No status transition without arithmetic-propagation sweep** (added v1.2.0 per D72 6-cycle ladder empirical evidence). Re-scoring an R-N (e.g., R36 ⚪ 2 → 🟡 3), opening/closing a B-N range, introducing a new edge case series, or transitioning a D-N status MUST be followed by Step 4.5 arithmetic-propagation sweep across CURRENT_STATE.md L7 + HANDOFF.md §14 + the most-recent `_validation_log.md` entry + any plan body that cites the OLD value. Skipping this sweep is the mechanical root cause of Pitfall #9.k arithmetic-propagation drift recurrence (5+ instances observed across cycles 2+3 of D72 6-cycle ladder on Phase A plan 2026-05-17 — the canonical empirical anchor).
+9. **No narrative arithmetic claim without intra-sentence contradiction sweep** (added v1.3.0 per B-448 forward-prevention + cycle-4 cascade `e76078c` G3-K1 empirical anchor). Any sentence written into a canonical narrative doc (CURRENT_STATE.md / HANDOFF.md / `_validation_log.md`) that takes the form `"N NEW [BR]-Ns (breakdown)"` MUST be sanity-checked per Step 4.5.1 — extract the headline integer + parse the parenthetical breakdown (single range / sum of ranges / range with sub-range citation) + verify the parts sum to the whole. Skipping this sweep is the mechanical root cause of the **INTRA-SENTENCE** complement to Pitfall #9.k (cross-document drift): a single sentence whose headline contradicts its own parenthetical (e.g., headline 16 with breakdown summing to 11). Composes with Hard rule 8 (cross-document) — both checks must pass before Step 5 report.
 
 ## Anti-patterns
 
@@ -181,6 +218,7 @@ Brief is the goal. The detail lives in `_validation_log.md`; the report exists f
 - ❌ Re-running the skill mid-completion (before all sub-tasks land) — wait for the natural completion boundary
 - ❌ Writing the new `_validation_log.md` event entry WITHOUT refreshing the EXISTING CURRENT_STATE.md L7 + HANDOFF.md §14 narrative for inherited drift across multi-commit cascade (added v1.2.0 per cycle-6 cosmetic finding 2026-05-17 — narrative said "24 NEW B-Ns / R34-R37 / SE1-SE7" 5 commits after actual state became "40 NEW B-Ns / R34-R38 / SE1-SE10"; the "Earlier YYYY-MM-DD" prefix pattern preserves audit trail BUT the current-state narrative MUST reflect cumulative current state at each invocation, not just the per-completion delta)
 - ❌ Skipping Step 4.5 arithmetic-propagation sweep when the completion touched a count / range / score / enumeration that has corresponding narrative references elsewhere (added v1.2.0 per Pitfall #9.k 5+ recurrence on D72 6-cycle ladder)
+- ❌ Writing `"N NEW [BR]-Ns (range1 + range2)"` without arithmetically verifying that `range1.size + range2.size == N` per Step 4.5.1 (added v1.3.0 per B-448 + commit `e76078c` G3-K1 — the exact failure was `"16 NEW R-Ns (R39-R49 — R39-R43 + R44-R49)"` where R39-R43 (5) + R44-R49 (6) sums to 11, not 16; appeared in BOTH CURRENT_STATE L7 + HANDOFF L427). The headline + breakdown must be internally consistent before the sentence is committed; the cross-document Step 4.5 sweep is necessary-but-insufficient because it would only catch the SAME wrong number propagated across multiple docs, not the parts-don't-sum-to-whole intra-sentence inconsistency.
 
 ## Integration with existing skills
 
@@ -252,3 +290,4 @@ Authored 2026-05-12 per user-direction "make it a skill to ensure that all agent
 | v1.0.0 | 2026-05-12 | Initial authoring per user-direction (per-completion tracker-update skill) | Empirical 8-unit cohort tracker-drift evidence |
 | v1.1.0 | 2026-05-17 | MINOR — directive strengthening: Step 1 table row for `tools/*.py` with `EVENT_TYPE = "CLI_*"` promoted from CONDITIONAL to MANDATORY (CLAUDE.md L207 CLI_* family registry update required in same commit). Companion to harness-side mechanical enforcement at `tools/pre_commit_checks.py::check_cli_registry_sync` (8th orchestrator check) landing same day. | B189 closure cohort 2026-05-17 surfaced 4-tool drift (3 B-317 cascade tools + 1 B189 tool absent from L207 for 1-5 days) — paired producer-side + harness-side defense per Option A plan |
 | v1.2.0 | 2026-05-17 | MINOR — directive addition: (1) NEW Step 4.5 arithmetic-propagation sweep (after tracker updates, grep canonical narratives for stale counts/ranges/scores; update inline; verify with second grep returning 0 occurrences); (2) Step 2 Pitfall #9.j extended with `🟠 PARTIAL CLOSURE` convention for B-N partial-state per B-382 empirical precedent (X of Y locations applied; remainder via separate B-N); (3) NEW Hard rule 8 — no status transition without arithmetic-propagation sweep; (4) NEW anti-pattern — writing per-completion _validation_log entry without refreshing existing CURRENT_STATE/HANDOFF narrative for inherited drift across multi-commit cascade. | D72 6-cycle ladder on Phase A plan 2026-05-17 (cycles 1-6 spanning Agents 43-52; empirical evidence: 5+ instances of Pitfall #9.k arithmetic-propagation drift in the very tracker narrative updates the skill produces — specifically `7cb7659` → `fe53b4c` 21→24 drift + cycle-3 `114aa22` 4 instances at Phase A plan + 1 at _validation_log + R36 re-score stale-narrative across 3 plan locations through 2 cycles + Phase A plan §5 TOTAL "12 B-Ns" vs 10 actual). Cycle-3 remediation introduced 3 NEW instances ("fix introduces same bug class" pattern); cycle-6 cosmetic findings included 2 inherited-drift instances (B-382 badge + brainstorm-cohort narrative still cited 24 B-Ns 5 commits after state became 40 B-Ns). The arithmetic-propagation sweep + partial-closure convention + multi-commit narrative refresh discipline are the producer-side mechanical mitigations; compose with harness-side `tools/pre_commit_checks.py` markdown_cross_refs check which covers different scope (refs RESOLVE vs refs CURRENT). |
+| v1.3.0 | 2026-05-17 | MINOR — directive addition: (1) NEW Step 4.5.1 INTRA-SENTENCE arithmetic contradiction detection (regex `\b(\d+)\s+NEW\s+[BR]-Ns?\s*\(([^)]*)\)` over canonical narratives + parenthetical breakdown verification across 4 parse forms — single range, sum of ranges, range with sub-range citation, no structured form); (2) NEW Hard rule 9 — no narrative arithmetic claim without intra-sentence contradiction sweep; (3) NEW anti-pattern — writing `"N NEW [BR]-Ns (range1 + range2)"` without verifying range sum equals N. | B-448 forward-prevention. 1st-event empirical anchor: cycle-4 cascade commit `e76078c` 2026-05-17 narrative `"16 NEW R-Ns (R39-R49 — R39-R43 from udm-progress-logger plan + R44-R49 from skills audit plan)"` — parenthetical sub-range sum R39-R43 (5) + R44-R49 (6) = 11, contradicting headline 16; appeared in BOTH CURRENT_STATE.md L7 + HANDOFF.md L427 narratives. Surfaced by Agent 59 (a486e54e49f829a77) cycle-3 D72 convergence check as finding G3-K1. Producer self-check Step 9 (Pitfall #9.m discipline-applied-to-its-own-tracker) did NOT fire on the discipline-application commit itself. v1.2.0 Step 4.5 CROSS-DOCUMENT sweep is necessary-but-insufficient — it would catch the SAME wrong number propagated across docs but not the parts-don't-sum-to-whole intra-sentence inconsistency. v1.3.0 closes the INTRA-SENTENCE complement. Tier 0 test: `tests/tier0/test_skill_progress_logger.py` (structural assertion — SKILL.md content verification, not executable detector — detector candidate B-N would be `tools/check_arithmetic_propagation.py`). |

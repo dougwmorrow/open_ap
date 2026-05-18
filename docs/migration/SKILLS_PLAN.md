@@ -1,13 +1,39 @@
-# UDM Pipeline — Claude Skills Plan
+﻿# UDM Pipeline — Claude Skills Plan
 
 This document captures the skill set we've installed and how to use them across the project's planning and implementation phases.
+
+## §0. Planning session provenance
+
+**RETROACTIVE BACKFILL per B-391 closure 2026-05-17** (authored BEFORE udm-planning-session-startup skill discipline was formalized 2026-05-15 per CLAUDE.md hard rule 13; Pitfall #9.m discipline-applied-retroactively). Original plan authored 2026-05-12 at commit `b73220c` (Initial Commit); this §0 section backfills the audit trail for which planning-discipline skills WOULD HAVE BEEN applied per the matrix at `docs/migration/PLANNING_DISCIPLINE.md` §2 for scope PS-9 SELF.
+
+**Note on self-referential context**: this plan is itself about the skill suite (which skills to install + how to use them) — making it the SELF-IMPROVEMENT artifact PS-9 was designed for. The plan predates the planning-discipline skill suite by ~3 days (skill formalized 2026-05-15; plan authored 2026-05-12). The original 5 skills documented here grew to the 20+ skill catalogue currently maintained at `.claude/skills/` per Round 8 D95-D99 self-improvement framework. Plan still serves as the canonical "what we did + why" rationale for project-local skill authoring vs Superpowers third-party adoption (per D46 + D48 decisions cited L7).
+
+**Scope**: PS-9 SELF (primary; skill suite installation + invocation guidance) + PS-8 D-N (secondary; documents D46 skill evaluation + D48 project-local skill installation decisions)
+
+**Skills that WOULD HAVE BEEN invoked at session start** (per matrix lookup; not invoked at original authoring time because skill discipline didn't exist; recorded here for audit trail consistency):
+
+| Skill | Rationale per matrix |
+|---|---|
+| `udm-producer-checklist-evolver` (skill) | PS-9 SELF mandatory at session start (per which family) — skill-suite installation IS a producer-checklist-evolution discipline (which skills should producers invoke at which times); plan §"When to invoke each" L37-60 IS the producer checklist for skill invocation |
+| `udm-retrospective-collector` (skill) | PS-9 SELF mandatory at session start — would have surfaced empirical evidence for which skills are most impactful (this evidence base accumulated via `_reviewer_effectiveness.md` over Rounds 4-7 per Round 8 D95-D99 framework) |
+| `udm-agent-prompt-versioner` (skill) | PS-9 SELF mandatory at session start — skill prompt changes are subject to semver discipline per Round 8 D98 (5 initial skills installed without semver baselining; subsequent skill versioning per `_agent_evolution/<name>-changelog.md`) |
+| `udm-decision-recorder` (skill) | PS-8 D-N (secondary scope) mandatory — plan references D46 + D48 + D61 + D62 decisions; would have validated each decision is recorded in `03_DECISIONS.md` per canonical format |
+| `udm-design-reviewer` (agent) | PS-8 D-N mandatory + PS-9 SELF conditional — architectural review for skill catalogue scope + non-trivial skill prompt changes |
+| `udm-checks-and-balances` (skill/agent) | PS-8 D-N mandatory + PS-9 SELF conditional — 5-gate validation orchestration per D55 for D46/D48 decision attestation |
+| `udm-cascade-audit-evolver` (skill) | PS-9 SELF conditional — fires for Pattern F changes; skill suite touches Pattern F audit coverage per Round 8 D89-D91 framework |
+| `udm-brainstorm` (skill) | PS-8 D-N conditional — fires for multiple defensible options (D46 had 3 alternatives: Superpowers adoption / project-local authoring / hybrid; plan L7-12 documents the project-local choice rationale) |
+| `udm-researcher` (agent) | PS-8 D-N conditional — primary-source grounding for D46 evaluation (Superpowers framework comparison; deferred to retroactive research at `_research/superpowers-framework-2026-05-15.md` per B-279 closure 2026-05-15) |
+| `udm-gap-check` (skill) | Always-mandatory at attestation per CLAUDE.md hard rule 11 |
+| `udm-progress-logger` (skill) | Always-mandatory throughout per CLAUDE.md hard rule 9 |
+
+**Note**: This §0 section was added 2026-05-17 to satisfy hard rule 13 + the `check_planning_provenance` Mechanism C-1 pre-commit hook (introduced 2026-05-16 per B-275-class closure). Future revisions to this plan MUST update §0 per `udm-planning-session-startup` Step 5 contract; this backfill establishes the baseline audit trail.
 
 ## What we did
 
 Per D46 (skill evaluation) and D48 (project-local skill installation), we authored five project-specific skills in `.claude/skills/` rather than installing third-party Superpowers content. The reasoning:
 
 1. **OSS approval gate**: third-party Superpowers content (github.com/obra/superpowers, MIT license) requires our org's open-source approval. Authoring our own bypasses that bottleneck.
-2. **Tighter integration**: project-local skills can reference our specific D-numbers, edge case series (M/S/I/N/P/G/D/F/V), runbook conventions, and the six-step deep dive cycle.
+2. **Tighter integration**: project-local skills can reference our specific D-numbers, edge case series (M/S/I/N/P/G/D/F/V/DP/T/SI/SE), runbook conventions, and the six-step deep dive cycle.
 3. **Reversibility**: if Superpowers is approved later, we can supplement; if not, we still have the discipline.
 4. **No duplication**: our `03_DECISIONS.md` already implements ADR conventions; our `04_EDGE_CASES.md` is the audit trail; our `06_TESTING.md` is the test discipline. Skills should layer ON TOP of these, not duplicate them.
 
@@ -17,7 +43,7 @@ Per D46 (skill evaluation) and D48 (project-local skill installation), we author
 |---|---|---|
 | **udm-planning** | `.claude/skills/udm-planning/SKILL.md` | Decompose a Phase round into 2-5 minute tasks with verification |
 | **udm-brainstorm** | `.claude/skills/udm-brainstorm/SKILL.md` | Force at-least-3 alternatives before locking a design choice |
-| **udm-edge-case-validator** | `.claude/skills/udm-edge-case-validator/SKILL.md` | Walk M/S/I/N/P/G/D/F/V series against an artifact |
+| **udm-edge-case-validator** | `.claude/skills/udm-edge-case-validator/SKILL.md` | Walk M/S/I/N/P/G/D/F/V/DP/T/SI/SE series against an artifact |
 | **udm-decision-recorder** | `.claude/skills/udm-decision-recorder/SKILL.md` | Enforce D-number / status / rationale / **pillar mapping (D61)** / **risk delta (D61)** structure |
 | **udm-runbook-author** | `.claude/skills/udm-runbook-author/SKILL.md` | Enforce When/Pre-flight/Procedure/Validation/Rollback for new runbooks |
 | **udm-data-engineer-review** | `.claude/skills/udm-data-engineer-review/SKILL.md` | Review CDC/SCD2/Polars/Parquet/BCP for non-idiomatic patterns and bugs |
