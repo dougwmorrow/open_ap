@@ -2,6 +2,39 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-17 — udm-progress-logger v1.1.0 → v1.2.0 (revisit per user standing direction "We will revisit udm-progress-logger" held since `7cb7659`)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" → Item 1 from prior cascade close-out recommended-next-steps list = revisit `udm-progress-logger` (standing direction held across 7+ multi-turn gap since `7cb7659`).
+
+**Artifacts touched**: `.claude/skills/udm-progress-logger/SKILL.md` (+57 LOC; 6 targeted edits).
+
+**Outcome**: ✅ v1.1.0 → v1.2.0 MINOR (directive addition per D98 semver discipline).
+
+**Enhancements applied** (all motivated by THIS session's D72 6-cycle ladder empirical evidence; cycles 1-6 spanning Agents 43-52):
+
+1. **NEW Step 4.5 — Arithmetic-propagation sweep** with per-change-type table (new B-N opened / B-N closed / R-N re-scored / D-N transitioned / NEW edge case series introduced / §-row count change). After tracker updates, grep canonical narratives (CURRENT_STATE L7 + HANDOFF §14 + most-recent _validation_log entry + plan bodies citing OLD value) for stale counts/ranges/scores; update inline; verify with second grep returning 0 occurrences. Cites verification step + grep result in the report. **Empirical anchor**: D72 6-cycle ladder cycles 2+3 had 5+ instances of Pitfall #9.k arithmetic-propagation drift in the very tracker narrative updates the skill produced (`7cb7659` → `fe53b4c` 21→24 drift + cycle-3 `114aa22` 4 instances at Phase A plan + 1 at _validation_log + R36 re-score stale-narrative across 3 plan locations through 2 cycles + Phase A plan §5 TOTAL "12 B-Ns" vs 10 actual).
+
+2. **Step 2 Pitfall #9.j extended** with `🟠 PARTIAL CLOSURE` convention per B-382 empirical precedent at D72 cycle-6 cohort (when a B-N has partial closure state — X of Y locations applied; remaining tracked via separate B-N — the canonical leading badge is `(🟠 PARTIAL CLOSURE; <PRIORITY>; WSJF <N>)` matching inline annotation; distinguishes from canonical 🟡 Open / ⚫ CLOSED / 🟠 Noticeable).
+
+3. **NEW Hard rule 8 — No status transition without arithmetic-propagation sweep**: re-scoring R-N + opening/closing B-N range + introducing new edge case series + D-N status transition MUST be followed by Step 4.5 sweep. Closes mechanical root cause of Pitfall #9.k recurrence.
+
+4. **NEW anti-pattern**: writing per-completion `_validation_log.md` event entry WITHOUT refreshing existing CURRENT_STATE.md L7 + HANDOFF.md §14 narrative for inherited drift across multi-commit cascade. Empirical: cycle-6 cosmetic finding — narrative said "24 NEW B-Ns / R34-R37 / SE1-SE7" 5 commits after actual state became "40 NEW B-Ns / R34-R38 / SE1-SE10".
+
+**Trackers updated this commit**: `.claude/skills/udm-progress-logger/SKILL.md` (skill content + changelog v1.2.0 entry) + `_validation_log.md` (THIS entry).
+
+**Test verification**: pytest 2471 pass / 10 skip / 0 fail baseline preserved (no code changes); SKILL.md frontmatter version field correctly bumped (v1.1.0 → v1.2.0); Step 4.5 + Hard rule 8 + Anti-pattern + Changelog entries grep-verified present.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT classification — `.claude/skills/udm-*/SKILL.md` is in substrate enumeration per `tools/cascade_classifier.py`):
+- **TEST**: pytest baseline + SKILL.md structure verification (frontmatter version + section headers + changelog row all present)
+- **GAP ANALYSIS**: parent-agent G1-G6 sweep — this revisit is itself the discipline-application of the held user direction (closes the 7+ multi-turn gap)
+- **REVIEW**: cohort attestation via Agents 43-52 (10 agent applications across D72 6-cycle ladder on Phase A plan) — these agents collectively surfaced the empirical evidence (5+ Pitfall #9.k instances, B-382 partial-closure pattern, narrative-drift across multi-commit cascade) that motivates each v1.2.0 enhancement. Specifically: Agent 47 cycle-2 G3.9.k finding (4 NEW arithmetic-drift instances at Phase A plan L24/L439/L453/L478 + 1 at _validation_log L26) + Agent 48 cycle-3 §5 TOTAL row "12 B-Ns" vs 10 actual finding + Agent 49 cycle-3 R37 duplication + canonical-spec drift findings + Agent 51 cycle-5 B-382 leading-badge cosmetic finding + Agent 52 cycle-6 narrative-drift cosmetic finding. Each enhancement traces to a specific cohort finding.
+
+**Forward outlook**: v1.2.0 enhancements composes with harness-side `tools/pre_commit_checks.py` markdown_cross_refs check (covers different scope: refs RESOLVE vs refs CURRENT). First production-application of Step 4.5 will be next substantive completion that touches a count/range/score change. Empirical effectiveness measurable at next D72 ladder run on a different plan body.
+
+**User direction acknowledged**: "We will revisit udm-progress-logger" — addressed THIS commit. The user direction is now resolved; future udm-progress-logger work would be triggered by NEW evidence of recurrence (per D98 semver discipline: PATCH for bug fixes; MINOR for additive enhancements; MAJOR for breaking changes).
+
+---
+
 ## 2026-05-17 — Phase A Plan D72 CONVERGENCE ACHIEVED (6-cycle validation track; counter 3/3; cycle-6 🟡 IMPROVE; 2 pre-existing cosmetic inline-fixed; D115/D116 🟡 → 🟢 flip PERMITTED pending pipeline-lead USER-ACTION sign-off on 5 gate-blockers)
 
 **Trigger**: pipeline-lead "Run a gap analysis review and test of the recent enhancements" → 6th cycle in D72 validation track on Phase A plan (Agents 43-52 spanning brainstorm cohort + 2nd-pass + 3 remediation cycles + 3 convergence cycles).

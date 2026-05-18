@@ -1,6 +1,6 @@
 ---
 name: udm-progress-logger
-version: v1.1.0
+version: v1.2.0
 description: Logs the completion of substantive work to the canonical progress trackers (BACKLOG.md, _validation_log.md, ONE_OFF_SCRIPTS.md, POLISH_QUEUE.md, HANDOFF.md) IMMEDIATELY when the work completes. Use AFTER any agent / sub-agent / multi-agent team finishes substantive work — closing a B-item, landing a fix-cycle, locking a decision (D-number), authoring a runbook (RB-N), authoring a stored procedure (SP-N), building a tool, or completing a multi-unit build cohort. Distinct from udm-round-closeout (round-aggregate cadence) and udm-post-build-verify (test cadence) — this skill is the per-completion cadence that fills the mid-round tracker-drift gap. Per user-direction 2026-05-12 "make it a skill to ensure that all agents, sub-agents and multi-agent teams keep our progress tracked."
 ---
 
@@ -99,6 +99,7 @@ For every BACKLOG.md / RISKS.md / POLISH_QUEUE.md / ONE_OFF_SCRIPTS.md row touch
 - **Strikethrough preserves the body** — never delete; append-only audit trail per BACKLOG.md L139-145 + Pitfall #9.j
 - **Closure mechanism is required** — cite the closing event (e.g., "via Pattern B3 cohort + B215 fix-application"; "via D108 path (b) acceptance"; "via cycle-2 design-review fix landed inline")
 - **High-priority duplicate** — if the closing B-N also appears in a "## High priority" sorted-list at the top of BACKLOG.md, strike BOTH appearances per Pitfall #9.j 6-step audit Step 6
+- **Partial closure** (added v1.2.0 per B-382 empirical precedent at D72 cycle-6 cohort 2026-05-17): when a B-N has been partially closed (e.g., X of Y locations applied; remaining tracked via separate B-N), the canonical leading badge is `(🟠 PARTIAL CLOSURE; <PRIORITY>; WSJF <N>)` matching the inline `🟠 PARTIAL CLOSURE YYYY-MM-DD (X of Y applied; Z deferred to B-NNN)` annotation. NOT `(🟡 Open ...)` (which would mis-suggest no progress) and NOT `(⚫ CLOSED ...)` (which would mis-suggest full closure). The 🟠 emoji distinguishes partial-state from canonical Open / CLOSED / Noticeable per BACKLOG.md status legend extension.
 
 ### Step 3 — Apply CLAUDE.md hard-rule discipline
 
@@ -126,6 +127,23 @@ Append a one-row entry (or short multi-row block for multi-unit cohorts) to `doc
 
 Place the entry under the round's section, NOT at the file end. Round sections are typically dated; if no current-round section exists yet, create one.
 
+### Step 4.5 — Arithmetic-propagation sweep (added v1.2.0 per Pitfall #9.k empirical recurrence across D72 6-cycle ladder 2026-05-17)
+
+After the `_validation_log.md` row is written, BEFORE the report is produced: grep canonical narrative docs (CURRENT_STATE.md L7 + HANDOFF.md §14 + the very `_validation_log.md` entry being written) for stale counts / ranges / scores that this completion changes. Specifically:
+
+| Change made in completion | Required arithmetic-propagation sweep | Why |
+|---|---|---|
+| New B-N opened (B-X) | grep "X NEW B-Ns" / "B-353 through B-Y" / "B-X-Y" range claims in CURRENT_STATE L7 + HANDOFF §14 + _validation_log most-recent event; update inline to reflect new range/count | Pitfall #9.k recurrence at commits `7cb7659` → `fe53b4c` (21→24 drift) + cycle-3 `114aa22` (4 instances at Phase A plan L24/L439/L453/L478 + 1 at _validation_log L26); 5+ instances across 2 cycles |
+| B-N closed (B-X → ⚫) | grep "open B-N count" / "carryover X items" claims in HANDOFF §14 + CURRENT_STATE L7; update inline | Same Pitfall #9.k pattern; affects rolling counter narratives |
+| R-N opened / re-scored / closed | grep OLD score (e.g., `R36 ⚪ 2`) across canonical docs + Phase A plan + related plan bodies; update inline to reflect new score consistently | Pitfall #9.k empirical at R36 re-score (⚪ 2 → 🟡 3 at `0da9bda`); Phase A plan §3.2 L178 + §7 L356 + §9.4 L426 + L507 retained stale ⚪ 2 for 2 cycles before cycle-3 caught + fixed |
+| D-N opened / locked / superseded | grep "D-N count" / "D-N range" / D-N-supersedes-X claims; update inline | Closes future-state drift when D-N status transitions |
+| New edge case series introduced (e.g., SE-N) | grep "X canonical series total" + "M/S/I/N/P/G/D/F/V/..." enumerations across ALL canonical doc anchor locations; cascade NEW series suffix to each | Pitfall #9.n cascade per B-382 empirical (14-location enumeration scope; 7+ additional locations surfaced post-hoc by cycle-3 gap-check → B-392) |
+| §-row count change in a plan body | grep "TOTAL X rows" / "N items present" / "9 B-Ns" enumeration column claims; recount + update | Pitfall #9.k self-recurrence at Phase A plan §5 TOTAL row "12 B-Ns" vs 10 actual at cycle-3 |
+
+**Verification mechanism**: after the inline updates, run a SECOND grep for the OLD value/count/range across the same scope; expected = 0 occurrences. Cite the verification step + grep result in the report.
+
+**Why this Step exists**: D72 6-cycle ladder on Phase A plan (2026-05-17) empirically demonstrated that the skill's own work product (tracker narrative updates) is the highest-recurrence site for Pitfall #9.k arithmetic-propagation drift. Cycles 2+3 had 5+ instances; cycle-3 remediation introduced 3 more new instances (the "fix introduces same bug class" failure mode). This Step is the producer-side mechanical mitigation; it composes with `tools/pre_commit_checks.py` markdown_cross_refs (harness-side) but covers a different scope (cross-ref check verifies refs RESOLVE; this Step verifies refs are NUMERICALLY current).
+
 ### Step 5 — Produce the report
 
 The skill's return value is a 4-6 line report:
@@ -150,6 +168,7 @@ Brief is the goal. The detail lives in `_validation_log.md`; the report exists f
 5. **No build-code 🟢 without `ONE_OFF_SCRIPTS.md` OR scheduled-tools-registry classification.** Existing CLAUDE.md hard rule from `udm-execution-classifier` discipline.
 6. **One skill invocation per completion event.** If a multi-unit cohort finishes, ONE invocation logs ALL units (multi-row block in `_validation_log.md`); not N invocations. **Partial cohort failure handling** (added 2026-05-12 per F-2 validation finding): if a multi-unit cohort partially fails (e.g., 3 of 5 units 🟢; 2 units 🔴), log the 🟢 units immediately with their canonical closure mechanism + log the 🔴 units in the same `_validation_log.md` block with `Outcome: 🔴` + open a B-N item per failing unit OR aggregate B-N if the failures share root cause. Do NOT defer the 🟢 logging while waiting for the 🔴 units to resolve — that's the gap this skill exists to close. The 🔴 units' B-N entries then become the natural carryover for the next session.
 7. **No code-build 🟢 without `CODE_BUILD_STATUS.md` row state transition.** Every code module / tool / migration that reaches 🟢 Built MUST appear with its 🟢 build date + test pass-count in the corresponding `CODE_BUILD_STATUS.md` per-unit table (Round 4 tools / Round 3 modules / Migrations / etc.). State transitions ⬜ → 🟡 → 🟢 → ✅ are inline edits with date + mechanism. Authored 2026-05-12 per user-direction "tracking progress on completing the coding tasks" to fill the gap that hard rules 4 + 5 alone don't cover (B-N + ONE_OFF_SCRIPTS only catch one-off scripts; the broader codebase needs visibility into Round 3 modules + Round 4 tools + Round 6 modules + Phase 2+ extensions). The tracker is at `docs/migration/CODE_BUILD_STATUS.md`.
+8. **No status transition without arithmetic-propagation sweep** (added v1.2.0 per D72 6-cycle ladder empirical evidence). Re-scoring an R-N (e.g., R36 ⚪ 2 → 🟡 3), opening/closing a B-N range, introducing a new edge case series, or transitioning a D-N status MUST be followed by Step 4.5 arithmetic-propagation sweep across CURRENT_STATE.md L7 + HANDOFF.md §14 + the most-recent `_validation_log.md` entry + any plan body that cites the OLD value. Skipping this sweep is the mechanical root cause of Pitfall #9.k arithmetic-propagation drift recurrence (5+ instances observed across cycles 2+3 of D72 6-cycle ladder on Phase A plan 2026-05-17 — the canonical empirical anchor).
 
 ## Anti-patterns
 
@@ -160,6 +179,8 @@ Brief is the goal. The detail lives in `_validation_log.md`; the report exists f
 - ❌ Inventing a B-N or D-N number — verify against `BACKLOG.md` / `03_DECISIONS.md` first; if the number doesn't exist, this isn't the right closure event
 - ❌ Logging trivial work (typo fixes, no-op edits) — skip; reserve the skill for substantive completions
 - ❌ Re-running the skill mid-completion (before all sub-tasks land) — wait for the natural completion boundary
+- ❌ Writing the new `_validation_log.md` event entry WITHOUT refreshing the EXISTING CURRENT_STATE.md L7 + HANDOFF.md §14 narrative for inherited drift across multi-commit cascade (added v1.2.0 per cycle-6 cosmetic finding 2026-05-17 — narrative said "24 NEW B-Ns / R34-R37 / SE1-SE7" 5 commits after actual state became "40 NEW B-Ns / R34-R38 / SE1-SE10"; the "Earlier YYYY-MM-DD" prefix pattern preserves audit trail BUT the current-state narrative MUST reflect cumulative current state at each invocation, not just the per-completion delta)
+- ❌ Skipping Step 4.5 arithmetic-propagation sweep when the completion touched a count / range / score / enumeration that has corresponding narrative references elsewhere (added v1.2.0 per Pitfall #9.k 5+ recurrence on D72 6-cycle ladder)
 
 ## Integration with existing skills
 
@@ -230,3 +251,4 @@ Authored 2026-05-12 per user-direction "make it a skill to ensure that all agent
 |---|---|---|---|
 | v1.0.0 | 2026-05-12 | Initial authoring per user-direction (per-completion tracker-update skill) | Empirical 8-unit cohort tracker-drift evidence |
 | v1.1.0 | 2026-05-17 | MINOR — directive strengthening: Step 1 table row for `tools/*.py` with `EVENT_TYPE = "CLI_*"` promoted from CONDITIONAL to MANDATORY (CLAUDE.md L207 CLI_* family registry update required in same commit). Companion to harness-side mechanical enforcement at `tools/pre_commit_checks.py::check_cli_registry_sync` (8th orchestrator check) landing same day. | B189 closure cohort 2026-05-17 surfaced 4-tool drift (3 B-317 cascade tools + 1 B189 tool absent from L207 for 1-5 days) — paired producer-side + harness-side defense per Option A plan |
+| v1.2.0 | 2026-05-17 | MINOR — directive addition: (1) NEW Step 4.5 arithmetic-propagation sweep (after tracker updates, grep canonical narratives for stale counts/ranges/scores; update inline; verify with second grep returning 0 occurrences); (2) Step 2 Pitfall #9.j extended with `🟠 PARTIAL CLOSURE` convention for B-N partial-state per B-382 empirical precedent (X of Y locations applied; remainder via separate B-N); (3) NEW Hard rule 8 — no status transition without arithmetic-propagation sweep; (4) NEW anti-pattern — writing per-completion _validation_log entry without refreshing existing CURRENT_STATE/HANDOFF narrative for inherited drift across multi-commit cascade. | D72 6-cycle ladder on Phase A plan 2026-05-17 (cycles 1-6 spanning Agents 43-52; empirical evidence: 5+ instances of Pitfall #9.k arithmetic-propagation drift in the very tracker narrative updates the skill produces — specifically `7cb7659` → `fe53b4c` 21→24 drift + cycle-3 `114aa22` 4 instances at Phase A plan + 1 at _validation_log + R36 re-score stale-narrative across 3 plan locations through 2 cycles + Phase A plan §5 TOTAL "12 B-Ns" vs 10 actual). Cycle-3 remediation introduced 3 NEW instances ("fix introduces same bug class" pattern); cycle-6 cosmetic findings included 2 inherited-drift instances (B-382 badge + brainstorm-cohort narrative still cited 24 B-Ns 5 commits after state became 40 B-Ns). The arithmetic-propagation sweep + partial-closure convention + multi-commit narrative refresh discipline are the producer-side mechanical mitigations; compose with harness-side `tools/pre_commit_checks.py` markdown_cross_refs check which covers different scope (refs RESOLVE vs refs CURRENT). |
