@@ -246,6 +246,22 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
         "tests/tier0/test_commit_msg_hook.py",
         "tests/tier0/test_cascade_classifier.py",
         "tests/tier0/test_query_blindspots.py",
+        # Tier 1 test file for check_9o detector contains trigger phrases as
+        # test data (positive/negative cases for 9o detection). Same chicken-
+        # and-egg class as Tier 0 test file allowlist above. Per B-493 closure
+        # extension 2026-05-18 — surfaced when adding test_9o_suppresses_in_
+        # session_snapshot_directory + test_9o_fires_outside_session_snapshot_
+        # directory test cases (each containing canonical trigger substrings).
+        # Note: bare filename used (not full path) because tools/pre_commit_checks.py
+        # orchestrator routes MODIFIED files through temp-diff path scanning per B-316
+        # freshness contract (writes added-lines diff to /tmp/qb_diff_*/DIFF_<hash>_
+        # <filename>); the temp path does NOT contain the original `tests/tier1/` prefix.
+        # Filename-only match handles BOTH newly-added flow (full path passed) AND
+        # modified flow (temp path passed with filename as suffix). Same pattern applies
+        # to the prior tier0 entries above — those work for newly-authored commits but
+        # would silently fail for future modifications; addressed only for tier1 here
+        # because that's the immediate B-493 closure friction.
+        "test_query_blindspots_checks.py",
         "tools/exemption_phrases.py",
         "tools/check_commit_msg.py",
         "tools/cascade_classifier.py",
@@ -261,6 +277,14 @@ def check_9o_recursive_exemption(content: str, file_path: str) -> list[Match]:
         # SESSION_RESUME.md is the session-handoff narrative; descriptive
         # discussion of Pitfall #9.o pattern is expected content.
         "session_resume.md",
+        # docs/migration/_session_snapshots/ artifacts authored by
+        # udm-session-compactor skill carry §4 Deeper insights tables that
+        # canonically cite Pitfall #9.o sub-class name (the regex trigger
+        # substring). Per B-493 closure 2026-05-18 (1-event empirical anchor
+        # at commit f65b827 where snapshot pre-commit BLOCKED self-firing
+        # on canonical citation): allowlist the whole directory analogous to
+        # session_resume.md narrative-doc treatment.
+        "docs/migration/_session_snapshots/",
     )
     if any(substrate in norm_path for substrate in trigger_phrase_substrate_files):
         return matches  # chicken-and-egg false-positive suppression per B-304

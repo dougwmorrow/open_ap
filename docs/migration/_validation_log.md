@@ -2,6 +2,29 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-493 closure: `tools/query_blindspots.py::check_9o` substrate-file allowlist extension for `_session_snapshots/`
+
+**Trigger**: pipeline-lead "Let's not discuss UDM pipeline SCD2 + parquet loading. Let's move onto tieing up any loose ends with regard to udm-session-compactor" 2026-05-18 — explicit tie-up directive scoped to udm-session-compactor.
+
+**Scope**: 1 B-N closure (B-493). Substrate-edit at `tools/query_blindspots.py` adding `"docs/migration/_session_snapshots/"` directory-prefix entry to `trigger_phrase_substrate_files` tuple (~9 LOC including 6-line citation comment). 2 NEW Tier 1 assertions at `tests/tier1/test_query_blindspots_checks.py`.
+
+**Producer**: parent agent.
+
+**Rationale-for-early-closure** (vs defer-to-2nd-event per HANDOFF §8 convention): 2nd-event is STRUCTURALLY PREDICTABLE — every future udm-session-compactor invocation will author a snapshot whose §4 Deeper insights table canonically cites Pitfall #9.o sub-class name (containing trigger substring `recursive[ -]exemption` per detector regex). Defer-to-2nd-event convention assumes empirical uncertainty about recurrence; here recurrence is mechanically inevitable. Conservative inline-citation rewrite pattern adopted at commit f65b827 would propagate to every future snapshot, accumulating maintenance burden + cognitive overhead during snapshot authoring.
+
+**B-493 implementation**:
+
+- `tools/query_blindspots.py` `check_9o_recursive_exemption` `trigger_phrase_substrate_files` tuple extended with new entry `"docs/migration/_session_snapshots/"` (directory-prefix match; `any(substrate in norm_path)` membership check handles the match). 6-line citation comment block above the entry referencing B-493 closure + empirical anchor commit f65b827 + analogous treatment to existing `session_resume.md` narrative-doc entry.
+- 2 NEW Tier 1 assertions at `tests/tier1/test_query_blindspots_checks.py`:
+  - `test_9o_suppresses_in_session_snapshot_directory` (positive case): canonical Pitfall #9.o citation in snapshot path `docs/migration/_session_snapshots/2026-05-18-1233bc8.md` returns empty matches list
+  - `test_9o_fires_outside_session_snapshot_directory` (negative regression-pin): same trigger phrase in `COMMIT_MSG` path still fires; prevents over-broad allowlist drift
+
+**Tests**: 2/2 NEW Tier 1 PASS in 0.71s (cohort scope); full-suite re-verify 2827 passed / 10 skipped / 0 failed in 63.45s (baseline 2825 from prior commit `1233bc8` + 2 new = 2827 sum-matches).
+
+**Cumulative session delta UPDATED at B-493**: **100 → 101 NEW B-Ns** (B-393-B-493) / **24 → 25 B-Ns CLOSED multi-session arc** / pytest 2825 → **2827 pass / 10 skip / 0 fail** (+2).
+
+**Status**: ⚫ CLOSED inline at this commit; substrate-edit per hard rule 14 — PRE-COMMIT reviewer to be spawned before commit lands.
+
 ## 2026-05-18 — First production invocation of `udm-session-compactor` (Phase 1 manual-trigger validation)
 
 **Trigger**: pipeline-lead "Let's proceed with your primary objective or tie up any loose ends before moving on" 2026-05-18 — context: user pivoting to UDM pipeline SCD2 + Parquet load testing in parallel Claude session. Cascade Step 1 execution: PRIMARY recommended item from prior turn was "First production invocation of `udm-session-compactor` — author the session arc's first `_session_snapshots/2026-05-18-1233bc8.md` to validate the Phase 1 workflow."
