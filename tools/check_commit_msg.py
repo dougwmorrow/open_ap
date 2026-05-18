@@ -147,10 +147,16 @@ class CommitMsgCheck(ABC):
     """Abstract base class for commit-msg orchestrator checks per B-459.
 
     Subclass contract:
-        - Define class attributes `name` (unique identifier; used as audit-row
-          JSON findings dict key), `severity` (WARN or BLOCK), and
-          `requires_backlog_diff` (whether scan() reads `staged_diffs` for
-          BACKLOG.md content).
+        - Define class attributes:
+            * `name` (str; unique identifier; used as audit-row JSON
+              findings dict key)
+            * `severity` (Literal["WARN", "BLOCK"]; resolved value validated
+              by B-471 __init_subclass__ extension)
+            * `requires_backlog_diff` (bool; whether scan() reads
+              `staged_diffs` for BACKLOG.md content)
+            * `requires_classification` (bool; B-472 declarative replacement
+              for brittle `isinstance(c, CascadeEvidenceCheck)` dispatch —
+              whether scan() reads `ctx.classification`)
         - Implement `scan(commit_msg, ctx)` returning a CheckResult.
         - Optionally override `render_findings_to_stderr(findings)` to emit
           check-specific recommendation footer (default emits findings with
@@ -165,15 +171,39 @@ class CommitMsgCheck(ABC):
     Per B-466 (2026-05-18; Agent 72 Concern 1.1): `__init_subclass__`
     validates required class attributes at class-definition time (fail-fast
     instead of opaque runtime `AttributeError`).
+
+    Per B-471 (2026-05-18; Agent 76 Concern 1A): `__init_subclass__`
+    additionally validates resolved `severity` VALUE is in
+    {"WARN", "BLOCK"} — closes typo-class failure mode (e.g., "BLCK").
+
+    Per B-472 (2026-05-18; Agent 76 Concern 2B): `requires_classification`
+    declarative bool attribute replaces brittle `isinstance` dispatch in
+    `_build_orchestration_context` — future checks (B-458 + B-464) compose
+    cleanly without modifying the orchestrator helper.
     """
     name: str
     severity: Literal["WARN", "BLOCK"]
     requires_backlog_diff: bool
+    requires_classification: bool
 
     def __init_subclass__(cls, **kwargs):
         """Per B-466 (2026-05-18; Agent 72 Concern 1.1): validate every
-        `CommitMsgCheck` subclass declares all 3 required class attributes
+        `CommitMsgCheck` subclass declares all required class attributes
         at class-definition time, NOT at first orchestrator access.
+
+        Per B-471 (2026-05-18; Agent 76 Concern 1A): additionally validate
+        the resolved `severity` VALUE is one of the canonical literals
+        ("WARN" or "BLOCK"). Closes the typo-class failure mode where a
+        subclass author writing `severity = "BLCK"` or `severity = "warn"`
+        would silently pass B-466 attribute-presence validation + silently
+        degrade at `main()` `if check.severity == "BLOCK"` (intended BLOCK
+        becomes WARN with no diagnostic — EXACTLY the failure mode B-466
+        was designed to prevent at a different layer).
+
+        Per B-472 (2026-05-18; Agent 76 Concern 2B): `requires_classification`
+        added to the required-attribute set; declarative replacement for
+        the brittle `isinstance(c, CascadeEvidenceCheck)` dispatch in
+        `_build_orchestration_context`.
 
         Without this hook, Python treats bare annotations as documentation
         only — a broken subclass omitting `name = "..."` declaration would
@@ -182,17 +212,31 @@ class CommitMsgCheck(ABC):
         `findings_by_check[check.name]` or `_collect_orchestration_context(checks)`.
 
         Fail-fast at class-defn time gives the broken subclass author a
-        clear error message identifying which attribute is missing.
+        clear error message identifying which attribute is missing or
+        what severity value is invalid.
         """
         super().__init_subclass__(**kwargs)
-        required = ("name", "severity", "requires_backlog_diff")
+        required = (
+            "name", "severity", "requires_backlog_diff", "requires_classification",
+        )
         missing = [attr for attr in required if not hasattr(cls, attr)]
         if missing:
             raise TypeError(
                 f"{cls.__name__} subclass of CommitMsgCheck missing required "
                 f"class attribute(s): {', '.join(missing)}. All "
                 f"CommitMsgCheck subclasses MUST declare name (str) + severity "
-                f"(Literal['WARN','BLOCK']) + requires_backlog_diff (bool)."
+                f"(Literal['WARN','BLOCK']) + requires_backlog_diff (bool) + "
+                f"requires_classification (bool)."
+            )
+        # B-471: validate severity VALUE — catches typo like "BLCK" or
+        # mis-case like "warn" that pre-B-471 would silently degrade to WARN
+        # at `main()` BLOCK-comparison time.
+        valid_severities = ("WARN", "BLOCK")
+        if cls.severity not in valid_severities:
+            raise TypeError(
+                f"{cls.__name__}.severity = {cls.severity!r} is not a valid "
+                f"severity literal. Must be one of: {valid_severities}. "
+                f"Typo-class failure prevented per B-471 closure 2026-05-18."
             )
 
     @abstractmethod
@@ -297,7 +341,13 @@ def _build_orchestration_context(
     rather than per-check + per-audit-row-build, eliminating redundant
     git subprocess fan-out as more checks land.
 
-    A `CascadeEvidenceCheck` instance presence triggers the classify call.
+    Per B-472 (2026-05-18; Agent 76 Concern 2B): dispatch on declarative
+    `requires_classification: bool` ABC attribute rather than brittle
+    `isinstance(c, CascadeEvidenceCheck)`. Future checks (B-458 + B-464)
+    that need classification ambient compose by declaring
+    `requires_classification = True`; the helper does not require
+    modification when new checks land.
+
     If `classify_commit` is unavailable (import failed) OR raises, the
     classification field is None — `CascadeEvidenceCheck.scan()` degrades
     gracefully when classification is None (returns PASS per pre-existing
@@ -306,7 +356,7 @@ def _build_orchestration_context(
     diffs = _collect_staged_diffs(checks)
     classification = None
     if classify_commit is not None and any(
-        isinstance(c, CascadeEvidenceCheck) for c in checks
+        getattr(c, "requires_classification", False) for c in checks
     ):
         try:
             classification = classify_commit()
@@ -505,6 +555,7 @@ class ExemptionPhraseCheck(CommitMsgCheck):
     name = "exemption_phrase"
     severity: Literal["WARN", "BLOCK"] = "BLOCK"
     requires_backlog_diff = False
+    requires_classification = False  # per B-472: declares scan() does not read ctx.classification
 
     def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
         if contains_exemption_phrase is None:
@@ -545,6 +596,7 @@ class CascadeEvidenceCheck(CommitMsgCheck):
     name = "cascade_evidence"
     severity: Literal["WARN", "BLOCK"] = "BLOCK"
     requires_backlog_diff = False
+    requires_classification = True  # per B-472: reads ctx.classification for cascade-required dispatch
 
     def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
         if has_cascade_evidence is None:
@@ -592,6 +644,7 @@ class PytestCountDisambiguationCheck(CommitMsgCheck):
     name = "pytest_count"
     severity: Literal["WARN", "BLOCK"] = "WARN"
     requires_backlog_diff = False
+    requires_classification = False  # per B-472: scan() reads only TEST section text
 
     def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
         test_text = _extract_test_section_text(commit_msg)
@@ -660,6 +713,7 @@ class UnresolvedForwardPreventionCandidatesCheck(CommitMsgCheck):
     name = "orphan_candidate"
     severity: Literal["WARN", "BLOCK"] = "WARN"
     requires_backlog_diff = True
+    requires_classification = False  # per B-472: reads BACKLOG staged-diff via ctx.staged_diffs, not classification
 
     def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
         sanitized = _strip_code_blocks(commit_msg)
@@ -724,6 +778,297 @@ class UnresolvedForwardPreventionCandidatesCheck(CommitMsgCheck):
               file=sys.stderr)
 
 
+# -------------------------------------------------------------------------
+# B-470 closure: PRE-COMMIT reviewer inline-fix claim verification
+# -------------------------------------------------------------------------
+# Empirical evidence base (2-event 2026-05-18):
+#   - Commit 2a33efa: Agent 70 cited B-459 leading-badge fix applied; file
+#     state still rendered "🟡 Open" inside strikethrough (Agent 71 catch at
+#     7eef2ef). Root cause: prior Edit overwritten by subsequent re-Read+
+#     re-Edit cycles in producer workflow.
+#   - Commit 20d998f: Agent 74 cited 3 inline fixes; 2 of 3 did NOT land
+#     (B-465 leading-badge + GLOSSARY L769 signature update; Agent 75 catch
+#     at 9775340).
+# Forward-prevention: parse reviewer-block numbered-fix claims + verify each
+# claim's "after" pattern in staged content of target file. WARN-only per
+# WSJF MEDIUM contract (matches B-449 + B-451). Escalation to BLOCK reserved
+# for pipeline-lead post-baseline period.
+
+# Reviewer-block header. Tolerant: optional "Independent" prefix; optional
+# "pre-commit" / "PRE-COMMIT" qualifier; optional parenthesized hex agentId.
+_REVIEWER_BLOCK_HEADER_RE = re.compile(
+    r"(?:Independent\s+)?(?:pre-commit\s+|PRE-COMMIT\s+)?(?:independent\s+)?"
+    r"reviewer\s+Agent\s+\d+(?:\s*\([0-9a-fA-F]{6,}\))?",
+    re.IGNORECASE,
+)
+
+_NUMBERED_FIX_RE = re.compile(r"^\s*(?P<num>\d+)\.\s+(?P<body>.+)$")
+
+_PITFALL_MARKER_RE = re.compile(
+    r"Pitfall\s+#?9\.(?P<letter>[a-o])",
+    re.IGNORECASE,
+)
+
+_BN_REF_RE = re.compile(r"B-(\d+)")
+
+# Generic transition pattern with → arrow + quoted before/after (curly+straight
+# quotes). The lazy prose-matchers between quote-closes and the arrow allow
+# patterns like `pre-B-467 "old" → post-B-467 "new"` (canonical form per
+# forensic analysis of commits 2a33efa + 20d998f).
+_TRANSITION_RE = re.compile(
+    r"[\"“‘`](?P<old>[^\"”’`\n]+?)[\"”’`]"
+    r"[^\"”’`\n]*?"
+    r"(?:→|->)"
+    r"[^\"”’`\n]*?"
+    r"[\"“‘`](?P<new>[^\"”’`\n]+?)[\"”’`]"
+)
+
+# Canonical filename → repo path. Longer (".md") forms first so they win
+# substring match before bare name.
+_CANONICAL_FILE_PATHS: tuple[tuple[str, str], ...] = (
+    ("BACKLOG.md", "docs/migration/BACKLOG.md"),
+    ("GLOSSARY.md", "docs/migration/GLOSSARY.md"),
+    ("CURRENT_STATE.md", "docs/migration/CURRENT_STATE.md"),
+    ("HANDOFF.md", "docs/migration/HANDOFF.md"),
+    ("SESSION_RESUME.md", "SESSION_RESUME.md"),
+    ("CLAUDE.md", "CLAUDE.md"),
+    ("BACKLOG", "docs/migration/BACKLOG.md"),
+    ("GLOSSARY", "docs/migration/GLOSSARY.md"),
+    ("CURRENT_STATE", "docs/migration/CURRENT_STATE.md"),
+    ("HANDOFF", "docs/migration/HANDOFF.md"),
+    ("SESSION_RESUME", "SESSION_RESUME.md"),
+    ("CLAUDE", "CLAUDE.md"),
+)
+
+
+def _extract_reviewer_block(commit_msg: str) -> str:
+    """Return the substring of `commit_msg` starting at the first reviewer-
+    block header. Empty string if no header found."""
+    match = _REVIEWER_BLOCK_HEADER_RE.search(commit_msg)
+    if not match:
+        return ""
+    return commit_msg[match.start():]
+
+
+def _resolve_target_path(fix_body: str) -> str | None:
+    """Identify the canonical target file referenced in a fix-body line.
+
+    Longest filename token wins (".md" form preferred over bare name)."""
+    for name, path in _CANONICAL_FILE_PATHS:
+        if name in fix_body:
+            return path
+    return None
+
+
+def _fetch_staged_content(path: str) -> str:
+    """Fetch staged-content for `path` via `git show :<path>`. Returns ""
+    on failure (file not staged OR git unavailable). Caller MUST cache;
+    each call spawns a subprocess."""
+    try:
+        result = subprocess.run(
+            ["git", "show", f":{path}"],
+            capture_output=True, text=True, check=False, timeout=10,
+            cwd=REPO_ROOT,
+        )
+        return result.stdout if result.returncode == 0 else ""
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return ""
+
+
+def _parse_inline_fix_claims(reviewer_block: str) -> list[dict]:
+    """Parse numbered fix items from reviewer-block. Returns a list of dicts
+    keyed by:
+        fix_num: int — 1-based numbered item index
+        raw_body: str — concatenated fix-body lines
+        kind: str — "badge_flip" | "transition" | "missing_entries" | "unknown"
+        before: str | None — parsed "before" pattern (transition kind only)
+        after: str | None — parsed "after" pattern (transition kind only)
+        bn: str | None — B-N identifier referenced in fix-body (e.g., "B-465")
+        target_path: str | None — canonical repo path inferred from fix-body
+    """
+    claims: list[dict] = []
+    current: dict | None = None
+    current_body_lines: list[str] = []
+
+    def _finalize() -> None:
+        nonlocal current, current_body_lines
+        if current is None:
+            return
+        joined = " ".join(current_body_lines)
+        current["raw_body"] = joined
+        # Parse "before → after" transition (first match)
+        m = _TRANSITION_RE.search(joined)
+        if m:
+            current["before"] = m.group("old")
+            current["after"] = m.group("new")
+        else:
+            current["before"] = None
+            current["after"] = None
+        # Classify by Pitfall marker
+        pit = _PITFALL_MARKER_RE.search(joined)
+        if pit:
+            letter = pit.group("letter").lower()
+            if letter == "j":
+                current["kind"] = "badge_flip"
+            elif letter == "n":
+                current["kind"] = "missing_entries"
+            elif letter in ("k", "l"):
+                current["kind"] = "transition"
+            else:
+                current["kind"] = "transition" if current["after"] else "unknown"
+        elif "leading badge" in joined.lower():
+            current["kind"] = "badge_flip"
+        elif current.get("after"):
+            current["kind"] = "transition"
+        else:
+            current["kind"] = "unknown"
+        # B-N reference (for badge_flip anchoring)
+        bn_m = _BN_REF_RE.search(joined)
+        current["bn"] = ("B-" + bn_m.group(1)) if bn_m else None
+        # Target file path
+        current["target_path"] = _resolve_target_path(joined)
+        claims.append(current)
+        current = None
+        current_body_lines = []
+
+    lines = reviewer_block.splitlines()
+    for line in lines:
+        m = _NUMBERED_FIX_RE.match(line)
+        if m:
+            _finalize()
+            current = {"fix_num": int(m.group("num"))}
+            current_body_lines = [m.group("body")]
+        else:
+            stripped = line.strip()
+            if current is not None and stripped:
+                current_body_lines.append(stripped)
+            elif current is not None and not stripped:
+                # Blank line ends the current fix block
+                _finalize()
+    _finalize()
+    return claims
+
+
+class InlineFixClaimVerificationCheck(CommitMsgCheck):
+    """B-470 closure (2026-05-18; 2-event evidence base): verify each
+    PRE-COMMIT reviewer inline-fix claim in commit-msg actually landed in
+    staged file content.
+
+    Empirical anchors:
+        - Commit 2a33efa (Agent 70 claim; Agent 71 catch at 7eef2ef)
+        - Commit 20d998f (Agent 74 claim; Agent 75 catch at 9775340)
+
+    Detection logic (heuristic; WARN-only):
+        - Find reviewer-block by header regex.
+        - Parse numbered fix items + classify by Pitfall #9.X letter.
+        - For Pitfall #9.j badge_flip: verify staged BACKLOG.md does NOT
+          contain `**B-NNN** (🟡 Open` for the cited B-N.
+        - For Pitfall #9.k / #9.l transition: verify "after" pattern is
+          present in staged target file (basic substring check).
+
+    Severity: WARN per WSJF MEDIUM (matches B-449 + B-451 contract).
+    """
+    name = "inline_fix_claim"
+    severity: Literal["WARN", "BLOCK"] = "WARN"
+    requires_backlog_diff = False
+    requires_classification = False
+
+    def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
+        reviewer_block = _extract_reviewer_block(commit_msg)
+        if not reviewer_block:
+            return CheckResult(passed=True, findings=[])
+        claims = _parse_inline_fix_claims(reviewer_block)
+        if not claims:
+            return CheckResult(passed=True, findings=[])
+
+        findings: list[str] = []
+        staged_cache: dict[str, str] = {}
+
+        for claim in claims:
+            target = claim.get("target_path")
+            kind = claim.get("kind")
+            if kind == "unknown" or target is None:
+                # Unverifiable claim — skip silently per WARN heuristic.
+                continue
+            if target not in staged_cache:
+                staged_cache[target] = _fetch_staged_content(target)
+            content = staged_cache[target]
+            if not content:
+                # File not in staged index — cannot verify; skip silently.
+                continue
+
+            if kind == "badge_flip":
+                bn = claim.get("bn")
+                if not bn:
+                    continue
+                # Pitfall #9.j: leading-badge stale. Check `**B-NNN** (🟡 Open`
+                # is NOT present in staged file (the fix should have flipped
+                # it to ⚫ CLOSED).
+                old_leading_badge = f"**{bn}** (🟡 Open"
+                if old_leading_badge in content:
+                    findings.append(
+                        f"Fix #{claim['fix_num']} (badge_flip) claims "
+                        f"{bn} leading badge flipped to ⚫ CLOSED in {target}, "
+                        f"but staged content still contains '{old_leading_badge}'. "
+                        f"Likely Edit-overwrite drift per B-470 closure 2026-05-18 "
+                        f"(2-event evidence base: commits 2a33efa + 20d998f). "
+                        f"Re-apply via Edit + verify via grep BEFORE staging."
+                    )
+            elif kind == "transition":
+                after = claim.get("after")
+                if not after or len(after) < 4:
+                    # Skip very short "after" patterns (high false-positive risk)
+                    continue
+                if after not in content:
+                    findings.append(
+                        f"Fix #{claim['fix_num']} (transition) claims "
+                        f"'{after}' applied to {target} but staged content "
+                        f"does not contain this pattern. "
+                        f"Likely Edit-overwrite drift per B-470 closure 2026-05-18 "
+                        f"(2-event evidence base: commits 2a33efa + 20d998f). "
+                        f"Re-apply via Edit + verify via grep BEFORE staging."
+                    )
+            # missing_entries kind: parser classifies it but scan() verification
+            # deferred per B-477 (open 2026-05-18). Empirically 1 occurrence so
+            # far (commit 20d998f Fix #3) and it DID land — verification gap
+            # only impactful on subsequent non-landed missing-entries claim.
+
+        if findings:
+            return CheckResult(passed=False, findings=findings[:10])
+        return CheckResult(passed=True, findings=[])
+
+    def render_findings_to_stderr(self, findings: list[str]) -> None:
+        """Per B-468: emit inline-fix WARN boilerplate with grep-verify
+        recommendation footer."""
+        print(
+            f"\n[commit-msg WARN] {len(findings)} inline-fix claim(s) in "
+            "commit-msg do NOT match staged file content "
+            "(per B-470; 2-event evidence base: Agent 70 + Agent 74 at "
+            "commits 2a33efa + 20d998f):",
+            file=sys.stderr,
+        )
+        for f in findings:
+            print(f"  - {f}", file=sys.stderr)
+        print("\nResolution options:", file=sys.stderr)
+        print(
+            "  - Re-apply the cited fix via Edit + verify via grep BEFORE re-staging",
+            file=sys.stderr,
+        )
+        print(
+            "  - Update the commit-msg claim wording to match the actual diff state",
+            file=sys.stderr,
+        )
+        print(
+            "  - Cite explicit dismissal if the claim was withdrawn",
+            file=sys.stderr,
+        )
+        print(
+            "This is a WARN (not BLOCK); commit will still proceed. "
+            "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
+            file=sys.stderr,
+        )
+
+
 # CHECKS registry per B-459 — single point of registration for orchestrator.
 # Order matters only for stderr-emission deterministic display; audit-row
 # JSON keys are independent.
@@ -732,6 +1077,7 @@ CHECKS: list[CommitMsgCheck] = [
     CascadeEvidenceCheck(),
     PytestCountDisambiguationCheck(),
     UnresolvedForwardPreventionCandidatesCheck(),
+    InlineFixClaimVerificationCheck(),  # B-470 closure 2026-05-18
 ]
 
 

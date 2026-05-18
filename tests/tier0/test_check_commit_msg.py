@@ -779,25 +779,33 @@ def test_check_result_dataclass_shape():
 
 
 def test_checks_registry_present():
-    """B-459 Assertion 52: CHECKS registry list present + 4 check instances."""
+    """B-459 Assertion 52 (updated B-470 2026-05-18): CHECKS registry list
+    present + at least 4 check instances (B-470 cohort adds
+    `inline_fix_claim` to bring count to 5)."""
     import tools.check_commit_msg as ccm
     assert hasattr(ccm, "CHECKS")
     assert isinstance(ccm.CHECKS, list)
-    assert len(ccm.CHECKS) == 4
+    assert len(ccm.CHECKS) >= 4
     for check in ccm.CHECKS:
         assert isinstance(check, ccm.CommitMsgCheck)
 
 
 def test_each_check_has_unique_name():
-    """B-459 Assertion 53: each CHECKS entry has a unique name attribute
-    (required for audit-row findings dict keying)."""
+    """B-459 Assertion 53 (updated B-470 2026-05-18): each CHECKS entry has
+    a unique name attribute. Canonical name set extended from 4 → 5 with
+    `inline_fix_claim` (B-470 closure)."""
     import tools.check_commit_msg as ccm
     names = [c.name for c in ccm.CHECKS]
     assert len(names) == len(set(names)), f"Duplicate check names: {names}"
-    # Canonical name set (B-459 migration of the 4 pre-existing checks):
-    assert set(names) == {
+    canonical_b459_names = {
         "exemption_phrase", "cascade_evidence", "pytest_count", "orphan_candidate",
     }
+    canonical_b470_names = canonical_b459_names | {"inline_fix_claim"}
+    # Accept either set — pins back-compat (pre-B-470 expectation) AND
+    # forward-compat (post-B-470 expectation):
+    assert set(names) == canonical_b470_names, (
+        f"CHECKS names must equal {canonical_b470_names}; got {set(names)}"
+    )
 
 
 def test_each_check_has_severity_attribute():
@@ -817,15 +825,18 @@ def test_each_check_has_requires_backlog_diff_attribute():
 
 
 def test_block_checks_are_exemption_and_cascade():
-    """B-459 Assertion 56: BLOCK severity is exemption_phrase + cascade_evidence
-    (preserves pre-B-459 BLOCK contract); WARN severity is pytest_count +
-    orphan_candidate (preserves WSJF MEDIUM WARN-only contract)."""
+    """B-459 Assertion 56 (updated B-470 2026-05-18): BLOCK severity is
+    exemption_phrase + cascade_evidence (preserves pre-B-459 BLOCK contract).
+    WARN severity expanded from {pytest_count, orphan_candidate} to
+    {pytest_count, orphan_candidate, inline_fix_claim} per B-470 closure."""
     import tools.check_commit_msg as ccm
     by_severity = {"BLOCK": set(), "WARN": set()}
     for check in ccm.CHECKS:
         by_severity[check.severity].add(check.name)
     assert by_severity["BLOCK"] == {"exemption_phrase", "cascade_evidence"}
-    assert by_severity["WARN"] == {"pytest_count", "orphan_candidate"}
+    assert by_severity["WARN"] == {
+        "pytest_count", "orphan_candidate", "inline_fix_claim",
+    }
 
 
 def test_only_orphan_check_requires_backlog_diff():
@@ -1195,14 +1206,16 @@ def test_init_subclass_error_message_cites_all_missing_attrs():
 
 
 def test_init_subclass_passes_on_complete_subclass():
-    """B-466 Assertion 76: valid subclass with all 3 class attributes
-    instantiates cleanly (no TypeError raised)."""
+    """B-466 Assertion 76 (updated B-472 2026-05-18): valid subclass with
+    all 4 class attributes (name + severity + requires_backlog_diff +
+    requires_classification) instantiates cleanly (no TypeError raised)."""
     import tools.check_commit_msg as ccm
 
     class ValidCheck(ccm.CommitMsgCheck):
         name = "valid_check"
         severity: "Literal['WARN', 'BLOCK']" = "WARN"  # type: ignore[name-defined]  # noqa: F821
         requires_backlog_diff = False
+        requires_classification = False
         def scan(self, commit_msg, ctx):
             return ccm.CheckResult(passed=True, findings=[])
 
@@ -1210,21 +1223,28 @@ def test_init_subclass_passes_on_complete_subclass():
     assert instance.name == "valid_check"
     assert instance.severity == "WARN"
     assert instance.requires_backlog_diff is False
+    assert instance.requires_classification is False
 
 
 def test_init_subclass_canonical_4_subclasses_have_all_attrs():
-    """B-466 Assertion 77: the canonical 4 CHECKS subclasses each declare all
-    3 required class attributes (sanity check that B-459 migrations + B-466
-    validation co-exist; CHECKS instantiation does not raise)."""
+    """B-466 Assertion 77 (updated B-472 2026-05-18): the canonical 4 CHECKS
+    subclasses each declare all 4 required class attributes (sanity check
+    that B-459 migrations + B-466 + B-471 + B-472 validation co-exist;
+    CHECKS instantiation does not raise).
+
+    Per B-470 cohort (2026-05-18) — if InlineFixClaimVerificationCheck has
+    been appended to CHECKS, len(ccm.CHECKS) increases to 5. Test pins
+    the lower bound (>= 4) to remain compatible across B-470 landing."""
     import tools.check_commit_msg as ccm
-    # Module load already instantiated CHECKS; if any subclass were broken,
-    # import would have failed. Re-verify here for explicit pin.
-    assert len(ccm.CHECKS) == 4
+    assert len(ccm.CHECKS) >= 4
     for check in ccm.CHECKS:
         assert hasattr(check, "name")
         assert hasattr(check, "severity")
         assert hasattr(check, "requires_backlog_diff")
+        assert hasattr(check, "requires_classification")
         assert check.name  # non-empty string
+        assert check.severity in ("WARN", "BLOCK")  # B-471 severity-value pin
+        assert isinstance(check.requires_classification, bool)
 
 
 # ---------------------------------------------------------------------------
@@ -1408,6 +1428,7 @@ def test_render_findings_default_emits_severity_prefix(capsys):
         name = "test_default_render"
         severity: "Literal['WARN', 'BLOCK']" = "WARN"  # type: ignore[name-defined]  # noqa: F821
         requires_backlog_diff = False
+        requires_classification = False
         def scan(self, commit_msg, ctx):
             return ccm.CheckResult(passed=True, findings=[])
 
@@ -1525,3 +1546,451 @@ def test_block_severity_check_render_emits_blocked_header(tmp_path, monkeypatch,
     assert "commit-msg BLOCKED" in captured.err
     assert "Layer N+1 termination" in captured.err
     assert rc == ccm.EXIT_BLOCKED
+
+
+# ---------------------------------------------------------------------------
+# B-471 closure: __init_subclass__ severity-VALUE validation
+# (Agent 76 design review 2026-05-18 Concern 1A; closes typo-class failure
+# mode where misdeclared severity literal silently degrades to WARN)
+# ---------------------------------------------------------------------------
+
+
+def test_init_subclass_raises_on_invalid_severity_typo():
+    """B-471 Assertion 92: subclass with severity='BLCK' (typo of 'BLOCK')
+    raises TypeError at class-definition time (fail-fast). Pre-B-471 this
+    would silently pass B-466 hasattr() check + silently degrade at
+    main() `if check.severity == 'BLOCK'` (intended BLOCK becomes WARN)."""
+    import tools.check_commit_msg as ccm
+    with pytest.raises(TypeError) as exc_info:
+        class BadSeverityTypo(ccm.CommitMsgCheck):  # type: ignore[misc]
+            name = "bad_typo"
+            severity = "BLCK"  # typo of "BLOCK"
+            requires_backlog_diff = False
+            requires_classification = False
+            def scan(self, commit_msg, ctx):
+                return ccm.CheckResult(passed=True, findings=[])
+    err = str(exc_info.value)
+    assert "BLCK" in err
+    assert "valid severity literal" in err
+    assert "B-471" in err  # cites closure
+
+
+def test_init_subclass_raises_on_invalid_severity_case():
+    """B-471 Assertion 93: subclass with severity='warn' (lowercase) raises
+    TypeError. Severity values are case-sensitive literals; the orchestrator
+    uses exact match `if check.severity == 'BLOCK'`, so lowercase silently
+    degrades."""
+    import tools.check_commit_msg as ccm
+    with pytest.raises(TypeError) as exc_info:
+        class BadSeverityCase(ccm.CommitMsgCheck):  # type: ignore[misc]
+            name = "bad_case"
+            severity = "warn"  # should be "WARN"
+            requires_backlog_diff = False
+            requires_classification = False
+            def scan(self, commit_msg, ctx):
+                return ccm.CheckResult(passed=True, findings=[])
+    err = str(exc_info.value)
+    assert "warn" in err
+    assert "valid severity literal" in err
+
+
+def test_init_subclass_accepts_canonical_severity_values():
+    """B-471 Assertion 94: subclasses with severity='WARN' OR 'BLOCK' (the
+    canonical Literal values) instantiate cleanly."""
+    import tools.check_commit_msg as ccm
+
+    class WarnCheck(ccm.CommitMsgCheck):
+        name = "warn_canonical"
+        severity = "WARN"
+        requires_backlog_diff = False
+        requires_classification = False
+        def scan(self, commit_msg, ctx):
+            return ccm.CheckResult(passed=True, findings=[])
+
+    class BlockCheck(ccm.CommitMsgCheck):
+        name = "block_canonical"
+        severity = "BLOCK"
+        requires_backlog_diff = False
+        requires_classification = False
+        def scan(self, commit_msg, ctx):
+            return ccm.CheckResult(passed=True, findings=[])
+
+    assert WarnCheck().severity == "WARN"
+    assert BlockCheck().severity == "BLOCK"
+
+
+# ---------------------------------------------------------------------------
+# B-472 closure: declarative requires_classification attribute (replaces
+# brittle isinstance(c, CascadeEvidenceCheck) dispatch in
+# _build_orchestration_context)
+# ---------------------------------------------------------------------------
+
+
+def test_init_subclass_raises_on_missing_requires_classification():
+    """B-472 Assertion 95: subclass omitting `requires_classification`
+    attribute raises TypeError at class-definition time (fail-fast). Closes
+    the failure mode where a future check needing classification ambient
+    forgets to declare it + the brittle isinstance dispatch silently
+    skips classify_commit()."""
+    import tools.check_commit_msg as ccm
+    with pytest.raises(TypeError) as exc_info:
+        class BrokenNoReqClass(ccm.CommitMsgCheck):  # type: ignore[misc]
+            name = "broken_req_class"
+            severity = "WARN"
+            requires_backlog_diff = False
+            # requires_classification deliberately omitted
+            def scan(self, commit_msg, ctx):
+                return ccm.CheckResult(passed=True, findings=[])
+    assert "requires_classification" in str(exc_info.value)
+
+
+def test_cascade_evidence_check_declares_requires_classification_true():
+    """B-472 Assertion 96: the canonical CascadeEvidenceCheck declares
+    requires_classification=True (the ONLY current subclass that reads
+    ctx.classification). Other 3 subclasses declare False."""
+    import tools.check_commit_msg as ccm
+    assert ccm.CascadeEvidenceCheck.requires_classification is True
+    assert ccm.ExemptionPhraseCheck.requires_classification is False
+    assert ccm.PytestCountDisambiguationCheck.requires_classification is False
+    assert ccm.UnresolvedForwardPreventionCandidatesCheck.requires_classification is False
+
+
+def test_build_orchestration_context_dispatches_on_requires_classification_attr(monkeypatch):
+    """B-472 Assertion 97: _build_orchestration_context dispatches on the
+    declarative requires_classification attribute, NOT on
+    isinstance(c, CascadeEvidenceCheck). Verifies a non-CascadeEvidenceCheck
+    subclass with requires_classification=True triggers classify_commit()."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+
+    call_count = {"n": 0}
+    def fake_classify():
+        call_count["n"] += 1
+        return CommitClassification(CLASS_TYPO, "test", True, False, 1, 2)
+    monkeypatch.setattr(ccm, "classify_commit", fake_classify)
+
+    # Hypothetical future check that needs classification but is NOT an
+    # instance of CascadeEvidenceCheck — pre-B-472 isinstance dispatch
+    # would silently skip classify_commit() for this check.
+    class FutureClassificationCheck(ccm.CommitMsgCheck):
+        name = "future_class_check"
+        severity = "WARN"
+        requires_backlog_diff = False
+        requires_classification = True
+        def scan(self, commit_msg, ctx):
+            return ccm.CheckResult(passed=True, findings=[])
+
+    ctx = ccm._build_orchestration_context([FutureClassificationCheck()])
+    assert call_count["n"] == 1, (
+        "classify_commit should fire when ANY check declares "
+        "requires_classification=True, regardless of isinstance"
+    )
+    assert ctx.classification is not None
+    assert ctx.classification.classification == CLASS_TYPO
+
+
+def test_build_orchestration_context_skips_classify_when_no_check_needs_it(monkeypatch):
+    """B-472 Assertion 98: when NO check in the list declares
+    requires_classification=True, _build_orchestration_context does NOT
+    call classify_commit() (avoids unnecessary git-subprocess invocation)."""
+    import tools.check_commit_msg as ccm
+
+    call_count = {"n": 0}
+    def fake_classify():
+        call_count["n"] += 1
+        return None
+    monkeypatch.setattr(ccm, "classify_commit", fake_classify)
+
+    class NoClassNeeded(ccm.CommitMsgCheck):
+        name = "no_class_needed"
+        severity = "WARN"
+        requires_backlog_diff = False
+        requires_classification = False
+        def scan(self, commit_msg, ctx):
+            return ccm.CheckResult(passed=True, findings=[])
+
+    ctx = ccm._build_orchestration_context([NoClassNeeded()])
+    assert call_count["n"] == 0
+    assert ctx.classification is None
+
+
+# ---------------------------------------------------------------------------
+# B-470 closure: InlineFixClaimVerificationCheck — claim-vs-reality drift
+# forward-prevention (Agent 75 + Agent 71 2-event evidence base at commits
+# 2a33efa + 20d998f; PRE-COMMIT reviewer inline-fix claims that did not land)
+# ---------------------------------------------------------------------------
+
+
+def test_inline_fix_claim_check_registered_in_checks():
+    """B-470 Assertion 99: InlineFixClaimVerificationCheck registered in
+    CHECKS list as the 5th check + severity is WARN (per WSJF MEDIUM)."""
+    import tools.check_commit_msg as ccm
+    names = [c.name for c in ccm.CHECKS]
+    assert "inline_fix_claim" in names
+    inline_check = next(c for c in ccm.CHECKS if c.name == "inline_fix_claim")
+    assert inline_check.severity == "WARN"
+    assert inline_check.requires_backlog_diff is False
+    assert inline_check.requires_classification is False
+
+
+def test_extract_reviewer_block_returns_empty_on_no_header():
+    """B-470 Assertion 100: _extract_reviewer_block returns empty string
+    when commit-msg has no reviewer-block header (no false claims to verify)."""
+    import tools.check_commit_msg as ccm
+    msg = "feat: ordinary commit\n\nNo reviewer block here.\n"
+    assert ccm._extract_reviewer_block(msg) == ""
+
+
+def test_extract_reviewer_block_finds_header():
+    """B-470 Assertion 101: _extract_reviewer_block returns text starting
+    at the reviewer-block header line."""
+    import tools.check_commit_msg as ccm
+    msg = (
+        "feat: work\n\n"
+        "Body text.\n\n"
+        "Independent pre-commit reviewer Agent 74 (a7843efac4f1bd92d) "
+        "per hard rule 14: fixes applied.\n"
+        "1. fix one\n"
+    )
+    block = ccm._extract_reviewer_block(msg)
+    assert "Agent 74" in block
+    assert "1. fix one" in block
+    assert "Body text" not in block  # block starts at header, prose excluded
+
+
+def test_parse_inline_fix_claims_recognizes_badge_flip():
+    """B-470 Assertion 102: parser classifies Pitfall #9.j numbered item as
+    badge_flip kind with extracted B-N anchor + target file path."""
+    import tools.check_commit_msg as ccm
+    block = (
+        "Independent pre-commit reviewer Agent 74 (a7843efac4f1bd92d):\n"
+        "1. Pitfall #9.j: B-465 BACKLOG L492 leading badge \"X Open\" -> \"Y CLOSED 2026-05-18\"\n"
+    )
+    claims = ccm._parse_inline_fix_claims(block)
+    assert len(claims) == 1
+    assert claims[0]["kind"] == "badge_flip"
+    assert claims[0]["bn"] == "B-465"
+    assert claims[0]["target_path"] == "docs/migration/BACKLOG.md"
+    assert claims[0]["fix_num"] == 1
+
+
+def test_parse_inline_fix_claims_recognizes_transition():
+    """B-470 Assertion 103: parser classifies Pitfall #9.l numbered item as
+    transition kind with extracted before/after patterns (prose between
+    closing quote and arrow is tolerated)."""
+    import tools.check_commit_msg as ccm
+    block = (
+        "Independent pre-commit reviewer Agent 74 (a7843efac4f1bd92d):\n"
+        "2. Pitfall #9.l: GLOSSARY L769 CommitMsgCheck signature description "
+        "updated pre-B-467 \"scan(commit_msg, staged_diffs)\" -> post-B-467 "
+        "\"scan(commit_msg, ctx: OrchestrationContext)\" + cite B-467 closure\n"
+    )
+    claims = ccm._parse_inline_fix_claims(block)
+    assert len(claims) == 1
+    assert claims[0]["kind"] == "transition"
+    assert claims[0]["before"] == "scan(commit_msg, staged_diffs)"
+    assert claims[0]["after"] == "scan(commit_msg, ctx: OrchestrationContext)"
+    assert claims[0]["target_path"] == "docs/migration/GLOSSARY.md"
+
+
+def test_parse_inline_fix_claims_handles_multiple_numbered_items():
+    """B-470 Assertion 104: parser returns all numbered fix items in
+    reviewer-block (each separated by newline + next number)."""
+    import tools.check_commit_msg as ccm
+    block = (
+        "Independent pre-commit reviewer Agent 74 (a7843efac4f1bd92d):\n"
+        "1. Pitfall #9.j: B-465 BACKLOG leading badge \"X Open\" -> \"Y CLOSED 2026-05-18\"\n"
+        "2. Pitfall #9.l: GLOSSARY \"old-sig\" -> \"new-sig\"\n"
+        "3. Pitfall #9.n: GLOSSARY missing 2 NEW B-467 surfaces\n"
+    )
+    claims = ccm._parse_inline_fix_claims(block)
+    assert len(claims) == 3
+    assert claims[0]["fix_num"] == 1
+    assert claims[1]["fix_num"] == 2
+    assert claims[2]["fix_num"] == 3
+    assert {c["kind"] for c in claims} >= {"badge_flip", "transition", "missing_entries"}
+
+
+def test_inline_fix_check_warns_on_unlanded_badge_flip(tmp_path, monkeypatch):
+    """B-470 Assertion 105: when commit-msg claims B-NNN leading-badge
+    flipped to ⚫ CLOSED but staged BACKLOG still contains the OLD `🟡 Open`
+    leading-badge form for that B-N, the check returns WARN finding.
+
+    Empirical anchor: commit 2a33efa Agent 70 B-459 leading-badge fix +
+    commit 20d998f Agent 74 B-465 leading-badge fix BOTH cited but did NOT
+    land in staged content."""
+    import tools.check_commit_msg as ccm
+    # Mock git show :BACKLOG.md to return staged content where B-465 leading
+    # badge is still 🟡 Open (simulating the Agent 74 drift at commit 20d998f).
+    staged_content = (
+        "- **B-464** (⚫ CLOSED 2026-05-18; ...): work\n"
+        "- **B-465** (🟡 Open; HIGH; WSJF 3.0): description\n"
+    )
+    monkeypatch.setattr(
+        ccm, "_fetch_staged_content",
+        lambda path: staged_content if "BACKLOG" in path else "",
+    )
+    commit_msg = (
+        "build: substantive work\n\n"
+        "Independent pre-commit reviewer Agent 74 (a7843efac4f1bd92d):\n"
+        "1. Pitfall #9.j: B-465 BACKLOG L492 leading badge \"X Open\" -> "
+        "\"Y CLOSED 2026-05-18\"\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is False
+    assert any("B-465" in f for f in result.findings)
+    assert any("Edit-overwrite drift" in f for f in result.findings)
+
+
+def test_inline_fix_check_passes_when_badge_flip_landed(tmp_path, monkeypatch):
+    """B-470 Assertion 106: when staged BACKLOG.md no longer contains the
+    OLD `**B-NNN** (🟡 Open` leading-badge form (i.e., the fix LANDED), the
+    check passes silently."""
+    import tools.check_commit_msg as ccm
+    staged_content = (
+        "- **B-465** (⚫ CLOSED 2026-05-18; HIGH; WSJF 3.0): description\n"
+    )
+    monkeypatch.setattr(
+        ccm, "_fetch_staged_content",
+        lambda path: staged_content if "BACKLOG" in path else "",
+    )
+    commit_msg = (
+        "build: substantive work\n\n"
+        "Independent pre-commit reviewer Agent 74 (a7843efac4f1bd92d):\n"
+        "1. Pitfall #9.j: B-465 BACKLOG L492 leading badge \"X Open\" -> "
+        "\"Y CLOSED 2026-05-18\"\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_inline_fix_check_warns_on_unlanded_transition(monkeypatch):
+    """B-470 Assertion 107: when commit-msg cites a Pitfall #9.l transition
+    "<old>" -> "<new>" but the staged target file does not contain "<new>",
+    the check returns WARN finding.
+
+    Empirical anchor: commit 20d998f Agent 74 GLOSSARY L769 signature
+    description update cited but staged content still showed pre-B-467 sig."""
+    import tools.check_commit_msg as ccm
+    # Staged GLOSSARY content still shows the pre-B-467 signature
+    staged_content = (
+        "**CommitMsgCheck** | ABC for commit-msg check subclasses | "
+        "`scan(commit_msg, staged_diffs) -> CheckResult` |\n"
+    )
+    monkeypatch.setattr(
+        ccm, "_fetch_staged_content",
+        lambda path: staged_content if "GLOSSARY" in path else "",
+    )
+    commit_msg = (
+        "build: substantive work\n\n"
+        "Independent pre-commit reviewer Agent 74 (a7843efac4f1bd92d):\n"
+        "2. Pitfall #9.l: GLOSSARY L769 CommitMsgCheck signature description "
+        "updated pre-B-467 \"scan(commit_msg, staged_diffs)\" -> post-B-467 "
+        "\"scan(commit_msg, ctx: OrchestrationContext)\"\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is False
+    # "after" pattern should appear in finding text
+    assert any("scan(commit_msg, ctx: OrchestrationContext)" in f for f in result.findings)
+
+
+def test_inline_fix_check_passes_when_transition_landed(monkeypatch):
+    """B-470 Assertion 108: when staged target file contains the cited
+    "<new>" pattern, the check passes."""
+    import tools.check_commit_msg as ccm
+    staged_content = (
+        "**CommitMsgCheck** | ABC for commit-msg check subclasses | "
+        "`scan(commit_msg, ctx: OrchestrationContext) -> CheckResult` |\n"
+    )
+    monkeypatch.setattr(
+        ccm, "_fetch_staged_content",
+        lambda path: staged_content if "GLOSSARY" in path else "",
+    )
+    commit_msg = (
+        "build: substantive work\n\n"
+        "Independent pre-commit reviewer Agent 74 (a7843efac4f1bd92d):\n"
+        "2. Pitfall #9.l: GLOSSARY L769 CommitMsgCheck signature description "
+        "updated pre-B-467 \"scan(commit_msg, staged_diffs)\" -> post-B-467 "
+        "\"scan(commit_msg, ctx: OrchestrationContext)\"\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_inline_fix_check_passes_silently_without_reviewer_block():
+    """B-470 Assertion 109: commits with no reviewer-block header are not
+    subject to the check (passes silently regardless of commit content)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "fix: bug fix\n\nOrdinary commit with no PRE-COMMIT reviewer cited.\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_inline_fix_check_render_findings_emits_warn_footer(capsys):
+    """B-470 Assertion 110: render_findings_to_stderr emits WARN header +
+    grep-verify recommendation footer (matches B-449/B-451 contract style)."""
+    import tools.check_commit_msg as ccm
+    check = ccm.InlineFixClaimVerificationCheck()
+    check.render_findings_to_stderr([
+        "Fix #1 (badge_flip) claims B-465 leading badge flipped...",
+    ])
+    err = capsys.readouterr().err
+    assert "[commit-msg WARN]" in err
+    assert "B-470" in err
+    assert "Re-apply" in err
+    assert "WARN (not BLOCK)" in err
+
+
+def test_inline_fix_check_resolves_canonical_file_paths():
+    """B-470 Assertion 111: _resolve_target_path maps canonical filenames
+    in fix-body text to repo paths."""
+    import tools.check_commit_msg as ccm
+    # ".md" form preferred when both present
+    assert ccm._resolve_target_path(
+        "BACKLOG.md L492 leading badge"
+    ) == "docs/migration/BACKLOG.md"
+    assert ccm._resolve_target_path(
+        "GLOSSARY L769 signature"
+    ) == "docs/migration/GLOSSARY.md"
+    assert ccm._resolve_target_path(
+        "CURRENT_STATE.md L7 narrative"
+    ) == "docs/migration/CURRENT_STATE.md"
+    assert ccm._resolve_target_path(
+        "CLAUDE.md hard rule 14"
+    ) == "CLAUDE.md"
+    # Returns None for unknown filename token
+    assert ccm._resolve_target_path("unrelated prose with no canonical file") is None
+
+
+def test_inline_fix_check_unknown_kind_skipped_silently(monkeypatch):
+    """B-470 Assertion 112: numbered items with no parseable Pitfall marker
+    AND no transition pattern are kind=unknown — skipped silently from
+    verification (heuristic-parser conservative on unparseable claims;
+    avoids false-positive WARN flood)."""
+    import tools.check_commit_msg as ccm
+    monkeypatch.setattr(ccm, "_fetch_staged_content", lambda path: "")
+    commit_msg = (
+        "build: work\n\n"
+        "Independent pre-commit reviewer Agent 99 (deadbeef123):\n"
+        "1. Some narrative without quoted transition or pitfall marker.\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []

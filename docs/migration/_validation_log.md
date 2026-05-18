@@ -2,6 +2,45 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-470 + B-471 + B-472 cohort (HIGH WSJF 3.0 forward-prevention + B-459 abstraction polish)
+
+**Trigger**: pipeline-lead "Review SESSION_RESUME.md and then proceed with the most important objectives." 2026-05-18.
+
+**Scope**: 3 B-N closures (B-470 InlineFixClaimVerificationCheck + B-471 severity-value validation + B-472 declarative requires_classification); +21 NEW Tier 0 assertions; 4 files modified (`tools/check_commit_msg.py` + `tests/tier0/test_check_commit_msg.py` + `CLAUDE.md` + `docs/migration/GLOSSARY.md`).
+
+**Producer**: parent agent (this session).
+
+**Forensic sub-agent** (`a06872221166aafac`): forensic analysis of commits 2a33efa + 20d998f + remediation commits 7eef2ef + 9775340 — extracted canonical claim format set for B-470 parser regex design (6 patterns enumerated: reviewer-block header + numbered-fix items + Pitfall #9.j badge-flip + Pitfall #9.l signature-update + Pitfall #9.n missing-entries + Pitfall #9.k arithmetic). Drove design of `_REVIEWER_BLOCK_HEADER_RE` + `_NUMBERED_FIX_RE` + `_PITFALL_MARKER_RE` + `_TRANSITION_RE` regex constants.
+
+**B-471** (MEDIUM WSJF 2.0; Agent 76 Scope 1 Concern 1A): `CommitMsgCheck.__init_subclass__` extended with severity-VALUE validation — post-hasattr-check pass `if cls.severity not in ("WARN", "BLOCK"): raise TypeError(...)`. Closes typo-class failure mode (e.g., `severity="BLCK"` or `severity="warn"`) that pre-B-471 silently degraded to WARN at orchestrator BLOCK-comparison time. 3 NEW Tier 0 assertions (92-94) cover typo rejection + case-mismatch rejection + canonical-literal acceptance.
+
+**B-472** (MEDIUM WSJF 2.0; Agent 76 Scope 2 Concern 2B): `requires_classification: bool` declarative ABC attribute REPLACES brittle `isinstance(c, CascadeEvidenceCheck)` dispatch in `_build_orchestration_context`. `__init_subclass__` extended to require the attribute (parallel to `requires_backlog_diff`). 4 pre-existing subclasses declare canonical values (CascadeEvidenceCheck=True; ExemptionPhrase+PytestCount+OrphanCandidate=False). B-470 InlineFixClaimVerificationCheck declares False. Orchestrator dispatch swaps `any(isinstance(c, CascadeEvidenceCheck) for c in checks)` → `any(getattr(c, "requires_classification", False) for c in checks)`. Future checks (B-458 + B-464) compose without modifying orchestrator helper. 4 NEW Tier 0 assertions (95-98).
+
+**B-470** (HIGH WSJF 3.0; Agent 75 B-NEW.2 + Agent 71 prior precedent at commit 2a33efa; 2-event empirical evidence base): `InlineFixClaimVerificationCheck` CommitMsgCheck subclass — WARN-severity forward-prevention for "claim-vs-reality drift" failure mode (PRE-COMMIT reviewer inline-fix claims that DO NOT actually land in staged file state). Empirical anchors: commit 2a33efa Agent 70 B-459 leading-badge fix (caught by Agent 71 at 7eef2ef) + commit 20d998f Agent 74 B-465 + GLOSSARY signature fixes (2 of 3 did not land; caught by Agent 75 at 9775340). Root cause: parent Edit operations silently overwritten by subsequent re-Read+re-Edit cycles when files modified between calls. Implementation composes via B-459 abstraction — new public surface `InlineFixClaimVerificationCheck` + helpers `_extract_reviewer_block` + `_parse_inline_fix_claims` + `_resolve_target_path` + `_fetch_staged_content` + regex constants + `_CANONICAL_FILE_PATHS` tuple. Detection logic: parses reviewer-block via `Independent.*reviewer Agent N (...)` regex → enumerates numbered-fix items → classifies by Pitfall #9.X letter → verifies against staged content via `git show :<path>`. Pitfall #9.j badge_flip: checks `**B-NNN** (🟡 Open` NOT in staged BACKLOG.md. Pitfall #9.k/#9.l transition: checks "<after>" IS in staged target file. CHECKS registry count: 4 → 5. WARN-set extended: {pytest_count, orphan_candidate, inline_fix_claim}. 14 NEW Tier 0 assertions (99-112).
+
+**Cumulative session delta UPDATED at B-470/471/472 cohort + reviewer-surfaced B-N opens**: 82 NEW B-Ns at session start (B-393-B-474) → **85 NEW B-Ns post-reviewer-opens** (B-393-B-477; 3 new opens B-475 + B-476 + B-477 surfaced by PRE-COMMIT reviewer `a7677c73928581c43` per Scope 3 + Scope 2 follow-up findings). 3 B-Ns CLOSED this cohort (cumulative 7 CLOSED across the multi-session arc since `c8145de`). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2721 → **2742 pass / 10 skip / 0 fail** (+21 from B-470+B-471+B-472 Tier 0 additions; full-suite scope verified live by parent agent post-cohort: tier0+tier1+unit+property+regression).
+
+**Architectural debt status from Agent 76 design review**:
+- Scope 1 Concern 1A (severity-value validation) — CLOSED via B-471 ✓
+- Scope 2 Concern 2B (declarative requires_classification) — CLOSED via B-472 ✓
+- Scope 2 Concern 2C (`required_diffs` tuple generalization) — DEFERRED at B-473 (LOW; defer until 2nd diff-needing path appears)
+- Scope 4 Concern 4C (GLOSSARY "internal-but-cross-module" criterion) — DEFERRED at B-474 (LOW; opportunistic at next GLOSSARY edit cohort)
+
+**Architectural debt status from Agent 75 gap-check**:
+- B-NEW.2 claim-vs-reality drift forward-prevention — CLOSED via B-470 ✓
+- 2-event empirical pattern → Pitfall #9.q candidate addressed via Mechanism C-1 InlineFixClaimVerificationCheck (executable forward-prevention rather than narrative documentation)
+
+**B-458 + B-464 implementation path further cleaner**: with B-471 severity-value validation + B-472 declarative requires_classification, B-458 (`ClosureAnnotationConsistencyCheck`) lands as ~50 LOC subclass + `CHECKS` registry append + `render_findings_to_stderr` override + Tier 0 tests; B-464 (narrative pytest-claim verification) same pattern. Typo-class + isinstance-brittleness now BOTH prevented at class-definition time.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/test_check_commit_msg.py` + `CLAUDE.md` + `GLOSSARY.md` + `_validation_log.md` all substrate per `tools/cascade_classifier.py::SUBSTRATE_FILES`):
+- TEST: pytest 2742 verified live per cascade Step 3.1 — `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression -q` returned `2742 passed, 10 skipped in 54.65s` scope=tier0+tier1+unit+property+regression; 112 Tier 0 assertions at `test_check_commit_msg.py` (was 91 pre-cohort; +21 distributed as B-471 3 + B-472 4 + B-470 14); subclass smoke-test verified BadSev/MissingClass rejected with descriptive TypeError; parser smoke-test verified all 3 empirical claim patterns extract correctly (badge_flip B-465 + transition signature update + missing_entries detected).
+- GAP ANALYSIS: forensic sub-agent (`a06872221166aafac`) drove parser regex design from empirical commits 2a33efa + 20d998f; PRE-COMMIT independent reviewer spawn scheduled BEFORE commit per substrate-edit clause (cannot self-review).
+- REVIEW: PRE-COMMIT independent reviewer `a7677c73928581c43` (udm-design-reviewer subagent) — VERDICT: **VALID-WITH-CONCERNS** (no 🔴 BLOCK). Verified Scope 1 implementation correctness (B-471 hasattr-first-then-value-check ordering correct; B-472 getattr-defense-in-depth correct; B-470 scan() edge cases all handled). Verified Scope 2 back-compat (all 4 pre-existing subclasses declare requires_classification correctly; existing test subclasses updated; assertions 52/53/56/57/77 forward-compat). Verified Scope 3 test coverage (14 B-470 assertions correctly implemented; identified gap → B-475 opened). Verified Scope 4 CLAUDE.md / GLOSSARY accuracy (L98 row + L769 CommitMsgCheck + 7 NEW B-470 surface entries + _build_orchestration_context update all accurate). Verified Scope 5 Pitfall #9.j leading-badge self-application (B-470/471/472 all `(⚫ CLOSED 2026-05-18` correctly rendered on the very feature designed to catch that drift). Verified Scope 6 architectural deferrals (B-473 + B-474 correctly scoped). 2 🟡 concerns surfaced + 2 NEW findings → tracked as B-475 + B-476 + B-477.
+
+**Producer self-application of post-edit verification cascade per hard rule 14 substrate-edit clause**: producer (parent agent) cannot satisfy hard rule 14 REVIEW step via self-review on SUBSTRATE_EDIT commits. Spawned `udm-design-reviewer` agent `a7677c73928581c43` per Mechanism A step 4 (verified all 6 modified-files match reviewer-cited file set; reviewer cited specific line ranges from each file proving substantive review).
+
+---
+
 ## 2026-05-18 — B-459 completion cohort (B-466 + B-467 + B-468) + B-465 GLOSSARY via 2-parallel-agent team
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps." 2026-05-18.
