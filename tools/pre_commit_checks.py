@@ -1073,6 +1073,144 @@ def check_cli_registry_sync(staged_files: list[str]) -> CheckResult:
     )
 
 
+# ---------------------------------------------------------------------------
+# Check 9: wc -l line-count claim forward-prevention (B-481 closure 2026-05-18)
+# ---------------------------------------------------------------------------
+# Empirical anchor (Pitfall #9.h class; FP-1 in _false_positive_log.md):
+# CLAUDE.md L98 cited "127 lines per actual wc -l after B-307 refactor" for
+# .githooks/pre-commit + "117 lines per actual wc -l per B-307 split" for
+# .githooks/commit-msg. Claims were TRUE at original B-307 authoring (~2026-05-16)
+# but BECAME FALSE post-multiple-refactors. Actual `wc -l` at 2026-05-18 reports
+# 68 + 41 lines respectively. Drift detected by cross-cohort reviewer
+# `aa320fb75f55a5471` §6 + remediated inline at commit `9e8291a`.
+#
+# This check provides MECHANICAL forward-prevention: regex-matches the canonical
+# "N lines per actual wc -l" pattern in staged markdown + verifies count against
+# current `wc -l` output. WARN on mismatch.
+
+# Canonical wc -l claim pattern (case-insensitive). Captures the file path
+# (from backtick-wrapped reference within 200 chars BEFORE the claim) + the
+# cited line count. Handles canonical CLAUDE.md L98 phrasing:
+#   "`pre-commit` (Python; 68 lines per actual `wc -l` 2026-05-18 ...)"
+#   "`commit-msg` (Python; 41 lines per actual wc -l ...)"
+_WC_LINE_COUNT_CLAIM_RE = re.compile(
+    r"`(?P<filename>[^`\s]+)`[^(]*\([^)]*?(?P<count>\d+)\s+lines?\s+per\s+actual\s+`?wc\s+-l`?",
+    re.IGNORECASE,
+)
+
+# Canonical filename → repo path mapping for B-481 wc -l verification.
+# Bare filenames in CLAUDE.md prose map to canonical repo paths.
+_WC_CANONICAL_FILE_PATHS: tuple[tuple[str, str], ...] = (
+    ("pre-commit", ".githooks/pre-commit"),
+    ("commit-msg", ".githooks/commit-msg"),
+    # Add more as discovered. Tools/scripts use bare filename in CLAUDE.md;
+    # this map resolves them to full repo-relative paths for wc -l invocation.
+)
+
+
+def _resolve_wc_target_path(filename: str) -> str | None:
+    """Per B-481 closure 2026-05-18: map a backtick-wrapped filename token
+    from a wc -l claim to a canonical repo path. Returns None if no match."""
+    # Direct path match (e.g., "tools/check_commit_msg.py")
+    if "/" in filename or "." in filename:
+        candidate = REPO_ROOT / filename
+        if candidate.is_file():
+            return filename
+    # Bare-filename map
+    for name, path in _WC_CANONICAL_FILE_PATHS:
+        if filename == name:
+            return path
+    return None
+
+
+def check_wc_line_count_claims(staged_files: list[str]) -> CheckResult:
+    """For staged markdown files, scan for "N lines per actual wc -l" claims
+    and verify each count against the actual `wc -l` of the referenced file.
+
+    Per B-481 closure 2026-05-18 (Pitfall #9.h forward-prevention; FP-1 in
+    _false_positive_log.md). 1-event empirical anchor: CLAUDE.md L98 cited
+    "127 lines per actual wc -l after B-307 refactor" — TRUE at authoring time,
+    BECAME false post-refactor. This check detects the class mechanically.
+
+    Detection logic:
+    1. Filter staged_files to `*.md` matches.
+    2. For each, read content; regex-extract `<filename> (...N lines per
+       actual wc -l...)` patterns.
+    3. For each (filename, claimed_count) pair, resolve canonical path +
+       run `wc -l <path>` + compare with claimed count.
+    4. WARN on mismatch (not BLOCK; per WSJF LOW + Mechanism C-1 WARN-only
+       contract for stale-narrative-class checks).
+    5. Silent skip if filename can't be resolved to a real file (defensive
+       against future claim formats not yet in canonical map).
+
+    Composes with existing markdown cross-ref + planning-provenance check
+    patterns. Test coverage at `tests/tier0/test_pre_commit_checks_b481.py`.
+
+    Returns:
+        INFO if no markdown files staged OR no wc -l claims found.
+        PASS if all wc -l claims match actual wc -l.
+        WARN with diagnostic enumerating mismatches.
+    """
+    md_files = [
+        f.replace("\\", "/") for f in staged_files
+        if f.replace("\\", "/").endswith(".md")
+    ]
+    if not md_files:
+        return CheckResult(
+            "wc_line_count_claims", True, "info",
+            "no staged markdown files; wc -l claim check skipped"
+        )
+
+    mismatches: list[tuple[str, str, int, int]] = []  # (md_file, target, claimed, actual)
+    total_claims = 0
+
+    for md_file in md_files:
+        md_path = REPO_ROOT / md_file
+        try:
+            content = md_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for m in _WC_LINE_COUNT_CLAIM_RE.finditer(content):
+            total_claims += 1
+            filename = m.group("filename")
+            claimed = int(m.group("count"))
+            target_rel = _resolve_wc_target_path(filename)
+            if target_rel is None:
+                # Filename not in canonical map; silently skip per defensive design
+                continue
+            target_path = REPO_ROOT / target_rel
+            if not target_path.is_file():
+                continue
+            try:
+                with target_path.open("r", encoding="utf-8") as fh:
+                    actual = sum(1 for _ in fh)
+            except (OSError, UnicodeDecodeError):
+                continue
+            if actual != claimed:
+                mismatches.append((md_file, target_rel, claimed, actual))
+
+    if mismatches:
+        return CheckResult(
+            "wc_line_count_claims", False, "warn",
+            f"{len(mismatches)} stale `wc -l` line-count claim(s) detected in "
+            f"staged markdown (per B-481 closure 2026-05-18; Pitfall #9.h "
+            f"forward-prevention class):\n"
+            + "\n".join(
+                f"  - {md}: claim `{target}` = {claimed} lines, actual `wc -l` = {actual}"
+                for md, target, claimed, actual in mismatches[:10]
+            )
+            + "\n\nUpdate the cited count to the actual `wc -l` value OR rephrase "
+              "the claim to omit the specific count. This is a WARN (not BLOCK); "
+              "commit will still proceed."
+        )
+
+    return CheckResult(
+        "wc_line_count_claims", True, "info",
+        f"all {total_claims} `wc -l` claim(s) in {len(md_files)} staged "
+        f"markdown file(s) match actual line counts"
+    )
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
@@ -1082,6 +1220,7 @@ CHECKS = [
     check_gap_accountability,
     check_planning_provenance,
     check_cli_registry_sync,
+    check_wc_line_count_claims,  # B-481 closure 2026-05-18
 ]
 
 

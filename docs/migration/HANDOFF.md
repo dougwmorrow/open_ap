@@ -424,7 +424,9 @@ Per D60, this section appends one row per round during close-out. Read top-to-bo
 
 ## §14. Last updated
 
-2026-05-18 (**B-478 shared-CLOSED chain detection — ClosureAnnotationConsistencyCheck extension**): NEW backward post-match chain walk catches `B-409 + B-414 CLOSED` empirical pattern. 2 NEW regex constants + 3 NEW Tier 0 assertions. **Cumulative**: 98 NEW B-Ns / **22 CLOSED** (+B-478) / pytest 2807 → **2810 pass / 10 skip / 0 fail** (+3).
+2026-05-18 (**B-481 wc -l line-count claim forward-prevention check — Pitfall #9.h forward-prevention; CHECKS registry 8 → 9**): NEW `check_wc_line_count_claims` (9th Phase 1 quality check). Regex match + canonical filename map + actual `wc -l` verification + WARN on mismatch. 7 NEW Tier 0 assertions + 4 existing tests updated. Closes FP-1 empirical class. **Cumulative**: **98 → 99 NEW B-Ns** (B-393-B-491; +1 from B-491 open per reviewer self-firing finding) / **23 CLOSED** (+B-481) / pytest 2810 → **2817 pass / 10 skip / 0 fail** (+7).
+
+Earlier 2026-05-18 (**B-478 shared-CLOSED chain detection — ClosureAnnotationConsistencyCheck extension**): NEW backward post-match chain walk catches `B-409 + B-414 CLOSED` empirical pattern. 2 NEW regex constants + 3 NEW Tier 0 assertions. **Cumulative**: 98 NEW B-Ns / **22 CLOSED** (+B-478) / pytest 2807 → **2810 pass / 10 skip / 0 fail** (+3).
 
 Earlier 2026-05-18 (**Cleanup cohort — B-476 + B-479 + B-486 trivial closures pre-UDM-pipeline-pivot**): 3 LOW closures batched (Pitfall #9.j/k/l discipline polish): B-476 test docstring accuracy + B-479 subprocess.run encoding='utf-8' for Windows-dev safety + B-486 env-configurable threshold. 4 NEW Tier 0 assertions. **Cumulative**: 98 NEW B-Ns / **21 B-Ns CLOSED** multi-session arc / pytest 2803 → **2807 pass / 10 skip / 0 fail**.
 

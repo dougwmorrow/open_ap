@@ -54,11 +54,11 @@ def test_exit_codes_per_d74():
 
 
 def test_checks_registry_complete():
-    """Assertion 5 (per B-309 Cycle 1 + B-315 + B-275-class + B189 closure cohort):
-    CHECKS registry has 8 Phase 1 checks (B189 closure 2026-05-17 adds
-    check_cli_registry_sync as 8th check; CLI_* registry sync mechanical
-    enforcement; empirical anchor B189 closure cohort + B-317 cascade-tools
-    drift class)."""
+    """Assertion 5 (per B-309 Cycle 1 + B-315 + B-275-class + B189 + B-481 closure
+    cohort): CHECKS registry has 9 Phase 1 checks. B-481 closure 2026-05-18 adds
+    check_wc_line_count_claims as 9th check; Pitfall #9.h forward-prevention
+    against stale `N lines per actual wc -l` claims (empirical anchor: CLAUDE.md
+    L98 cited 127/117 stale post-refactor; actual 68/41)."""
     from tools.pre_commit_checks import (
         CHECKS,
         check_query_blindspots,
@@ -69,6 +69,7 @@ def test_checks_registry_complete():
         check_gap_accountability,
         check_planning_provenance,
         check_cli_registry_sync,
+        check_wc_line_count_claims,
     )
     assert check_query_blindspots in CHECKS
     assert check_pytest_changed_python_files in CHECKS
@@ -78,7 +79,8 @@ def test_checks_registry_complete():
     assert check_gap_accountability in CHECKS
     assert check_planning_provenance in CHECKS
     assert check_cli_registry_sync in CHECKS
-    assert len(CHECKS) == 8
+    assert check_wc_line_count_claims in CHECKS
+    assert len(CHECKS) == 9
 
 
 def test_check_result_shape():
@@ -95,11 +97,11 @@ def test_check_result_shape():
 
 
 def test_empty_staged_returns_passes():
-    """Assertion 7 (per B189 closure cohort): with no staged files, all 8 checks
+    """Assertion 7 (per B-481 closure cohort): with no staged files, all 9 checks
     return passed (info severity)."""
     from tools.pre_commit_checks import run_all_checks
     results = run_all_checks(staged=[])
-    assert len(results) == 8
+    assert len(results) == 9
     for r in results:
         assert r.passed, f"{r.name} failed on empty input: {r.diagnostic}"
 
@@ -428,11 +430,12 @@ def test_check_planning_provenance_glob_case_insensitive(tmp_path, monkeypatch):
 
 
 def test_check_planning_provenance_in_checks_registry():
-    """Assertion 34 (per B-275-class): CHECKS registry contains check_planning_provenance."""
+    """Assertion 34 (per B-275-class; updated B-481 closure cohort 2026-05-18):
+    CHECKS registry contains check_planning_provenance."""
     from tools.pre_commit_checks import CHECKS, check_planning_provenance
     assert check_planning_provenance in CHECKS
-    # 8th entry per B189 closure cohort (added check_cli_registry_sync as 8th)
-    assert len(CHECKS) == 8
+    # 9th entry per B-481 closure cohort (added check_wc_line_count_claims as 9th)
+    assert len(CHECKS) == 9
 
 
 # ---------------------------------------------------------------------------
@@ -560,14 +563,14 @@ def test_check_cli_registry_sync_non_cli_event_type_skipped(tmp_path, monkeypatc
 
 
 def test_check_cli_registry_sync_in_checks_registry():
-    """Assertion 39 (per B189 closure cohort): CHECKS registry contains
-    check_cli_registry_sync as 8th entry; verify helper functions + module-level
-    regex constants public-surface present."""
+    """Assertion 39 (per B189 closure cohort; updated B-481 cohort 2026-05-18):
+    CHECKS registry contains check_cli_registry_sync; verify helper functions +
+    module-level regex constants public-surface present."""
     import tools.pre_commit_checks as pcc
     from tools.pre_commit_checks import CHECKS, check_cli_registry_sync
     assert check_cli_registry_sync in CHECKS
-    # 8th entry per B189 closure cohort 2026-05-17
-    assert len(CHECKS) == 8
+    # 9th entry per B-481 closure cohort 2026-05-18 (was 8th pre-B-481)
+    assert len(CHECKS) == 9
     # Module-level regex constants + helper functions present in public surface
     assert hasattr(pcc, "_EVENT_TYPE_DECLARATION_RE")
     assert hasattr(pcc, "_CLI_REGISTRY_REGION_START_RE")

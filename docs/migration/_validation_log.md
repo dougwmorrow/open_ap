@@ -2,6 +2,43 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-481 wc -l line-count claim forward-prevention check (LOW WSJF 1.0; Pitfall #9.h forward-prevention; 9th Phase 1 check)
+
+**Trigger**: pipeline-lead "Proceed with where you last left off" 2026-05-18 — continuing the 2-step user-direction sequence (gap analysis ✅ CLEAN by `a81f7eeca6c029ab8` + recommended next steps). B-481 selected per cascade Step 1.1 (smallest scope at LOW priority; B-482 deferred per its own "until empirical 2nd-need" trigger).
+
+**Scope**: 1 B-N closure (B-481) — new Phase 1 quality check + Tier 0 self-tests + 4 existing tests updated for 8 → 9 count. 5 files modified: `tools/pre_commit_checks.py` (NEW `check_wc_line_count_claims` + 2 regex constants + helper + CHECKS append; ~120 LOC delta) + `tests/tier0/test_pre_commit_checks_b481.py` (NEW; 7 assertions) + `tests/tier0/test_pre_commit_checks.py` (4 existing tests updated for `len(CHECKS) == 9`) + `CLAUDE.md` (L99 row updated for 9 checks + B-481 closure citation) + `docs/migration/BACKLOG.md` (closure annotation) + `docs/migration/GLOSSARY.md` (2 NEW entries: `check_wc_line_count_claims` + regex/canonical-map composite) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical anchor (1-event)**: detected by cross-cohort reviewer `aa320fb75f55a5471` §6 finding 2026-05-18 + remediated inline at commit `9e8281a` (CLAUDE.md L98 cited `127 lines per actual wc -l after B-307 refactor` for `.githooks/pre-commit` + `117 lines per actual wc -l per B-307 split` for `.githooks/commit-msg` — both TRUE at original B-307 authoring ~2026-05-16 but BECAME FALSE post-multiple-refactors; actual `wc -l` at 2026-05-18 reports 68 + 41 lines). Tracked at `_false_positive_log.md` FP-1.
+
+**B-481 implementation**:
+- NEW `_WC_LINE_COUNT_CLAIM_RE = re.compile(r"`(?P<filename>[^`\s]+)`[^(]*\([^)]*?(?P<count>\d+)\s+lines?\s+per\s+actual\s+`?wc\s+-l`?", re.IGNORECASE)` — matches canonical CLAUDE.md L98 phrasing pattern. Named capture groups: `filename` (backtick-wrapped) + `count` (digit sequence).
+- NEW `_WC_CANONICAL_FILE_PATHS: tuple[tuple[str, str], ...]` — 2-entry mapping: `("pre-commit", ".githooks/pre-commit")` + `("commit-msg", ".githooks/commit-msg")`. Extensible (add more entries as future claim patterns emerge).
+- NEW `_resolve_wc_target_path(filename: str) -> str | None` helper — direct path match first (e.g., "tools/check_commit_msg.py") then canonical map fallback. Returns None for unresolvable tokens (defensive design — silent skip rather than false-positive WARN).
+- NEW `check_wc_line_count_claims(staged_files: list[str]) -> CheckResult` (9th Phase 1 check): filters staged files to `*.md`; reads content; for each `_WC_LINE_COUNT_CLAIM_RE` match, resolves filename + runs `wc -l` (Python equivalent via `sum(1 for _ in fh)`) + compares with claimed count; WARN on mismatch; PASS otherwise. Findings cap 10. Severity per Mechanism C-1 stale-narrative-class contract = "warn" (not "block").
+
+**Tier 0 coverage**: 7 NEW assertions at `tests/tier0/test_pre_commit_checks_b481.py`:
+- Assertion 1: module imports
+- Assertion 2: registry membership + position (9th, last)
+- Assertion 3: regex matches canonical CLAUDE.md L98 pattern (2 matches verified)
+- Assertion 4: PASS on real CLAUDE.md (canonical-known-good empirical verification)
+- Assertion 5: WARN on synthesized stale claim (999 lines vs actual 68)
+- Assertion 6: silent skip for unresolvable filename (defensive design pin)
+- Assertion 7: no-md-staged skip (consistent with sibling check patterns)
+- PLUS 4 existing tests at `test_pre_commit_checks.py` updated for `len(CHECKS) == 9`: `test_checks_registry_complete` + `test_empty_staged_returns_passes` + `test_check_planning_provenance_in_checks_registry` + `test_check_cli_registry_sync_in_checks_registry`.
+
+**Cumulative session delta UPDATED at B-481 closure**: 98 NEW B-Ns UNCHANGED (B-481 was pre-existing open). **23 B-Ns CLOSED multi-session arc** (cumulative; 22 prior + B-481). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2810 → **2817 pass / 10 skip / 0 fail** (+7 from B-481 Tier 0 additions).
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/pre_commit_checks.py` + `tests/tier0/*` + `CLAUDE.md` + 4 tracker mirrors):
+- TEST: pytest 2817 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 7/7 NEW B-481 assertions PASS in 0.35s. 4 existing tests at `test_pre_commit_checks.py` updated for 8 → 9 count + still pass.
+- GAP ANALYSIS: producer-side 6-category G1-G6 audit applied — G1 leading-badge correct, G2 arithmetic 98 NEW + 22 → 23 CLOSED + pytest 2810 → 2817 propagated 4 mirrors + CLAUDE.md, G3 implementation matches BACKLOG, G4 udm-progress-logger applied, G5 new public surface registered (CLAUDE.md L99 + GLOSSARY 2 NEW entries), G6 0 new B-N opportunities.
+- REVIEW: PRE-COMMIT independent reviewer `a4310f90ef3b89357` (general-purpose subagent) — VERDICT: **VALID-WITH-CONCERNS** (no 🔴 BLOCK). All 6 scopes 🟢 PASS except 🟡 self-firing observation: new `check_wc_line_count_claims` correctly catches 3 historical wc -l citations in BACKLOG.md L408 + 2× _validation_log.md (B-301 closure annotation era 2026-05-16; cited counts accurate at write-time but BECAME stale post-multiple-refactors). Per append-only narrative discipline (precedent from 95 → 98 cumulative remediation: historical entries preserved), retroactive rewrite NOT applied. Forward-prevention candidate B-491 opened (LOW WSJF 0.5; empirical-anchor context suppression for `check_wc_line_count_claims` — port `_is_empirical_anchor_context()` helper from `tools/check_commit_msg.py`; defer to 2nd-event per precedent). WARN-only severity confirms commit proceeds.
+
+**Cumulative session delta UPDATED post-PRE-COMMIT-reviewer-open**: 98 → **99 NEW B-Ns** (B-393-B-491; +1 from B-491 self-firing forward-prevention candidate).
+
+---
+
 ## 2026-05-18 — B-478 shared-CLOSED chain detection (LOW WSJF 0.5; ClosureAnnotationConsistencyCheck extension)
 
 **Trigger**: pipeline-lead "Make a final push into Github. After that proceed with your recommended next steps." 2026-05-18. Branch already up-to-date with origin at trigger; recommended-next-step per cascade Step 1.1 (smallest scope among remaining LOW priority items; B-482 deferred as larger-scope architectural).
