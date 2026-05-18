@@ -2,6 +2,42 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-469 `_tier0_test_base.py` CLI tool factory pattern (MEDIUM WSJF 2.0; generalizes B-461 SKILL.md factory to CLI domain)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). B-469 was the highest-priority MEDIUM WSJF 2.0 item per Step 1.1 selection.
+
+**Scope**: 1 B-N closure (B-469) — NEW module + self-tests + tracker updates. 5 files: `tests/tier0/_tier0_test_base.py` (NEW; ~140 LOC) + `tests/tier0/test_tier0_test_base.py` (NEW; 11 assertions) + `docs/migration/BACKLOG.md` (closure annotation) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Architectural significance**: parallels B-461 `_skill_test_base.py` (SKILL.md domain) for the CLI tool domain. Both modules are internal test infrastructure with no production public API surface — exempt from CLAUDE.md Structure + GLOSSARY public-surface registration per the B-474 cross-module-consumed criterion (test infrastructure consumed cross-test-module but not production-imported).
+
+**B-469 implementation**:
+- NEW `tests/tier0/_tier0_test_base.py` (~140 LOC) with:
+  - `REPO_ROOT` module constant (path resolution; `tests/tier0/_tier0_test_base.py → tests/tier0/ → tests/ → repo`)
+  - `make_baseline_test_module_imports(module_name: str) -> Callable` — pins module importability per D67 Tier 0 baseline (catches silent rename/move regression)
+  - `make_baseline_test_event_type_constant(module_name: str, expected_event_type: str) -> Callable` — pins canonical EVENT_TYPE per D76 audit-row contract (catches silent EVENT_TYPE rename)
+  - `make_baseline_test_exit_codes(module_name: str, expected_exit_success: int = 0, expected_exit_fatal: int = 2) -> Callable` — pins EXIT_SUCCESS + EXIT_FATAL per D74 exit-code contract; parameterized to accommodate empirical EXIT_FATAL variance (project has tools with EXIT_FATAL=2 AND tools.query_blindspots with EXIT_FATAL=3 — factory accepts override rather than enforcing single value)
+
+**Empirical surprise discovered during implementation**: pre-B-469 the producer assumed D74 canonical EXIT_FATAL=2 universally; running `make_baseline_test_exit_codes("tools.query_blindspots")` FAILED with `actual=3 expected=2 per D74`. Investigation revealed `tools.query_blindspots` declares `EXIT_FATAL = 3` while `tools.parquet_verify` + others declare `EXIT_FATAL = 2`. Factory parameterized to handle both rather than forcing standardization (which would be a separate cohort + breaking change).
+
+**Tier 0 coverage**: 11 NEW assertions at `tests/tier0/test_tier0_test_base.py`:
+- Assertion 1: REPO_ROOT resolves to repo directory (path resolution validation)
+- Assertion 2-4: `make_baseline_test_module_imports` (callable / passes on real module / fails on nonexistent)
+- Assertion 5-7: `make_baseline_test_event_type_constant` (callable / passes on correct / fails on drift)
+- Assertion 8-11: `make_baseline_test_exit_codes` (callable / passes on canonical / fails on value drift / fails on missing constant)
+
+**Bulk-pin deferred**: Applying the factory to all ~24 CLI tools is a separate cohort. Each CLI tool test file would adopt the 3 factory baselines (typically 3 NEW assertions per file = ~72 NEW Tier 0 assertions across the CLI tool surface). Scope decision: keep B-469 minimal (factory + self-tests); future B-N candidate "B-469 bulk-pin SKILL.md + CLI cohort" tracks the application phase.
+
+**Cumulative session delta UPDATED at B-469 closure**: 95 NEW B-Ns UNCHANGED (B-469 was pre-existing open). **17 B-Ns CLOSED multi-session arc** (cumulative; 16 prior + B-469 this commit). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2787 → **2798 pass / 10 skip / 0 fail** (+11 from B-469 Tier 0 additions; full-suite scope verified live).
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tests/tier0/*` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md`):
+- TEST: pytest 2798 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 11/11 NEW B-469 assertions PASS in 0.25s. Smoke test verified: factory functions return callable / passing tests pass / failing scenarios raise AssertionError with diagnostic messages.
+- GAP ANALYSIS: producer-side 6-category G1-G6 audit applied (B-469 entry leading badge correct + arithmetic propagation across 4 mirrors + canonical re-read of existing _skill_test_base.py pattern matched + udm-progress-logger discipline applied + new factory functions exempt from CLAUDE.md Structure registration per B-474 cross-module-consumed criterion / N/A for code-only module + 0 new B-N opportunities surfaced beyond bulk-pin deferral noted in closure narrative).
+- REVIEW: PRE-COMMIT independent reviewer `a5d92e87428283d5c` (general-purpose subagent) — VERDICT: **VALID-WITH-CONCERNS** (no 🔴 BLOCK). 🟡 Scope 6 finding: producer claimed `_tier0_test_base.py` exempt from GLOSSARY registration per B-474 cross-module-consumed criterion; reviewer correctly identified this INVERTS the B-465 precedent that established `_skill_test_base.py` IS registered (8 GLOSSARY rows) BECAUSE its public helpers are cross-test-module-consumed. Inline-fix applied pre-commit: added 4 GLOSSARY rows (REPO_ROOT + 3 factory functions) parallel to existing 8-row `_skill_test_base.py` registration. Module docstring exemption-claim REMOVED + replaced with explicit B-465-precedent-application narrative. Other 🟡 findings (B-N candidates 2 + 3 — REPO_ROOT DRY dedup + sys.path.insert asymmetry; both LOW) deferred per scope-management decision; not opened this cohort. **B-N candidate 1** (forward-prevention pre-commit check for `_*_test_base.py` GLOSSARY sync) deferred; tracked as future B-N if 2nd-event evidence accumulates. Quote-cite from reviewer Final verdict: "B-469 is structurally sound: factories correct, tests adequate, parameterization well-grounded in empirical EXIT_FATAL variance, cross-doc arithmetic propagated correctly, leading-badge discipline observed." Producer ne reviewer maintained per D55 + D56.
+
+---
+
 ## 2026-05-18 — B-477 InlineFixClaimVerificationCheck missing_entries kind verification (MEDIUM WSJF 2.0; closes Pitfall #9.n false-negative class)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). Per cascade Step 1.1 smallest-scope-at-same-priority tiebreaker: B-477 selected over B-469 (smaller scope; ~30 LOC scan() extension + 2 regex constants vs ~50-100 LOC factory generalization + bulk-pin cohort).
