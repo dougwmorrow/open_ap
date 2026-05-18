@@ -2,6 +2,39 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-449 mechanical pytest-count disambiguation check (post-D72-FULL-CONVERGENCE forward-prevention build)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 → Item recommended from cycle-7 D72 FULL CONVERGENCE report → B-449 MEDIUM WSJF 2.0 (next non-pipeline-lead-authorization-gated item; Phase 2 of UDM Skills Audit explicitly gated).
+
+**Scope**: single B-N closure (B-449); 6 files modified:
+1. `tools/check_commit_msg.py` (+191 LOC): NEW `check_pytest_count_disambiguation` + 4 helpers (`_PYTEST_COUNT_RE`, `_SCOPE_INDICATORS` 45-substring tuple, `_has_scope_indicator`, `_strip_code_blocks`, `_extract_test_section_text`) + integration into main() flow with WARN-only contract + audit-row JSON extension (`pytest_count_findings` key)
+2. `tests/tier0/test_check_commit_msg.py` (+235 LOC): 15 NEW Tier 0 assertions (18 → 33 total per Agent 63 G3-K1 arithmetic verification)
+3. `CLAUDE.md` (+2/-1 LOC): Structure L98 .githooks/ row updated with B-449 closure citation + check function capability note + WARN-only per WSJF MEDIUM rationale
+4. `docs/migration/BACKLOG.md` (+2/-1 LOC): B-449 closure annotation per Pitfall #9.j (canonical strikethrough + ⚫ CLOSED 2026-05-18 + closure mechanism citation)
+5. `docs/migration/CURRENT_STATE.md`: L7 narrative refresh per v1.3.1 multi-commit discipline (with arithmetic correction per Agent 63 G3-K1)
+6. `docs/migration/HANDOFF.md`: L427 narrative refresh mirror
+
+**Build agent**: Agent (`ac5dd13b275a22e70`) — single-agent implementation per user direction "Proceed with your recommended next steps" (no multi-agent team request this cycle); chose `tools/check_commit_msg.py` home over `tools/pre_commit_checks.py` (rationale: check operates on commit-msg content, not staged source files; semantic match with existing tri-section parser; reuses `cascade_classifier._extract_section_bodies`).
+
+**Pre-commit independent reviewer**: Agent 63 (`a52c812b2cf79cac7`) per hard rule 14 substrate-edit clause — verdict 🟡 IN-FLIGHT DRIFT with 2 actionable findings + 1 minor terminology: (a) Pitfall #9.k arithmetic-propagation drift in 3 narrative locations (narrative said "14 new + 19 pre-existing" but git diff verified +15 new + 18 pre-existing; producer self-check Step 4.5.1 INTRA-SENTENCE regex did NOT catch because the pattern is "N new X assertions" / "N pre-existing" not the matching "N NEW B-Ns (range)" pattern v1.3.1 regex targets — 1st-event evidence that v1.3.1 Option E regex scope should be extended to test-count drift patterns; candidate for udm-progress-logger v1.3.2 future B-N); (b) Pitfall #9.m discipline-self-application gap — `_validation_log.md` not staged for B-449 closure per CLAUDE.md L437 hard rule 9 (THIS ENTRY remediates); (c) minor terminology drift "9th commit-msg parser check" should be "3rd commit-msg layer" + "28-substring tuple" should be "45-substring".
+
+**Inline remediation per Agent 63 verdict**: all 3 findings corrected pre-commit: (a) BACKLOG L460 + CURRENT_STATE L7 + HANDOFF L427 narratives corrected to "15 new + 18 pre-existing" with explicit "corrected at pre-commit per Agent 63 finding G3-K1" provenance text; (b) THIS ENTRY (added 2026-05-18 satisfying CLAUDE.md L437 hard rule 9); (c) "9th" → "3rd commit-msg layer (exemption-phrase + cascade-evidence + pytest-count)" + "28-substring" → "45-substring" throughout 3 narratives.
+
+**Pytest verification**: 2592 → **2607 pass / 10 skip / 0 fail** (+15 baseline matches 15 new B-449 assertions). Authoritative per cascade Step 3.1 full-suite scope (tier0+tier1+unit+property+regression).
+
+**Reviewer verdict** (Agent 63 post-remediation expected): ✅ CLEAN after inline fixes land. Per substrate-edit cascade contract: independent reviewer spawn requirement SATISFIED via Agent 63 invocation.
+
+**Phase context**: this is the FIRST substantive forward-prevention build POST-D72-FULL-CONVERGENCE (achieved at cycle-7 commit `2a814e9`). The 7-cycle convergence ladder closed Phase 1 UDM Skills Audit + cascade remediation chain. B-449 implements the mechanical forward-prevention layer for the pytest-scope-disambiguation drift pattern Agent 59 surfaced at cycle 3 (commit `e76078c`). Forward-prevention layering: B-449 (mechanical pytest-count check) + B-451 (pre-commit `check_unresolved_forward_prevention_candidates` — deferred) + B-452 (commit-msg cascade-evidence audit — deferred) compose to close the empirical drift classes from the convergence ladder.
+
+**Forward-prevention candidate surfaced**: udm-progress-logger v1.3.1 Option E regex scope-extension candidate — current regex catches "N NEW B-Ns (range)" pattern but NOT "N new X assertions / N pre-existing" pattern. 1st-event evidence base from THIS commit's narrative drift. Future B-N for v1.3.2 MINOR extension; tracked optionally per pipeline-lead direction.
+
+**Hard rule 14 cascade applied to THIS ENTRY** (SUBSTRATE_EDIT — `_validation_log.md` is canonical audit-trail substrate):
+- **TEST**: grep `B-449.*CLOSED 2026-05-18` returns 1 hit in BACKLOG.md L460 + canonical narrative consistency across CURRENT_STATE L7 + HANDOFF L427
+- **GAP ANALYSIS**: Agent 63 G3-M finding remediated by THIS ENTRY; closes the discipline-self-application gap surfaced post-build
+- **REVIEW**: Agent 63 (`a52c812b2cf79cac7`) PRE-COMMIT independent reviewer per hard rule 14 substrate-edit clause; verdict awaits inline-fix re-verification + parent commit landing
+
+---
+
 ## 2026-05-17 — Phase 1 of UDM Skills Audit COMPLETE — 8 of 8 CRITICAL fixes implemented + retroactively-attested via independent gap-check (de-facto D56 2nd-pass)
 
 **Trigger**: Phase 1 implementation cohort (4 serial commits 2026-05-17 closing B-408 through B-415 per `UDM_SKILLS_AUDIT_AND_OPTIMIZATION_PLAN_2026-05-17.md` §3.1 CRITICAL phase) followed by independent gap-check Agent 58 (agentId `a21a4705a21801196`) returning 🔴 BLOCKING verdict with 5 critical G-findings. Current remediation cascade (4 parallel Agents A/B/C/D) addresses all 5 findings. THIS ENTRY (Agent C scope) serves as the de-facto D56 2nd-pass attestation for the Phase 1 implementation cohort — closes Agent 58 finding G3.9.o-precedent (scope-conflation: cohort agents 54-57 attested to the SYNTHESIS PLAN at commit `3b9cf8f`, NOT to the implementation commits `895ae59` / `20fe33a` / `3cf2535` / `64ef833`).

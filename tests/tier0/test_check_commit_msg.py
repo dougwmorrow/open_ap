@@ -261,3 +261,238 @@ def test_anti_trigger_commit_skips_cascade_check(tmp_path, monkeypatch):
     msg_path.write_text("chore: badge flip on B-123\n", encoding="utf-8")
     rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
     assert rc == ccm.EXIT_SUCCESS
+
+
+# ---------------------------------------------------------------------------
+# B-449 closure: pytest-count disambiguation check
+# (Agent 59 cycle-3 D72 convergence finding G3-K2; empirical anchor commit
+# `e76078c` cited "2418 pass" as tier0+tier1 scope but baseline was 2471 from
+# full-suite — 53-test discrepancy opaque without cross-reference)
+# ---------------------------------------------------------------------------
+
+def test_pytest_count_disambiguation_function_exists():
+    """B-449 Assertion 18: check_pytest_count_disambiguation function present."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "check_pytest_count_disambiguation")
+    assert callable(ccm.check_pytest_count_disambiguation)
+
+
+def test_pytest_count_disambiguation_scope_cited_inline_passes():
+    """B-449 Assertion 19: TEST section with scope+count on same line → PASS."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "feat: change\n\n"
+        "## TEST\n"
+        "- pytest tier0+tier1: 2418 pass / 10 skip / 0 fail (baseline preserved)\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert passed, f"Expected pass; findings: {findings}"
+    assert findings == []
+
+
+def test_pytest_count_disambiguation_full_suite_invocation_passes():
+    """B-449 Assertion 20: TEST section with full-suite pytest invocation → PASS."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "build: substantive\n\n"
+        "## TEST\n"
+        "- .venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 "
+        "tests/unit tests/property tests/regression: 2592 pass / 10 skip / 0 fail\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert passed, f"Expected pass; findings: {findings}"
+    assert findings == []
+
+
+def test_pytest_count_disambiguation_bare_count_warns():
+    """B-449 Assertion 21: TEST section with bare count, no scope → WARN (failed)."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "feat: change\n\n"
+        "## TEST\n"
+        "- pytest 2418 pass\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert not passed, f"Expected WARN finding; got passed=True"
+    assert len(findings) >= 1
+    assert "2418" in findings[0]
+
+
+def test_pytest_count_disambiguation_multiple_counts_with_disambiguation_passes():
+    """B-449 Assertion 22: TEST section with delta notation + scope cited → PASS."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "feat: change\n\n"
+        "## TEST\n"
+        "- pytest tier0+tier1: 2418 pass (was 2415; +3 baseline restored after fix)\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert passed, f"Expected pass; findings: {findings}"
+
+
+def test_pytest_count_disambiguation_no_pytest_count_passes():
+    """B-449 Assertion 23: TEST section with no pytest counts → PASS (nothing to check)."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "feat: change\n\n"
+        "## TEST\n"
+        "- Orchestrator smoke run completed cleanly\n"
+        "- Manual end-to-end verification PASS\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert passed
+    assert findings == []
+
+
+def test_pytest_count_disambiguation_count_inside_code_block_passes():
+    """B-449 Assertion 24: pytest count INSIDE fenced code block → PASS (verbatim
+    output is acceptable; not a producer-authored bare count claim)."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "feat: change\n\n"
+        "## TEST\n"
+        "Output of test run:\n"
+        "```\n"
+        "2589 passed, 10 skipped in 47.32s\n"
+        "```\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert passed, f"Expected pass for code-block count; findings: {findings}"
+
+
+def test_pytest_count_disambiguation_empirical_anchor_e76078c_passes():
+    """B-449 Assertion 25 (EMPIRICAL ANCHOR per Agent 59 cycle-3 G3-K2):
+    the actual TEST section text from commit `e76078c` DOES disambiguate
+    via the explicit 'tier0+tier1' scope-indicator on the same line as the
+    count. The check should PASS on this (which is why Agent 59's finding
+    was about discipline drift across many OTHER bare-count commits like
+    'pytest 2471 pass' — not specifically e76078c itself)."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "remediation(round-6): close Agent 58 gap-check 5 findings\n\n"
+        "## TEST\n\n"
+        "Pre-cascade verification:\n"
+        "- pytest tier0+tier1: 2418 pass / 10 skip / 0 fail (baseline preserved; no\n"
+        "  code touched in this remediation cohort)\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert passed, f"Expected pass for e76078c canonical pattern; findings: {findings}"
+
+
+def test_pytest_count_disambiguation_bare_baseline_count_warns():
+    """B-449 Assertion 25b (BARE bare-count failure case from grep over real
+    commit history): 'pytest 2471 pass' with NO scope-indicator anywhere → WARN.
+
+    This is the canonical drift-class Agent 59 G3-K2 surfaced — many commits
+    in this project's history used this bare pattern without scope-indicator,
+    making the 53-test count discrepancy opaque to readers."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "docs: minor edit\n\n"
+        "## TEST\n"
+        "- pytest 2471 pass\n"
+        "- nothing else\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert not passed
+    assert len(findings) >= 1
+    assert "2471" in findings[0]
+
+
+def test_pytest_count_disambiguation_baseline_preserved_phrase_passes():
+    """B-449 Assertion 26: 'baseline preserved' phrase paired with count → PASS
+    (canonical scope-equivalence indicator; 'baseline' implies 'same scope as
+    prior baseline' which is sufficient disambiguation per real commit-history
+    grep over project's commit log)."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "docs: minor edit\n\n"
+        "## TEST\n"
+        "- pytest 2471 pass / 10 skip / 0 fail baseline preserved\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert passed, f"Expected pass for baseline-preserved phrase; findings: {findings}"
+
+
+def test_pytest_count_disambiguation_explicit_tests_dir_passes():
+    """B-449 Assertion 27: explicit tests/tier0/test_<name>.py path → PASS."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = (
+        "feat: new tool\n\n"
+        "## TEST\n"
+        "- pytest tests/tier0/test_my_tool.py: 39/39 PASS in 0.37s\n"
+    )
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert passed, f"Expected pass; findings: {findings}"
+
+
+def test_pytest_count_disambiguation_no_test_section_passes():
+    """B-449 Assertion 28: commit with NO TEST section → PASS (check skipped)."""
+    from tools.check_commit_msg import check_pytest_count_disambiguation
+    msg = "chore: minor cleanup\n\nNothing to test.\n"
+    passed, findings = check_pytest_count_disambiguation(msg)
+    assert passed
+    assert findings == []
+
+
+def test_pytest_count_disambiguation_warn_does_not_block(tmp_path, monkeypatch):
+    """B-449 Assertion 29 (CRITICAL): WARN-only behavior — bare pytest count
+    must NOT cause final exit BLOCK. Verifies the check's WSJF MEDIUM warn-only
+    contract per spec."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: minor edit\n\n"
+        "## TEST\n"
+        "- pytest 2471 pass\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    # Should be EXIT_SUCCESS — warn does NOT block exit code
+    assert rc == ccm.EXIT_SUCCESS
+
+
+def test_pytest_count_disambiguation_audit_row_includes_findings(tmp_path, monkeypatch):
+    """B-449 Assertion 30: pytest_count_findings included in audit-row JSON for
+    forensic correlation (matches missing_sections / matched_phrases pattern)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: minor edit\n\n"
+        "## TEST\n"
+        "- pytest 2471 pass\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path)])
+    assert rc == ccm.EXIT_SUCCESS  # WARN does not block
+    log_files = list((tmp_path / "_session_logs").glob("cli_check_commit_msg_*.log"))
+    assert len(log_files) == 1
+    content = log_files[0].read_text(encoding="utf-8")
+    assert "pytest_count_findings" in content
+    assert "2471" in content
+
+
+def test_pytest_count_disambiguation_module_level_regex_present():
+    """B-449 Assertion 31: module-level regex + scope-indicator tuple exposed
+    as public-surface for inspection + extensibility."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "_PYTEST_COUNT_RE")
+    assert hasattr(ccm, "_SCOPE_INDICATORS")
+    assert hasattr(ccm, "_has_scope_indicator")
+    assert hasattr(ccm, "_strip_code_blocks")
+    # Spot-check scope-indicators
+    indicators = ccm._SCOPE_INDICATORS
+    assert "tier0+tier1" in indicators
+    assert "full-suite" in indicators
+    assert "baseline preserved" in indicators
+    assert "python -m pytest" in indicators

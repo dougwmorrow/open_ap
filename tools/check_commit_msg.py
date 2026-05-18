@@ -11,17 +11,28 @@ Per B-306 (2026-05-16): writes per-invocation audit row to
 `_session_logs/cli_check_commit_msg_<date>.log` per D76 audit-row contract.
 Mirrors `tools/pre_commit_checks.py` `_emit_audit_row` pattern.
 
+Per B-449 closure (2026-05-18; Agent 59 cycle-3 D72 convergence finding G3-K2):
+adds `check_pytest_count_disambiguation` — WARN-only check that scans the
+commit-msg TEST section for pytest counts cited without scope-disambiguation.
+Empirical anchor commit `e76078c` cited "2418 pass" (actually tier0+tier1
+scope but no scope-indicator next to the count); established baseline was
+2471 from full-suite. The 53-test discrepancy was opaque to external readers
+without cross-referencing prior baseline messages. Closure target:
+Mechanism C-1 Phase 2 extension; warn-only per WSJF MEDIUM (escalation to
+BLOCK reserved for pipeline-lead after false-positive baseline period).
+
 Usage (invoked by `.githooks/commit-msg` wrapper):
     python check_commit_msg.py <commit-msg-path> [--no-audit]
 
 Exit codes:
-- 0: no exemption-claim phrases detected (pass)
-- 1: exemption-claim phrases detected (BLOCK)
+- 0: no exemption-claim phrases detected (pass; pytest-count check is WARN-only)
+- 1: exemption-claim phrases detected (BLOCK) OR cascade-evidence missing
 - 0: COMMIT_EDITMSG missing or unreadable (graceful fallback)
 """
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,6 +59,141 @@ except ImportError as _exc:
     classify_commit = None  # type: ignore[assignment]
     has_cascade_evidence = None  # type: ignore[assignment]
 
+try:
+    from tools.cascade_classifier import _extract_section_bodies
+except ImportError:
+    _extract_section_bodies = None  # type: ignore[assignment]
+
+
+# -------------------------------------------------------------------------
+# B-449 closure: pytest-count disambiguation check
+# -------------------------------------------------------------------------
+# Empirical anchor commit `e76078c` (Agent 59 cycle-3 D72 convergence finding
+# G3-K2): TEST section cited "2418 pass" with tier0+tier1 scope but baseline
+# was 2471 from full-suite — the 53-test discrepancy was opaque without
+# cross-referencing prior baseline messages. Forward-prevention: WARN on
+# pytest counts in TEST section that lack a co-located scope indicator.
+#
+# Counts are 3-5 digits (covers small Tier 0 subset like "39/39 PASS" through
+# full suites like "2589 passed"); avoids matching unrelated 2-digit / 6+ digit
+# numbers in prose.
+_PYTEST_COUNT_RE = re.compile(
+    r"\b(\d{2,5})\s*(?:/\s*\d{1,5})?\s*(?:pass(?:ed|ing)?|PASS(?:ED)?)\b",
+)
+
+# Scope indicators that disambiguate WHICH pytest scope produced a count.
+# Order matters for diagnostic; full-suite synonyms first.
+_SCOPE_INDICATORS = (
+    "full-suite", "full suite", "full_suite",
+    "tier0+tier1", "tier0 + tier1", "tier0,tier1", "tier0 tier1",
+    "tier 0+tier 1", "tier0+tier1+", "tier0+",
+    "tier0", "tier 0", "tier-0",
+    "tier1", "tier 1", "tier-1",
+    "tier2", "tier 2", "tier-2",
+    "tier3", "tier 3", "tier-3",
+    "tier4", "tier 4", "tier-4",
+    "tests/tier0", "tests/tier1", "tests/tier2", "tests/tier3", "tests/tier4",
+    "tests/unit", "tests/property", "tests/regression", "tests/integration", "tests/crash",
+    "unit+property", "unit + property",
+    "authoritative",  # canonical "full-suite authoritative" pattern
+    "baseline preserved",  # canonical "no scope change vs prior baseline" pattern
+    "from prior verification",  # references prior verified baseline scope
+    "python -m pytest", ".venv/scripts/python.exe -m pytest", ".venv/bin/python -m pytest",
+    "-m pytest tests/",
+    "scope:",
+)
+
+
+def _has_scope_indicator(text: str) -> bool:
+    """True if `text` contains a recognized pytest scope-indicator substring
+    (case-insensitive). Used to scope-disambiguate pytest counts per B-449."""
+    lower = text.lower()
+    return any(ind in lower for ind in _SCOPE_INDICATORS)
+
+
+def _extract_test_section_text(commit_msg: str) -> str | None:
+    """Extract the TEST section body as a single joined string. Returns None
+    if cascade_classifier helper unavailable OR no TEST section present."""
+    if _extract_section_bodies is None:
+        return None
+    sections = _extract_section_bodies(commit_msg)
+    if "TEST" not in sections:
+        return None
+    return "\n".join(sections["TEST"])
+
+
+def _strip_code_blocks(text: str) -> str:
+    """Remove fenced code blocks (```...```) from `text`. Pytest counts inside
+    code blocks are verbatim quoted output — never trigger WARN on those."""
+    return re.sub(r"```[\s\S]*?```", "", text)
+
+
+def check_pytest_count_disambiguation(commit_msg: str) -> tuple[bool, list[str]]:
+    """Per B-449 closure (Agent 59 cycle-3 D72 convergence finding G3-K2):
+    scan TEST section for pytest counts cited WITHOUT scope disambiguation.
+
+    Detection logic:
+    1. Extract TEST section body via cascade_classifier._extract_section_bodies
+    2. Strip fenced code blocks (verbatim quoted pytest output is acceptable)
+    3. For each pytest count match (e.g., "2418 pass" / "39/39 PASS"):
+       - Get the surrounding line context
+       - Verify a scope-indicator substring appears in same line OR within
+         ±3 lines (e.g., a count on one line + "scope: tier0+tier1" nearby)
+    4. WARN (not BLOCK) on each unpaired count match
+
+    Returns (passed: bool, findings: list[str]) tuple — mirrors the
+    has_cascade_evidence() signature for caller convenience.
+
+    Anti-patterns (acceptable; do NOT WARN):
+    - "pytest tier0+tier1: 2418 pass" (scope on same line)
+    - "Pytest baseline preserved (2471 pass / 10 skip / 0 fail from prior verification)"
+      ("baseline preserved" + "from prior verification" both scope-equivalent)
+    - "pytest tests/tier0: 510/510 PASS" (explicit test-dir cite)
+    - Counts inside ``` code blocks (verbatim output)
+
+    Bad patterns (WARN):
+    - "pytest 2471 pass" (no scope; ambiguous)
+    - "Pytest: 2471/10/0 (unchanged)" ("unchanged" is too soft; could mean
+      unchanged scope OR unchanged count of different scope)
+    - Multiple distinct counts with no scope attribution per count
+    """
+    test_text = _extract_test_section_text(commit_msg)
+    if test_text is None:
+        return True, []  # No TEST section OR helper unavailable → no check
+
+    sanitized = _strip_code_blocks(test_text)
+    if not sanitized.strip():
+        return True, []
+
+    lines = sanitized.splitlines()
+    findings: list[str] = []
+    seen_lines: set[int] = set()
+
+    for i, line in enumerate(lines):
+        matches = list(_PYTEST_COUNT_RE.finditer(line))
+        if not matches:
+            continue
+        if i in seen_lines:
+            continue
+        # Per-line check: gather ±3 line context around this line
+        lo, hi = max(0, i - 3), min(len(lines), i + 4)
+        window = "\n".join(lines[lo:hi])
+        if _has_scope_indicator(window):
+            continue
+        # Bare count without scope-indicator nearby
+        for m in matches:
+            count_str = m.group(1)
+            snippet = line.strip()[:120]
+            findings.append(
+                f"pytest count {count_str!r} cited without scope indicator "
+                f"(line {i+1}): {snippet!r}"
+            )
+        seen_lines.add(i)
+
+    if findings:
+        return False, findings[:10]
+    return True, []
+
 
 def _emit_audit_row(
     commit_msg_path: Path,
@@ -55,12 +201,17 @@ def _emit_audit_row(
     exit_code: int,
     classification: str | None = None,
     missing_sections: list[str] | None = None,
+    pytest_count_findings: list[str] | None = None,
 ) -> None:
-    """Per-invocation audit row per D76 + B-306 + B-317.
+    """Per-invocation audit row per D76 + B-306 + B-317 + B-449.
 
     Per reviewer 🟡 IMPROVE: cascade verdict (classification + missing_sections)
     included in audit payload — forensic audit of cascade-skip BLOCK can now
     identify the BLOCK cause without re-running the classifier.
+
+    Per B-449 (2026-05-18): pytest_count_findings included so forensic audit
+    can trace WARN-only discipline-drift events even though they do not affect
+    exit_code (escalation to BLOCK reserved for pipeline-lead).
     """
     audit_dir = REPO_ROOT / "_session_logs"
     try:
@@ -75,6 +226,7 @@ def _emit_audit_row(
         "matched_phrases": matched_phrases,
         "classification": classification,
         "missing_sections": missing_sections or [],
+        "pytest_count_findings": pytest_count_findings or [],
         "exit_code": exit_code,
     }
     try:
@@ -152,6 +304,18 @@ def main(argv: list[str]) -> int:
                     f"findings: {'; '.join(cascade_findings)}"
                 )
 
+    # Per B-449 (2026-05-18; Agent 59 cycle-3 D72 convergence finding G3-K2):
+    # pytest-count disambiguation — WARN-only (does NOT contribute to BLOCK
+    # exit code per WSJF MEDIUM; pipeline-lead can escalate later if
+    # false-positive rate is low after baseline period). Findings emitted to
+    # stderr + included in audit-row for forensic correlation.
+    pytest_count_findings: list[str] = []
+    try:
+        _pytest_count_ok, pytest_count_findings = check_pytest_count_disambiguation(actual_msg)
+    except Exception as exc:  # noqa: BLE001 — degrade gracefully
+        print(f"[commit-msg WARN] pytest-count disambiguation check raised ({exc}); "
+              "WARN-only check skipped this commit.", file=sys.stderr)
+
     final_exit_code = EXIT_BLOCKED if (
         exemption_exit_code == EXIT_BLOCKED or cascade_exit_code == EXIT_BLOCKED
     ) else EXIT_SUCCESS
@@ -161,6 +325,7 @@ def main(argv: list[str]) -> int:
             commit_msg_path, matched_phrases, final_exit_code,
             classification=cls.classification if cls else None,
             missing_sections=cascade_findings,
+            pytest_count_findings=pytest_count_findings,
         )
 
     if matched_phrases:
@@ -189,6 +354,26 @@ def main(argv: list[str]) -> int:
         print(f"\nIf this is an anti-trigger commit, include explicit 'SKIPPED: <anti-trigger>' "
               "in each missing section. Bypass with --no-verify is self-flagging cascade-skip "
               "that reviewers should treat as quasi-audit-question trigger.", file=sys.stderr)
+
+    # Per B-449: pytest-count disambiguation WARN block (NOT a BLOCK; informational
+    # only). Helps producer catch ambiguous count citations like "2418 pass" before
+    # the commit lands; pipeline-lead can escalate to BLOCK after baseline period.
+    if pytest_count_findings:
+        print(f"\n[commit-msg WARN] {len(pytest_count_findings)} pytest count(s) "
+              "cited without scope disambiguation in TEST section "
+              "(per B-449; Agent 59 cycle-3 G3-K2 empirical anchor commit `e76078c`):",
+              file=sys.stderr)
+        for f in pytest_count_findings:
+            print(f"  - {f}", file=sys.stderr)
+        print("\nDisambiguate by citing scope alongside count, e.g.:", file=sys.stderr)
+        print("  - 'pytest tier0+tier1: 2418 pass / 10 skip / 0 fail'", file=sys.stderr)
+        print("  - 'pytest tests/tier0: 510/510 PASS'", file=sys.stderr)
+        print("  - 'pytest full-suite authoritative: 2471 pass / 10 skip / 0 fail'", file=sys.stderr)
+        print("  - 'pytest baseline preserved (2471 pass / 10 skip / 0 fail "
+              "from prior verification)'", file=sys.stderr)
+        print("This is a WARN (not BLOCK); commit will still proceed. "
+              "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
+              file=sys.stderr)
 
     return final_exit_code
 
