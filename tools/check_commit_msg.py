@@ -70,6 +70,7 @@ Exit codes:
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -319,6 +320,7 @@ def _collect_staged_diffs(checks: list[CommitMsgCheck]) -> dict[str, str]:
                 ["git", "diff", "--cached", "--", path],
                 capture_output=True, text=True, check=False, timeout=10,
                 cwd=REPO_ROOT,
+                encoding="utf-8",  # B-479: explicit UTF-8 for Windows-dev safety (else system codepage CP1252 default would mangle Unicode markers like ⚫)
             )
             diffs[path] = result.stdout if result.returncode == 0 else ""
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -504,6 +506,78 @@ def _is_inside_blockquote(lines: list[str], idx: int) -> bool:
     return False
 
 
+# Per B-488 closure 2026-05-18: shared context-sensitive false-positive
+# suppression helper. Markers below were derived from empirical false-positive
+# events at commits 133b212 (B-458 fired on quoted "B-414 CLOSED" empirical
+# anchor → B-480 candidate) + c6ba969 (B-464 fired on quoted "62 skip"
+# empirical anchor → B-487 candidate). Both events involved producer authoring
+# commit-msg about a check whose canonical-anchor citation triggered the
+# very pattern the check detects (self-reference meta-pattern).
+_EMPIRICAL_ANCHOR_MARKERS: tuple[str, ...] = (
+    "empirical anchor commit",
+    "empirical anchor",
+    "1st-event empirical anchor",
+    "1st-event",
+    "META-IRONY",
+    "meta-irony",
+    "historical reference",
+    "historical context",
+    "historical anchor",
+    "Quote-cite from reviewer",
+    "quote-cite from reviewer",
+    "Mechanism A step 5",
+    "per Cohort",
+    "per cohort",
+    "verbatim quote",
+    "reviewer quote",
+    "Reviewer cited",
+    "reviewer cited",
+)
+
+
+def _is_empirical_anchor_context(
+    lines: list[str], idx: int, lookback: int = 5,
+) -> bool:
+    """Per B-488 closure 2026-05-18: True if `lines[idx]` is within an
+    empirical-anchor citation context (within `lookback` lines after a marker
+    phrase like `empirical anchor commit`, `META-IRONY`, `Quote-cite from
+    reviewer`, etc.).
+
+    Used to suppress false-positive WARNs across heuristic checks
+    (ClosureAnnotationConsistencyCheck + NarrativePytestClaimVerificationCheck
+    + InlineFixClaimVerificationCheck) when commit-msg cites historical
+    pattern instances rather than asserting current-commit claims.
+
+    Empirical evidence base (3-event 2026-05-18):
+        - commit 133b212: B-458 fired on `**B-414 CLOSED**` inside REVIEW-section
+          quote-cite of prior reviewer's verdict (B-480 candidate)
+        - commit c6ba969: B-464 fired on `2664 pass / 62 skip / 0 fail` inside
+          empirical-anchor prose citing 1f74b72 META-IRONY (B-487 candidate)
+        - latent: B-470 InlineFixClaimVerificationCheck has same vulnerability
+          if commit-msg quotes a historical reviewer block
+
+    Args:
+        lines: split commit-msg lines (already sanitized via _strip_code_blocks).
+        idx: target line index to evaluate.
+        lookback: number of lines BEFORE idx to scan for markers (default 5).
+
+    Returns:
+        True if any line in `lines[idx-lookback:idx+1]` contains an empirical
+        anchor marker (case-sensitive match against `_EMPIRICAL_ANCHOR_MARKERS`).
+        False otherwise. Note: case-sensitive — `_EMPIRICAL_ANCHOR_MARKERS`
+        includes both common case variants explicitly.
+    """
+    if idx < 0 or idx >= len(lines):
+        return False
+    lo = max(0, idx - lookback)
+    window = lines[lo:idx + 1]
+    for line in window:
+        for marker in _EMPIRICAL_ANCHOR_MARKERS:
+            if marker in line:
+                return True
+    return False
+
+
 def check_unresolved_forward_prevention_candidates(
     commit_msg: str,
     staged_backlog_diff: str | None = None,
@@ -527,6 +601,7 @@ def check_unresolved_forward_prevention_candidates(
             result = subprocess.run(
                 ["git", "diff", "--cached", "docs/migration/BACKLOG.md"],
                 capture_output=True, text=True, timeout=10, cwd=REPO_ROOT,
+                encoding="utf-8",  # B-479: explicit UTF-8 for Windows-dev safety
             )
             staged_backlog_diff = result.stdout if result.returncode == 0 else ""
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -823,6 +898,22 @@ _TRANSITION_RE = re.compile(
     r"[\"“‘`](?P<new>[^\"”’`\n]+?)[\"”’`]"
 )
 
+# Per B-477 closure 2026-05-18: missing_entries kind verification (Pitfall #9.n
+# claim class). Canonical claim format extracted from forensic analysis of
+# commit 20d998f Fix #3: "GLOSSARY missing 2 NEW B-467 surfaces (OrchestrationContext
+# + _build_orchestration_context) — added 2 entries after REPO_ROOT row".
+# Regex captures the parenthesized ident-list. Identifiers separated by
+# whitespace + "+" / "," / ";" / " and ". Tolerates Unicode dash "—" / "–".
+_MISSING_ENTRIES_RE = re.compile(
+    r"missing\s+\d+\s+(?:NEW\s+)?(?:[\w-]+\s+)?surfaces?\s*"
+    r"\((?P<ident_list>[^)]+)\)",
+    re.IGNORECASE,
+)
+
+# Per B-477: split identifier list into individual identifier tokens.
+# Accepts " + " / " , " / " ; " / " and " separators; strips backticks.
+_IDENT_SEPARATOR_RE = re.compile(r"\s*(?:[+,;]|\band\b)\s*")
+
 # Canonical filename → repo path. Longer (".md") forms first so they win
 # substring match before bare name.
 _CANONICAL_FILE_PATHS: tuple[tuple[str, str], ...] = (
@@ -869,6 +960,7 @@ def _fetch_staged_content(path: str) -> str:
             ["git", "show", f":{path}"],
             capture_output=True, text=True, check=False, timeout=10,
             cwd=REPO_ROOT,
+            encoding="utf-8",  # B-479: explicit UTF-8 for Windows-dev safety (else system codepage CP1252 default would mangle Unicode markers in target file content)
         )
         return result.stdout if result.returncode == 0 else ""
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -1028,10 +1120,41 @@ class InlineFixClaimVerificationCheck(CommitMsgCheck):
                         f"(2-event evidence base: commits 2a33efa + 20d998f). "
                         f"Re-apply via Edit + verify via grep BEFORE staging."
                     )
-            # missing_entries kind: parser classifies it but scan() verification
-            # deferred per B-477 (open 2026-05-18). Empirically 1 occurrence so
-            # far (commit 20d998f Fix #3) and it DID land — verification gap
-            # only impactful on subsequent non-landed missing-entries claim.
+            elif kind == "missing_entries":
+                # Per B-477 closure 2026-05-18: Pitfall #9.n claim class
+                # verification. Parse ident-list from raw_body via
+                # `_MISSING_ENTRIES_RE`; verify each identifier appears in
+                # staged target file content. WARN per missing identifier.
+                raw_body = claim.get("raw_body", "")
+                m = _MISSING_ENTRIES_RE.search(raw_body)
+                if not m:
+                    # No parseable ident-list — silently skip per WARN heuristic
+                    continue
+                ident_list_str = m.group("ident_list")
+                # Split on common separators; strip backticks/whitespace.
+                idents = [
+                    tok.strip().strip("`").strip()
+                    for tok in _IDENT_SEPARATOR_RE.split(ident_list_str)
+                    if tok.strip()
+                ]
+                missing_idents: list[str] = []
+                for ident in idents:
+                    if not ident or len(ident) < 3:
+                        # Skip very short tokens (high false-positive risk)
+                        continue
+                    if ident not in content:
+                        missing_idents.append(ident)
+                if missing_idents:
+                    findings.append(
+                        f"Fix #{claim['fix_num']} (missing_entries) claims "
+                        f"{len(idents)} identifier(s) added to {target} "
+                        f"but {len(missing_idents)} are NOT present in staged "
+                        f"content: {missing_idents!r}. "
+                        f"Likely Edit-overwrite drift per B-477 closure 2026-05-18 "
+                        f"(Pitfall #9.n claim class; empirical 1-event anchor: "
+                        f"commit 20d998f Fix #3 GLOSSARY 2 NEW B-467 surfaces). "
+                        f"Re-apply via Edit + verify via grep BEFORE staging."
+                    )
 
         if findings:
             return CheckResult(passed=False, findings=findings[:10])
@@ -1102,6 +1225,19 @@ _BACKLOG_CLOSURE_ANNOTATION_RE = re.compile(
     re.MULTILINE,
 )
 
+# Per B-478 closure 2026-05-18: shared-CLOSED chain detection regex.
+# Matches a single B-N reference (e.g., "B-409") for back-walk through
+# prefix when shared-CLOSED pattern like "B-409 + B-414 CLOSED" is detected.
+_BN_REFERENCE_RE = re.compile(r"\bB-(\d+)\b")
+
+# Per B-478 closure 2026-05-18: valid chain separators between B-N references
+# in a shared-CLOSED pattern. Supports `+` / `,` / `;` / `&` / ` and ` /
+# ` AND `. Whitespace-flexible. Empirical anchor commit `20fe33a` used `+`.
+_SHARED_CLOSED_SEPARATOR_RE = re.compile(
+    r"^\s*(?:[+,;&]|\band\b)\s*$",
+    re.IGNORECASE,
+)
+
 
 class ClosureAnnotationConsistencyCheck(CommitMsgCheck):
     """B-458 closure (2026-05-18): retrospective-closure-without-BACKLOG-
@@ -1142,12 +1278,39 @@ class ClosureAnnotationConsistencyCheck(CommitMsgCheck):
         for i, line in enumerate(lines):
             if _is_inside_blockquote(lines, i):
                 continue
+            # Per B-488 closure 2026-05-18: skip claims within empirical-anchor
+            # citation context (closes self-reference meta-pattern; absorbs
+            # B-480 candidate)
+            if _is_empirical_anchor_context(lines, i):
+                continue
             for m in _CLOSURE_CLAIM_RE.finditer(line):
                 bn_num = m.group(1) or m.group(2)
                 if bn_num:
                     bn = f"B-{bn_num}"
                     if bn not in claimed:
                         claimed[bn] = i + 1
+                    # Per B-478 closure 2026-05-18: shared-CLOSED chain
+                    # detection. When bare-form matches "B-414 CLOSED" but the
+                    # commit-msg cites "B-409 + B-414 CLOSED" (canonical
+                    # 20fe33a pattern), the bare-form regex only catches the
+                    # B-N adjacent to "CLOSED" (B-414). Walk backward through
+                    # the prefix to capture preceding B-N references that are
+                    # separated from the matched B-N by canonical chain
+                    # separators (+ / , / ; / & / and). Bold-form `**B-NNN
+                    # CLOSED**` does not chain (each is independently bolded).
+                    if m.group(2):  # bare-form match (group 2 = bare B-N)
+                        prefix = line[: m.start()]
+                        prev_matches = list(_BN_REFERENCE_RE.finditer(prefix))
+                        last_pos = m.start()
+                        for prev_match in reversed(prev_matches):
+                            between = line[prev_match.end() : last_pos]
+                            if _SHARED_CLOSED_SEPARATOR_RE.match(between):
+                                prev_bn = f"B-{prev_match.group(1)}"
+                                if prev_bn not in claimed:
+                                    claimed[prev_bn] = i + 1
+                                last_pos = prev_match.start()
+                            else:
+                                break  # chain broken; stop walking back
 
         if not claimed:
             return CheckResult(passed=True, findings=[])
@@ -1214,6 +1377,170 @@ class ClosureAnnotationConsistencyCheck(CommitMsgCheck):
         )
 
 
+# -------------------------------------------------------------------------
+# B-464 closure: narrative pytest-claim verification (skip-count anomaly)
+# -------------------------------------------------------------------------
+# Empirical anchor commit `1f74b72` (META-IRONY surfaced by Agent 69 2026-05-18):
+# narrative cited "2664 pass / 62 skip" in 4 locations but actual cascade
+# scope (tier0+tier1+unit+property+regression) returns "2664 pass / 10 skip".
+# The PASS count was correct; the SKIP count was wrong by 6.2x. Root cause:
+# copy-paste of stale narrative from prior commit before the test suite's
+# skip-count baseline changed.
+#
+# This check composes with B-449 (pytest-count scope-disambiguation) as
+# orthogonal failure-mode coverage:
+#   - B-449 catches pytest counts WITHOUT scope-indicator (ambiguity)
+#   - B-464 catches pytest counts WITH anomalous skip-count (accuracy)
+#
+# Heuristic strategy: hardcoded skip-count threshold = 20 (2x current
+# baseline 10). False-positive rate near zero since project's actual skip
+# count grows slowly. Future B-N may add subprocess-baseline verification
+# (run `pytest --collect-only -q` at commit time + parse "N collected").
+# Current heuristic is bounded-cost (regex-only); subprocess approach has
+# ~5-10s overhead per commit which exceeds reasonable hook latency.
+
+# Regex extracts `N pass / M skip [/ K fail]` patterns. The "/" separator
+# is canonical per project convention; tolerates whitespace variation.
+# Captures pass-count + skip-count for threshold check.
+_PYTEST_FULL_TRIPLET_RE = re.compile(
+    r"\b(?P<pass>\d{2,5})\s*(?:pass(?:ed)?|PASS(?:ED)?)"
+    r"\s*[/,]\s*"
+    r"(?P<skip>\d{1,4})\s*(?:skip(?:ped)?|SKIP(?:PED)?)"
+    r"(?:\s*[/,]\s*(?P<fail>\d{1,3})\s*(?:fail(?:ed|ing)?|FAIL(?:ED)?))?",
+    re.IGNORECASE,
+)
+
+# Skip-count anomaly threshold. Project's actual baseline at 2026-05-18 is
+# 10 skipped (tier0+tier1+unit+property+regression scope). Threshold = 20
+# permits 2x baseline before WARN; catches 1f74b72-class drift (62 cited).
+#
+# Per B-486 closure 2026-05-18: env-configurable via PYTEST_SKIP_ANOMALY_THRESHOLD
+# operator-override. Defaults to canonical 20; allows accommodation of organic
+# project growth (e.g., Tier 4 crash-tests landing on Linux CI add ~52 skips)
+# without code edit. Invalid env values (non-int) silently fall back to default.
+def _resolve_pytest_skip_threshold() -> int:
+    """Per B-486 closure 2026-05-18: parse PYTEST_SKIP_ANOMALY_THRESHOLD env
+    var with graceful fallback. Returns canonical 20 on absent / invalid value."""
+    raw = os.environ.get("PYTEST_SKIP_ANOMALY_THRESHOLD", "20")
+    try:
+        value = int(raw)
+        if value < 0:
+            return 20  # negative threshold nonsensical; fall back to canonical
+        return value
+    except (ValueError, TypeError):
+        return 20
+
+
+_PYTEST_SKIP_ANOMALY_THRESHOLD = _resolve_pytest_skip_threshold()
+
+
+class NarrativePytestClaimVerificationCheck(CommitMsgCheck):
+    """B-464 closure (2026-05-18): narrative pytest-claim verification —
+    catches anomalously high skip-counts indicating copy-paste-stale
+    narrative or arithmetic error.
+
+    Empirical anchor: commit `1f74b72` cited `2664 pass / 62 skip` in 4
+    locations but actual cascade Step 3.1 scope returned `2664 pass /
+    10 skip`. The 62 was a copy-paste from a prior pytest run with
+    different scope (likely including Tier 4 crash-tests which add ~52
+    module-level skips on dev workstations).
+
+    Detection logic (heuristic; WARN-only):
+        - Sanitize commit-msg via `_strip_code_blocks` (preserves canonical
+          B-449/B-451/B-458 pattern).
+        - Find `N pass / M skip [/ K fail]` triplet patterns.
+        - WARN per match where `M > _PYTEST_SKIP_ANOMALY_THRESHOLD` (20).
+        - Cite empirical anchor + suggest re-verification.
+
+    Severity: WARN per WSJF MEDIUM (matches B-449 + B-451 + B-470 + B-458
+    contract). Conservative threshold (2x baseline) keeps false-positive
+    rate near zero; project's actual skip count is stable at ~10.
+
+    Composes orthogonally with B-449 PytestCountDisambiguationCheck —
+    B-449 catches missing-scope; B-464 catches anomalous-value.
+    """
+    name = "narrative_pytest_claim"
+    severity: Literal["WARN", "BLOCK"] = "WARN"
+    requires_backlog_diff = False
+    requires_classification = False
+
+    def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
+        sanitized = _strip_code_blocks(commit_msg)
+        if not sanitized.strip():
+            return CheckResult(passed=True, findings=[])
+
+        # Iterate per-line so we can report line numbers (helpful diagnostic)
+        lines = sanitized.splitlines()
+        findings: list[str] = []
+        seen_lines: set[int] = set()
+
+        for i, line in enumerate(lines):
+            if _is_inside_blockquote(lines, i):
+                continue
+            # Per B-488 closure 2026-05-18: skip claims within empirical-anchor
+            # citation context (closes self-reference meta-pattern; absorbs
+            # B-487 candidate)
+            if _is_empirical_anchor_context(lines, i):
+                continue
+            for m in _PYTEST_FULL_TRIPLET_RE.finditer(line):
+                skip_count = int(m.group("skip"))
+                if skip_count <= _PYTEST_SKIP_ANOMALY_THRESHOLD:
+                    continue
+                if i in seen_lines:
+                    continue
+                seen_lines.add(i)
+                snippet = line.strip()[:120]
+                findings.append(
+                    f"pytest skip-count {skip_count!r} (line {i+1}) exceeds "
+                    f"anomaly threshold {_PYTEST_SKIP_ANOMALY_THRESHOLD} "
+                    f"(project baseline ~10 for full-suite scope). "
+                    f"Empirical anchor commit `1f74b72` per B-464 closure "
+                    f"2026-05-18 — META-IRONY pattern (62 skip cited / 10 "
+                    f"actual). Re-verify via `pytest -q --no-header | tail -3` "
+                    f"on cited scope OR update narrative to match actual count. "
+                    f"Snippet: {snippet!r}"
+                )
+
+        if findings:
+            return CheckResult(passed=False, findings=findings[:10])
+        return CheckResult(passed=True, findings=[])
+
+    def render_findings_to_stderr(self, findings: list[str]) -> None:
+        """Per B-468: emit narrative-pytest-claim WARN boilerplate with
+        re-verification recommendation footer."""
+        print(
+            f"\n[commit-msg WARN] {len(findings)} pytest count claim(s) with "
+            "anomalously high skip-count in commit-msg "
+            "(per B-464; 1st-event empirical anchor commit `1f74b72`):",
+            file=sys.stderr,
+        )
+        for f in findings:
+            print(f"  - {f}", file=sys.stderr)
+        print("\nResolution options:", file=sys.stderr)
+        print(
+            "  - Re-verify pytest counts: "
+            "`.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 "
+            "tests/unit tests/property tests/regression -q --no-header 2>&1 "
+            "| tail -3`",
+            file=sys.stderr,
+        )
+        print(
+            "  - Update narrative to match actual count (likely copy-paste "
+            "from prior commit before suite grew)",
+            file=sys.stderr,
+        )
+        print(
+            "  - If skip-count is legitimately high (e.g., Tier 4 crash-tests "
+            "included), cite explicit scope (e.g., 'with-crash-tier')",
+            file=sys.stderr,
+        )
+        print(
+            "This is a WARN (not BLOCK); commit will still proceed. "
+            "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
+            file=sys.stderr,
+        )
+
+
 # CHECKS registry per B-459 — single point of registration for orchestrator.
 # Order matters only for stderr-emission deterministic display; audit-row
 # JSON keys are independent.
@@ -1224,6 +1551,7 @@ CHECKS: list[CommitMsgCheck] = [
     UnresolvedForwardPreventionCandidatesCheck(),
     InlineFixClaimVerificationCheck(),  # B-470 closure 2026-05-18
     ClosureAnnotationConsistencyCheck(),  # B-458 closure 2026-05-18
+    NarrativePytestClaimVerificationCheck(),  # B-464 closure 2026-05-18
 ]
 
 

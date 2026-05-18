@@ -2,6 +2,312 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-478 shared-CLOSED chain detection (LOW WSJF 0.5; ClosureAnnotationConsistencyCheck extension)
+
+**Trigger**: pipeline-lead "Make a final push into Github. After that proceed with your recommended next steps." 2026-05-18. Branch already up-to-date with origin at trigger; recommended-next-step per cascade Step 1.1 (smallest scope among remaining LOW priority items; B-482 deferred as larger-scope architectural).
+
+**Scope**: 1 B-N closure (B-478) — shared-CLOSED chain detection at `ClosureAnnotationConsistencyCheck.scan()` + 2 NEW regex constants + 3 Tier 0 assertions. 5 files modified: `tools/check_commit_msg.py` (chain walk logic + 2 regex constants) + `tests/tier0/test_check_commit_msg.py` (+3 assertions; 149 → 152) + `CLAUDE.md` (L98 assertion count + cohort delta) + `docs/migration/BACKLOG.md` (closure annotation) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical anchor**: commit `20fe33a` cited `B-409 + B-414 CLOSED` in subject + body. Pre-B-478 regex `_CLOSURE_CLAIM_RE` bare-form alternation only matched B-414 (the B-N adjacent to CLOSED); B-409 missed because not directly adjacent to CLOSED. PRE-COMMIT reviewer `a56030f11be41025b` Scope 1a finding 2026-05-18 surfaced this as B-478 candidate.
+
+**B-478 implementation**:
+- NEW `_BN_REFERENCE_RE = re.compile(r"\bB-(\d+)\b")` — matches single B-N reference for prefix-scan
+- NEW `_SHARED_CLOSED_SEPARATOR_RE = re.compile(r"^\s*(?:[+,;&]|\band\b)\s*$", re.IGNORECASE)` — validates 5 canonical chain separators (`+` / `,` / `;` / `&` / ` and ` / ` AND `)
+- `ClosureAnnotationConsistencyCheck.scan()` extended — after bare-form match (`m.group(2)`), walk backward through prefix B-N references; for each preceding B-N, check separator between previous-match-end and current-match-start; if separator matches `_SHARED_CLOSED_SEPARATOR_RE`, add preceding B-N to claimed dict; chain breaks at first non-canonical separator. Bold-form match (`m.group(1)`) does NOT trigger chain walk (each `**B-NNN CLOSED**` is independently bolded).
+
+**Tier 0 coverage**: 3 NEW assertions at `tests/tier0/test_check_commit_msg.py`:
+- Assertion 150 (`test_b478_shared_closed_chain_catches_both_bns`): empirical 20fe33a pattern — `B-409 + B-414 CLOSED` with only B-408 annotated → both B-409 AND B-414 produce findings (pre-B-478 only B-414)
+- Assertion 151 (`test_b478_chain_separators_all_canonical_supported`): 5 separator-variants tested (+, /, ;, and, 3-chain "B-100 + B-200 + B-300 CLOSED")
+- Assertion 152 (`test_b478_chain_break_on_invalid_separator`): non-canonical separator "blah" breaks chain (B-200 fires, B-100 does NOT — prevents over-capture)
+
+**Architectural choice rationale**: regex-extension approach (e.g., `\b(B-\d+(?:\s*[+,;&]\s*B-\d+)+)\s+CLOSED\b`) considered + rejected. Reasons: (a) single-regex with multi-capture group would require post-match identifier extraction anyway; (b) backward chain walk after primary match is cleaner separation (find anchor → walk back to chain) than greedy multi-capture; (c) extending existing regex risks breaking the bold-form alternation match-group semantics; (d) post-match approach localizes the new logic to the scan() loop body rather than the module-level regex (easier to reason about + test in isolation).
+
+**Cumulative session delta UPDATED at B-478 closure**: 98 NEW B-Ns UNCHANGED (B-478 pre-existing open). **22 B-Ns CLOSED multi-session arc** (cumulative; 21 prior + B-478). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2807 → **2810 pass / 10 skip / 0 fail** (+3 from B-478 Tier 0 additions).
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/*` + `CLAUDE.md` + 4 tracker mirrors):
+- TEST: pytest 2810 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 152 Tier 0 assertions at `test_check_commit_msg.py`. Smoke test verified empirical anchor pattern: `B-409 + B-414 CLOSED` produces 2 findings (both B-Ns captured).
+- GAP ANALYSIS: producer-side 6-category G1-G6 audit applied — G1 leading-badge correct, G2 arithmetic propagated 4 mirrors + CLAUDE.md L98, G3 implementation matches BACKLOG, G4 udm-progress-logger applied, G5 N/A (additive to existing regex constant set; no NEW orthogonal public surface), G6 0 new B-N opportunities surfaced.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
+## 2026-05-18 — Cleanup cohort B-476 + B-479 + B-486 (LOW WSJF; pre-UDM-pipeline-pivot runway clear)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps. We need to finish up anything before moving onto our next UDM pipeline updates." 2026-05-18. User running pipeline tests (SCD2 + parquet load) in parallel; cleanup cohort minimizes outstanding small B-Ns before pivot.
+
+**Scope**: 3 B-N closures batched (B-476 + B-479 + B-486) — all LOW WSJF trivial fixes. 5 files modified: `tools/check_commit_msg.py` (B-479 subprocess.run encoding + B-486 env-configurable threshold + os import added) + `tests/tier0/test_check_commit_msg.py` (B-476 docstring fix + 4 NEW assertions for B-479/B-486) + `docs/migration/BACKLOG.md` (3 closure annotations) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + `CLAUDE.md` (L98 assertion count 145 → 149) + this entry.
+
+**Producer**: parent agent (this session).
+
+**B-476 implementation** (LOW WSJF 1.0; test docstring accuracy):
+- `tests/tier0/test_check_commit_msg.py:1178` — added `requires_classification = False` to `BrokenNoSeverity` test class. Pre-B-476 the test class omitted BOTH `severity` AND `requires_classification` (post-B-472 __init_subclass__ requires both), making the test's "missing severity in isolation" claim ambiguous. Option A applied per BACKLOG spec (cleaner isolation; 1-line additive).
+
+**B-479 implementation** (LOW WSJF 0.5; subprocess encoding safety):
+- `tools/check_commit_msg.py:318,599,956` — added explicit `encoding="utf-8"` kwarg to all 3 `subprocess.run()` calls (`_collect_staged_diffs` + back-compat orphan-candidate wrapper + `_fetch_staged_content`). Pre-B-479 `text=True` without explicit encoding defaulted to system codepage (CP1252 on Windows; UTF-8 on RHEL); would mangle Unicode markers like `⚫` in git diff output on Windows-dev workstations causing `_BACKLOG_CLOSURE_ANNOTATION_RE` + `_is_empirical_anchor_context()` to miss legitimate matches. Now explicit UTF-8 enforced regardless of host system. +1 Tier 0 assertion 146 (source-grep pin against silent removal).
+
+**B-486 implementation** (LOW WSJF 1.0; env-configurable threshold):
+- `tools/check_commit_msg.py` — NEW `_resolve_pytest_skip_threshold()` helper at L1389 reads `PYTEST_SKIP_ANOMALY_THRESHOLD` env var with graceful fallback to canonical 20 on absent/invalid (non-int/negative) value. `_PYTEST_SKIP_ANOMALY_THRESHOLD` constant now resolved at module-load time from helper. `os` import added to top-of-module. Operator override pathway: `PYTEST_SKIP_ANOMALY_THRESHOLD=50 git commit ...` accommodates organic project skip-count growth (Tier 4 crash-tests adding ~52 skips on Linux CI). +3 Tier 0 assertions (147-149: default 20 / env=50 override / invalid env fallback to 20). Option (b) JSON sidecar baseline DEFERRED (heavier refactor; opportunistic at next round close-out).
+
+**Cumulative session delta UPDATED at cleanup cohort closure**: 98 NEW B-Ns UNCHANGED (B-476 + B-479 + B-486 all pre-existing opens). **21 B-Ns CLOSED multi-session arc** (cumulative; 18 prior + 3 this cohort: B-476 + B-479 + B-486). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2803 → **2807 pass / 10 skip / 0 fail** (+4 from B-479 + B-486 Tier 0 additions; B-476 is 1-line test docstring fix with no NEW assertion).
+
+**Runway state post-cleanup**: explicitly-deferred items remain (B-460 udm-progress-logger v2.0.0 MAJOR / B-462 + B-463 query_blindspots forward-prevention / B-473 required_diffs tuple generalization / B-474 GLOSSARY criterion / B-484 udm-cohort-reviewer agent / B-485 cohort-review effectiveness ledger). Pipeline-lead-blocked Phase 2-4 UDM Skills Audit (B-416-B-447; 32 B-Ns) waiting on explicit authorization. Architectural items B-481 (wc -l forward-prevention) + B-482 (OrchestrationContext.staged_files extension) remain LOW priority deferred. POLISH_QUEUE P-21 + P-22 + P-23 (3 LOW cosmetic). Branch ready for UDM pipeline pivot per user direction.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/*` + `CLAUDE.md` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md`):
+- TEST: pytest 2807 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 149 Tier 0 assertions at `test_check_commit_msg.py`. Smoke test verified all 3 fixes: B-479 encoding count, B-486 default/override/invalid fallback paths, B-476 isolation.
+- GAP ANALYSIS: producer-side 6-category G1-G6 audit applied — G1 leading-badges correct, G2 arithmetic propagated 4 mirrors, G3 implementation matches BACKLOG, G4 udm-progress-logger applied, G5 N/A (no new public surface; modifications to existing `_PYTEST_SKIP_ANOMALY_THRESHOLD` + subprocess.run kwargs), G6 0 new B-N opportunities.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
+## 2026-05-18 — B-489 `_false_positive_log.md` discipline tracker (LOW WSJF 1.5; Layer 4 of false-positive prevention architecture)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). B-489 selected as highest-priority LOW WSJF 1.5 (vs B-486 / B-481 / B-478 / B-479 / B-486 LOW WSJF 1.0).
+
+**Scope**: 1 B-N closure (B-489) — NEW tracker file + Tier 0 self-tests + tracker updates. 5 files modified: `docs/migration/_false_positive_log.md` (NEW; ~180 LOC append-only audit trail) + `tests/tier0/test_false_positive_log.py` (NEW; 5 assertions) + `docs/migration/BACKLOG.md` (closure annotation) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Architectural significance**: COMPLETES the 4-layer false-positive prevention architecture authored across this 2026-05-18 session arc:
+
+| Layer | B-N | Cadence | Description |
+|---|---|---|---|
+| 1. Severity discipline | (pre-existing) | per-fire | WARN-only for heuristic checks; never BLOCK |
+| 2. Shared context helper | B-488 | per-commit | `_is_empirical_anchor_context()` suppresses self-references |
+| 3. Reviewer methodology | B-490 | per-cohort | Mechanism A Step 6 regex-completeness verification |
+| 4. Accumulation tracker | **B-489** | **per-event → round-aggregate** | **`_false_positive_log.md`** |
+
+**B-489 implementation**: 
+- NEW `docs/migration/_false_positive_log.md` (~180 LOC):
+  - 8 canonical sections: Purpose / When to log / Schema / Aggregation discipline / Composition / Initial event corpus / Aggregation findings / Next aggregation trigger
+  - 7-field event schema: trigger_pattern / actual_semantic / empirical_anchor_commit / detected_by / remediation_status / forward_prevention_B_N / class
+  - Seeded with 4 historical events from 2026-05-18 session: FP-1 (CLAUDE.md wc -l staleness; B-481 deferred) + FP-2 (B-458 self-firing on quoted B-414 CLOSED; B-480 → B-488 absorbed) + FP-3 (B-464 self-firing on quoted 62 skip; B-487 → B-488 absorbed) + FP-4 (cross-cohort review grep methodology blind-spot; B-490 absorbed)
+  - Aggregation findings: 3 classes documented (self-reference meta-pattern 2-event ✅ closed; reviewer-methodology 1-event ✅ closed; Pitfall #9.h 1-event 🟡 deferred)
+- Composition with existing trackers: parallels `_validation_log.md` (per-cohort validation) + `_reviewer_effectiveness.md` (per-reviewer-event round-level). Round close-out cascade walks this log at aggregation cadence.
+
+**Tier 0 coverage**: 5 NEW assertions at `tests/tier0/test_false_positive_log.py`:
+- Assertion 1: tracker file exists at canonical path
+- Assertion 2: 8 required canonical section headers present
+- Assertion 3: 4-event initial corpus (FP-1 through FP-4) present
+- Assertion 4: 3 canonical false-positive classes documented + forward-prevention B-N references for each
+- Assertion 5: 7-field schema documented (trigger_pattern + actual_semantic + empirical_anchor_commit + detected_by + remediation_status + forward_prevention_B_N + class)
+
+**Cumulative session delta UPDATED at B-489 closure**: 98 NEW B-Ns UNCHANGED (B-489 was pre-existing open). **18 B-Ns CLOSED multi-session arc** (cumulative; 17 prior + B-489). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2798 → **2803 pass / 10 skip / 0 fail** (+5).
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `docs/migration/_false_positive_log.md` NEW + `tests/tier0/*` + tracker mirrors):
+- TEST: pytest 2803 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 5/5 NEW B-489 assertions PASS in 0.26s. Smoke test verified: file exists at canonical path; sections present; schema fields documented; event corpus complete.
+- GAP ANALYSIS: udm-next-step-cascade Step 2 gap-check scheduled post-commit.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
+## 2026-05-18 — Cross-cohort review drift remediation (Pitfall #9.k arithmetic-propagation 95 → 98 NEW B-Ns)
+
+**Trigger**: user-direction "Run a gap analysis of the recent enhancements" 2026-05-18 → 4th formal `udm-cohort-review` invocation `a0461577f1ab9137d` on commits `ba487a8` + `e1a1449` returned 🟡 ISSUES verdict.
+
+**Scope**: 1 remediation cycle — narrative arithmetic propagation fix across 4 tracker mirrors + SESSION_RESUME refresh. 4 files modified: `docs/migration/CURRENT_STATE.md` (L7 narrative) + `docs/migration/HANDOFF.md` §14 (L427 narrative) + `docs/migration/_validation_log.md` (this entry + L32 B-469 entry) + `SESSION_RESUME.md` (L12 pytest + L14 cumulative + L15 closures).
+
+**Producer**: parent agent (this session).
+
+**Cross-cohort reviewer empirical anchor (1-event 2026-05-18)**: cross-cohort reviewer `a0461577f1ab9137d` applied Mechanism A Step 6 dual-regex verification (per B-490 closure) to count claims in cohort `ba487a8` + `e1a1449`. Primary regex `^- (~~)?\*\*B-[0-9]+\*\*` filtered to B-393-B-490 range returned 98 unique rows; secondary `seq 393 490 | comm` verification showed zero gaps. Narrative claim "95 NEW B-Ns" was stale by 3.
+
+**Root cause**: at B-488 closure (commit `8a5b133`), producer narrative said "**95 NEW B-Ns** (B-393-B-490; +3 from B-488 + B-489 + B-490 opens at start of cohort)" — the "+3" was acknowledged in the prose but NOT propagated to the headline rollup label (should have read "98 NEW B-Ns"). The drift carried forward mechanically through subsequent commits (B-490 + B-477 + B-469 cohorts) which all inherited "95" as a stale snapshot.
+
+**Meta-validation of Mechanism A Step 6**: this catch DIRECTLY validates the B-490 closure (Step 6 regex-completeness verification). Single-commit PRE-COMMIT reviewers at `a47a812` (B-490) + `ba487a8` (B-477) + `e1a1449` (B-469) ALL saw the stale "95" narrative without catching the drift — because single-commit scope doesn't readily expose cumulative-arithmetic-vs-actual-row-count mismatch. Cross-cohort review applying Step 6 dual-regex DOES expose it. The discipline is working as designed.
+
+**Inline-fix applied**:
+- `docs/migration/CURRENT_STATE.md:7` (most-recent narrative): "95 NEW B-Ns unchanged" → "98 NEW B-Ns (B-393-B-490; corrected from stale 95 per cross-cohort reviewer Step 6 catch)"
+- `docs/migration/HANDOFF.md:427` (§14 narrative): same correction
+- `docs/migration/_validation_log.md:32` (B-469 event entry): same correction
+- `SESSION_RESUME.md:14`: "91 NEW B-Ns (B-393-B-483)" → "98 NEW B-Ns (B-393-B-490)" (was frozen at abb7596 era; refreshed)
+- `SESSION_RESUME.md:15`: "10 B-Ns CLOSED" → "17 B-Ns CLOSED" with full closure enumeration including B-480/B-487 absorbed
+- `SESSION_RESUME.md:12`: pytest "2763" → "2798" (was frozen at abb7596 era)
+
+Historical narrative entries at `_validation_log.md:62,94,133,174` + `CURRENT_STATE.md:9,11,13,15` NOT retroactively rewritten — append-only timeline preserves snapshot-at-write-time context per Pitfall #9.k discipline (rewriting history is more confusing than informative; the canonical CURRENT count is what matters going forward).
+
+**Cumulative session delta UPDATED**: **98 NEW B-Ns** (B-393-B-490) / **17 B-Ns CLOSED multi-session arc** / 11 NEW R-Ns / 14 canonical edge case series / pytest 2798 unchanged this commit (narrative + tracker remediation only; no code changes).
+
+**Hard rule 14 cascade applied** (anti-trigger qualifying — pure narrative arithmetic remediation; no code path modified; no new public surface):
+- TEST: SKIPPED: anti-trigger (zero functional change; pure tracker arithmetic propagation per CLAUDE.md L437 inline-self-review clause).
+- GAP ANALYSIS: this commit IS the response to cross-cohort review verdict; reviewer's Step 6 verification IS the gap-check authority.
+- REVIEW: cross-cohort reviewer `a0461577f1ab9137d` (general-purpose subagent invoked via `udm-cohort-review` skill) served as the substantive independent reviewer driving this remediation per D55+D56. Mechanism A step 4 file-overlap full match: reviewer cited L32, L62, L94, L133 of _validation_log + L427/L429/L431 of HANDOFF + SESSION_RESUME L14 as drift locations; this commit fixes the CURRENT-state entries (L7 / L427 / L32) + SESSION_RESUME L12+L14+L15. Historical entries (L62/L94/L133) preserved per append-only discipline. Mechanism A step 5 quote-cite from reviewer Final verdict: "spawn remediation commit to fix arithmetic rollup 95→98 across all 4 tracker mirrors + SESSION_RESUME.md L14 + L223. Cohort body of work itself is ✅ CLEAN; remediation is purely tracker arithmetic propagation. No blockers; no new B-Ns required (this IS Pitfall #9.k by definition; recurrent class is well-tracked)."
+
+---
+
+## 2026-05-18 — B-469 `_tier0_test_base.py` CLI tool factory pattern (MEDIUM WSJF 2.0; generalizes B-461 SKILL.md factory to CLI domain)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). B-469 was the highest-priority MEDIUM WSJF 2.0 item per Step 1.1 selection.
+
+**Scope**: 1 B-N closure (B-469) — NEW module + self-tests + tracker updates. 5 files: `tests/tier0/_tier0_test_base.py` (NEW; ~140 LOC) + `tests/tier0/test_tier0_test_base.py` (NEW; 11 assertions) + `docs/migration/BACKLOG.md` (closure annotation) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Architectural significance**: parallels B-461 `_skill_test_base.py` (SKILL.md domain) for the CLI tool domain. Both modules are internal test infrastructure with no production public API surface — exempt from CLAUDE.md Structure + GLOSSARY public-surface registration per the B-474 cross-module-consumed criterion (test infrastructure consumed cross-test-module but not production-imported).
+
+**B-469 implementation**:
+- NEW `tests/tier0/_tier0_test_base.py` (~140 LOC) with:
+  - `REPO_ROOT` module constant (path resolution; `tests/tier0/_tier0_test_base.py → tests/tier0/ → tests/ → repo`)
+  - `make_baseline_test_module_imports(module_name: str) -> Callable` — pins module importability per D67 Tier 0 baseline (catches silent rename/move regression)
+  - `make_baseline_test_event_type_constant(module_name: str, expected_event_type: str) -> Callable` — pins canonical EVENT_TYPE per D76 audit-row contract (catches silent EVENT_TYPE rename)
+  - `make_baseline_test_exit_codes(module_name: str, expected_exit_success: int = 0, expected_exit_fatal: int = 2) -> Callable` — pins EXIT_SUCCESS + EXIT_FATAL per D74 exit-code contract; parameterized to accommodate empirical EXIT_FATAL variance (project has tools with EXIT_FATAL=2 AND tools.query_blindspots with EXIT_FATAL=3 — factory accepts override rather than enforcing single value)
+
+**Empirical surprise discovered during implementation**: pre-B-469 the producer assumed D74 canonical EXIT_FATAL=2 universally; running `make_baseline_test_exit_codes("tools.query_blindspots")` FAILED with `actual=3 expected=2 per D74`. Investigation revealed `tools.query_blindspots` declares `EXIT_FATAL = 3` while `tools.parquet_verify` + others declare `EXIT_FATAL = 2`. Factory parameterized to handle both rather than forcing standardization (which would be a separate cohort + breaking change).
+
+**Tier 0 coverage**: 11 NEW assertions at `tests/tier0/test_tier0_test_base.py`:
+- Assertion 1: REPO_ROOT resolves to repo directory (path resolution validation)
+- Assertion 2-4: `make_baseline_test_module_imports` (callable / passes on real module / fails on nonexistent)
+- Assertion 5-7: `make_baseline_test_event_type_constant` (callable / passes on correct / fails on drift)
+- Assertion 8-11: `make_baseline_test_exit_codes` (callable / passes on canonical / fails on value drift / fails on missing constant)
+
+**Bulk-pin deferred**: Applying the factory to all ~24 CLI tools is a separate cohort. Each CLI tool test file would adopt the 3 factory baselines (typically 3 NEW assertions per file = ~72 NEW Tier 0 assertions across the CLI tool surface). Scope decision: keep B-469 minimal (factory + self-tests); future B-N candidate "B-469 bulk-pin SKILL.md + CLI cohort" tracks the application phase.
+
+**Cumulative session delta UPDATED at B-469 closure + cross-cohort-review-drift-catch**: **98 NEW B-Ns** (B-393-B-490; corrected from stale "95" per cross-cohort reviewer `a0461577f1ab9137d` Mechanism A Step 6 dual-regex verification — B-488/489/490 opens at `8a5b133` were not propagated to rollup label; canonical count = 82 baseline + 16 opens this session = 98). **17 B-Ns CLOSED multi-session arc** (cumulative; 16 prior + B-469 this commit). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2787 → **2798 pass / 10 skip / 0 fail** (+11 from B-469 Tier 0 additions; full-suite scope verified live).
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tests/tier0/*` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md`):
+- TEST: pytest 2798 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 11/11 NEW B-469 assertions PASS in 0.25s. Smoke test verified: factory functions return callable / passing tests pass / failing scenarios raise AssertionError with diagnostic messages.
+- GAP ANALYSIS: producer-side 6-category G1-G6 audit applied (B-469 entry leading badge correct + arithmetic propagation across 4 mirrors + canonical re-read of existing _skill_test_base.py pattern matched + udm-progress-logger discipline applied + new factory functions exempt from CLAUDE.md Structure registration per B-474 cross-module-consumed criterion / N/A for code-only module + 0 new B-N opportunities surfaced beyond bulk-pin deferral noted in closure narrative).
+- REVIEW: PRE-COMMIT independent reviewer `a5d92e87428283d5c` (general-purpose subagent) — VERDICT: **VALID-WITH-CONCERNS** (no 🔴 BLOCK). 🟡 Scope 6 finding: producer claimed `_tier0_test_base.py` exempt from GLOSSARY registration per B-474 cross-module-consumed criterion; reviewer correctly identified this INVERTS the B-465 precedent that established `_skill_test_base.py` IS registered (8 GLOSSARY rows) BECAUSE its public helpers are cross-test-module-consumed. Inline-fix applied pre-commit: added 4 GLOSSARY rows (REPO_ROOT + 3 factory functions) parallel to existing 8-row `_skill_test_base.py` registration. Module docstring exemption-claim REMOVED + replaced with explicit B-465-precedent-application narrative. Other 🟡 findings (B-N candidates 2 + 3 — REPO_ROOT DRY dedup + sys.path.insert asymmetry; both LOW) deferred per scope-management decision; not opened this cohort. **B-N candidate 1** (forward-prevention pre-commit check for `_*_test_base.py` GLOSSARY sync) deferred; tracked as future B-N if 2nd-event evidence accumulates. Quote-cite from reviewer Final verdict: "B-469 is structurally sound: factories correct, tests adequate, parameterization well-grounded in empirical EXIT_FATAL variance, cross-doc arithmetic propagated correctly, leading-badge discipline observed." Producer ne reviewer maintained per D55 + D56.
+
+---
+
+## 2026-05-18 — B-477 InlineFixClaimVerificationCheck missing_entries kind verification (MEDIUM WSJF 2.0; closes Pitfall #9.n false-negative class)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). Per cascade Step 1.1 smallest-scope-at-same-priority tiebreaker: B-477 selected over B-469 (smaller scope; ~30 LOC scan() extension + 2 regex constants vs ~50-100 LOC factory generalization + bulk-pin cohort).
+
+**Scope**: 1 B-N closure (B-477) — scan() extension + 2 regex constants + 4 Tier 0 assertions + tracker updates. 5 files modified: `tools/check_commit_msg.py` (scan() branch + 2 regex constants) + `tests/tier0/test_check_commit_msg.py` (+4 assertions; 141 → 145) + `CLAUDE.md` (assertion count + cohort delta) + `docs/migration/BACKLOG.md` (closure annotation) + `docs/migration/GLOSSARY.md` (NEW regex constants composite row) + `docs/migration/CURRENT_STATE.md` + `docs/migration/HANDOFF.md` + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical anchor (1-event 2026-05-18)**: commit `20d998f` Fix #3 cited `Pitfall #9.n: GLOSSARY missing 2 NEW B-467 surfaces (OrchestrationContext + _build_orchestration_context) — added 2 entries after REPO_ROOT row`. That fix DID land. The pre-B-477 scan() parser CLASSIFIED the kind as `missing_entries` but the scan() loop DEFERRED verification with explicit comment (Pitfall #9.n false-negative class). B-477 closes the verification gap: subsequent non-landed missing-entries claim now triggers WARN.
+
+**B-477 implementation**:
+- NEW `_MISSING_ENTRIES_RE` regex matching `missing N NEW <scope> surfaces (<ident-list>)` format with case-insensitive flag + named capture group `ident_list`. Handles canonical "NEW" qualifier as optional. Tolerates optional `<scope>` qualifier (e.g., "B-467 surfaces" vs bare "surfaces").
+- NEW `_IDENT_SEPARATOR_RE` regex splitting ident-list on canonical separators: `+` / `,` / `;` / `and` (with whitespace tolerance). Backtick + whitespace stripping per identifier.
+- `InlineFixClaimVerificationCheck.scan()` extended with `elif kind == "missing_entries":` branch — parses raw_body via `_MISSING_ENTRIES_RE`, splits ident-list via `_IDENT_SEPARATOR_RE`, filters identifiers <3 chars (false-positive guard for short tokens), checks each remaining identifier against staged target file content. WARN per missing identifier with explicit list.
+
+**Tier 0 coverage**: 4 NEW assertions at `tests/tier0/test_check_commit_msg.py` (142-145):
+- Assertion 142 (`test_inline_fix_check_missing_entries_regex_constants_exported`): pins both regex constants exported from module
+- Assertion 143 (`test_inline_fix_check_warns_on_unlanded_missing_entries`): empirical anchor pattern with 1 of 2 identifiers missing → WARN with specific identifier cited
+- Assertion 144 (`test_inline_fix_check_passes_when_all_missing_entries_landed`): both identifiers present → PASS
+- Assertion 145 (`test_inline_fix_check_missing_entries_handles_multiple_separators`): canonical separator tuple (+, /, ;, and) pinned
+
+**Cumulative session delta UPDATED at B-477 closure**: 95 NEW B-Ns UNCHANGED (B-477 pre-existing open). **16 B-Ns CLOSED multi-session arc** (cumulative; 15 prior + B-477 this commit). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2783 → **2787 pass / 10 skip / 0 fail** (+4 from B-477 Tier 0 additions).
+
+**Architectural significance**: `InlineFixClaimVerificationCheck` (B-470) now verifies ALL 3 documented kinds — badge_flip (Pitfall #9.j) + transition (Pitfall #9.k/l) + missing_entries (Pitfall #9.n). Pitfall #9.X false-negative classes for inline-fix claims are now mechanically covered through commit-msg-time verification. CHECKS registry unchanged at 7; this is internal scope-completion not new layer.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/*` + `CLAUDE.md` + `GLOSSARY.md` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md`):
+- TEST: pytest 2787 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression scope; 145 Tier 0 assertions at `test_check_commit_msg.py`. Smoke-test verified: both identifiers present → PASS; 1 missing → WARN with specific identifier cited; both missing → WARN. 4 separator tests pass for canonical tuple.
+- GAP ANALYSIS: udm-next-step-cascade Step 2 gap-check scheduled post-commit (Layer 2a + Layer 2b parent-agent reflection).
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
+## 2026-05-18 — B-490 udm-cohort-review Mechanism A Step 6 regex-completeness verification (LOW WSJF 1.0; closes empirical reviewer-methodology blind-spot class)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). Per cascade Step 1.1 smallest-scope-at-same-priority tiebreaker: B-490 selected over B-489 (smaller scope; ~20 LOC SKILL.md amendment vs ~50 LOC tracker authoring).
+
+**Scope**: 1 B-N closure (B-490) — SKILL.md amendment + 2 Tier 0 assertions + tracker updates. 5 files modified: `.claude/skills/udm-cohort-review/SKILL.md` (NEW section between §6 + Output contract) + `tests/tier0/test_skill_cohort_review.py` (+2 assertions; 10 → 12) + `docs/migration/BACKLOG.md` (B-490 closure annotation) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical anchor (1-event 2026-05-18)**: cross-cohort reviewer `a73a72b3539791788` reported a 🔴 §4 Pitfall #9.k recurrence finding based on `grep -oE "^- \*\*B-[0-9]+\*\*"` returning 73 unique B-N rows in B-393-B-486 range vs narrative "94 NEW B-Ns" claim. Producer-side verification with broader regex accepting both `- \*\*B-N\*\*` AND `- ~~\*\*B-N\*\*~~` formats returned all 94 unique B-N rows — confirming narrative claim was correct AND reviewer's pattern had a blind spot (missed older strikethrough-wrapped format used for B-408-B-414 historical closures).
+
+**B-490 implementation**:
+- NEW "Mechanism A Step 6 — regex-completeness verification (per B-490 closure 2026-05-18)" section inserted between §6 cross-doc consistency final sweep + Output contract sections.
+- Canonical format-variant table documenting 5 BACKLOG.md row formats: (1) standard open `- **B-N** (🟡 Open`; (2) standard closed leading-badge `- **B-N** (⚫ CLOSED <date>`; (3) strikethrough-wrapped legacy `- ~~**B-N**~~ (🟡 Open` (used for B-408-B-414 era closures pre-Pitfall #9.j discipline); (4) partial closure `- **B-N** (🟠 PARTIAL` (per udm-progress-logger v1.2.0); (5) deferred `- **B-N** (⬜ Deferred` (rare).
+- Reviewer regex contract: combined `^- (~~)?\*\*B-[0-9]+\*\*` for B-N row enumeration; alternative numeric `grep -oE "B-[0-9]+" | sort -u | wc -l` for secondary verification when drift count is load-bearing.
+- 4-step Step 6 procedure: (1) identify regex pattern used; (2) run secondary verification with alternative method; (3) compute deviation between primary + secondary; (4) cite verification method in verdict.
+- Anti-pattern citation: reporting count-based drift without secondary verification = Pitfall #9.k-class false-positive that wastes producer time + erodes trust.
+
+**Tier 0 coverage**: 2 NEW assertions at `tests/tier0/test_skill_cohort_review.py`:
+- Assertion 11 (`test_mechanism_a_step_6_regex_completeness_section_present`): pins canonical substrings for Step 6 section + empirical anchor agentId + strikethrough-wrapped legacy variant reference
+- Assertion 12 (`test_step_6_procedure_enumerates_verification_steps`): pins 4-step procedure structure (identify regex / secondary verify / compute deviation / cite method)
+
+**Cumulative session delta UPDATED at B-490 closure**: 95 NEW B-Ns UNCHANGED (B-393-B-490; B-490 was pre-existing open). **15 B-Ns CLOSED multi-session arc** (cumulative; 14 prior + B-490 this commit: 4 prior session + 11 this session including 2 absorbed). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2781 → **2783 pass / 10 skip / 0 fail** (+2 from B-490 Tier 0 additions).
+
+**Architectural significance**: The cross-cohort review discipline (B-483) now has a built-in **methodology-pinning step** parallel to udm-progress-logger Step 4.5.1 (intra-sentence arithmetic contradiction detection). Pattern: when discipline depends on regex/grep methodology, codify canonical pattern variants AND require secondary verification for load-bearing counts. This forward-prevents the false-positive class where a check/reviewer's grep blind-spot produces phantom drift findings.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `.claude/skills/udm-cohort-review/SKILL.md` + `tests/tier0/*` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md` all substrate):
+- TEST: pytest tests/tier0/test_skill_cohort_review.py PASS 10 → **12 assertions in 0.31s**; full-suite scope verified live post-cohort 2783 / 10 / 0.
+- GAP ANALYSIS: udm-next-step-cascade Step 2 gap-check scheduled post-commit.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
+## 2026-05-18 — B-488 + B-489 + B-490 false-positive forward-prevention architecture cohort (MEDIUM WSJF 2.5 + LOW WSJF 1.5 + LOW WSJF 1.0; shared helper consolidation closes B-480 + B-487 absorbed)
+
+**Trigger**: user-direction 2026-05-18 "How will we address and prevent false positives?" → producer authored 4-layer architectural proposal → user-direction "Open all 3 B-Ns + proceed with B-488".
+
+**Scope**: 3 B-N opens (B-488 + B-489 + B-490) + 1 B-N close-via-implementation (B-488) + 2 B-Ns ABSORBED-as-closed (B-480 + B-487). 6 files modified: `tools/check_commit_msg.py` (helper + marker tuple + 2 check `scan()` updates) + `tests/tier0/test_check_commit_msg.py` (+9 assertions + 1 existing test update for anchor-suppression-induced expectation change) + `CLAUDE.md` (.githooks/ row updated for 141 assertions + B-488 + helper citation) + `docs/migration/BACKLOG.md` (B-488/B-489/B-490 opens + B-488/B-480/B-487 closures via ABSORBED mechanism) + `docs/migration/GLOSSARY.md` (2 NEW entries for `_is_empirical_anchor_context` + `_EMPIRICAL_ANCHOR_MARKERS`) + `docs/migration/CURRENT_STATE.md` + `docs/migration/HANDOFF.md` §14 + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical evidence base (3-event 2026-05-18)**:
+- Commit 133b212 (B-458 closure): ClosureAnnotationConsistencyCheck fired WARN on `**B-414 CLOSED**` inside REVIEW-section reviewer-output quote-cite — false-positive class identified as Pitfall #9-self-reference. Tracked as B-480 candidate.
+- Commit c6ba969 (B-464 closure): NarrativePytestClaimVerificationCheck fired WARN on `62 skip` inside empirical-anchor prose citing 1f74b72 META-IRONY pattern — same false-positive class. Tracked as B-487 candidate.
+- B-470 InlineFixClaimVerificationCheck has latent same-class vulnerability (block-based parsing on commit-msg that might quote historical reviewer block); 0 events observed but architectural surface exists.
+
+**Common root cause**: regex-only heuristics lack awareness of WHERE in commit-msg match occurs (empirical-anchor citation prose vs producer's actual claim about current commit). Self-reference meta-pattern: discipline-documenting commits cite the pattern the check catches, creating false-positive surface.
+
+**B-488 implementation** (MEDIUM WSJF 2.5; SHARED HELPER consolidation):
+- `_EMPIRICAL_ANCHOR_MARKERS: tuple[str, ...]` — 18 canonical marker phrases (case variants explicit): "empirical anchor commit" / "empirical anchor" / "1st-event empirical anchor" / "1st-event" / "META-IRONY" / "meta-irony" / "historical reference" / "historical context" / "historical anchor" / "Quote-cite from reviewer" / "quote-cite from reviewer" / "Mechanism A step 5" / "per Cohort" / "per cohort" / "verbatim quote" / "reviewer quote" / "Reviewer cited" / "reviewer cited".
+- `_is_empirical_anchor_context(lines, idx, lookback=5) -> bool` — parallel to existing `_is_inside_blockquote()`. Scans 5-line lookback window for any marker. Inclusive boundary (lookback=5 covers indices i-5 through i; verified Assertion 134).
+- `ClosureAnnotationConsistencyCheck.scan()` updated — after `_is_inside_blockquote()` check, also calls `_is_empirical_anchor_context()` and skips claims in anchor context. Closes B-480 absorbed.
+- `NarrativePytestClaimVerificationCheck.scan()` updated — same pattern. Closes B-487 absorbed.
+- `InlineFixClaimVerificationCheck` extension DEFERRED — block-based parsing structurally different; latent vulnerability not empirically manifested; future B-N if pattern emerges.
+- 9 NEW Tier 0 assertions (133-141): helper-exported / 5line-lookback / marker-on-target-line / false-on-no-marker / canonical-marker-set / closure-annotation-absorbs-B480 / closure-annotation-fires-outside-anchor / narrative-pytest-absorbs-B487 / narrative-pytest-fires-outside-anchor.
+- 1 existing test (`test_narrative_pytest_check_via_main_orchestrator`) updated — commit-msg subject avoided "meta-irony" phrase which would now correctly trigger anchor-context suppression.
+
+**B-489 (LOW WSJF 1.5)**: `docs/migration/_false_positive_log.md` discipline opened (NOT YET implemented). Empirical evidence base 2026-05-18: 4 observed false-positive instances. Schema proposed: event_date / check_name / trigger_pattern / actual_semantic / remediation_status / forward_prevention_B_N. Closure target: opportunistic; recommend BEFORE round 7 close-out for first round-aggregate classification.
+
+**B-490 (LOW WSJF 1.0)**: Extend `udm-cohort-review` SKILL.md with Mechanism A Step 6 — reviewer methodology regex-completeness verification (NOT YET implemented). Empirical anchor: cross-cohort reviewer `a73a72b3539791788` reported false-positive 🔴 finding due to grep pattern missing strikethrough-wrapped `- ~~**B-N**~~` format. Closure target: opportunistic at next SKILL.md edit cohort.
+
+**Cumulative session delta UPDATED at B-488 cohort closure**: **95 NEW B-Ns** (B-393-B-490; +3 from B-488/489/490 opens). **14 B-Ns CLOSED multi-session arc** (4 prior session: B-465+B-466+B-467+B-468; 10 this session: B-470+B-471+B-472+B-458+B-475+B-483+B-464+B-488+B-480-absorbed+B-487-absorbed). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2772 → **2781 pass / 10 skip / 0 fail** (+9 from B-488 Tier 0; full-suite scope verified live: tier0+tier1+unit+property+regression).
+
+**Architectural significance**: Mechanism C-1 commit-msg layer now has FALSE-POSITIVE SUPPRESSION LAYER via shared `_is_empirical_anchor_context()` helper. Pattern: identify recurring false-positive class (≥2-event evidence) → build shared helper → extend affected checks. Generalizable beyond commit-msg layer to other heuristic-check surfaces. Layer 1 severity discipline (WARN-only) preserved as architectural safety valve.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/*` + `CLAUDE.md` + `GLOSSARY.md` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md`):
+- TEST: pytest 2781 verified live per cascade Step 3.1 — `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression -q` returned `2781 passed, 10 skipped in 52.43s`. 141 Tier 0 assertions at `test_check_commit_msg.py`. Smoke-test verified: helper detects anchor context correctly (5-line lookback inclusive) + ClosureAnnotationConsistencyCheck suppresses claims in anchor context + NarrativePytestClaimVerificationCheck suppresses anomalous counts in anchor context + both checks still fire WARN outside anchor context.
+- GAP ANALYSIS: producer-side 6-category G1-G6 audit applied. G1 leading-badge B-488 ⚫ CLOSED + B-489/B-490 🟡 Open + B-480 + B-487 ⚫ CLOSED-absorbed all correctly rendered. G2 arithmetic 92 → 95 propagated across 4 tracker mirrors. G3 implementation matches BACKLOG description. G4 udm-progress-logger discipline applied. G5 new public surface registered (CLAUDE.md L98 + GLOSSARY). G6 no new B-N opportunities beyond B-488/489/490.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
+## 2026-05-18 — B-464 narrative pytest-claim verification (MEDIUM WSJF 2.0; 7th CommitMsgCheck subclass; Mechanism C-1 layer empirically complete)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). Recommendation: B-464 per prior SESSION_RESUME runway + cascade-complete report.
+
+**Scope**: 1 B-N closure (B-464) — new CommitMsgCheck subclass + Tier 0 tests + tracker updates. 7 files modified: `tools/check_commit_msg.py` + `tests/tier0/test_check_commit_msg.py` + `CLAUDE.md` + `docs/migration/BACKLOG.md` + `docs/migration/GLOSSARY.md` + `docs/migration/CURRENT_STATE.md` + `docs/migration/HANDOFF.md` + `docs/migration/_validation_log.md` (this entry).
+
+**Producer**: parent agent (this session).
+
+**B-464** (MEDIUM WSJF 2.0; 1st-event empirical anchor commit `1f74b72`): `NarrativePytestClaimVerificationCheck` 7th CommitMsgCheck subclass. WARN-severity heuristic narrative pytest-claim verification — catches anomalously high skip-counts indicating copy-paste-stale narrative. Empirical META-IRONY pattern at 1f74b72: cited `2664 pass / 62 skip` in 4 locations; actual cascade scope returned `2664 pass / 10 skip` (6.2x skip-count drift; root cause copy-paste-stale narrative from prior pytest run with different scope). Detection: `_PYTEST_FULL_TRIPLET_RE` matches `\b(?P<pass>\d{2,5})\s*pass[/,]\s*(?P<skip>\d{1,4})\s*skip(?:\s*[/,]\s*(?P<fail>\d{1,3})\s*fail)?` (case-insensitive; "/" or "," separator; named capture groups for forensic logging). `_PYTEST_SKIP_ANOMALY_THRESHOLD = 20` (2x project baseline ~10). Threshold boundary exclusive (skip=20 PASS; skip=21 WARN). Code-block + blockquote suppression via existing `_strip_code_blocks` + `_is_inside_blockquote` helpers (canonical pattern from B-449 + B-451 + B-458). Findings cap 10; finding text cites line number + anomaly threshold + project baseline + canonical re-verify command + B-464 closure + empirical anchor commit. WARN-only per WSJF MEDIUM (matches B-449 + B-451 + B-470 + B-458 contract). Orthogonal-failure-mode complement to B-449 PytestCountDisambiguationCheck — B-449 catches missing-scope; B-464 catches anomalous-value. Subprocess `pytest --collect-only -q` approach considered + rejected (~5-10s overhead per commit exceeds reasonable hook latency; heuristic threshold sufficient at current scale; future B-N may add dynamic-baseline verification if heuristic threshold proves insufficient). 9 NEW Tier 0 assertions (124-132 — registered-in-CHECKS / passes-on-no-triplet / passes-on-normal-skip-count / warns-on-anomalous-skip-count / threshold-boundary-at-20 / skips-code-blocks / skips-blockquote-lines / render-emits-warn-footer / end-to-end-via-main-orchestrator).
+
+**Mechanism C-1 commit-msg layer architecture EMPIRICALLY COMPLETE**: 7 CommitMsgCheck subclasses now cover all observed failure-mode classes through 2026-05-18:
+- `ExemptionPhraseCheck` (BLOCK; 12-phrase exemption detection)
+- `CascadeEvidenceCheck` (BLOCK; hard rule 14 tri-section validation)
+- `PytestCountDisambiguationCheck` (WARN; B-449 missing-scope)
+- `UnresolvedForwardPreventionCandidatesCheck` (WARN; B-451 orphan-candidates)
+- `InlineFixClaimVerificationCheck` (WARN; B-470 claim-vs-reality drift)
+- `ClosureAnnotationConsistencyCheck` (WARN; B-458 retrospective closure claims)
+- `NarrativePytestClaimVerificationCheck` (WARN; B-464 anomalous skip-count) ← NEW
+- 132 Tier 0 assertions pin abstraction + all 7 subclasses (was 71 pre-B-459-cohort)
+- Future check additions land via single subclass + CHECKS append per B-459 abstraction (B-466 init_subclass validation + B-467 OrchestrationContext + B-468 render_findings_to_stderr + B-471 severity-value validation + B-472 declarative requires_classification)
+
+**Cumulative session delta UPDATED at B-464 closure**: 91 NEW B-Ns UNCHANGED (B-393-B-483; B-464 was pre-existing open; no new opens this commit). **11 B-Ns CLOSED multi-session arc** (cumulative; 10 prior + B-464 this commit: B-465+B-466+B-467+B-468 prior session + B-470+B-471+B-472+B-458+B-475+B-483 + **B-464** this session). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2763 → **2772 pass / 10 skip / 0 fail** (+9 from B-464 Tier 0 additions; full-suite scope verified live: tier0+tier1+unit+property+regression).
+
+**Pitfall #9.j leading-badge self-application**: B-464 BACKLOG entry leading badge `(⚫ CLOSED 2026-05-18; MEDIUM; WSJF 2.0)` correctly rendered with strikethrough body + inline closure mechanism — recursive self-consistency verified on the EXACT discipline (B-458 + B-470) designed to catch this drift class.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/test_check_commit_msg.py` + `CLAUDE.md` + `GLOSSARY.md` + `_validation_log.md` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` all substrate per `tools/cascade_classifier.py::SUBSTRATE_FILES`):
+- TEST: pytest 2772 verified live per cascade Step 3.1 — `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression -q` returned `2772 passed, 10 skipped in 55.38s` scope=tier0+tier1+unit+property+regression. 132 Tier 0 assertions at `test_check_commit_msg.py` (was 123 pre-cohort; +9 B-464). Smoke-test verified: anomalous case (62 skip) → WARN; normal case (10 skip) → PASS; threshold boundary at 20 (=20 PASS; =21 WARN); code-block + blockquote suppression preserved.
+- GAP ANALYSIS: udm-next-step-cascade Step 2 gap-check scheduled post-commit (Layer 2a udm-step-10-verifier + Layer 2b parent-agent broader gap reflection across 6 categories).
+- REVIEW: PRE-COMMIT independent reviewer `a9159d38e14a31f4f` (general-purpose subagent) — VERDICT: **VALID-WITH-CONCERNS** (no 🔴 BLOCK). 6 scopes walked: §1 implementation correctness ✅ (regex sound + threshold exclusive boundary + suppression preserved) + 🟡 dead-store concern fixed inline; §2 back-compat ✅; §3 test coverage ✅; §4 Pitfall #9.j leading-badge ✅ (recursive self-consistency on the EXACT discipline designed to catch this); §5 CLAUDE.md/GLOSSARY ✅ + 🟡 GLOSSARY phrasing drift fixed inline ("Findings sorted by line number" → "Findings emitted in line-number order (natural iteration)"); §6 architectural 🟡 threshold-rigidity (B-486 candidate opened LOW WSJF 1.0; defer until empirical threshold drift). Mechanism A step 5 quote-cite: "All 6 scopes pass mechanically. Three 🟡 cosmetic + one 🟡 architectural-rigidity (B-N candidate). Commit may proceed."
+
+**Cumulative session delta UPDATED at reviewer-surfaced opens + gap-check remediation + cross-cohort review B-487 open**: 91 → **95 NEW B-Ns** (B-393-B-487; +1 from B-486 open per PRE-COMMIT reviewer Concern 6.1 + 2 from gap-check remediation opening B-484 + B-485 per Pitfall #9.k drift catch by `a8a15f62c86cf4075` + 1 from cross-cohort review by `a73a72b3539791788` §2 calibration-drift opening B-487 per precedent-consistency with B-480 + B-481 1-event self-firing pattern). Cross-cohort reviewer's 🔴 §4 Pitfall #9.k recurrence finding was a FALSE POSITIVE — caused by reviewer's grep pattern not accepting older strikethrough-wrapped `- ~~**B-N**~~` format used for B-408-B-414 historical closures; broader grep accepting both `- \*\*B-N\*\*` AND `- ~~\*\*B-N\*\*~~` confirms all 94 positions in B-393-B-486 are populated (now 95 with B-487 open). Pattern-blind-spot itself a future-improvement candidate (review-methodology forward-prevention).
+
+---
+
 ## 2026-05-18 — B-483 cross-cohort review discipline layer (HIGH WSJF 3.0; systematic single-commit-scope gap closure)
 
 **Trigger**: user-direction 2026-05-18 "Proceed with B-483" following acceptance of proposal authored at prior turn ("Come up with a proposal to address this gap").

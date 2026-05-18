@@ -791,20 +791,19 @@ def test_checks_registry_present():
 
 
 def test_each_check_has_unique_name():
-    """B-459 Assertion 53 (updated B-470 + B-458 2026-05-18): each CHECKS
-    entry has a unique name attribute. Canonical name set evolved 4 → 5 → 6
-    via B-470 (`inline_fix_claim`) + B-458 (`closure_annotation`) closures."""
+    """B-459 Assertion 53 (updated B-470 + B-458 + B-464 2026-05-18): each
+    CHECKS entry has a unique name. Canonical name set evolved 4 → 5 → 6 → 7
+    via B-470 (`inline_fix_claim`) + B-458 (`closure_annotation`) + B-464
+    (`narrative_pytest_claim`) closures."""
     import tools.check_commit_msg as ccm
     names = [c.name for c in ccm.CHECKS]
     assert len(names) == len(set(names)), f"Duplicate check names: {names}"
-    canonical_b459_names = {
+    canonical_b464_names = {
         "exemption_phrase", "cascade_evidence", "pytest_count", "orphan_candidate",
+        "inline_fix_claim", "closure_annotation", "narrative_pytest_claim",
     }
-    canonical_b458_names = canonical_b459_names | {
-        "inline_fix_claim", "closure_annotation",
-    }
-    assert set(names) == canonical_b458_names, (
-        f"CHECKS names must equal {canonical_b458_names}; got {set(names)}"
+    assert set(names) == canonical_b464_names, (
+        f"CHECKS names must equal {canonical_b464_names}; got {set(names)}"
     )
 
 
@@ -836,7 +835,7 @@ def test_block_checks_are_exemption_and_cascade():
     assert by_severity["BLOCK"] == {"exemption_phrase", "cascade_evidence"}
     assert by_severity["WARN"] == {
         "pytest_count", "orphan_candidate", "inline_fix_claim",
-        "closure_annotation",
+        "closure_annotation", "narrative_pytest_claim",
     }
 
 
@@ -1174,6 +1173,10 @@ def test_init_subclass_raises_on_missing_severity():
         class BrokenNoSeverity(ccm.CommitMsgCheck):  # type: ignore[misc]
             name = "broken_severity"
             requires_backlog_diff = False
+            # Per B-476 closure 2026-05-18: explicitly declare requires_classification
+            # so this test isolates the "missing severity" assertion (post-B-472
+            # CommitMsgCheck.__init_subclass__ requires this attribute).
+            requires_classification = False
             def scan(self, commit_msg, ctx):
                 return ccm.CheckResult(passed=True, findings=[])
     assert "severity" in str(exc_info.value)
@@ -2260,3 +2263,588 @@ def test_closure_annotation_check_via_main_orchestrator(tmp_path, monkeypatch, c
     assert "B-458" in captured.err
     assert "B-409" in captured.err
     assert "B-414" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# B-464 closure: NarrativePytestClaimVerificationCheck — anomalously high
+# skip-count detection (META-IRONY pattern 1f74b72: 62 cited / 10 actual)
+# ---------------------------------------------------------------------------
+
+
+def test_narrative_pytest_check_registered_in_checks():
+    """B-464 Assertion 124: NarrativePytestClaimVerificationCheck registered
+    in CHECKS list as the 7th check + severity=WARN + requires_backlog_diff
+    False + requires_classification False."""
+    import tools.check_commit_msg as ccm
+    names = [c.name for c in ccm.CHECKS]
+    assert "narrative_pytest_claim" in names
+    check = next(c for c in ccm.CHECKS if c.name == "narrative_pytest_claim")
+    assert check.severity == "WARN"
+    assert check.requires_backlog_diff is False
+    assert check.requires_classification is False
+    assert len(ccm.CHECKS) >= 7  # forward-compat lower bound
+
+
+def test_narrative_pytest_check_passes_on_no_triplet():
+    """B-464 Assertion 125: commits with no pytest count claims return PASS."""
+    import tools.check_commit_msg as ccm
+    commit_msg = "feat: ordinary commit\n\nNo pytest count narrative.\n"
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_narrative_pytest_check_passes_on_normal_skip_count():
+    """B-464 Assertion 126: commits citing `N pass / M skip` where M is
+    within project baseline range return PASS (no anomaly)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = "build: cohort closure\n\npytest 2763 pass / 10 skip / 0 fail.\n"
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_narrative_pytest_check_warns_on_anomalous_skip_count():
+    """B-464 Assertion 127: commits citing `N pass / M skip` where M exceeds
+    anomaly threshold (20) return WARN finding (the EXACT 1f74b72 META-IRONY
+    pattern: 62 skip cited / 10 actual)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = "docs: cohort closure\n\npytest 2664 pass / 62 skip / 0 fail.\n"
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is False
+    assert len(result.findings) == 1
+    # Finding cites the anomalous count + empirical anchor
+    assert "62" in result.findings[0]
+    assert "1f74b72" in result.findings[0]
+    assert "B-464" in result.findings[0]
+
+
+def test_narrative_pytest_check_threshold_boundary_at_20():
+    """B-464 Assertion 128: threshold is exclusive (skip=20 PASSES, skip=21
+    triggers WARN). Pins the boundary against silent threshold drift."""
+    import tools.check_commit_msg as ccm
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+
+    msg_at_threshold = "build: \n\npytest 1000 pass / 20 skip / 0 fail.\n"
+    result_at = check.scan(msg_at_threshold, ctx)
+    assert result_at.passed is True, "skip=20 should NOT trigger (boundary)"
+
+    msg_above_threshold = "build: \n\npytest 1000 pass / 21 skip / 0 fail.\n"
+    result_above = check.scan(msg_above_threshold, ctx)
+    assert result_above.passed is False, "skip=21 should trigger WARN"
+
+
+def test_narrative_pytest_check_skips_code_blocks():
+    """B-464 Assertion 129: pytest triplets inside fenced code blocks are
+    stripped via `_strip_code_blocks` and do NOT trigger WARN (preserves
+    canonical pattern shared with B-449 + B-451 + B-458 checks)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: work\n\n"
+        "Example output from prior commit:\n"
+        "```\n"
+        "pytest 1000 pass / 100 skip / 0 fail (verbatim historical output)\n"
+        "```\n"
+        "Body without anomalous claim.\n"
+    )
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+
+
+def test_narrative_pytest_check_skips_blockquote_lines():
+    """B-464 Assertion 130: pytest triplets inside markdown blockquote lines
+    (`>` prefix) are NOT treated as new claims — quoted reviewer-output of
+    historical counts should not trigger false positives."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: substantive work\n\n"
+        "Reviewer cited:\n"
+        "> Per prior cycle: pytest 2664 pass / 62 skip / 0 fail (historical).\n"
+        "\n"
+        "Body without anomalous claims.\n"
+    )
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_narrative_pytest_check_render_findings_emits_warn_footer(capsys):
+    """B-464 Assertion 131: render_findings_to_stderr emits `[commit-msg WARN]`
+    header + 1f74b72 empirical-anchor reference + re-verify recommendation."""
+    import tools.check_commit_msg as ccm
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    check.render_findings_to_stderr([
+        "pytest skip-count 62 (line 3) exceeds anomaly threshold 20...",
+    ])
+    err = capsys.readouterr().err
+    assert "[commit-msg WARN]" in err
+    assert "B-464" in err
+    assert "1f74b72" in err
+    assert "Re-verify pytest counts" in err
+    assert "WARN (not BLOCK)" in err
+
+
+def test_narrative_pytest_check_via_main_orchestrator(tmp_path, monkeypatch, capsys):
+    """B-464 Assertion 132: end-to-end via main() — commit-msg with anomalous
+    skip-count produces WARN finding but does NOT BLOCK (exit code 0)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    # NOTE per B-488 closure 2026-05-18: commit-msg subject avoids anchor
+    # markers (META-IRONY / empirical anchor / etc.) which would now correctly
+    # trigger anchor-context suppression. This test verifies end-to-end
+    # WARN-fire on a clean commit-msg (no empirical-anchor context); the
+    # B-488 suppression behavior has dedicated tests below.
+    msg_path.write_text(
+        "docs: anomalous count pattern\n\npytest 2664 pass / 62 skip / 0 fail.\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    captured = capsys.readouterr()
+    # WARN-only; does NOT block (exit 0)
+    assert rc == ccm.EXIT_SUCCESS
+    assert "B-464" in captured.err
+    assert "62" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# B-488 closure: shared _is_empirical_anchor_context helper consolidates
+# B-480 + B-487 (absorbed). Suppresses self-reference meta-pattern across
+# ClosureAnnotationConsistencyCheck + NarrativePytestClaimVerificationCheck.
+# ---------------------------------------------------------------------------
+
+
+def test_is_empirical_anchor_context_helper_exported():
+    """B-488 Assertion 133: `_is_empirical_anchor_context` is exported from
+    `tools/check_commit_msg.py` for shared use across heuristic checks.
+    Also verifies `_EMPIRICAL_ANCHOR_MARKERS` constant present."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "_is_empirical_anchor_context")
+    assert callable(ccm._is_empirical_anchor_context)
+    assert hasattr(ccm, "_EMPIRICAL_ANCHOR_MARKERS")
+    assert isinstance(ccm._EMPIRICAL_ANCHOR_MARKERS, tuple)
+    assert len(ccm._EMPIRICAL_ANCHOR_MARKERS) >= 10  # canonical marker set
+
+
+def test_is_empirical_anchor_context_detects_5line_lookback():
+    """B-488 Assertion 134: helper returns True when a marker line is within
+    5-line lookback window of target index. Pins canonical 5-line scope."""
+    import tools.check_commit_msg as ccm
+    lines = [
+        "body line 0",
+        "empirical anchor commit `1f74b72`",  # marker at i=1
+        "body line 2",
+        "body line 3",
+        "body line 4",
+        "body line 5",  # at distance 4 from marker — within lookback
+        "body line 6",  # at distance 5 from marker — within lookback (inclusive)
+        "body line 7",  # at distance 6 from marker — OUTSIDE lookback
+    ]
+    assert ccm._is_empirical_anchor_context(lines, 5) is True
+    assert ccm._is_empirical_anchor_context(lines, 6) is True
+    assert ccm._is_empirical_anchor_context(lines, 7) is False
+
+
+def test_is_empirical_anchor_context_detects_marker_on_target_line():
+    """B-488 Assertion 135: helper returns True when target line itself
+    contains a marker (lookback window includes target line)."""
+    import tools.check_commit_msg as ccm
+    lines = [
+        "body line 0",
+        "META-IRONY pattern: pytest 2664 pass / 62 skip / 0 fail",
+    ]
+    assert ccm._is_empirical_anchor_context(lines, 1) is True
+
+
+def test_is_empirical_anchor_context_false_on_no_marker():
+    """B-488 Assertion 136: helper returns False when no marker found in
+    lookback window."""
+    import tools.check_commit_msg as ccm
+    lines = ["body 0", "body 1", "pytest 2664 pass / 62 skip / 0 fail"]
+    assert ccm._is_empirical_anchor_context(lines, 2) is False
+
+
+def test_is_empirical_anchor_context_marker_set_canonical():
+    """B-488 Assertion 137: canonical marker set includes core terms
+    derived from empirical false-positive events (B-480 + B-487 commits)."""
+    import tools.check_commit_msg as ccm
+    canonical_subset = {
+        "empirical anchor commit",
+        "1st-event empirical anchor",
+        "META-IRONY",
+        "historical reference",
+        "Quote-cite from reviewer",
+    }
+    actual_markers = set(ccm._EMPIRICAL_ANCHOR_MARKERS)
+    missing = canonical_subset - actual_markers
+    assert not missing, f"Missing canonical markers: {missing}"
+
+
+def test_closure_annotation_check_absorbs_b480_false_positive():
+    """B-488 Assertion 138 (B-480 absorbed): ClosureAnnotationConsistencyCheck
+    skips B-N CLOSED claims within empirical-anchor citation context.
+    Empirical anchor: commit 133b212 (B-458 closure) fired WARN on quoted
+    "B-414 CLOSED" inside REVIEW-section reviewer-output citation."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: substantive work\n"
+        "\n"
+        "## REVIEW\n"
+        "Quote-cite from reviewer: per Mechanism A step 5 self-evidence:\n"
+        "B-414 CLOSED claim at commit 20fe33a — historical context.\n"
+    )
+    backlog_diff = (
+        "diff --git a/docs/migration/BACKLOG.md\n"
+        "+- **B-999** (⚫ CLOSED 2026-05-18; ...): something else.\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    # B-414 CLOSED claim is INSIDE empirical-anchor context (Quote-cite from reviewer marker)
+    # → SUPPRESSED → result PASSES
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_closure_annotation_check_fires_outside_anchor_context():
+    """B-488 Assertion 139 (negative case for absorbed B-480): a B-N CLOSED
+    claim OUTSIDE empirical-anchor context still fires WARN (existing B-458
+    behavior preserved)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "docs(round-6): B-409 CLOSED in current commit\n"
+        "\n"
+        "**B-409 CLOSED**: substantive fix landed.\n"
+    )
+    backlog_diff = (
+        "diff --git a/docs/migration/BACKLOG.md\n"
+        "+- **B-408** (⚫ CLOSED 2026-05-18; ...): other.\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    # B-409 CLOSED outside anchor context → fires WARN (no annotation found)
+    assert result.passed is False
+    assert any("B-409" in f for f in result.findings)
+
+
+def test_narrative_pytest_check_absorbs_b487_false_positive():
+    """B-488 Assertion 140 (B-487 absorbed): NarrativePytestClaimVerificationCheck
+    skips anomalous skip-counts within empirical-anchor citation context.
+    Empirical anchor: commit c6ba969 (B-464 closure) fired WARN on quoted
+    "62 skip" inside empirical-anchor prose citing 1f74b72 META-IRONY."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: cohort closure\n"
+        "\n"
+        "Empirical anchor commit `1f74b72` META-IRONY pattern:\n"
+        "pytest 2664 pass / 62 skip / 0 fail (historical reference; the bug)\n"
+    )
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    # 62 skip is INSIDE empirical-anchor context → SUPPRESSED → PASSES
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_narrative_pytest_check_fires_outside_anchor_context():
+    """B-488 Assertion 141 (negative case for absorbed B-487): an anomalous
+    skip-count OUTSIDE empirical-anchor context still fires WARN (existing
+    B-464 behavior preserved)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: current cohort\n"
+        "\n"
+        "pytest 2664 pass / 62 skip / 0 fail\n"
+    )
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    # 62 skip outside anchor context → fires WARN
+    assert result.passed is False
+    assert any("62" in f for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# B-477 closure: missing_entries kind verification (Pitfall #9.n claim class)
+# in InlineFixClaimVerificationCheck.scan()
+# ---------------------------------------------------------------------------
+
+
+def test_inline_fix_check_missing_entries_regex_constants_exported():
+    """B-477 Assertion 142: `_MISSING_ENTRIES_RE` + `_IDENT_SEPARATOR_RE`
+    regex constants exported from check_commit_msg module."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "_MISSING_ENTRIES_RE")
+    assert hasattr(ccm, "_IDENT_SEPARATOR_RE")
+
+
+def test_inline_fix_check_warns_on_unlanded_missing_entries(monkeypatch):
+    """B-477 Assertion 143: when commit-msg cites Pitfall #9.n missing_entries
+    fix but staged target file does NOT contain ALL identifiers from the
+    ident-list, the check returns WARN finding.
+
+    Empirical anchor: commit `20d998f` Fix #3 cited 'GLOSSARY missing 2 NEW
+    B-467 surfaces (OrchestrationContext + _build_orchestration_context)' —
+    in that case fix LANDED; this test simulates non-landed case to verify
+    B-477 detection."""
+    import tools.check_commit_msg as ccm
+    # Staged GLOSSARY contains only ONE of the two cited identifiers
+    staged_content = (
+        "**OrchestrationContext** | tools/check_commit_msg.py | dataclass...\n"
+        # _build_orchestration_context absent
+    )
+    monkeypatch.setattr(
+        ccm, "_fetch_staged_content",
+        lambda path: staged_content if "GLOSSARY" in path else "",
+    )
+    commit_msg = (
+        "build: cohort closure\n\n"
+        "Independent pre-commit reviewer Agent 99 (deadbeef123):\n"
+        "3. Pitfall #9.n: GLOSSARY missing 2 NEW B-467 surfaces "
+        "(OrchestrationContext + _build_orchestration_context) - added 2 entries.\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is False
+    assert len(result.findings) == 1
+    # Finding cites the specific missing identifier
+    assert "_build_orchestration_context" in result.findings[0]
+    assert "missing_entries" in result.findings[0]
+    assert "B-477" in result.findings[0]
+
+
+def test_inline_fix_check_passes_when_all_missing_entries_landed(monkeypatch):
+    """B-477 Assertion 144: when staged target file contains ALL identifiers
+    from the cited ident-list, the check passes silently."""
+    import tools.check_commit_msg as ccm
+    staged_content = (
+        "**OrchestrationContext** | ... | ...\n"
+        "**_build_orchestration_context** | ... | ...\n"
+    )
+    monkeypatch.setattr(
+        ccm, "_fetch_staged_content",
+        lambda path: staged_content if "GLOSSARY" in path else "",
+    )
+    commit_msg = (
+        "build: cohort closure\n\n"
+        "Independent pre-commit reviewer Agent 99 (deadbeef123):\n"
+        "3. Pitfall #9.n: GLOSSARY missing 2 NEW B-467 surfaces "
+        "(OrchestrationContext + _build_orchestration_context) - added 2 entries.\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_inline_fix_check_missing_entries_handles_multiple_separators():
+    """B-477 Assertion 145: ident-list parser handles common separators
+    (' + ' / ' , ' / ' ; ' / ' and '). Pins canonical separator tuple."""
+    import tools.check_commit_msg as ccm
+    # Test _IDENT_SEPARATOR_RE directly
+    test_cases = [
+        ("foo + bar + baz", ["foo", "bar", "baz"]),
+        ("foo, bar, baz", ["foo", "bar", "baz"]),
+        ("foo; bar; baz", ["foo", "bar", "baz"]),
+        ("foo and bar", ["foo", "bar"]),
+        ("foo + bar, baz", ["foo", "bar", "baz"]),
+    ]
+    for input_str, expected in test_cases:
+        result = [
+            tok.strip().strip("`").strip()
+            for tok in ccm._IDENT_SEPARATOR_RE.split(input_str)
+            if tok.strip()
+        ]
+        assert result == expected, f"Input {input_str!r} -> {result} (expected {expected})"
+
+
+# ---------------------------------------------------------------------------
+# B-479 closure: subprocess.run encoding='utf-8' explicit declaration
+# (Windows-dev safety for Unicode markers in git diff output)
+# ---------------------------------------------------------------------------
+
+
+def test_b479_subprocess_run_calls_have_explicit_utf8_encoding():
+    """B-479 Assertion 146: all 3 subprocess.run calls in check_commit_msg.py
+    declare explicit `encoding="utf-8"` per B-479 closure. Catches silent
+    drift where future refactor removes the encoding parameter (which would
+    re-introduce Windows-dev false-negative class on Unicode emoji markers
+    like ⚫ in git diff output)."""
+    import inspect
+    import tools.check_commit_msg as ccm
+    source = inspect.getsource(ccm)
+    # 3 subprocess.run calls: _collect_staged_diffs (L318) + back-compat
+    # wrapper (L599) + _fetch_staged_content (L956). Each should have
+    # encoding="utf-8". Count source occurrences as proxy.
+    # Note: count includes 2 inline comments ("encoding='utf-8'" references)
+    # plus the 3 kwarg declarations = 5 total expected.
+    assert source.count('encoding="utf-8"') >= 3, (
+        f"Expected ≥3 `encoding=\"utf-8\"` declarations in check_commit_msg.py "
+        f"per B-479 closure (subprocess.run x 3); found {source.count(chr(34) + 'encoding=' + chr(34))}. "
+        f"Silent removal would re-introduce Windows-dev false-negative class."
+    )
+
+
+# ---------------------------------------------------------------------------
+# B-486 closure: env-configurable _PYTEST_SKIP_ANOMALY_THRESHOLD
+# (operator-override accommodates organic project skip-count growth)
+# ---------------------------------------------------------------------------
+
+
+def test_b486_threshold_default_is_20(monkeypatch):
+    """B-486 Assertion 147: default `_PYTEST_SKIP_ANOMALY_THRESHOLD` = 20
+    when env var unset (canonical D74 baseline)."""
+    import importlib
+    import tools.check_commit_msg
+    monkeypatch.delenv("PYTEST_SKIP_ANOMALY_THRESHOLD", raising=False)
+    importlib.reload(tools.check_commit_msg)
+    assert tools.check_commit_msg._PYTEST_SKIP_ANOMALY_THRESHOLD == 20
+
+
+def test_b486_threshold_env_override_valid_int(monkeypatch):
+    """B-486 Assertion 148: env var `PYTEST_SKIP_ANOMALY_THRESHOLD=50`
+    overrides default. Pins operator-override pathway."""
+    import importlib
+    import tools.check_commit_msg
+    monkeypatch.setenv("PYTEST_SKIP_ANOMALY_THRESHOLD", "50")
+    importlib.reload(tools.check_commit_msg)
+    assert tools.check_commit_msg._PYTEST_SKIP_ANOMALY_THRESHOLD == 50
+
+
+def test_b486_threshold_env_invalid_falls_back_to_default(monkeypatch):
+    """B-486 Assertion 149: invalid env value (non-int / negative) gracefully
+    falls back to canonical 20 (defense against operator typo or shell drift)."""
+    import importlib
+    import tools.check_commit_msg
+    monkeypatch.setenv("PYTEST_SKIP_ANOMALY_THRESHOLD", "not-an-int")
+    importlib.reload(tools.check_commit_msg)
+    assert tools.check_commit_msg._PYTEST_SKIP_ANOMALY_THRESHOLD == 20
+
+    monkeypatch.setenv("PYTEST_SKIP_ANOMALY_THRESHOLD", "-5")
+    importlib.reload(tools.check_commit_msg)
+    assert tools.check_commit_msg._PYTEST_SKIP_ANOMALY_THRESHOLD == 20
+
+    # Cleanup: restore module to canonical state
+    monkeypatch.delenv("PYTEST_SKIP_ANOMALY_THRESHOLD", raising=False)
+    importlib.reload(tools.check_commit_msg)
+
+
+# ---------------------------------------------------------------------------
+# B-478 closure: shared-CLOSED chain detection in ClosureAnnotationConsistencyCheck
+# (extends _CLOSURE_CLAIM_RE bare-form match with backward chain walk)
+# ---------------------------------------------------------------------------
+
+
+def test_b478_shared_closed_chain_catches_both_bns():
+    """B-478 Assertion 150: empirical anchor commit `20fe33a` pattern
+    `B-409 + B-414 CLOSED` — the bare-form regex matches `B-414 CLOSED`;
+    chain detection walks backward through `+` separator + captures B-409.
+    Both B-Ns now claimed; B-409 + B-414 both flagged if absent from BACKLOG."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "docs(round-6): B-409 + B-414 CLOSED + B-408 closure annotation\n"
+        "\n"
+        "Body text.\n"
+    )
+    # BACKLOG only annotates B-408 (not B-409 or B-414)
+    backlog_diff = (
+        "diff --git a/docs/migration/BACKLOG.md b/docs/migration/BACKLOG.md\n"
+        "+- **B-408** (⚫ CLOSED 2026-05-17; ...): foo\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is False
+    # Both B-409 AND B-414 should produce findings (pre-B-478 only B-414)
+    assert len(result.findings) == 2
+    finding_text = "\n".join(result.findings)
+    assert "B-409" in finding_text
+    assert "B-414" in finding_text
+
+
+def test_b478_chain_separators_all_canonical_supported():
+    """B-478 Assertion 151: canonical chain separators all supported
+    (+ / , / ; / and). Each separator-variant produces correct chain walk."""
+    import tools.check_commit_msg as ccm
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    backlog_empty = (
+        "diff --git a/docs/migration/BACKLOG.md b/docs/migration/BACKLOG.md\n"
+        "+- **B-999** (⚫ CLOSED 2026-05-18; ...): unrelated\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_empty},
+        classification=None,
+    )
+
+    # Test each separator variant (canonical 5-separator tuple per
+    # _SHARED_CLOSED_SEPARATOR_RE: + / , / ; / & / and)
+    test_cases = [
+        ("B-100 + B-200 CLOSED", {"B-100", "B-200"}),
+        ("B-100, B-200 CLOSED", {"B-100", "B-200"}),
+        ("B-100; B-200 CLOSED", {"B-100", "B-200"}),
+        ("B-100 & B-200 CLOSED", {"B-100", "B-200"}),  # ampersand separator
+        ("B-100 and B-200 CLOSED", {"B-100", "B-200"}),
+        ("B-100 + B-200 + B-300 CLOSED", {"B-100", "B-200", "B-300"}),  # 3-chain
+    ]
+    for input_text, expected_bns in test_cases:
+        commit_msg = f"docs: {input_text}\n\nBody.\n"
+        result = check.scan(commit_msg, ctx)
+        # All listed B-Ns should be flagged (none annotated; only B-999 in BACKLOG)
+        finding_text = "\n".join(result.findings)
+        for bn in expected_bns:
+            assert bn in finding_text, (
+                f"Input {input_text!r}: expected {bn} in findings; got {finding_text!r}"
+            )
+
+
+def test_b478_chain_break_on_invalid_separator():
+    """B-478 Assertion 152: chain walk STOPS at non-canonical separator
+    (prevents over-capture of unrelated B-N references on same line)."""
+    import tools.check_commit_msg as ccm
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    backlog = (
+        "diff --git a/docs/migration/BACKLOG.md b/docs/migration/BACKLOG.md\n"
+        "+- **B-999** (⚫ CLOSED 2026-05-18; ...): unrelated\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog},
+        classification=None,
+    )
+    # B-100 is NOT in a valid chain with B-200 (separator is "blah" not + /,/etc.)
+    commit_msg = "docs: B-100 blah B-200 CLOSED\n\nBody.\n"
+    result = check.scan(commit_msg, ctx)
+    finding_text = "\n".join(result.findings)
+    # B-200 should fire (adjacent to CLOSED); B-100 should NOT (chain broken)
+    assert "B-200" in finding_text
+    assert "B-100" not in finding_text
