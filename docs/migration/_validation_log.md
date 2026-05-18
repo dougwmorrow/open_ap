@@ -2,6 +2,45 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-488 + B-489 + B-490 false-positive forward-prevention architecture cohort (MEDIUM WSJF 2.5 + LOW WSJF 1.5 + LOW WSJF 1.0; shared helper consolidation closes B-480 + B-487 absorbed)
+
+**Trigger**: user-direction 2026-05-18 "How will we address and prevent false positives?" → producer authored 4-layer architectural proposal → user-direction "Open all 3 B-Ns + proceed with B-488".
+
+**Scope**: 3 B-N opens (B-488 + B-489 + B-490) + 1 B-N close-via-implementation (B-488) + 2 B-Ns ABSORBED-as-closed (B-480 + B-487). 6 files modified: `tools/check_commit_msg.py` (helper + marker tuple + 2 check `scan()` updates) + `tests/tier0/test_check_commit_msg.py` (+9 assertions + 1 existing test update for anchor-suppression-induced expectation change) + `CLAUDE.md` (.githooks/ row updated for 141 assertions + B-488 + helper citation) + `docs/migration/BACKLOG.md` (B-488/B-489/B-490 opens + B-488/B-480/B-487 closures via ABSORBED mechanism) + `docs/migration/GLOSSARY.md` (2 NEW entries for `_is_empirical_anchor_context` + `_EMPIRICAL_ANCHOR_MARKERS`) + `docs/migration/CURRENT_STATE.md` + `docs/migration/HANDOFF.md` §14 + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical evidence base (3-event 2026-05-18)**:
+- Commit 133b212 (B-458 closure): ClosureAnnotationConsistencyCheck fired WARN on `**B-414 CLOSED**` inside REVIEW-section reviewer-output quote-cite — false-positive class identified as Pitfall #9-self-reference. Tracked as B-480 candidate.
+- Commit c6ba969 (B-464 closure): NarrativePytestClaimVerificationCheck fired WARN on `62 skip` inside empirical-anchor prose citing 1f74b72 META-IRONY pattern — same false-positive class. Tracked as B-487 candidate.
+- B-470 InlineFixClaimVerificationCheck has latent same-class vulnerability (block-based parsing on commit-msg that might quote historical reviewer block); 0 events observed but architectural surface exists.
+
+**Common root cause**: regex-only heuristics lack awareness of WHERE in commit-msg match occurs (empirical-anchor citation prose vs producer's actual claim about current commit). Self-reference meta-pattern: discipline-documenting commits cite the pattern the check catches, creating false-positive surface.
+
+**B-488 implementation** (MEDIUM WSJF 2.5; SHARED HELPER consolidation):
+- `_EMPIRICAL_ANCHOR_MARKERS: tuple[str, ...]` — 18 canonical marker phrases (case variants explicit): "empirical anchor commit" / "empirical anchor" / "1st-event empirical anchor" / "1st-event" / "META-IRONY" / "meta-irony" / "historical reference" / "historical context" / "historical anchor" / "Quote-cite from reviewer" / "quote-cite from reviewer" / "Mechanism A step 5" / "per Cohort" / "per cohort" / "verbatim quote" / "reviewer quote" / "Reviewer cited" / "reviewer cited".
+- `_is_empirical_anchor_context(lines, idx, lookback=5) -> bool` — parallel to existing `_is_inside_blockquote()`. Scans 5-line lookback window for any marker. Inclusive boundary (lookback=5 covers indices i-5 through i; verified Assertion 134).
+- `ClosureAnnotationConsistencyCheck.scan()` updated — after `_is_inside_blockquote()` check, also calls `_is_empirical_anchor_context()` and skips claims in anchor context. Closes B-480 absorbed.
+- `NarrativePytestClaimVerificationCheck.scan()` updated — same pattern. Closes B-487 absorbed.
+- `InlineFixClaimVerificationCheck` extension DEFERRED — block-based parsing structurally different; latent vulnerability not empirically manifested; future B-N if pattern emerges.
+- 9 NEW Tier 0 assertions (133-141): helper-exported / 5line-lookback / marker-on-target-line / false-on-no-marker / canonical-marker-set / closure-annotation-absorbs-B480 / closure-annotation-fires-outside-anchor / narrative-pytest-absorbs-B487 / narrative-pytest-fires-outside-anchor.
+- 1 existing test (`test_narrative_pytest_check_via_main_orchestrator`) updated — commit-msg subject avoided "meta-irony" phrase which would now correctly trigger anchor-context suppression.
+
+**B-489 (LOW WSJF 1.5)**: `docs/migration/_false_positive_log.md` discipline opened (NOT YET implemented). Empirical evidence base 2026-05-18: 4 observed false-positive instances. Schema proposed: event_date / check_name / trigger_pattern / actual_semantic / remediation_status / forward_prevention_B_N. Closure target: opportunistic; recommend BEFORE round 7 close-out for first round-aggregate classification.
+
+**B-490 (LOW WSJF 1.0)**: Extend `udm-cohort-review` SKILL.md with Mechanism A Step 6 — reviewer methodology regex-completeness verification (NOT YET implemented). Empirical anchor: cross-cohort reviewer `a73a72b3539791788` reported false-positive 🔴 finding due to grep pattern missing strikethrough-wrapped `- ~~**B-N**~~` format. Closure target: opportunistic at next SKILL.md edit cohort.
+
+**Cumulative session delta UPDATED at B-488 cohort closure**: **95 NEW B-Ns** (B-393-B-490; +3 from B-488/489/490 opens). **14 B-Ns CLOSED multi-session arc** (4 prior session: B-465+B-466+B-467+B-468; 10 this session: B-470+B-471+B-472+B-458+B-475+B-483+B-464+B-488+B-480-absorbed+B-487-absorbed). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2772 → **2781 pass / 10 skip / 0 fail** (+9 from B-488 Tier 0; full-suite scope verified live: tier0+tier1+unit+property+regression).
+
+**Architectural significance**: Mechanism C-1 commit-msg layer now has FALSE-POSITIVE SUPPRESSION LAYER via shared `_is_empirical_anchor_context()` helper. Pattern: identify recurring false-positive class (≥2-event evidence) → build shared helper → extend affected checks. Generalizable beyond commit-msg layer to other heuristic-check surfaces. Layer 1 severity discipline (WARN-only) preserved as architectural safety valve.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/*` + `CLAUDE.md` + `GLOSSARY.md` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md`):
+- TEST: pytest 2781 verified live per cascade Step 3.1 — `.venv/Scripts/python.exe -m pytest tests/tier0 tests/tier1 tests/unit tests/property tests/regression -q` returned `2781 passed, 10 skipped in 52.43s`. 141 Tier 0 assertions at `test_check_commit_msg.py`. Smoke-test verified: helper detects anchor context correctly (5-line lookback inclusive) + ClosureAnnotationConsistencyCheck suppresses claims in anchor context + NarrativePytestClaimVerificationCheck suppresses anomalous counts in anchor context + both checks still fire WARN outside anchor context.
+- GAP ANALYSIS: producer-side 6-category G1-G6 audit applied. G1 leading-badge B-488 ⚫ CLOSED + B-489/B-490 🟡 Open + B-480 + B-487 ⚫ CLOSED-absorbed all correctly rendered. G2 arithmetic 92 → 95 propagated across 4 tracker mirrors. G3 implementation matches BACKLOG description. G4 udm-progress-logger discipline applied. G5 new public surface registered (CLAUDE.md L98 + GLOSSARY). G6 no new B-N opportunities beyond B-488/489/490.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
 ## 2026-05-18 — B-464 narrative pytest-claim verification (MEDIUM WSJF 2.0; 7th CommitMsgCheck subclass; Mechanism C-1 layer empirically complete)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). Recommendation: B-464 per prior SESSION_RESUME runway + cascade-complete report.

@@ -2404,8 +2404,13 @@ def test_narrative_pytest_check_via_main_orchestrator(tmp_path, monkeypatch, cap
     )
 
     msg_path = tmp_path / "COMMIT_EDITMSG"
+    # NOTE per B-488 closure 2026-05-18: commit-msg subject avoids anchor
+    # markers (META-IRONY / empirical anchor / etc.) which would now correctly
+    # trigger anchor-context suppression. This test verifies end-to-end
+    # WARN-fire on a clean commit-msg (no empirical-anchor context); the
+    # B-488 suppression behavior has dedicated tests below.
     msg_path.write_text(
-        "docs: meta-irony pattern\n\npytest 2664 pass / 62 skip / 0 fail.\n",
+        "docs: anomalous count pattern\n\npytest 2664 pass / 62 skip / 0 fail.\n",
         encoding="utf-8",
     )
     rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
@@ -2414,3 +2419,168 @@ def test_narrative_pytest_check_via_main_orchestrator(tmp_path, monkeypatch, cap
     assert rc == ccm.EXIT_SUCCESS
     assert "B-464" in captured.err
     assert "62" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# B-488 closure: shared _is_empirical_anchor_context helper consolidates
+# B-480 + B-487 (absorbed). Suppresses self-reference meta-pattern across
+# ClosureAnnotationConsistencyCheck + NarrativePytestClaimVerificationCheck.
+# ---------------------------------------------------------------------------
+
+
+def test_is_empirical_anchor_context_helper_exported():
+    """B-488 Assertion 133: `_is_empirical_anchor_context` is exported from
+    `tools/check_commit_msg.py` for shared use across heuristic checks.
+    Also verifies `_EMPIRICAL_ANCHOR_MARKERS` constant present."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "_is_empirical_anchor_context")
+    assert callable(ccm._is_empirical_anchor_context)
+    assert hasattr(ccm, "_EMPIRICAL_ANCHOR_MARKERS")
+    assert isinstance(ccm._EMPIRICAL_ANCHOR_MARKERS, tuple)
+    assert len(ccm._EMPIRICAL_ANCHOR_MARKERS) >= 10  # canonical marker set
+
+
+def test_is_empirical_anchor_context_detects_5line_lookback():
+    """B-488 Assertion 134: helper returns True when a marker line is within
+    5-line lookback window of target index. Pins canonical 5-line scope."""
+    import tools.check_commit_msg as ccm
+    lines = [
+        "body line 0",
+        "empirical anchor commit `1f74b72`",  # marker at i=1
+        "body line 2",
+        "body line 3",
+        "body line 4",
+        "body line 5",  # at distance 4 from marker — within lookback
+        "body line 6",  # at distance 5 from marker — within lookback (inclusive)
+        "body line 7",  # at distance 6 from marker — OUTSIDE lookback
+    ]
+    assert ccm._is_empirical_anchor_context(lines, 5) is True
+    assert ccm._is_empirical_anchor_context(lines, 6) is True
+    assert ccm._is_empirical_anchor_context(lines, 7) is False
+
+
+def test_is_empirical_anchor_context_detects_marker_on_target_line():
+    """B-488 Assertion 135: helper returns True when target line itself
+    contains a marker (lookback window includes target line)."""
+    import tools.check_commit_msg as ccm
+    lines = [
+        "body line 0",
+        "META-IRONY pattern: pytest 2664 pass / 62 skip / 0 fail",
+    ]
+    assert ccm._is_empirical_anchor_context(lines, 1) is True
+
+
+def test_is_empirical_anchor_context_false_on_no_marker():
+    """B-488 Assertion 136: helper returns False when no marker found in
+    lookback window."""
+    import tools.check_commit_msg as ccm
+    lines = ["body 0", "body 1", "pytest 2664 pass / 62 skip / 0 fail"]
+    assert ccm._is_empirical_anchor_context(lines, 2) is False
+
+
+def test_is_empirical_anchor_context_marker_set_canonical():
+    """B-488 Assertion 137: canonical marker set includes core terms
+    derived from empirical false-positive events (B-480 + B-487 commits)."""
+    import tools.check_commit_msg as ccm
+    canonical_subset = {
+        "empirical anchor commit",
+        "1st-event empirical anchor",
+        "META-IRONY",
+        "historical reference",
+        "Quote-cite from reviewer",
+    }
+    actual_markers = set(ccm._EMPIRICAL_ANCHOR_MARKERS)
+    missing = canonical_subset - actual_markers
+    assert not missing, f"Missing canonical markers: {missing}"
+
+
+def test_closure_annotation_check_absorbs_b480_false_positive():
+    """B-488 Assertion 138 (B-480 absorbed): ClosureAnnotationConsistencyCheck
+    skips B-N CLOSED claims within empirical-anchor citation context.
+    Empirical anchor: commit 133b212 (B-458 closure) fired WARN on quoted
+    "B-414 CLOSED" inside REVIEW-section reviewer-output citation."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: substantive work\n"
+        "\n"
+        "## REVIEW\n"
+        "Quote-cite from reviewer: per Mechanism A step 5 self-evidence:\n"
+        "B-414 CLOSED claim at commit 20fe33a — historical context.\n"
+    )
+    backlog_diff = (
+        "diff --git a/docs/migration/BACKLOG.md\n"
+        "+- **B-999** (⚫ CLOSED 2026-05-18; ...): something else.\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    # B-414 CLOSED claim is INSIDE empirical-anchor context (Quote-cite from reviewer marker)
+    # → SUPPRESSED → result PASSES
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_closure_annotation_check_fires_outside_anchor_context():
+    """B-488 Assertion 139 (negative case for absorbed B-480): a B-N CLOSED
+    claim OUTSIDE empirical-anchor context still fires WARN (existing B-458
+    behavior preserved)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "docs(round-6): B-409 CLOSED in current commit\n"
+        "\n"
+        "**B-409 CLOSED**: substantive fix landed.\n"
+    )
+    backlog_diff = (
+        "diff --git a/docs/migration/BACKLOG.md\n"
+        "+- **B-408** (⚫ CLOSED 2026-05-18; ...): other.\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    # B-409 CLOSED outside anchor context → fires WARN (no annotation found)
+    assert result.passed is False
+    assert any("B-409" in f for f in result.findings)
+
+
+def test_narrative_pytest_check_absorbs_b487_false_positive():
+    """B-488 Assertion 140 (B-487 absorbed): NarrativePytestClaimVerificationCheck
+    skips anomalous skip-counts within empirical-anchor citation context.
+    Empirical anchor: commit c6ba969 (B-464 closure) fired WARN on quoted
+    "62 skip" inside empirical-anchor prose citing 1f74b72 META-IRONY."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: cohort closure\n"
+        "\n"
+        "Empirical anchor commit `1f74b72` META-IRONY pattern:\n"
+        "pytest 2664 pass / 62 skip / 0 fail (historical reference; the bug)\n"
+    )
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    # 62 skip is INSIDE empirical-anchor context → SUPPRESSED → PASSES
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_narrative_pytest_check_fires_outside_anchor_context():
+    """B-488 Assertion 141 (negative case for absorbed B-487): an anomalous
+    skip-count OUTSIDE empirical-anchor context still fires WARN (existing
+    B-464 behavior preserved)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: current cohort\n"
+        "\n"
+        "pytest 2664 pass / 62 skip / 0 fail\n"
+    )
+    check = ccm.NarrativePytestClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    # 62 skip outside anchor context → fires WARN
+    assert result.passed is False
+    assert any("62" in f for f in result.findings)

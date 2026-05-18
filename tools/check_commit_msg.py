@@ -504,6 +504,78 @@ def _is_inside_blockquote(lines: list[str], idx: int) -> bool:
     return False
 
 
+# Per B-488 closure 2026-05-18: shared context-sensitive false-positive
+# suppression helper. Markers below were derived from empirical false-positive
+# events at commits 133b212 (B-458 fired on quoted "B-414 CLOSED" empirical
+# anchor → B-480 candidate) + c6ba969 (B-464 fired on quoted "62 skip"
+# empirical anchor → B-487 candidate). Both events involved producer authoring
+# commit-msg about a check whose canonical-anchor citation triggered the
+# very pattern the check detects (self-reference meta-pattern).
+_EMPIRICAL_ANCHOR_MARKERS: tuple[str, ...] = (
+    "empirical anchor commit",
+    "empirical anchor",
+    "1st-event empirical anchor",
+    "1st-event",
+    "META-IRONY",
+    "meta-irony",
+    "historical reference",
+    "historical context",
+    "historical anchor",
+    "Quote-cite from reviewer",
+    "quote-cite from reviewer",
+    "Mechanism A step 5",
+    "per Cohort",
+    "per cohort",
+    "verbatim quote",
+    "reviewer quote",
+    "Reviewer cited",
+    "reviewer cited",
+)
+
+
+def _is_empirical_anchor_context(
+    lines: list[str], idx: int, lookback: int = 5,
+) -> bool:
+    """Per B-488 closure 2026-05-18: True if `lines[idx]` is within an
+    empirical-anchor citation context (within `lookback` lines after a marker
+    phrase like `empirical anchor commit`, `META-IRONY`, `Quote-cite from
+    reviewer`, etc.).
+
+    Used to suppress false-positive WARNs across heuristic checks
+    (ClosureAnnotationConsistencyCheck + NarrativePytestClaimVerificationCheck
+    + InlineFixClaimVerificationCheck) when commit-msg cites historical
+    pattern instances rather than asserting current-commit claims.
+
+    Empirical evidence base (3-event 2026-05-18):
+        - commit 133b212: B-458 fired on `**B-414 CLOSED**` inside REVIEW-section
+          quote-cite of prior reviewer's verdict (B-480 candidate)
+        - commit c6ba969: B-464 fired on `2664 pass / 62 skip / 0 fail` inside
+          empirical-anchor prose citing 1f74b72 META-IRONY (B-487 candidate)
+        - latent: B-470 InlineFixClaimVerificationCheck has same vulnerability
+          if commit-msg quotes a historical reviewer block
+
+    Args:
+        lines: split commit-msg lines (already sanitized via _strip_code_blocks).
+        idx: target line index to evaluate.
+        lookback: number of lines BEFORE idx to scan for markers (default 5).
+
+    Returns:
+        True if any line in `lines[idx-lookback:idx+1]` contains an empirical
+        anchor marker (case-sensitive match against `_EMPIRICAL_ANCHOR_MARKERS`).
+        False otherwise. Note: case-sensitive — `_EMPIRICAL_ANCHOR_MARKERS`
+        includes both common case variants explicitly.
+    """
+    if idx < 0 or idx >= len(lines):
+        return False
+    lo = max(0, idx - lookback)
+    window = lines[lo:idx + 1]
+    for line in window:
+        for marker in _EMPIRICAL_ANCHOR_MARKERS:
+            if marker in line:
+                return True
+    return False
+
+
 def check_unresolved_forward_prevention_candidates(
     commit_msg: str,
     staged_backlog_diff: str | None = None,
@@ -1142,6 +1214,11 @@ class ClosureAnnotationConsistencyCheck(CommitMsgCheck):
         for i, line in enumerate(lines):
             if _is_inside_blockquote(lines, i):
                 continue
+            # Per B-488 closure 2026-05-18: skip claims within empirical-anchor
+            # citation context (closes self-reference meta-pattern; absorbs
+            # B-480 candidate)
+            if _is_empirical_anchor_context(lines, i):
+                continue
             for m in _CLOSURE_CLAIM_RE.finditer(line):
                 bn_num = m.group(1) or m.group(2)
                 if bn_num:
@@ -1295,6 +1372,11 @@ class NarrativePytestClaimVerificationCheck(CommitMsgCheck):
 
         for i, line in enumerate(lines):
             if _is_inside_blockquote(lines, i):
+                continue
+            # Per B-488 closure 2026-05-18: skip claims within empirical-anchor
+            # citation context (closes self-reference meta-pattern; absorbs
+            # B-487 candidate)
+            if _is_empirical_anchor_context(lines, i):
                 continue
             for m in _PYTEST_FULL_TRIPLET_RE.finditer(line):
                 skip_count = int(m.group("skip"))
