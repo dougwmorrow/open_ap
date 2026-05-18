@@ -71,7 +71,7 @@ For each completion claim, verify:
 
 ### Category 3 — Pitfall #9 sub-class instances in the work
 
-Walk 9.a-9.m against the new artifacts:
+Walk **9.a-9.o** against the new artifacts (15 sub-classes total — updated 2026-05-17 per B-408 atomic 4-skill series-list fix; was stale at 9.a-9.m missing 9.n + 9.o):
 - **9.a column-name drift**: did producer cite canonical columns correctly?
 - **9.b parameter-name drift**: any invented SP / function parameters?
 - **9.c enum-value drift**: invented or stale enum values?
@@ -85,6 +85,8 @@ Walk 9.a-9.m against the new artifacts:
 - **9.k arithmetic-propagation**: count / row-index updated everywhere it's mirrored?
 - **9.l canonical-schema-detail working-memory drift**: did producer re-read canonical DDL before authoring?
 - **9.m discipline-not-applied-to-its-own**: does the new discipline / tracker / skill satisfy its own rules?
+- **9.n convention-registration-not-applied-to-new-build-artifacts**: per HANDOFF §8 Pitfall #9.n + Step 10 + B-261 closure — new public surface registered in CLAUDE.md Structure + GLOSSARY public-surface tables + L207 CLI_* family registry if applicable + Last reviewed date bumped?
+- **9.o anti-rationalization-clause compliance**: per CLAUDE.md hard rule 14 + 9-event evidence base — does cascade-evidence exemption claim quote-cite specific PRIOR reviewer output text proving the EXACT META-COMMIT content was reviewed (cite-by-quotation, NOT cite-by-existence)? OR was `udm-exemption-verifier` invoked when trigger phrases detected?
 
 ### Category 4 — Convention registration gaps
 

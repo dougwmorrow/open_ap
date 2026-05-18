@@ -22,7 +22,7 @@ Whoever invokes this skill (main agent or subagent) MUST have performed the Cano
 - **Stage 0 — Routing manifest** (recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3): `docs/migration/INDEX.md` — read FIRST when uncertain which downstream Stage 1+2+3 docs your task actually needs. Skip when: you already know which Stage 1+2+3 docs to load (typical for recurring task patterns).
 - **Stage 1 — Orientation** (mandatory, 4 reads): `NORTH_STAR.md`, `HANDOFF.md`, `CURRENT_STATE.md`, `CHECKS_AND_BALANCES.md`
 - **Stage 2 — Risk + Backlog awareness** (mandatory): `RISKS.md`, `BACKLOG.md`, `_validation_log.md`
-- **Stage 3 — Task-specific reads for this skill**: `04_EDGE_CASES.md` (full read of relevant series — M / S / I / N / P / G / D / F / V); the artifact under review
+- **Stage 3 — Task-specific reads for this skill**: `04_EDGE_CASES.md` (full read of relevant series — **14 canonical series**: M / S / I / N / P / G / D / F / V / DP / T / SI / SE / PL); the artifact under review. (Updated 2026-05-17 per B-408 atomic 4-skill series-list fix.)
 - **Stage 4 — Reference-on-demand**: grep `03_DECISIONS.md` for D-numbers cited in edge case mitigations, `05_RUNBOOKS.md` for RBs that handle specific cases
 
 If invoked from a subagent context, the subagent's CCL responsibility is hard-required (per agent definition — first `Read` must hit a Stage 1 doc).
@@ -72,6 +72,13 @@ RECOMMENDED ACTIONS:
 | D | 2x/day cadence | § D-Series |
 | F | Failover / cross-server parity | § F-Series |
 | V | Vault provenance | § V-Series |
+| DP | Deployment pipeline (Round 6; per B121) | § DP-Series |
+| T | Testing (Rounds 5+6; per B108 + B121) | § T-Series |
+| SI | Self-improvement discipline (Round 8; per D95-D99) | § SI-Series |
+| SE | Source-exactness invariants (Phase A; per D115 + D116 + B-373) | § SE-Series |
+| PL | udm-progress-logger discipline (added 2026-05-17 per B-405 closure) | § PL-Series |
+
+**14 canonical series total** (updated 2026-05-17 per B-408 atomic 4-skill series-list fix; was stale at 9 since Round 6 — every Gate 3 walk silently incomplete since then).
 
 ## Hard rules
 
