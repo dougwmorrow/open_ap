@@ -93,6 +93,7 @@ This is what the close-out protocol exists to enforce:
 - [ ] §8 "Pitfalls" — new lessons learned (3-5 sentence summary; full detail in validation log)
 - [ ] §11 "Round history" (new section per D60) — one-line round summary appended
 - [ ] §13 "Last updated" date current
+- [ ] **§14 "Last updated" narrative** — prepend round-close-out event narrative with cumulative delta (mirrors udm-next-step-cascade Step 1.4 forward-motion discipline; matches "UNTOUCHED-AS-EXPECTED (reason)" requirement); added 2026-05-17 per B-415 closure + Cohort A Agent 54 RC-7 finding (forward-motion cascade enforced HANDOFF §14 update but round-closeout omitted; asymmetry was a discipline gap)
 
 #### BACKLOG.md
 - [ ] New B-numbered items appended for this round's 🟡 follow-ups

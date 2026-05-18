@@ -95,7 +95,7 @@ Mechanical lookup (NOT enumeration of every Stage 3 doc — only those the sub-a
 | Decision / D-N | `03_DECISIONS.md` |
 | Edge case / M/S/I/N/P/G/D/F/V/DP/T/SI series | `04_EDGE_CASES.md` |
 | Gotcha / B-N / E-N / V-N / W-N / OBS-N / SCD2-* | `CLAUDE_GOTCHAS.md` |
-| Planning doc / plan output / PS-N session deliverable | None (Stage 1+2 brief sufficient; planning docs have no Phase-spec canonical source — sub-agent's output IS the planning artifact, not a derivative of one. Per reviewer `adf74ca386f192d64` IMPROVE #3 2026-05-17.) |
+| Planning doc / plan output / PS-N session deliverable | None for PS-1/2/3/4/5/6/7/8 (Stage 1+2 brief sufficient; planning docs have no Phase-spec canonical source — sub-agent's output IS the planning artifact, not a derivative of one. Per reviewer `adf74ca386f192d64` IMPROVE #3 2026-05-17). **EXCEPTION: PS-9 SELF (skill review + optimization sessions) — REQUIRES Stage 3 additions of `04_EDGE_CASES.md` + `CLAUDE.md` (hard rule 14 + Pitfall sub-class additions)** per B-412 closure 2026-05-17 (Cohort B Agent 55 CB-7-A finding). Skill-review sessions need edge case register access + hard-rule citation surface; the 2026-05-17 4-cohort skill audit (Agents 54-57) empirically demonstrated this requirement when each cohort had to reference both files extensively. |
 
 ### Step 4 — Extract verbatim excerpts per F5.1 (PASS-THROUGH-VERBATIM contract)
 

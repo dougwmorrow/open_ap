@@ -71,6 +71,7 @@ NEXT STEPS:
 3. **Recommend explicitly.** "It depends" is not an answer. If genuinely uncertain, recommend the least-reversible-option-with-most-info-gathered ("pick the one that lets us decide later").
 4. **Cite existing decisions and edge cases.** Don't brainstorm in isolation; the project has 46+ decisions and 120+ edge cases that already constrain answers.
 5. **Cost / reversibility matter more than apparent quality.** A "second-best" reversible decision often beats a "best" one-way one.
+6. **Locked-D-number guard (added 2026-05-17 per B-413 closure + Cohort A Agent 54 BS-2 finding)**: BEFORE emitting RECOMMENDATION, verify that the recommended option does NOT contradict any 🟢 Locked decision in `03_DECISIONS.md`. If any recommended option directly contradicts a locked D-N, it CANNOT be the recommendation without an explicit D-N supersession process per D92 forward-only schema discipline. The brainstorm output must either (a) supersede the locked D-N through a new D-N candidate following `udm-decision-recorder` discipline, OR (b) recommend a different option that respects the locked decision. Closes the attack surface where a fast-moving brainstorm could undermine locked architectural choices.
 
 ## Anti-patterns
 
