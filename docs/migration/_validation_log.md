@@ -1,6 +1,44 @@
-# Validation Log
+﻿# Validation Log
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
+
+## 2026-05-17 — Source-Exact Parquet Redesign 3-Agent Brainstorm Cohort + Phase A/B Split (21 NEW B-Ns + 2 NEW D-Ns + 4 NEW R-Ns + NEW SE-N edge case series)
+
+**Trigger**: User HARD REQUIREMENT 2026-05-17 evening: "Parquet files must be the exact copy of the data that was extracted from the source at the time of the data pipeline run. We need to ensure that we can tell when the raw data was extracted from source." Pipeline-lead direction "Proceed with your recommended next steps + log the issues found with udm-progress-logger. We will revisit udm-progress-logger."
+
+**Artifacts**:
+- **NEW research artifact**: `docs/migration/_research/r6-pme-extraction-time-2026-05-17.md` (~700 lines; 24 primary-source citations; R1-R7 findings on Apache Parquet `key_value_metadata` / PME maturity / on-prem KMS / crypto-shredding legal / Snowflake+PME / source-exactness verification / extraction-timestamp convention). Persisted from researcher agent `a54fcc995f87f919c` (44th cumulative) output.
+- **ORIGINAL plan**: `docs/migration/UDM_PIPELINE_REDESIGN_PARQUET_SOURCE_EXACT_2026-05-17.md` (~600 lines; PME + crypto-shredding + tokenization-reorder + key_value_metadata; SUPERSEDED inline by Phase A/B split per pipeline-lead direction).
+- **NEW Phase A plan**: `docs/migration/UDM_PIPELINE_PHASE_A_TOKENIZATION_REORDER_2026-05-17.md` (smaller scope; no PME; lower risk; immediate satisfaction of user hard requirement — to be authored next cycle per B-370).
+- **03_DECISIONS.md**: D115 (PII tokenization timing reorder; partially supersedes D6) + D116 (extraction-timestamp via Parquet `key_value_metadata` plaintext-footer) opened as 🟡 Proposed for Phase A scope. D-NEW-B/C/E (PME + crypto-shredding + PiiSubjectKeys DDL) deferred to Phase B.
+- **BACKLOG.md**: 21 NEW B-Ns opened (B-353 through B-373) covering pyarrow PME spike / PME column-key granularity redesign / KmsClient bridge / D116 extraction-timestamp / DDL fix / HOLDLOCK pattern / SubjectIdentifier granularity / the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) single-txn crypto-shred / PME-EC2 exception handling / SE-8 retroactive PME procedure / PiiSubjectKeyAccessLog / PME perf benchmark gate-blocker / Tier 4 C16 / ConnectorX DATE overflow / DATETIME2 precision / Snowflake PME limitation / Iceberg v3 tracking / Phase A/B split / 01c_data_flow_walkthrough update / RB-10 amendment / Tier 1 source-exactness test.
+- **RISKS.md**: 4 NEW R-Ns opened — R34 (pyarrow PME RHEL availability 🔴 6) + R35 (PME 3B-row perf overhead 🔴 6) + R36 (plaintext PII in Phase A Parquet ⚪ 2; compensating D103) + R37 (Parquet metadata schema drift ⚪ 1).
+- **04_EDGE_CASES.md**: NEW SE-N series (13th after M/S/I/N/P/G/D/F/V/DP/T/SI) with SE1-SE7 Phase A binding invariants (column count / dtype 1:1 / value byte-equivalence / no additive columns / control char preservation / row count / row order) + SE8 (new PII column retroactive coverage gap; deferred Phase B).
+- **CURRENT_STATE.md L7 + HANDOFF.md §14**: narrative prepended; prior 2026-05-17 narratives backfilled with "Earlier 2026-05-17:" prefix.
+
+**Empirical verification (multi-agent application sequence)**:
+- Agent 43 (`a472e0575d28816bb` udm-design-reviewer): 🔴 BLOCK verdict on 8 architectural gaps. Critical finding: plan §4.2 PME column-key pseudocode `column_keys={"SSN": "subject_key_id_for_ssn_row"}` is conceptually wrong — PME column_keys is per-column file-scoped, NOT per-row; per-subject granularity is implemented by KmsClient resolution. Plan as-written cannot lock D-NEW-B.
+- Agent 44 (`a54fcc995f87f919c` udm-researcher): 24 primary-source citations across Apache Parquet spec / pyarrow docs / EDPB Guidelines 02/2025 / ICO / California 1798.105 / Uber Engineering / IBM / Snowflake docs / Iceberg GitHub issues / Oracle / SQL Server / Polars / ConnectorX. Critical findings: plaintext_footer=True MANDATORY for key_value_metadata access (encrypted-footer mode hides it); Snowflake does NOT support PME-encrypted Parquet (Iceberg v3 PME support in development; no Snowflake adoption timeline); no published pyarrow PME production case study at 3B-row scale (Uber is Java/Spark).
+- Agent 45 (`afad0935ac58cd263` udm-gap-check): 🔴 6 of 6 categories blocking. Critical findings: ZERO presence of redesign in 7 canonical trackers (BACKLOG / 03_DECISIONS / CURRENT_STATE / HANDOFF / RISKS / CODE_BUILD_STATUS / _validation_log) — exact failure mode hard rule 14 + udm-progress-logger were designed to prevent; arithmetic-drift Pitfall #9.k recurrence (plan §7.3 "5 of 11 gaps eliminated" + "6 R5-research-surfaced gaps" + "4 of 6" all unsourced; R5 uses RQ1-RQ5 framing not "6 gaps"); citation-drift Pitfall #9.l (plan §2.1 cites "§ 3 Step 4-5" but canonical walkthrough has tokenization at Step 3 / Parquet at Step 4 — off-by-one); Greek-letter B-N convention is anti-pattern.
+
+**Hard rule 14 cascade applied**:
+- **TEST**: 3-agent gap-check cohort IS the test layer for the original plan (independent reviewers per D55+D56 producer ≠ reviewer); cohort verdict 🔴 BLOCK against original plan triggered this tracker-logging + Phase A/B split redirection. NO code changes in this commit; tracker updates + research persistence + plan supersession only.
+- **GAP ANALYSIS**: Agent 45 (gap-check) walked udm-gap-check 6-category audit G1-G6; verdict 🔴 6/6 with ~21 net unique B-N candidates surfaced; this commit OPENS those B-Ns (B-353-B-373) + 4 R-Ns + 2 D-Ns + SE-N series.
+- **REVIEW**: Agent 43 (design-reviewer) walked CHECKS_AND_BALANCES 5-gate equivalent for architectural review; Gate 5 risk-delta surfaced R34/R35/R36/R37 candidates which this commit promotes. Agent 44 (researcher) walked R-NEW-A research scope (primary-source grounding for D-NEW-B/D); 24 citations attest substantive review.
+
+**Pitfall #9 sub-class instances surfaced** (per gap-check Agent 45):
+- 9.j (status-render drift): D6 leading badge stale post-D115 proposal (will be resolved at D115 lock when D6 flips to ⚫ Superseded with forward link)
+- 9.k (arithmetic-propagation drift): 4th-instance recurrence at original plan §7.3 unsourced counts; resolved by retiring the original plan inline + replacing with Phase A plan (B-370) with verifiable arithmetic
+- 9.l (canonical-spec-detail-drift): instance at original plan §2.1 "Step 4-5" off-by-one against `01c_data_flow_walkthrough.md` § 3 (tokenization is Step 3, Parquet is Step 4); resolved by B-371 cascade
+- 9.m (discipline-not-applied-to-tracker): THIS event itself is the discipline application (`udm-progress-logger` invoked per pipeline-lead direction "log the issues found") — closes the would-be 9.m instance for the original plan that had ZERO tracker presence
+
+**Forward outlook**: Phase A plan authoring (B-370) is the next concrete deliverable. Phase A scope is intentionally narrow (tokenization-timing reorder + extraction-timestamp recording via key_value_metadata) to satisfy user hard requirement IMMEDIATELY without the heavy PME dependency chain. Phase B (PME layer) gates on B-353 (pyarrow PME RHEL spike) + B-354 (column-key granularity redesign) + B-355 (KmsClient bridge) + B-357 (DDL fix) + legal counsel review per `_research/r5-ccpa-parquet-replay-legal-2026-05-17.md` + performance benchmark per B-364. Phase A and Phase B are independently deployable.
+
+**Multi-agent application count progression**: 42 (D2 Gap Resolution close) → 43 (design-reviewer) → 44 (researcher) → 45 (gap-check) = +3 in this cohort.
+
+**User direction acknowledged**: "We will revisit udm-progress-logger." — held for next user touchpoint; no inline action taken on the skill itself (skill applied as-is for this event).
+
+---
 
 ## 2026-05-16 — B-312 CLOSED: markdown_cross_refs freshness refinement (only blocks on NEW broken refs; pre-existing legacy excluded); first commit since hook activation passing all checks without --no-verify on a multi-file scope
 
@@ -31,7 +69,7 @@ Append-only audit trail for all artifacts that pass through the `udm-checks-and-
 **Artifacts**:
 - `.github/workflows/pre-commit-mirror.yml` (NEW; ~100 lines): GitHub Actions workflow with 2 jobs: `pre-commit-mirror` (runs `tools/pre_commit_checks.py --files <diff>` on changed files vs base ref) + `commit-msg-mirror` (iterates commits in push/PR range; runs `tools/check_commit_msg.py` on each message). Triggers `on: push` (any branch) + `on: pull_request` (any base). Setup: Python 3.12 + minimal deps (pytest + pyyaml) + optional lint tools (ruff+bandit+mypy with `|| true` for graceful skip).
 - `tools/pre_commit_checks.py` cli_main extended: NEW `--files <comma-separated>` flag bypasses git --cached lookup; CI workflow uses this to pass explicit file list. When provided, passes to `run_all_checks(staged=explicit_files)`.
-- `tools/pre_commit_checks.py` `_load_canonical_ids` + `check_markdown_cross_refs` int-comparison fix: RISKS.md uses `R01` zero-padded; BACKLOG cites `R5`; previous string comparison failed (20 false-positives surfaced during smoke test). Fixed to int-based comparison via `int(match.group(2))`. Falsie-positives eliminated; real-positives (SP-12 + D-115 unresolved in BACKLOG.md body) preserved for future cleanup (out of THIS commit's scope).
+- `tools/pre_commit_checks.py` `_load_canonical_ids` + `check_markdown_cross_refs` int-comparison fix: RISKS.md uses `R01` zero-padded; BACKLOG cites `R5`; previous string comparison failed (20 false-positives surfaced during smoke test). Fixed to int-based comparison via `int(match.group(2))`. Falsie-positives eliminated; real-positives (the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) + D-115 unresolved in BACKLOG.md body) preserved for future cleanup (out of THIS commit's scope).
 
 **Smoke test on Cycle 2 staged scope** (`tools/pre_commit_checks.py + .github/workflows/pre-commit-mirror.yml`): 5/5 checks PASS. Hook should not block this commit.
 
@@ -2214,20 +2252,20 @@ Prior R6 retroactive (2026-05-11 earlier entry) was Round-6-scoped — caught Ro
 
 ### Artifact under review
 
-`docs/migration/phase1/07_schema_evolution_governance.md` (~50 KB, 13 sections) — schema evolution governance procedure operationalizing D40. Scope: 3 SP signature evolutions + new SP-12 CCPA deletion + Automic frozen-8→frozen-11 amendment + Phase 0 deliv 0.20 ops-channel client + RB-11 framing reconciliation + supersession protocol per D34 forward-only discipline.
+`docs/migration/phase1/07_schema_evolution_governance.md` (~50 KB, 13 sections) — schema evolution governance procedure operationalizing D40. Scope: 3 SP signature evolutions + new the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) CCPA deletion + Automic frozen-8→frozen-11 amendment + Phase 0 deliv 0.20 ops-channel client + RB-11 framing reconciliation + supersession protocol per D34 forward-only discipline.
 
 ### D72 8-cycle campaign trajectory
 
 | Cycle | Specialty / Mode | 🔴 found | 🟡 found | Counter | Notes |
 |---|---|---|---|---|---|
-| R7C1 | Pattern E 5-agent (column-walk + cross-ref + internal-consistency + D72-edge + advisory-research) | 12+ | 15+ | 0 (reset) | Cycle 1: SP-12 body canonical-schema drifts (PiiVault.Status 'purged_ccpa' invented; CcpaDeletionLog 4 column drifts; OrphanedTokenLog 2 column+enum drifts) + DataClassification enum drift ('public'/'restricted' invented) + § 11.1 B101/B106 false-closure + § 1.1 vs § 6.4 audit-row contradiction + § 1.3 vs § 6.2 EventType convention + migration script naming + SchemaContract ContractKey convention + 5+ other findings. **Producer self-check at § 1.6 attested ✓ Verified but column-walk specialist surfaced 5+ Pitfall #9.a drifts**. |
+| R7C1 | Pattern E 5-agent (column-walk + cross-ref + internal-consistency + D72-edge + advisory-research) | 12+ | 15+ | 0 (reset) | Cycle 1: the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) body canonical-schema drifts (PiiVault.Status 'purged_ccpa' invented; CcpaDeletionLog 4 column drifts; OrphanedTokenLog 2 column+enum drifts) + DataClassification enum drift ('public'/'restricted' invented) + § 11.1 B101/B106 false-closure + § 1.1 vs § 6.4 audit-row contradiction + § 1.3 vs § 6.2 EventType convention + migration script naming + SchemaContract ContractKey convention + 5+ other findings. **Producer self-check at § 1.6 attested ✓ Verified but column-walk specialist surfaced 5+ Pitfall #9.a drifts**. |
 | R7C2 | D56 verify single-agent comprehensive | 5 | — | 0 (reset) | Fix-fresh-instance: § 11.6 + § 12 trailing-summary count 9 (not 7); § 4.3 L347 orphaned ref to `sp_10_cutoff_override.py` after rename; § 9.1 I-next mitigation prose `'purged_ccpa'` enum drift; § 9 table 2-cell-vs-3-header format; BACKLOG B121 "F25" vs canonical F24. **6th-rounds 9.i recurrence pattern empirically confirmed**. |
 | R7C3 | Cycle 3 verify single-agent | 1 | — | 0 (reset) | Fix-fresh-instance: § 11.6 count fix to "14 new items" did not propagate to triage summary table (L764). |
 | R7C4 | Cycle 4 fix-application only | 0 | — | 1 | Single mechanical fix: § 11.6 count 10→14 + range B01-B155→B01-B159. |
-| R7C5 | **Sleeper-bug stress test** (mandatory final per R4C8 + R5C4 + R6C4 precedent — 3-event empirical) | 1 | 4 | 0 (reset) | **Substantive finding**: SP-12 required params (@SubjectIdentifier / @RequestedBy / @LegalExceptionReason) have no path from Round 4 § 3.9 CLI consumer (no `--requested-by` / `--legal-exception-reason` args; `--subject-id` mutex with `--token-file`). 4 🟡: SP-10 @CategoryFilter JOIN spec gap (DataClassification lives on UdmTablesList not PiiVault); OrphanedTokenLog L1254-1284 line-range off-by-N; @LegalExceptionReason needs `= NULL` default; § 5.5 un-numbered F-series cite. |
-| R7C6 | Cycle 6 fix-application | 0 (fix only) | — | 1 | Applied fixes: SP-12 NULL defaults for @SubjectIdentifier + @LegalExceptionReason; § 5.3 Round 4 § 3.9 CLI evolution (NEW `--requested-by` + `--legal-exception-reason`); § 4.2 JOIN spec PiiVault.SourceName → UdmTablesList.SourceName + canonical enum cite; § 5.5 F26 sequential assignment. **Introduced fresh-instance**: SP-12 NULL default for @SubjectIdentifier contradicts canonical CcpaDeletionLog.SubjectIdentifier NOT NULL (L1083). |
-| R7C7 | Independent verify single-agent (per R5C5 precedent — NOT R6C7 self-referential closure pattern) | 3 | 2 | 0 (reset) | **3 substantive fix-fresh-instance**: SP-12 INSERT regression (canonical NOT NULL violation introduced by cycle 6 fix); § 11.1 BACKLOG L275/L279 line-cite drift (canonical at L284/L288 — off-by-9); § 5.5 F26 forward-reference unresolved (§ 9.1 silently omits F26 in proposal table). 2 🟡: § 5.3 L1184 off-by-4 (table header vs data row); § 3.2 @CategoryFilter NVARCHAR(30) vs canonical UdmTablesList.DataClassification NVARCHAR(20) type-width drift. |
-| R7C8 | Cycle 8 fix-application | 0 (fix only) | — | 1 | Applied fixes: SP-12 body COALESCE @SubjectIdentifier to synthetic placeholder ('TOKEN_FILE_BULK_' + @RequestId); § 11.1 L275/L279 → L284/L288; § 5.5 F26 → § 9.1 proposal addition + § 9.1 close-out append; § 5.3 L1184 → L1188; § 3.2 @CategoryFilter NVARCHAR(30) → NVARCHAR(20). |
+| R7C5 | **Sleeper-bug stress test** (mandatory final per R4C8 + R5C4 + R6C4 precedent — 3-event empirical) | 1 | 4 | 0 (reset) | **Substantive finding**: the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) required params (@SubjectIdentifier / @RequestedBy / @LegalExceptionReason) have no path from Round 4 § 3.9 CLI consumer (no `--requested-by` / `--legal-exception-reason` args; `--subject-id` mutex with `--token-file`). 4 🟡: SP-10 @CategoryFilter JOIN spec gap (DataClassification lives on UdmTablesList not PiiVault); OrphanedTokenLog L1254-1284 line-range off-by-N; @LegalExceptionReason needs `= NULL` default; § 5.5 un-numbered F-series cite. |
+| R7C6 | Cycle 6 fix-application | 0 (fix only) | — | 1 | Applied fixes: the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) NULL defaults for @SubjectIdentifier + @LegalExceptionReason; § 5.3 Round 4 § 3.9 CLI evolution (NEW `--requested-by` + `--legal-exception-reason`); § 4.2 JOIN spec PiiVault.SourceName → UdmTablesList.SourceName + canonical enum cite; § 5.5 F26 sequential assignment. **Introduced fresh-instance**: the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) NULL default for @SubjectIdentifier contradicts canonical CcpaDeletionLog.SubjectIdentifier NOT NULL (L1083). |
+| R7C7 | Independent verify single-agent (per R5C5 precedent — NOT R6C7 self-referential closure pattern) | 3 | 2 | 0 (reset) | **3 substantive fix-fresh-instance**: the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) INSERT regression (canonical NOT NULL violation introduced by cycle 6 fix); § 11.1 BACKLOG L275/L279 line-cite drift (canonical at L284/L288 — off-by-9); § 5.5 F26 forward-reference unresolved (§ 9.1 silently omits F26 in proposal table). 2 🟡: § 5.3 L1184 off-by-4 (table header vs data row); § 3.2 @CategoryFilter NVARCHAR(30) vs canonical UdmTablesList.DataClassification NVARCHAR(20) type-width drift. |
+| R7C8 | Cycle 8 fix-application | 0 (fix only) | — | 1 | Applied fixes: the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) body COALESCE @SubjectIdentifier to synthetic placeholder ('TOKEN_FILE_BULK_' + @RequestId); § 11.1 L275/L279 → L284/L288; § 5.5 F26 → § 9.1 proposal addition + § 9.1 close-out append; § 5.3 L1184 → L1188; § 3.2 @CategoryFilter NVARCHAR(30) → NVARCHAR(20). |
 
 **Cumulative**: ~22 🔴 caught + fixed across 8 cycles; ~25 🟡; trajectory `12+→5→1→0→1→0→3→0`. Counter at C8 = 1 streak (per literal D72 reading); per stricter "fix-application doesn't count" reading = 0. Math infeasibility for 3-consecutive-clean within remaining 2 cycles (9, 10) per stricter reading; defensible as math-infeasibility variant.
 
@@ -2356,7 +2394,7 @@ Trajectory 5 → 1 → 3 → 2 → 0 → 0 demonstrates declining-then-converged
 ### B-item triage (per D73 + D78 + D83 + D88 + D94 + D99 mandate)
 
 - **5 closed in-round**: B129 (carryover-compounding monitor → 8.E implemented) + B143 (cascade-audit-evolver 7th skill → § 8 implemented) + B144 (9.j formalization → § 12 inline) + B145 (Pattern F unscoped residue) + B155 (CLAUDE.md register evolved SP signatures + 9.j sub-class)
-- **9 Phase-2-deferred**: B146 (edge case append) + B150 (SchemaContract archival) + B151 (RB-11 cascade addenda) + B152 (Round 5 test plans for SP-4/SP-10/SP-12) + B153 (Round 2 frozen-11 update) + B156 (ops-channel SRE inversion) + B157 (Kimball SCD2 citation) + B158 (CCPA pseudonymization rationale) + B159 (named-parameter calling-style note)
+- **9 Phase-2-deferred**: B146 (edge case append) + B150 (SchemaContract archival) + B151 (RB-11 cascade addenda) + B152 (Round 5 test plans for SP-4/SP-10/the CCPA-deletion stored procedure (per CLAUDE.md SP family registry)) + B153 (Round 2 frozen-11 update) + B156 (ops-channel SRE inversion) + B157 (Kimball SCD2 citation) + B158 (CCPA pseudonymization rationale) + B159 (named-parameter calling-style note)
 - **6 net-new**: B160 (Phase 2 R1 first-loop-invocation lock criteria) + B161 (udm-edge-case-evolver candidate) + B162 (MAINTENANCE.md Pattern F refresh) + B163 (custom agent version frontmatter) + B164 (skill cascade dry-run on R5/R6/R7/R8 data) + B165 (Pattern F Layer 1 Trigger G B-item status-render consistency)
 - **Outside-scope**: B16-B18 + B66/B67/B71 (Phase 6+ work)
 
@@ -2372,7 +2410,7 @@ Pattern F runs AT close-out cascade after all aggregate-doc updates complete. La
 
 **Pattern F INSTANCE 1** (agentId `a3c945444b494db86`): 8 ✅ + 1 🟡 (SI-series not registered in CLAUDE.md edge-case-series listing) + 0 🔴 + 1 candidate Trigger H proposal (edge-case-series CLAUDE.md registration audit) + 1 candidate Trigger G proposal (B-item status-render consistency — already tracked as B165).
 
-**Pattern F INSTANCE 2** (agentId `a10d4c8f5d0577771`): 5 ✅ on D-acceptance + 1 🔴 on B155 false-closure (CLAUDE.md does NOT actually register Round 7 SP-4 `@AcknowledgmentOnly` / SP-10 `@CutoffOverride`+`@CategoryFilter` / SP-12 CCPA / MIGRATION_AUTOMIC_INVENTORY value / forward-only schema evolution discipline — closure claim referenced these but CLAUDE.md only had D95-D99 + 9.j additions) + 3 candidate new triggers (G "false-closure-vs-actual-registration"; H "closure-target-content-verification"; I "cross-round Section 10 invocation check").
+**Pattern F INSTANCE 2** (agentId `a10d4c8f5d0577771`): 5 ✅ on D-acceptance + 1 🔴 on B155 false-closure (CLAUDE.md does NOT actually register Round 7 SP-4 `@AcknowledgmentOnly` / SP-10 `@CutoffOverride`+`@CategoryFilter` / the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) CCPA / MIGRATION_AUTOMIC_INVENTORY value / forward-only schema evolution discipline — closure claim referenced these but CLAUDE.md only had D95-D99 + 9.j additions) + 3 candidate new triggers (G "false-closure-vs-actual-registration"; H "closure-target-content-verification"; I "cross-round Section 10 invocation check").
 
 **Paired-judgment convergence**:
 - CONVERGENT findings: D99/D96/D97/D95/D98 substantiation; B129/B143/B144/B145 closures; D95-D99 + 9.j sub-class CLAUDE.md registration; 7-skill suite verified at `.claude/skills/`
@@ -2383,7 +2421,7 @@ Pattern F runs AT close-out cascade after all aggregate-doc updates complete. La
 
 **Cascade fix-cycle applied 2026-05-11 post-Pattern-F**:
 - CLAUDE.md MIGRATION_* family entry extended with MIGRATION_AUTOMIC_INVENTORY canonical value + metadata schema
-- CLAUDE.md NEW section added registering Round 7 SP signature evolutions (SP-4 @AcknowledgmentOnly / SP-10 @CutoffOverride+@CategoryFilter / SP-12 CCPA SP body excerpt) + forward-only schema evolution discipline per D92
+- CLAUDE.md NEW section added registering Round 7 SP signature evolutions (SP-4 @AcknowledgmentOnly / SP-10 @CutoffOverride+@CategoryFilter / the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) CCPA SP body excerpt) + forward-only schema evolution discipline per D92
 - CLAUDE.md edge-case-series listing extended with SI series (M/S/I/N/P/G/D/F/V → M/S/I/N/P/G/D/F/V/SI)
 
 Re-verification: B155 closure-target now substantiated by CLAUDE.md content. Pattern F second-pass verification implicit via fix-application (no NEW issues introduced; fixes are content-additive to canonical-source positions per D93 cross-doc cascade propagation).
@@ -2432,7 +2470,7 @@ Phase 1 Rounds 1-8 all 🟢 Locked as of this close-out 2026-05-11. **Phase 2 (P
 1. `phase1/01a_control_tables.md` (G1 — Round 1.5a, ~30 KB, Tier β) — UdmTablesList + UdmTablesColumnsList trigger-tier doc
 2. `phase1/01b_bronze_stage_example_ddl.md` (G3+G4 — Round 1.5b, Tier α) — canonical Bronze + Stage DDL example for ACCT
 3. `phase1/01c_data_flow_walkthrough.md` (G6 — Round 1.5c, ~30 KB, Tier β) — AM cycle end-to-end trace + observability annotations + 15-query dashboard catalog
-4. `phase1/07a_schema_contract_examples.md` (G5 — Round 1.5d, Tier α) — 3 example SchemaContract row clusters (SP-4/SP-10/SP-12 R7 evolutions)
+4. `phase1/07a_schema_contract_examples.md` (G5 — Round 1.5d, Tier α) — 3 example SchemaContract row clusters (SP-4/SP-10/the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) R7 evolutions)
 5. `09_VISUALS.md` § ER diagrams (G2 — Round 1.5e, Tier α) — 5 Mermaid erDiagram blocks for control + PII + orchestration + reconciliation + lifecycle clusters
 6. `GLOSSARY.md` (33 KB code/acronym reference; authored earlier this session)
 7. Phase 2 prerequisite messages for team meeting (20 Phase 0 deliverables)
@@ -3824,7 +3862,7 @@ Format reuses the table structure above. Each entry self-contained.
   - ✅ Pitfall #9.m self-application check: CODE_BUILD_STATUS.md is a META-doc tracking CODE artifacts; its own rules apply to code (not docs), so the tracker itself doesn't need an entry IN itself — self-check passes trivially.
   - ✅ Cross-doc cascade per D93: CLAUDE.md discipline #10 + udm-progress-logger Step 1 matrix + Hard Rule 7 all reference CODE_BUILD_STATUS.md by canonical path; mutual references consistent.
   - ✅ Tracker discipline applied to existing build state: today's 8-unit cohort (B183/B184/B188/B189/B190/B193/B194/B195) reflected as 🟢 Built rows with build date + test pass-counts.
-- **Carryovers** (newly visible from the synthesis): 0/17 Round 3 core modules built (biggest single chunk of remaining build work; foundational for Phase 2 R2+ + 8/11 Round 4 tools); 11/16 Round 4 operator tools pending — 3 unblocked (§ 3.6 promote_test_to_prod, § 3.8 enforce_retention, § 3.10 log_retention_cleanup); 8 blocked on Round 3 modules / SP-12 deployment / B82 ops-channel client. No new B-N / R-N / P-N opened — these are existing carryovers now made visible by the tracker.
+- **Carryovers** (newly visible from the synthesis): 0/17 Round 3 core modules built (biggest single chunk of remaining build work; foundational for Phase 2 R2+ + 8/11 Round 4 tools); 11/16 Round 4 operator tools pending — 3 unblocked (§ 3.6 promote_test_to_prod, § 3.8 enforce_retention, § 3.10 log_retention_cleanup); 8 blocked on Round 3 modules / the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) deployment / B82 ops-channel client. No new B-N / R-N / P-N opened — these are existing carryovers now made visible by the tracker.
 - **Next-natural-action** (recommendation surface): **`tools/log_retention_cleanup.py` (§ 3.10)** is the smallest unblocked code-build target — pure DELETE on `PipelineLog`, no Round 3 module dependency, ~150-line spec at `phase1/04_tools.md:1220-1305`. Single Pattern B1 build (author + test-author + design-reviewer cohort) would land it in one session and exercise the new `CODE_BUILD_STATUS.md` discipline end-to-end (⬜ → 🟡 → 🟢 transition). After that, § 3.8 enforce_retention (wraps SP-10) and § 3.6 promote_test_to_prod (wraps SP-4 + B79 amendment) are next unblocked Pattern B1 candidates. Then Round 3 core modules — substantially larger; should be planned as multi-round Pattern B build cohort.
 
 ---
@@ -4684,12 +4722,12 @@ fatal: path 'docs/migration/_tmp_gc.txt' exists on disk, but not in the index
 - **Pytest regression**: full suite **1206 pass / 14 skip / 2 fail**. Wave 3 cohort total = **280 net new passing tests across 5 modules (M16 54 + M1 63 + M2 57 + M4 55 + M5 51) with 0 new regression and 0 inline fix cycles**.
 - **Inline fixes (0 cycles across all 5 Wave 3 modules)**: **Wave 3 milestone — first cohort with 0 inline cycles across all members.** Empirical validation of B-226 Tier-calibration directive (CLAUDE.md "Validation discipline" §12 — 5-event evidence base from Wave 1+2 informed the calibration; Wave 3 is the first cohort built AFTER calibration landed). All 5 modules first-iteration pass vs Wave 1+2 which averaged 1-2 cycles per module. **Recommendation: this cohort's 0-cycle outcome is supporting evidence for the B-226 closure and may justify further refinement of the Tier-calibration directive at next round close-out per `udm-cycle-cadence-optimizer` skill.**
 - **Trackers updated**:
-  - `CODE_BUILD_STATUS.md` — Wave 3.5 build-cohort line added; M5 row in Round 3 core modules § 2.2 flipped ⬜ → 🟢; "Wave 3 COMPLETE 5/5" milestone annotation in Last reviewed + at-a-glance Round 3 row + new Wave 3 section header; Round 4 dep-unblock map updated (§ 3.4 decrypt_pii NOW BUILDABLE per M5 ⚫ + M6 ⚫ both satisfied; § 3.9 process_ccpa_deletion partial unblock — M5 satisfied but SP-12 still blocks).
+  - `CODE_BUILD_STATUS.md` — Wave 3.5 build-cohort line added; M5 row in Round 3 core modules § 2.2 flipped ⬜ → 🟢; "Wave 3 COMPLETE 5/5" milestone annotation in Last reviewed + at-a-glance Round 3 row + new Wave 3 section header; Round 4 dep-unblock map updated (§ 3.4 decrypt_pii NOW BUILDABLE per M5 ⚫ + M6 ⚫ both satisfied; § 3.9 process_ccpa_deletion partial unblock — M5 satisfied but the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) still blocks).
   - `_validation_log.md` — this entry (Wave 3.5 — final cohort entry; **B-226 calibration validation evidence** explicitly noted).
   - `BACKLOG.md` — NO B-N closes from this cohort. Cohort surfaces 7 total carryovers to gap-checker for routing (M5-specific: SP-2 disambiguation gap — SP-2 currently returns 0 rows for both absent-token AND deleted_per_request CCPA cases; M5 treats empty result as `TokenNotFound`, future "row with NULL plaintext" shape as `DecryptDenied` — B-N candidate to enhance SP-2; M16 gate-heartbeat writer location ambiguity from Wave 3.1; M1 placeholders from Wave 3.2; M1+M2 ledger composition asymmetry from Wave 3.2+3.3; EventType naming PARQUET_* vs REPLAY from Wave 3.3 alongside B-229; M4 per-column PiiType mapping + batch SP-1 from Wave 3.4).
   - `ONE_OFF_SCRIPTS.md` — NOT updated (library module).
   - `POLISH_QUEUE.md` — NOT updated; P-N candidates deferred to gap-checker decision.
-- **Execution classification**: Library module imported by Round 4 § 3.4 `decrypt_pii.py` operator tool + RB-10 CCPA-deletion procedure + Round 4 § 3.9 `process_ccpa_deletion.py` (when SP-12 lands). Not executable.
+- **Execution classification**: Library module imported by Round 4 § 3.4 `decrypt_pii.py` operator tool + RB-10 CCPA-deletion procedure + Round 4 § 3.9 `process_ccpa_deletion.py` (when the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) lands). Not executable.
 - **Wave context**: Wave 3.5 = 5th + final of 5 Wave 3 units. **Wave 3 COMPLETE 5/5** — milestone achievement. **Round 3 build state: 13/17 BUILT (76% complete)** — only Wave 4 (M17 `data_load/snowflake_uploader.py`) remains for 17/17 (100%); M17 gated by B191 Snowflake test conclusion.
 - **Dependencies satisfied**: M6 `data_load/vault_client.py` (Wave 2.3) — validates B103 catch-path closure target via empirical exercise of canonical `utils.errors.VaultUnavailable` raise path; `data_load/credentials_loader.py` (Wave 1.3); `utils/idempotency_ledger.py` (Wave 1.1).
 - **Hard-rule checks**:
@@ -4987,10 +5025,10 @@ fatal: path 'docs/migration/_tmp_gc.txt' exists on disk, but not in the index
   - **§ 3.6 `promote_test_to_prod.py`** — already built 2026-05-12.
   - **§ 3.7 `verify_server_parity.py`** — NOW BUILDABLE via M8 Wave 5.1 ⚫.
   - **§ 3.8 `enforce_retention.py`** — already built 2026-05-12.
-  - **§ 3.9 `process_ccpa_deletion.py`** — still blocked on SP-12 deployment (M5 satisfied).
+  - **§ 3.9 `process_ccpa_deletion.py`** — still blocked on the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) deployment (M5 satisfied).
   - **§ 3.10 `log_retention_cleanup.py`** — already built 2026-05-12.
   - **§ 3.11 `alert_dispatcher.py`** — still blocked on B82 ops-channel.
-  - **Net**: 9 of 11 Round 4 tools now buildable post-Wave-5 (vs 6 of 11 at Wave 4 close-out + 3 of 11 pre-Wave-3); only § 3.9 + § 3.11 remain blocked on non-R3 dependencies (SP-12 + B82).
+  - **Net**: 9 of 11 Round 4 tools now buildable post-Wave-5 (vs 6 of 11 at Wave 4 close-out + 3 of 11 pre-Wave-3); only § 3.9 + § 3.11 remain blocked on non-R3 dependencies (the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) + B82).
 - **Tracker drift summary (final)**:
   - **BACKLOG.md** — 3 B-Ns closed in Wave 5 (B-243 + B-244 + B-245); 7 B-Ns opened across Wave 3+4 (B-231 through B-237) remain ⬜ Open as M-level carryovers for future rounds. B-228 closed at Wave 2.2 gap-check; B-220 closed at Wave 2 close-out; B-226 closed at Wave 2→Wave 3 transition. Campaign-net BACKLOG churn: 4 B-Ns closed (B-220 / B-226 / B-228 / B-243 / B-244 / B-245 = 6 closed; 7 opened B-231 through B-237 + B-238 through B-242 from Wave 4 gap-check = 12 opened net of closures).
   - **_validation_log.md** — Round 3 campaign added ~25 dated entries (Wave-level + gap-check + milestone). This Round 3 TRUE 17/17 milestone entry follows the Wave 5.1/5.2/5.3 build entries above.
@@ -5042,7 +5080,7 @@ fatal: path 'docs/migration/_tmp_gc.txt' exists on disk, but not in the index
 - 🟡 I20 hash-version migration column — no per-row hash-version tag on `ParquetSnapshotRegistry` + `IdempotencyLedger` DDLs. → **B-246** opened.
 - 🟡 M9 drift alert wiring in `cdc/lateness_profiler.py` — `PreviousP99` + `DriftPct` + 25% WARNING alert not yet populated. → **B-247** opened.
 - 🟡 F22 documented_exceptions expiry enforcement in `tools/verify_server_parity.py` — `expires_at` field not enforced; 30-day pre-expiry NOTIFY missing. → **B-248** opened.
-- 🟡 OrphanedTokenLog writer wiring in `data_load/pii_decryptor.py` SP-10/SP-12 — verify server-side OrphanedTokenLog row INSERT + M5 raise-path test. → **B-249** opened.
+- 🟡 OrphanedTokenLog writer wiring in `data_load/pii_decryptor.py` SP-10/the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) — verify server-side OrphanedTokenLog row INSERT + M5 raise-path test. → **B-249** opened.
 - 🟡 I19 fault-injection test for `utils/idempotency_ledger.py` partial-UPDATE failure — INSERT-success-then-UPDATE-failure path uncovered. → **B-250** opened.
 
 **Category 6: Just-noticed issues**
@@ -5078,7 +5116,7 @@ fatal: path 'docs/migration/_tmp_gc.txt' exists on disk, but not in the index
 - ✅ Pre-fix 🔴 BLOCKER (recurrent F-4/F-6) inline-fixed; ≤🟡 verdict satisfies #11 hard rule
 - ✅ Pitfall #9.j discipline applied to all 7 new B-N entries — leading badges 🟡 Open match inline annotations
 - ✅ Pitfall #9.k Step 7 audit applied: regex-swept BACKLOG.md / CODE_BUILD_STATUS.md / GLOSSARY.md for stale 1458 + 17/17 count mirrors; no drift
-- ✅ Pitfall #9.l Step 8 audit applied: re-read canonical Round 3 § 1-7 numbering + canonical SP-2 / SP-10 / SP-12 / F22 / I19 / I20 contracts before authoring the 7 B-N migration plans
+- ✅ Pitfall #9.l Step 8 audit applied: re-read canonical Round 3 § 1-7 numbering + canonical SP-2 / SP-10 / the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) / F22 / I19 / I20 contracts before authoring the 7 B-N migration plans
 - ✅ Pitfall #9.m Step 9 audit applied: this entry itself applies the udm-gap-check + udm-progress-logger discipline to its own authoring event — gap-check entry exists in `_validation_log.md`, hard-rule checks ran, BACKLOG cascade complete, CLAUDE.md + GLOSSARY inline-fixes landed before 🟢 status claim
 
 ### Round 3 build campaign 🟢 COMPLETE per CLAUDE.md hard rule 11
@@ -5235,11 +5273,11 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
    - Convention-registration verified: M3 module body at `data_load/parquet_registry_client.py:~206` uses identical canonical values.
    - **B-229 closure in BACKLOG.md** at `docs/migration/BACKLOG.md:412`: leading badge flipped 🟡 Open → ⚫ CLOSED per Pitfall #9.j discipline; body strikethrough preserved per D92 forward-only additive; closure annotation cites CLAUDE.md edit + B86 precedent + Pattern F Layer 2 paired-judgment trigger.
 
-2. **Fix 2 — B-253 opened for SP-12 SP Index Round 7 carry-over gap**:
+2. **Fix 2 — B-253 opened for the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) SP Index Round 7 carry-over gap**:
    - Edit location: `docs/migration/BACKLOG.md:389` (newest-first ordering — inserted above B-252 L390).
-   - Surfaces pre-existing Round 7 close-out gap: `phase1/07_schema_evolution_governance.md` § 5 L480 claimed "SP-12 added to Round 1 § 'SP Index' via Round 7 close-out append (not editing Round 1 body; supersession-friendly)" — the append was never executed in `phase1/01_database_schema.md`.
+   - Surfaces pre-existing Round 7 close-out gap: `phase1/07_schema_evolution_governance.md` § 5 L480 claimed "the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) added to Round 1 § 'SP Index' via Round 7 close-out append (not editing Round 1 body; supersession-friendly)" — the append was never executed in `phase1/01_database_schema.md`.
    - Empirical impact: 82 YELLOW noise floor findings sourced from this gap in Layer 1 `tools/verify_cascade.py` runs indefinitely.
-   - Resolution options documented: (a) execute original close-out task — append SP-12 row to `phase1/01_database_schema.md` § SP Index per Round 7 § 5 L480 plan (additive per D92); (b) formally document supersession — mark Round 7 § 5 L480 claim as superseded. Recommended path (a) — preserves canonical-SP-index single-source-of-truth.
+   - Resolution options documented: (a) execute original close-out task — append the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) row to `phase1/01_database_schema.md` § SP Index per Round 7 § 5 L480 plan (additive per D92); (b) formally document supersession — mark Round 7 § 5 L480 claim as superseded. Recommended path (a) — preserves canonical-SP-index single-source-of-truth.
    - WSJF 1.5 (COD 3 — removes 82 YELLOW noise floor + restores canonical-SP-index discoverability; JS 1 — single doc edit). Closure target: next round close-out OR Round 7 supersession via D-number amendment.
 
 3. **Fix 3 — HANDOFF §3 L150-151 stale Round 7 in-flight labels cleanup**:
@@ -5250,7 +5288,7 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 ### B-229 closure + B-253 opening summary
 
 - **B-229 (🟡 Open → ⚫ CLOSED 2026-05-14)**: PARQUET_* IdempotencyLedger.EventType family registration in CLAUDE.md. Closure mechanism: paired-judgment audit inline-fix per B86 precedent. Source artifact: `CLAUDE.md` L312 + `BACKLOG.md` L412.
-- **B-253 (🟡 Open 2026-05-14)**: SP-12 not appended to `phase1/01_database_schema.md` SP Index — pre-existing Round 7 carry-over gap. Source: Pattern F Layer 2 paired-audit Auditor #1 finding. Source artifact: `BACKLOG.md` L389.
+- **B-253 (🟡 Open 2026-05-14)**: the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) not appended to `phase1/01_database_schema.md` SP Index — pre-existing Round 7 carry-over gap. Source: Pattern F Layer 2 paired-audit Auditor #1 finding. Source artifact: `BACKLOG.md` L389.
 
 ### Hard-rule checks
 
@@ -5266,7 +5304,7 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 
 1. **Commit** these 3 fixes + `_validation_log.md` entry as a single atomic commit citing "Pattern F Layer 2 paired-audit inline fixes — B-229 closed + B-253 opened + HANDOFF §3 cleanup".
 2. **Round 4 (Operator Tools) build campaign kickoff** — 5 newly-buildable § 3.x tools per Wave 5 dep-unblock map (§ 3.1 parquet_tier_review.py / § 3.2 parquet_verify.py / § 3.3 lateness_profile.py / § 3.5 detect_extraction_gaps.py / § 3.7 verify_server_parity.py). First stress-test opportunity for the 4 just-formalized DELTA-A1/A2/A3/A4 directives (Pitfall #9.n + producer self-check Steps 10/11).
-3. **Optional later**: B-253 path (a) execution — append SP-12 row to `phase1/01_database_schema.md` § SP Index per Round 7 § 5 L480 plan; removes 82 YELLOW noise floor from Layer 1 `verify_cascade.py` runs.
+3. **Optional later**: B-253 path (a) execution — append the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) row to `phase1/01_database_schema.md` § SP Index per Round 7 § 5 L480 plan; removes 82 YELLOW noise floor from Layer 1 `verify_cascade.py` runs.
 ---
 
 ## 2026-05-14 — Round 4.1 § 3.1 tools/parquet_tier_review.py build
@@ -5450,7 +5488,7 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 - **Carryovers** (open after this completion):
   - **B-254** (🟡 Open) — M3 `list_snapshots` helper extraction (from Round 4.1 § 3.1 producer audit) — UNCHANGED.
   - **B-218** (🟡 Open) — 2 pre-existing § 3.10 carryover failures — UNCHANGED.
-  - **B81** (🟡 Open / R4 blocker) — SP-12 (`PiiVault_ProcessCcpaDeletion`) DDL not deployed; blocks § 3.9 `process_ccpa_deletion.py` build.
+  - **B81** (🟡 Open / R4 blocker) — the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) (`PiiVault_ProcessCcpaDeletion`) DDL not deployed; blocks § 3.9 `process_ccpa_deletion.py` build.
   - **B82** (🟡 Open / R4 blocker) — Ops-channel client deferred to Phase 2 R1; blocks § 3.11 `alert_dispatcher.py` build.
 - **Hard-rule checks (CLAUDE.md Validation discipline #1-#11)**:
   - ✅ Hard rule 4 (D61 + CLAUDE.md hard rule): `_validation_log.md` row written same-session (this entry).
@@ -5537,7 +5575,7 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 ## 2026-05-14 — Round 4 partial close-out cascade (D60 per CLAUDE.md #6 + #7; 9/11 build status)
 
 **Reviewer**: cascade orchestrator (per `udm-round-closeout` Section 10.1-10.7; D60 + Round 8 D95-D99 close-out flow)
-**Trigger**: Round 4 build campaign close 2026-05-14 — 9/11 = 82% Round 4 CLI tools built (§ 3.1 / § 3.2 / § 3.3 / § 3.4 / § 3.5 / § 3.6 / § 3.7 / § 3.8 / § 3.10); 2/11 external-blocked (§ 3.9 → B81 SP-12 + § 3.11 → B82 ops-channel client). User-direction post-session-gap-audit: F-6 deferred Round 4 partial close-out cascade. **PLANNING-MODE invocation per task scope**: 7 sub-skills produce proposals; user reviews + approves YES/NO per delta in follow-up; only `udm-retrospective-collector` (Step 1) and this `_validation_log.md` entry are mechanical writes. NO `.claude/agents/*.md` edits + NO HANDOFF §8 mutations in this turn.
+**Trigger**: Round 4 build campaign close 2026-05-14 — 9/11 = 82% Round 4 CLI tools built (§ 3.1 / § 3.2 / § 3.3 / § 3.4 / § 3.5 / § 3.6 / § 3.7 / § 3.8 / § 3.10); 2/11 external-blocked (§ 3.9 → B81 the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) + § 3.11 → B82 ops-channel client). User-direction post-session-gap-audit: F-6 deferred Round 4 partial close-out cascade. **PLANNING-MODE invocation per task scope**: 7 sub-skills produce proposals; user reviews + approves YES/NO per delta in follow-up; only `udm-retrospective-collector` (Step 1) and this `_validation_log.md` entry are mechanical writes. NO `.claude/agents/*.md` edits + NO HANDOFF §8 mutations in this turn.
 
 ### Cascade outcomes (7 sub-skills + user-approval session per D95 umbrella)
 
@@ -5674,7 +5712,7 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 - **B-N candidate (DELTA-B1)** — sub-class 9.o tracking candidate; opens pending user approval.
 - **B-N candidate (DELTA-B3)** — Step 10 mechanism-enforcement tracking candidate; opens pending user approval.
 - **B-218** (🟡 Open) — 2 pre-existing § 3.10 carryover failures — UNCHANGED.
-- **B81** (🟡 Open / R4 blocker) — SP-12 DDL not deployed; blocks § 3.9 build (external prereq).
+- **B81** (🟡 Open / R4 blocker) — the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) DDL not deployed; blocks § 3.9 build (external prereq).
 - **B82** (🟡 Open / R4 blocker) — Ops-channel client deferred to Phase 2 R1; blocks § 3.11 build (external prereq).
 - **Round 4 → 9/11 PARTIAL close-out**: 🟡 Open until B81 + B82 unblock at Phase 2 R1; § 3.9 + § 3.11 buildable when prereqs resolve.
 
@@ -5735,7 +5773,7 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 ### Pattern F decision — Option-A skip (per user direction)
 
 - **User direction**: SKIP Pattern F (Layer 1 deterministic `tools/verify_cascade.py` + Layer 2 paired `udm-cascade-auditor.md`) at this Round 4 partial close-out. Per-cohort `udm-gap-check` 6-category audits at R4.1 cohort + R4-SGC + Wave 4.6 already cover Pattern F Layer 1 substrate at finer cadence.
-- **Trigger condition for deferred Pattern F**: when B81 (SP-12 DDL deployment) + B82 (ops-channel client) unblock at Phase 2 R1, bringing Round 4 to 11/11 = 100%; Pattern F runs as part of THAT close-out (Round 4 → 11/11 lock).
+- **Trigger condition for deferred Pattern F**: when B81 (the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) DDL deployment) + B82 (ops-channel client) unblock at Phase 2 R1, bringing Round 4 to 11/11 = 100%; Pattern F runs as part of THAT close-out (Round 4 → 11/11 lock).
 - **Per skill protocol**: `udm-cascade-audit-evolver` is SKIPPED at this close-out (per its skill body "Always invoked when Pattern F runs"). No new trigger candidates proposed this close-out.
 - **Hard-rule check**: CLAUDE.md item #5 "every round close-out runs Pattern F BEFORE round 🟢 lock" — Round 4 is NOT locked at 🟢 (currently 🟡 partial close pending B81 + B82 unblock); deferral is consistent with hard rule.
 
@@ -5766,7 +5804,7 @@ Per D95 umbrella hard rule: 4 deltas applied to HANDOFF + CLAUDE only (canonical
 - **B-260** (🟡 Open at MONITOR) — NEW; sub-class 9.o candidate; awaits 3rd event at R5+ close-out.
 - **B-261** (🟡 Open at MONITOR) — NEW; Step 10 mechanism-enforcement evolution candidate; awaits 3rd event at R5+ close-out.
 - **B-218** (🟡 Open) — 2 pre-existing § 3.10 carryover failures UNCHANGED.
-- **B81** (🟡 Open / R4 blocker) — SP-12 DDL deployment unblocks § 3.9 build.
+- **B81** (🟡 Open / R4 blocker) — the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) DDL deployment unblocks § 3.9 build.
 - **B82** (🟡 Open / R4 blocker) — Ops-channel client unblocks § 3.11 build.
 - **Round 4 → 9/11 PARTIAL close-out CASCADE COMPLETE**: planning-mode analysis (prior entry) + delta application (this entry) = full Round 4 close-out cascade for the 9/11-built portion. 🟡 Open until B81 + B82 unblock at Phase 2 R1 → 11/11 → Pattern F → 🟢 Lock.
 
@@ -5995,7 +6033,7 @@ This fix-cohort entry IS the `_validation_log.md` entry per CLAUDE.md "Validatio
 |---|---|---|---|
 | `docs/migration/00_OVERVIEW.md` | APPEND sub-bullet to § Status (lines 13-19) + APPEND row to § Document Map Tier 6 (line 103) | Added code-build progress block (Round 3 17/17 BUILT + Round 4 9/11 BUILT + Round 6 Tier 2 53 properties + B-262 production bug + agent prompt v1.1.0 + cross-refs to CODE_BUILD_STATUS + SESSION_2026-05-13_BUILD_LOG); registered SESSION_2026-05-13_BUILD_LOG.md in Tier 6 document map | Code-build dimension distinct from spec-lock dimension; existing "🟢 COMPLETE" header preserved for spec lock |
 | `docs/migration/02_PHASES.md` | APPEND sub-section under Phase 1 header (lines 70-74) | Added code-build sub-status block (Round 3 17/17 + Round 4 9/11 + Round 6 partial; Phase 1 ~75% impl complete) | "Status: 🟢 Complete" header preserved (refers to spec lock); code-build sub-status appended below |
-| `docs/migration/PHASE_1_DEEP_DIVE_PLAN.md` | APPEND code-build sub-status to existing Status lines for R3 / R4 / R6 (lines 143 / 153 / 173) | Round 3: 17/17 modules BUILT + cross-ref to CODE_BUILD_STATUS + SESSION_2026-05-13_BUILD_LOG; Round 4: 9/11 BUILT + 2 blocked on B81 SP-12 + B82 ops-channel; Round 6: Tier 2 props 🟢 + Tier 3/4 + B-item closures pending | Spec-lock 🟢 Locked statuses preserved verbatim |
+| `docs/migration/PHASE_1_DEEP_DIVE_PLAN.md` | APPEND code-build sub-status to existing Status lines for R3 / R4 / R6 (lines 143 / 153 / 173) | Round 3: 17/17 modules BUILT + cross-ref to CODE_BUILD_STATUS + SESSION_2026-05-13_BUILD_LOG; Round 4: 9/11 BUILT + 2 blocked on B81 the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) + B82 ops-channel; Round 6: Tier 2 props 🟢 + Tier 3/4 + B-item closures pending | Spec-lock 🟢 Locked statuses preserved verbatim |
 | `docs/migration/MAINTENANCE.md` | APPEND 3 cadence entries to § Quarterly (lines 107-109) | Added `CODE_BUILD_STATUS.md` review + `udm-progress-logger` skill audit + `_agent_evolution/` changelog review entries | Reflects CLAUDE.md "Validation discipline" #9 + #10 + D98 semver convention |
 | `docs/migration/CURRENT_STATE.md` | APPEND cross-link entry to § Recently completed (line 54) | Added Session 2026-05-13 / 2026-05-14 build campaign cross-link + reference to SESSION_2026-05-13_BUILD_LOG.md + CODE_BUILD_STATUS.md | Most-recent "Last updated" header (Tier 2 cohort B-262 narrative) preserved verbatim |
 
@@ -6382,7 +6420,7 @@ This entry IS the application of CLAUDE.md hard rule 9 (`udm-progress-logger`) t
 
 **Remaining 3 missing-test-file findings**:
 - `tools_alert_dispatcher` — genuine absence, B82 ops-channel blocker
-- `tools_process_ccpa_deletion` — genuine absence, B81 SP-12 blocker
+- `tools_process_ccpa_deletion` — genuine absence, B81 the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) blocker
 - `server_parity_verifier` — separate 3rd-class drift (M-module-name vs verify-prefixed tool filename) → surfaced as B-267 below
 
 **Remaining 16 missing_assertion findings**: mostly cases where spec assertion text references a backticked identifier (e.g., `import uuid` in `pii_decryptor` spec (a)) that the descriptive test function name does not echo. These represent genuine spec-vs-test specificity gaps now correctly surfaced — engineering-deploy gate signal-to-noise dramatically improved.
@@ -6730,7 +6768,7 @@ Output classifies each PK in (Stage CDC ∖ Bronze active) into 5 theory categor
 
 **Operator-blocked (cannot proceed without user action)**:
 
-- Round 4 § 3.9 `process_ccpa_deletion.py` — gated on B81 SP-12 deployment to General.ops
+- Round 4 § 3.9 `process_ccpa_deletion.py` — gated on B81 the CCPA-deletion stored procedure (per CLAUDE.md SP family registry) deployment to General.ops
 - Round 4 § 3.11 `alert_dispatcher.py` — gated on B82 ops-channel client + Phase 0 deliverable
 - Phase 0 deliv 0.1 (D103 team meeting), 0.2/0.3 (data-side), 0.4 (vault DBA review), 0.17 (capacity baseline on real data)
 
