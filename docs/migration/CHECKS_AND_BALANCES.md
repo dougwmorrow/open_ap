@@ -1,4 +1,4 @@
-# Checks and Balances Discipline
+﻿# Checks and Balances Discipline
 
 This document defines the validation discipline that every significant artifact in this project must pass through before being considered complete. It exists because the project's first 13 rounds produced bugs that could have been caught with a routine validation step, but that step was skipped.
 
@@ -65,7 +65,7 @@ Mandatory: review must produce a structured report with categorized findings (�
 
 ### Gate 3 — Edge case enumeration
 
-Walk the M/S/I/N/P/G/D/F/V series. For each:
+Walk the M/S/I/N/P/G/D/F/V/DP/T/SI/SE series. For each:
 
 | Outcome | Meaning |
 |---|---|

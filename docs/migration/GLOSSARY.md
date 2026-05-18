@@ -1,4 +1,4 @@
-# Glossary — Codes, Acronyms, and Naming Conventions
+﻿# Glossary — Codes, Acronyms, and Naming Conventions
 
 **For fresh engineers, AI agents, or auditors arriving mid-flight.** Every short-form identifier used across this project is defined here. If you see something like `D93`, `R7`, `R8-PF-INST2`, `Pitfall #9.j`, `Tier δ`, `SP-4`, `Pattern F`, `M-series`, or `WSJF` and don't recognize it — look here first.
 
@@ -521,7 +521,7 @@ Per `CHECKS_AND_BALANCES.md`. Every artifact passes 5 gates before being declare
 |---|---|---|
 | Gate 1 | Cross-reference | Consistent with the rest of the doc set |
 | Gate 2 | Quality assurance (independent review) | A second pair of eyes (different agent) confirms correctness |
-| Gate 3 | Edge case enumeration | M/S/I/N/P/G/D/F/V series walked |
+| Gate 3 | Edge case enumeration | M/S/I/N/P/G/D/F/V/DP/T/SI/SE series walked |
 | Gate 4 | Edge case validation | Every ✅-claimed case has tangible verification |
 | Gate 5 | Idempotency / regression | D15 invariant preserved; no broken prior work |
 

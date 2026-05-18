@@ -1,4 +1,4 @@
-# UDM Pipeline Migration — Decision Log
+﻿# UDM Pipeline Migration — Decision Log
 
 Every architectural decision made during the planning phase, with rationale and status. New decisions append to this log; superseded decisions stay in place with a `superseded by` link.
 
@@ -738,7 +738,7 @@ Code is throwaway. Run on dev only. Output: confirmation each integration works 
 |---|---|
 | `udm-planning` | Round task decomposition with verification |
 | `udm-brainstorm` | Force ≥3 alternatives before locking |
-| `udm-edge-case-validator` | M/S/I/N/P/G/D/F/V series check |
+| `udm-edge-case-validator` | M/S/I/N/P/G/D/F/V/DP/T/SI/SE series check |
 | `udm-decision-recorder` | D-number / status / rationale enforcement |
 | `udm-runbook-author` | Runbook structure enforcement |
 | `udm-data-engineer-review` | CDC/SCD2/Polars/Parquet pattern review |
@@ -913,7 +913,7 @@ Initial v2 was prematurely declared 🟢. The validation agent (per `CHECKS_AND_
 The 5 gates:
 1. **Cross-reference** — verify consistency with rest of doc set (decisions, edge cases, runbooks)
 2. **Quality assurance** — independent review (separate agent or human, not the producer)
-3. **Edge case enumeration** — walk M/S/I/N/P/G/D/F/V series; flag gaps and new cases
+3. **Edge case enumeration** — walk M/S/I/N/P/G/D/F/V/DP/T/SI/SE series; flag gaps and new cases
 4. **Edge case validation** — every "addressed" case has tangible verification (test, constraint, runbook step)
 5. **Idempotency / regression** — D15 invariant preserved; no previously-validated work broken
 

@@ -1,4 +1,4 @@
-# UDM Pipeline — Overview
+﻿# UDM Pipeline — Overview
 
 ## Purpose
 
@@ -76,7 +76,7 @@ These items still need explicit sign-off before code lands. See `03_DECISIONS.md
 | File | Purpose |
 |---|---|
 | `03_DECISIONS.md` | Decision log — every architectural decision with rationale, date, status |
-| `04_EDGE_CASES.md` | Consolidated edge case register (M/S/I/N/P/G/D/F/V series) |
+| `04_EDGE_CASES.md` | Consolidated edge case register (M/S/I/N/P/G/D/F/V/DP/T/SI/SE series) |
 | `CHECKS_AND_BALANCES.md` | 5-gate validation discipline (D55 + D56) |
 | `_validation_log.md` | Append-only audit trail for validation gate runs |
 | `BACKLOG.md` | WSJF-prioritized follow-up items |
@@ -133,7 +133,7 @@ These items still need explicit sign-off before code lands. See `03_DECISIONS.md
 |---|---|
 | `udm-planning` | Round task decomposition with verification |
 | `udm-brainstorm` | Force ≥3 alternatives before locking design |
-| `udm-edge-case-validator` | M/S/I/N/P/G/D/F/V series check against artifacts |
+| `udm-edge-case-validator` | M/S/I/N/P/G/D/F/V/DP/T/SI/SE series check against artifacts |
 | `udm-decision-recorder` | D-number / status / pillar / risk delta enforcement |
 | `udm-runbook-author` | Runbook structure enforcement |
 | `udm-data-engineer-review` | CDC/SCD2/Polars/Parquet/BCP pattern review |
