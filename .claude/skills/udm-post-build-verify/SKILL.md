@@ -50,6 +50,9 @@ If syntax fails → HALT + report the syntax error. No further steps run.
 
 ### Step 2 — Identify test files
 
+**Windows dev workstation pre-check (per B-410 closure 2026-05-17 + CLAUDE.md B-328 cited verbatim)**: production deps `oracledb` + `polars` are typically NOT installed on Windows dev workstations (production runs on RHEL Linux). Source modules under `extract/` + `data_load/` + `cdc/` + adjacent will fail pytest COLLECTION on Windows dev without those packages. **Identify collection-error modules** via `grep -rlE '^(import|from)\s+(oracledb|polars)\b' extract/ data_load/ cdc/ scd2/ orchestration/ schema/` (per CLAUDE.md B-328 closure 2026-05-17). **Treat collection errors on those modules as ADVISORY, NOT FAIL**; proceed to Step 3 with CI-authoritative count as ground truth. Workarounds: (a) trust `.github/workflows/pre-commit-mirror.yml` CI mirror for authoritative pass-count; (b) locally run only the cohorts that don't touch production extractors — `tests/tier0/` + `tests/tier1/` + `tests/property/` + meta-tooling tests run cleanly on bare Windows; (c) optional `pip install oracledb polars` enables local full-suite validation (oracledb pure-Python mode skips Oracle Instant Client requirement for collection-only purposes). Fresh agents on Windows dev: do NOT mark build 🔴 BLOCKING on collection errors against extract/data_load modules — verify CI green badge before treating count as a regression.
+
+
 For artifact at `<module_path>/<name>.py`:
 - Tier 0 test: `tests/tier0/test_<name>.py`
 - Tier 1 test: `tests/tier1/test_<name>.py`
