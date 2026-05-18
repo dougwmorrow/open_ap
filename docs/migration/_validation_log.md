@@ -2,6 +2,38 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-477 InlineFixClaimVerificationCheck missing_entries kind verification (MEDIUM WSJF 2.0; closes Pitfall #9.n false-negative class)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). Per cascade Step 1.1 smallest-scope-at-same-priority tiebreaker: B-477 selected over B-469 (smaller scope; ~30 LOC scan() extension + 2 regex constants vs ~50-100 LOC factory generalization + bulk-pin cohort).
+
+**Scope**: 1 B-N closure (B-477) — scan() extension + 2 regex constants + 4 Tier 0 assertions + tracker updates. 5 files modified: `tools/check_commit_msg.py` (scan() branch + 2 regex constants) + `tests/tier0/test_check_commit_msg.py` (+4 assertions; 141 → 145) + `CLAUDE.md` (assertion count + cohort delta) + `docs/migration/BACKLOG.md` (closure annotation) + `docs/migration/GLOSSARY.md` (NEW regex constants composite row) + `docs/migration/CURRENT_STATE.md` + `docs/migration/HANDOFF.md` + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical anchor (1-event 2026-05-18)**: commit `20d998f` Fix #3 cited `Pitfall #9.n: GLOSSARY missing 2 NEW B-467 surfaces (OrchestrationContext + _build_orchestration_context) — added 2 entries after REPO_ROOT row`. That fix DID land. The pre-B-477 scan() parser CLASSIFIED the kind as `missing_entries` but the scan() loop DEFERRED verification with explicit comment (Pitfall #9.n false-negative class). B-477 closes the verification gap: subsequent non-landed missing-entries claim now triggers WARN.
+
+**B-477 implementation**:
+- NEW `_MISSING_ENTRIES_RE` regex matching `missing N NEW <scope> surfaces (<ident-list>)` format with case-insensitive flag + named capture group `ident_list`. Handles canonical "NEW" qualifier as optional. Tolerates optional `<scope>` qualifier (e.g., "B-467 surfaces" vs bare "surfaces").
+- NEW `_IDENT_SEPARATOR_RE` regex splitting ident-list on canonical separators: `+` / `,` / `;` / `and` (with whitespace tolerance). Backtick + whitespace stripping per identifier.
+- `InlineFixClaimVerificationCheck.scan()` extended with `elif kind == "missing_entries":` branch — parses raw_body via `_MISSING_ENTRIES_RE`, splits ident-list via `_IDENT_SEPARATOR_RE`, filters identifiers <3 chars (false-positive guard for short tokens), checks each remaining identifier against staged target file content. WARN per missing identifier with explicit list.
+
+**Tier 0 coverage**: 4 NEW assertions at `tests/tier0/test_check_commit_msg.py` (142-145):
+- Assertion 142 (`test_inline_fix_check_missing_entries_regex_constants_exported`): pins both regex constants exported from module
+- Assertion 143 (`test_inline_fix_check_warns_on_unlanded_missing_entries`): empirical anchor pattern with 1 of 2 identifiers missing → WARN with specific identifier cited
+- Assertion 144 (`test_inline_fix_check_passes_when_all_missing_entries_landed`): both identifiers present → PASS
+- Assertion 145 (`test_inline_fix_check_missing_entries_handles_multiple_separators`): canonical separator tuple (+, /, ;, and) pinned
+
+**Cumulative session delta UPDATED at B-477 closure**: 95 NEW B-Ns UNCHANGED (B-477 pre-existing open). **16 B-Ns CLOSED multi-session arc** (cumulative; 15 prior + B-477 this commit). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2783 → **2787 pass / 10 skip / 0 fail** (+4 from B-477 Tier 0 additions).
+
+**Architectural significance**: `InlineFixClaimVerificationCheck` (B-470) now verifies ALL 3 documented kinds — badge_flip (Pitfall #9.j) + transition (Pitfall #9.k/l) + missing_entries (Pitfall #9.n). Pitfall #9.X false-negative classes for inline-fix claims are now mechanically covered through commit-msg-time verification. CHECKS registry unchanged at 7; this is internal scope-completion not new layer.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `tools/check_commit_msg.py` + `tests/tier0/*` + `CLAUDE.md` + `GLOSSARY.md` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md`):
+- TEST: pytest 2787 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression scope; 145 Tier 0 assertions at `test_check_commit_msg.py`. Smoke-test verified: both identifiers present → PASS; 1 missing → WARN with specific identifier cited; both missing → WARN. 4 separator tests pass for canonical tuple.
+- GAP ANALYSIS: udm-next-step-cascade Step 2 gap-check scheduled post-commit (Layer 2a + Layer 2b parent-agent reflection).
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
 ## 2026-05-18 — B-490 udm-cohort-review Mechanism A Step 6 regex-completeness verification (LOW WSJF 1.0; closes empirical reviewer-methodology blind-spot class)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). Per cascade Step 1.1 smallest-scope-at-same-priority tiebreaker: B-490 selected over B-489 (smaller scope; ~20 LOC SKILL.md amendment vs ~50 LOC tracker authoring).

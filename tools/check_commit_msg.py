@@ -895,6 +895,22 @@ _TRANSITION_RE = re.compile(
     r"[\"“‘`](?P<new>[^\"”’`\n]+?)[\"”’`]"
 )
 
+# Per B-477 closure 2026-05-18: missing_entries kind verification (Pitfall #9.n
+# claim class). Canonical claim format extracted from forensic analysis of
+# commit 20d998f Fix #3: "GLOSSARY missing 2 NEW B-467 surfaces (OrchestrationContext
+# + _build_orchestration_context) — added 2 entries after REPO_ROOT row".
+# Regex captures the parenthesized ident-list. Identifiers separated by
+# whitespace + "+" / "," / ";" / " and ". Tolerates Unicode dash "—" / "–".
+_MISSING_ENTRIES_RE = re.compile(
+    r"missing\s+\d+\s+(?:NEW\s+)?(?:[\w-]+\s+)?surfaces?\s*"
+    r"\((?P<ident_list>[^)]+)\)",
+    re.IGNORECASE,
+)
+
+# Per B-477: split identifier list into individual identifier tokens.
+# Accepts " + " / " , " / " ; " / " and " separators; strips backticks.
+_IDENT_SEPARATOR_RE = re.compile(r"\s*(?:[+,;]|\band\b)\s*")
+
 # Canonical filename → repo path. Longer (".md") forms first so they win
 # substring match before bare name.
 _CANONICAL_FILE_PATHS: tuple[tuple[str, str], ...] = (
@@ -1100,10 +1116,41 @@ class InlineFixClaimVerificationCheck(CommitMsgCheck):
                         f"(2-event evidence base: commits 2a33efa + 20d998f). "
                         f"Re-apply via Edit + verify via grep BEFORE staging."
                     )
-            # missing_entries kind: parser classifies it but scan() verification
-            # deferred per B-477 (open 2026-05-18). Empirically 1 occurrence so
-            # far (commit 20d998f Fix #3) and it DID land — verification gap
-            # only impactful on subsequent non-landed missing-entries claim.
+            elif kind == "missing_entries":
+                # Per B-477 closure 2026-05-18: Pitfall #9.n claim class
+                # verification. Parse ident-list from raw_body via
+                # `_MISSING_ENTRIES_RE`; verify each identifier appears in
+                # staged target file content. WARN per missing identifier.
+                raw_body = claim.get("raw_body", "")
+                m = _MISSING_ENTRIES_RE.search(raw_body)
+                if not m:
+                    # No parseable ident-list — silently skip per WARN heuristic
+                    continue
+                ident_list_str = m.group("ident_list")
+                # Split on common separators; strip backticks/whitespace.
+                idents = [
+                    tok.strip().strip("`").strip()
+                    for tok in _IDENT_SEPARATOR_RE.split(ident_list_str)
+                    if tok.strip()
+                ]
+                missing_idents: list[str] = []
+                for ident in idents:
+                    if not ident or len(ident) < 3:
+                        # Skip very short tokens (high false-positive risk)
+                        continue
+                    if ident not in content:
+                        missing_idents.append(ident)
+                if missing_idents:
+                    findings.append(
+                        f"Fix #{claim['fix_num']} (missing_entries) claims "
+                        f"{len(idents)} identifier(s) added to {target} "
+                        f"but {len(missing_idents)} are NOT present in staged "
+                        f"content: {missing_idents!r}. "
+                        f"Likely Edit-overwrite drift per B-477 closure 2026-05-18 "
+                        f"(Pitfall #9.n claim class; empirical 1-event anchor: "
+                        f"commit 20d998f Fix #3 GLOSSARY 2 NEW B-467 surfaces). "
+                        f"Re-apply via Edit + verify via grep BEFORE staging."
+                    )
 
         if findings:
             return CheckResult(passed=False, findings=findings[:10])

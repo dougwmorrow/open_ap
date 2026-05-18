@@ -2584,3 +2584,99 @@ def test_narrative_pytest_check_fires_outside_anchor_context():
     # 62 skip outside anchor context → fires WARN
     assert result.passed is False
     assert any("62" in f for f in result.findings)
+
+
+# ---------------------------------------------------------------------------
+# B-477 closure: missing_entries kind verification (Pitfall #9.n claim class)
+# in InlineFixClaimVerificationCheck.scan()
+# ---------------------------------------------------------------------------
+
+
+def test_inline_fix_check_missing_entries_regex_constants_exported():
+    """B-477 Assertion 142: `_MISSING_ENTRIES_RE` + `_IDENT_SEPARATOR_RE`
+    regex constants exported from check_commit_msg module."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "_MISSING_ENTRIES_RE")
+    assert hasattr(ccm, "_IDENT_SEPARATOR_RE")
+
+
+def test_inline_fix_check_warns_on_unlanded_missing_entries(monkeypatch):
+    """B-477 Assertion 143: when commit-msg cites Pitfall #9.n missing_entries
+    fix but staged target file does NOT contain ALL identifiers from the
+    ident-list, the check returns WARN finding.
+
+    Empirical anchor: commit `20d998f` Fix #3 cited 'GLOSSARY missing 2 NEW
+    B-467 surfaces (OrchestrationContext + _build_orchestration_context)' —
+    in that case fix LANDED; this test simulates non-landed case to verify
+    B-477 detection."""
+    import tools.check_commit_msg as ccm
+    # Staged GLOSSARY contains only ONE of the two cited identifiers
+    staged_content = (
+        "**OrchestrationContext** | tools/check_commit_msg.py | dataclass...\n"
+        # _build_orchestration_context absent
+    )
+    monkeypatch.setattr(
+        ccm, "_fetch_staged_content",
+        lambda path: staged_content if "GLOSSARY" in path else "",
+    )
+    commit_msg = (
+        "build: cohort closure\n\n"
+        "Independent pre-commit reviewer Agent 99 (deadbeef123):\n"
+        "3. Pitfall #9.n: GLOSSARY missing 2 NEW B-467 surfaces "
+        "(OrchestrationContext + _build_orchestration_context) - added 2 entries.\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is False
+    assert len(result.findings) == 1
+    # Finding cites the specific missing identifier
+    assert "_build_orchestration_context" in result.findings[0]
+    assert "missing_entries" in result.findings[0]
+    assert "B-477" in result.findings[0]
+
+
+def test_inline_fix_check_passes_when_all_missing_entries_landed(monkeypatch):
+    """B-477 Assertion 144: when staged target file contains ALL identifiers
+    from the cited ident-list, the check passes silently."""
+    import tools.check_commit_msg as ccm
+    staged_content = (
+        "**OrchestrationContext** | ... | ...\n"
+        "**_build_orchestration_context** | ... | ...\n"
+    )
+    monkeypatch.setattr(
+        ccm, "_fetch_staged_content",
+        lambda path: staged_content if "GLOSSARY" in path else "",
+    )
+    commit_msg = (
+        "build: cohort closure\n\n"
+        "Independent pre-commit reviewer Agent 99 (deadbeef123):\n"
+        "3. Pitfall #9.n: GLOSSARY missing 2 NEW B-467 surfaces "
+        "(OrchestrationContext + _build_orchestration_context) - added 2 entries.\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_inline_fix_check_missing_entries_handles_multiple_separators():
+    """B-477 Assertion 145: ident-list parser handles common separators
+    (' + ' / ' , ' / ' ; ' / ' and '). Pins canonical separator tuple."""
+    import tools.check_commit_msg as ccm
+    # Test _IDENT_SEPARATOR_RE directly
+    test_cases = [
+        ("foo + bar + baz", ["foo", "bar", "baz"]),
+        ("foo, bar, baz", ["foo", "bar", "baz"]),
+        ("foo; bar; baz", ["foo", "bar", "baz"]),
+        ("foo and bar", ["foo", "bar"]),
+        ("foo + bar, baz", ["foo", "bar", "baz"]),
+    ]
+    for input_str, expected in test_cases:
+        result = [
+            tok.strip().strip("`").strip()
+            for tok in ccm._IDENT_SEPARATOR_RE.split(input_str)
+            if tok.strip()
+        ]
+        assert result == expected, f"Input {input_str!r} -> {result} (expected {expected})"
