@@ -7,20 +7,22 @@
 ## State as of session end
 
 - **Branch**: `round-6-post-merge-tracking`
-- **Latest commit**: `abb7596` (B-483 cross-cohort review discipline layer — `udm-cohort-review` skill + CLAUDE.md hard rule 11 extension)
-- **Push status**: NOT pushed (default hold per cascade discipline; user can `git push` when ready). 14 commits ahead of `origin/round-6-post-merge-tracking`.
-- **pytest baseline** (authoritative per cascade Step 3.1): **2798 pass / 10 skip / 0 fail** on `tier0+tier1+unit+property+regression` scope
+- **Latest commit**: `c781c9b` (B-481 wc -l line-count claim forward-prevention check — 9th Phase 1 check at `tools/pre_commit_checks.py`)
+- **Push status**: PUSHED — 0 commits ahead of `origin/round-6-post-merge-tracking`
+- **pytest baseline** (authoritative per cascade Step 3.1): **2817 pass / 10 skip / 0 fail** on `tier0+tier1+unit+property+regression` scope
 - **Cumulative session delta vs `c8145de`** (Phase A Plan convergence anchor):
-  - **98 NEW B-Ns** (B-393-B-490; all 98 positions populated per Mechanism A Step 6 dual-regex verification 2026-05-18)
-  - **17 B-Ns CLOSED multi-session arc** (B-465+B-466+B-467+B-468 prior session + B-470+B-471+B-472+B-458+B-475+B-483+B-464+B-488+B-490+B-477+B-469 this session + B-480 + B-487 absorbed via B-488 shared-helper)
+  - **99 NEW B-Ns** (B-393-B-491; +1 from B-491 PRE-COMMIT reviewer-surfaced self-firing-class open at c781c9b)
+  - **23 B-Ns CLOSED multi-session arc** (prior 17 + B-478 shared-CLOSED chain detection + B-476 + B-479 + B-486 cleanup cohort + B-481 wc -l forward-prevention + B-480 + B-487 absorbed via B-488 shared-helper)
   - **11 NEW R-Ns** (R39-R49)
   - **14 canonical edge case series** (added PL + SE)
   - **udm-progress-logger**: v1.2.0 → v1.3.0 → v1.3.1 → v1.3.2 (4 PATCH iterations; unchanged this session)
-  - **CommitMsgCheck ABC**: extracted + 4 subclasses migrated + B-459 completion cohort (B-466+B-467+B-468) + B-470/471/472 polish + B-458 6th subclass → **6 CommitMsgCheck subclasses; 123 Tier 0 assertions at `test_check_commit_msg.py`**
-  - **NEW skill**: `udm-cohort-review` at `.claude/skills/udm-cohort-review/SKILL.md` (198 LOC; B-483 closure) — cross-cohort review discipline layer between per-commit (udm-gap-check + udm-design-reviewer) and per-round (udm-cascade-auditor Pattern F)
-  - **3 NEW Tier 0 test scaffolding modules** (cumulative): `tests/tier0/_skill_test_base.py` (B-461) + `tests/tier0/test_skill_cohort_review.py` (B-483; 10 assertions) + extended `test_check_commit_msg.py` (123 assertions; was 48 at multi-session start)
-  - **GLOSSARY**: 21+ B-459/461/467 entries + 9 B-458/470 entries (`ClosureAnnotationConsistencyCheck` + `InlineFixClaimVerificationCheck` + helpers + regex constants)
-- **Multi-agent applications this session**: ~85 cumulative agent spawns (~77 prior + 8 this session — forensic + 2 PRE-COMMIT reviewers + 2 gap-check reviewers + cross-cohort reviewer (informal) + cross-cohort reviewer (formal first invocation) + general-purpose for misc)
+  - **CommitMsgCheck ABC**: extracted + 7 subclasses migrated (ExemptionPhraseCheck + CascadeEvidenceCheck + PytestCountDisambiguationCheck + UnresolvedForwardPreventionCandidatesCheck + InlineFixClaimVerificationCheck + ClosureAnnotationConsistencyCheck + NarrativePytestClaimVerificationCheck) → **7 CommitMsgCheck subclasses; 152 Tier 0 assertions at `test_check_commit_msg.py`**
+  - **Phase 1 quality-checks orchestrator**: CHECKS registry expanded **4 → 8 → 9** at `tools/pre_commit_checks.py` (added `check_planning_provenance` + `check_cli_registry_sync` + `check_wc_line_count_claims`)
+  - **NEW skill**: `udm-cohort-review` at `.claude/skills/udm-cohort-review/SKILL.md` (198 LOC; B-483 closure) — cross-cohort review discipline layer between per-commit (udm-gap-check + udm-design-reviewer) and per-round (udm-cascade-auditor Pattern F); extended with Mechanism A Step 6 (B-490) regex-completeness verification
+  - **NEW canonical tracker**: `docs/migration/_false_positive_log.md` (~180 LOC append-only audit; B-489 closure) — 4-layer false-positive prevention architecture COMPLETE (Layer 1 WARN-severity + Layer 2 shared `_is_empirical_anchor_context()` helper B-488 + Layer 3 Mechanism A Step 6 B-490 + Layer 4 accumulation tracker B-489)
+  - **NEW Tier 0 test scaffolding modules** (cumulative): `tests/tier0/_skill_test_base.py` (B-461) + `tests/tier0/_tier0_test_base.py` (B-469 CLI tool factory) + `tests/tier0/test_skill_cohort_review.py` (B-483; 12 assertions incl. B-490) + `tests/tier0/test_pre_commit_checks_b481.py` (B-481; 7 assertions) + extended `test_check_commit_msg.py` (152 assertions; was 48 at multi-session start)
+  - **GLOSSARY**: 30+ B-459/461/467/470/477/478/481/483/486/488/489/490 entries
+- **Multi-agent applications this session**: ~87 cumulative agent spawns (~85 prior + 2 this session — claude-code-guide research + gap-check reviewer `ab45539c33d1cebd1`)
 
 ---
 

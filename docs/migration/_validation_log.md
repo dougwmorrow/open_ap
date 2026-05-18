@@ -2,6 +2,39 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-492 `udm-session-compactor` skill (Phase 1 manual-trigger scope; MEDIUM WSJF 3.0; session-state compression discipline layer)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 fires `udm-next-step-cascade` skill. Prior turn recommended building Phase 1 `udm-session-compactor` (~1 day scope). Cascade Step 1 execution.
+
+**Scope**: 1 B-N closure (B-492). NEW skill `.claude/skills/udm-session-compactor/SKILL.md` (~250 LOC; YAML frontmatter + 11 canonical sections) + NEW Tier 0 test `tests/tier0/test_skill_session_compactor.py` (8 assertions via B-461 factory pattern). Trackers updated: BACKLOG.md (B-492 closure annotation at L508) + GLOSSARY.md (2 NEW entries: `udm-session-compactor` skill row + `_session_snapshots/` directory row) + CURRENT_STATE.md L7 (narrative prepend) + HANDOFF.md §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical anchor (1-event)**: this session underwent context-window compaction during the arc; SESSION_RESUME.md proved insufficient as recovery anchor — gap-check reviewer `ab45539c33d1cebd1` G2 finding 2026-05-18 surfaced L10-L15 cumulative-count drift uncaught for 2-3 cohorts (98 → 99 NEW B-Ns / 17 → 23 CLOSED / 2798 → 2817 pytest / `abb7596` → `c781c9b` commit). Manual SESSION_RESUME.md refresh missed multiple session-events. The fundamental gap: SESSION_RESUME.md captures the WHAT (last-commit + cumulative counts + arc summary) but does NOT capture the WHY (architectural decisions + rejected alternatives + cross-cohort patterns + why-not justifications). Those rationales live ONLY in conversation transcript, which is exactly what compaction sheds.
+
+**B-492 implementation**:
+
+- NEW `.claude/skills/udm-session-compactor/SKILL.md` (~250 LOC):
+  - YAML frontmatter declares `name: udm-session-compactor` + descriptive `description:` field with empirical anchor
+  - 11 canonical sections — Why this skill exists (with 5-pattern failure-mode table + distinction-from-existing-layers table) + When to invoke (user-invokable trigger phrases + auto-invocable triggers + NOT auto-invocable triggers) + Anti-triggers + The 5-section snapshot procedure (§1 Active work context / §2 Completed deliverables / §3 Open runway / §4 **Deeper insights** (THE differentiator vs SESSION_RESUME.md) / §5 Pointer-back cross-refs) + Output contract (canonical snapshot path format `docs/migration/_session_snapshots/<YYYY-MM-DD>-<commit-hash-prefix-7>.md` + frontmatter contract + 5-section header requirement + footer trigger criteria) + Edge cases (≥6 enumerated) + Composition with other skills (5-composer table) + Phase 1 vs Phase 2 scope (current vs deferred) + Tier 0 stub + Cross-references + Owner + Changelog v1.0.0
+  - Phase 1 (current scope) = manual-trigger only (user trigger phrases + auto-triggers before SESSION_RESUME.md write + auto-triggers before anticipated compaction events)
+  - Phase 2 (deferred — future B-N pending Phase 1 workflow validation) = token-tracking subsystem via PostToolUse hook + Token Counting API ground-truth sampling + PreCompact hook integration. Deferred per claude-code-guide research `a4c2c9ae8ebd639e1` 2026-05-18 finding: Claude Code hooks cannot access token counts directly (active feature request `anthropics/claude-code#34340` requesting `CLAUDE_CONTEXT_USED` / `CLAUDE_CONTEXT_MAX` env vars); workaround would require parsing `~/.claude/projects/<slug>/<session-uuid>.jsonl` + Token Counting API subprocess invocations (~500ms-2s latency per measurement; rate-limited at higher tiers).
+
+- NEW `tests/tier0/test_skill_session_compactor.py` (8 assertions):
+  - 1-2: baseline factory-generated (skill file exists / frontmatter name) via B-461 `_skill_test_base.py` pattern
+  - 3: required canonical section headers present (11 headers pinned)
+  - 4: 5-canonical-snapshot-sections present (§1-§5)
+  - 5: composition table includes 5 canonical composers (udm-progress-logger + udm-cohort-review + udm-round-closeout + udm-gap-check + SESSION_RESUME.md)
+  - 6: Phase 1 vs Phase 2 scope documented (with anthropics/claude-code#34340 citation)
+  - 7: output contract pins canonical snapshot path format
+  - 8: empirical anchor cited (1-event evidence base + `ab45539c33d1cebd1` reviewer ID)
+
+**Tests**: 8/8 NEW Tier 0 PASS in 0.31s; full-suite re-verify 2825 passed / 10 skipped / 0 failed in 53.96s (baseline 2817 from c781c9b + 8 new = 2825 sum-matches).
+
+**Cumulative session delta UPDATED at B-492**: **99 → 100 NEW B-Ns** (B-393-B-492) / **24 B-Ns CLOSED multi-session arc** (23 prior + B-492) / 11 NEW R-Ns / 14 canonical edge case series / pytest 2817 → **2825 pass / 10 skip / 0 fail** (+8).
+
+**Status**: ⚫ CLOSED inline at this commit; substrate-edit per hard rule 14 — PRE-COMMIT reviewer to be spawned before commit lands.
+
 ## 2026-05-18 — B-481 wc -l line-count claim forward-prevention check (LOW WSJF 1.0; Pitfall #9.h forward-prevention; 9th Phase 1 check)
 
 **Trigger**: pipeline-lead "Proceed with where you last left off" 2026-05-18 — continuing the 2-step user-direction sequence (gap analysis ✅ CLEAN by `a81f7eeca6c029ab8` + recommended next steps). B-481 selected per cascade Step 1.1 (smallest scope at LOW priority; B-482 deferred per its own "until empirical 2nd-need" trigger).
