@@ -107,6 +107,37 @@ For each invocation: parent agent identifies the cohort scope (last N commits OR
 - Identify stale forward-references that have already been resolved
 - Identify line-count / line-anchor claims (`per actual wc -l N`; `L<N>`) and verify against current file state (Pitfall #9.h)
 
+## Mechanism A Step 6 — regex-completeness verification (per B-490 closure 2026-05-18)
+
+When reporting drift counts based on grep / regex pattern matching against tracker files (BACKLOG.md / CLAUDE.md / GLOSSARY.md / etc.), reviewer MUST verify findings against the **canonical format-variant set** for that artifact type. Pattern observed empirically: incomplete regex producing false-positive drift signals because the pattern doesn't cover all canonical format variants in active use.
+
+**Empirical anchor (1-event 2026-05-18; B-490 opening trigger)**: cross-cohort reviewer `a73a72b3539791788` reported a 🔴 §4 Pitfall #9.k recurrence finding based on `grep -oE "^- \*\*B-[0-9]+\*\*"` returning 73 unique B-N rows in B-393-B-486 range vs narrative "94 NEW B-Ns" claim. Producer-side verification with **broader regex accepting BOTH** `- \*\*B-N\*\*` AND `- ~~\*\*B-N\*\*~~` formats returned all 94 unique B-N rows — confirming narrative claim was correct AND reviewer's pattern had a blind spot. The reviewer's grep missed older strikethrough-wrapped format used for B-408-B-414 historical closures.
+
+### Canonical format-variant table (BACKLOG.md row formats)
+
+| Format | Pattern | Used for |
+|---|---|---|
+| **Standard open** | `^- \*\*B-N\*\* \(🟡 Open` | Currently-open B-Ns |
+| **Standard closed (leading-badge flip)** | `^- \*\*B-N\*\* \(⚫ CLOSED <date>` | Recent closures (post-B-458 convention) |
+| **Strikethrough-wrapped (legacy)** | `^- ~~\*\*B-N\*\*~~ \(🟡 Open` | Older closures pre-Pitfall #9.j leading-badge discipline (B-408-B-414 era); strikethrough applied to entire bold marker |
+| **Partial closure (🟠)** | `^- \*\*B-N\*\* \(🟠 PARTIAL` | Per udm-progress-logger v1.2.0 partial-closure convention |
+| **Deferred (⬜)** | `^- \*\*B-N\*\* \(⬜ Deferred` | Per status legend (rare) |
+
+**Reviewer regex contract**: when scanning BACKLOG.md for B-N row enumeration, use the COMBINED regex `^- (~~)?\*\*B-[0-9]+\*\*` (accepts both `- **B-N**` AND `- ~~**B-N**~~`). For specific status filtering, append a status-marker pattern. Verify counts against alternative methods (e.g., `grep -oE "B-[0-9]+" | sort -u`) when the count is load-bearing for a drift claim.
+
+### Step 6 procedure
+
+For each drift count cited in the verdict that is based on grep/regex of tracker file contents:
+
+1. **Identify the regex pattern used**: cite verbatim in the verdict so producer can verify against canonical format-variant table above
+2. **Run secondary verification**: use an ALTERNATIVE method (different regex; `awk` numeric extraction; cross-doc count comparison) to corroborate the primary count
+3. **Compute deviation**: if primary count ≠ secondary count, flag as 🟡 reviewer-methodology gap rather than 🔴 producer drift; investigate which method has the blind spot
+4. **Cite verification method in verdict**: e.g., "B-N row count = 94 (primary regex `^- (~~)?\\*\\*B-[0-9]+\\*\\*`; secondary numeric `grep -oE 'B-[0-9]+' | sort -u | wc -l` = 94; consistent)"
+
+**Anti-pattern (Pitfall #9.k-class false-positive)**: reporting a count-based drift finding without secondary verification → producer remediation effort wasted chasing a false positive caused by reviewer's incomplete pattern. This wastes producer time AND erodes trust in subsequent legitimate findings.
+
+**When this step applies**: any verdict scope that cites a count derived from grep/regex of a tracker file. Skip when count is derived from authoritative non-grep source (pytest output / git log / canonical-DDL row count).
+
 ## Output contract
 
 The reviewer agent returns a verdict using this template (≤700 words):

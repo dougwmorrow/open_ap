@@ -2,6 +2,38 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-490 udm-cohort-review Mechanism A Step 6 regex-completeness verification (LOW WSJF 1.0; closes empirical reviewer-methodology blind-spot class)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). Per cascade Step 1.1 smallest-scope-at-same-priority tiebreaker: B-490 selected over B-489 (smaller scope; ~20 LOC SKILL.md amendment vs ~50 LOC tracker authoring).
+
+**Scope**: 1 B-N closure (B-490) — SKILL.md amendment + 2 Tier 0 assertions + tracker updates. 5 files modified: `.claude/skills/udm-cohort-review/SKILL.md` (NEW section between §6 + Output contract) + `tests/tier0/test_skill_cohort_review.py` (+2 assertions; 10 → 12) + `docs/migration/BACKLOG.md` (B-490 closure annotation) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Empirical anchor (1-event 2026-05-18)**: cross-cohort reviewer `a73a72b3539791788` reported a 🔴 §4 Pitfall #9.k recurrence finding based on `grep -oE "^- \*\*B-[0-9]+\*\*"` returning 73 unique B-N rows in B-393-B-486 range vs narrative "94 NEW B-Ns" claim. Producer-side verification with broader regex accepting both `- \*\*B-N\*\*` AND `- ~~\*\*B-N\*\*~~` formats returned all 94 unique B-N rows — confirming narrative claim was correct AND reviewer's pattern had a blind spot (missed older strikethrough-wrapped format used for B-408-B-414 historical closures).
+
+**B-490 implementation**:
+- NEW "Mechanism A Step 6 — regex-completeness verification (per B-490 closure 2026-05-18)" section inserted between §6 cross-doc consistency final sweep + Output contract sections.
+- Canonical format-variant table documenting 5 BACKLOG.md row formats: (1) standard open `- **B-N** (🟡 Open`; (2) standard closed leading-badge `- **B-N** (⚫ CLOSED <date>`; (3) strikethrough-wrapped legacy `- ~~**B-N**~~ (🟡 Open` (used for B-408-B-414 era closures pre-Pitfall #9.j discipline); (4) partial closure `- **B-N** (🟠 PARTIAL` (per udm-progress-logger v1.2.0); (5) deferred `- **B-N** (⬜ Deferred` (rare).
+- Reviewer regex contract: combined `^- (~~)?\*\*B-[0-9]+\*\*` for B-N row enumeration; alternative numeric `grep -oE "B-[0-9]+" | sort -u | wc -l` for secondary verification when drift count is load-bearing.
+- 4-step Step 6 procedure: (1) identify regex pattern used; (2) run secondary verification with alternative method; (3) compute deviation between primary + secondary; (4) cite verification method in verdict.
+- Anti-pattern citation: reporting count-based drift without secondary verification = Pitfall #9.k-class false-positive that wastes producer time + erodes trust.
+
+**Tier 0 coverage**: 2 NEW assertions at `tests/tier0/test_skill_cohort_review.py`:
+- Assertion 11 (`test_mechanism_a_step_6_regex_completeness_section_present`): pins canonical substrings for Step 6 section + empirical anchor agentId + strikethrough-wrapped legacy variant reference
+- Assertion 12 (`test_step_6_procedure_enumerates_verification_steps`): pins 4-step procedure structure (identify regex / secondary verify / compute deviation / cite method)
+
+**Cumulative session delta UPDATED at B-490 closure**: 95 NEW B-Ns UNCHANGED (B-393-B-490; B-490 was pre-existing open). **15 B-Ns CLOSED multi-session arc** (cumulative; 14 prior + B-490 this commit: 4 prior session + 11 this session including 2 absorbed). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2781 → **2783 pass / 10 skip / 0 fail** (+2 from B-490 Tier 0 additions).
+
+**Architectural significance**: The cross-cohort review discipline (B-483) now has a built-in **methodology-pinning step** parallel to udm-progress-logger Step 4.5.1 (intra-sentence arithmetic contradiction detection). Pattern: when discipline depends on regex/grep methodology, codify canonical pattern variants AND require secondary verification for load-bearing counts. This forward-prevents the false-positive class where a check/reviewer's grep blind-spot produces phantom drift findings.
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `.claude/skills/udm-cohort-review/SKILL.md` + `tests/tier0/*` + `BACKLOG.md` + `CURRENT_STATE.md` + `HANDOFF.md` + `_validation_log.md` all substrate):
+- TEST: pytest tests/tier0/test_skill_cohort_review.py PASS 10 → **12 assertions in 0.31s**; full-suite scope verified live post-cohort 2783 / 10 / 0.
+- GAP ANALYSIS: udm-next-step-cascade Step 2 gap-check scheduled post-commit.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
 ## 2026-05-18 — B-488 + B-489 + B-490 false-positive forward-prevention architecture cohort (MEDIUM WSJF 2.5 + LOW WSJF 1.5 + LOW WSJF 1.0; shared helper consolidation closes B-480 + B-487 absorbed)
 
 **Trigger**: user-direction 2026-05-18 "How will we address and prevent false positives?" → producer authored 4-layer architectural proposal → user-direction "Open all 3 B-Ns + proceed with B-488".

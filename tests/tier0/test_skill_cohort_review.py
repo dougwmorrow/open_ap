@@ -155,3 +155,39 @@ def test_anti_trigger_section_warns_against_overlap(skill_content: str) -> None:
         hint="Anti-trigger warns against overlap with single-commit / round-level "
              "review layers per B-483 spec",
     )
+
+
+def test_mechanism_a_step_6_regex_completeness_section_present(skill_content: str) -> None:
+    """B-490 Assertion 11: SKILL.md contains Mechanism A Step 6 regex-completeness
+    verification section + canonical format-variant table for BACKLOG.md row
+    formats (per B-490 closure 2026-05-18; empirical anchor: cross-cohort
+    reviewer `a73a72b3539791788` false-positive grep blind-spot)."""
+    assert_skill_contains_substrings(
+        skill_content,
+        [
+            "Mechanism A Step 6",
+            "regex-completeness verification",
+            "Canonical format-variant table",
+            "B-490 closure 2026-05-18",
+            "a73a72b3539791788",
+            "Strikethrough-wrapped (legacy)",
+        ],
+        hint="Step 6 regex-completeness section + canonical format table per "
+             "B-490 spec; closes cross-cohort reviewer grep blind-spot class",
+    )
+
+
+def test_step_6_procedure_enumerates_verification_steps(skill_content: str) -> None:
+    """B-490 Assertion 12: Step 6 procedure section enumerates the 4-step
+    verification procedure (identify regex / secondary verification /
+    compute deviation / cite method in verdict)."""
+    assert_skill_contains_substrings(
+        skill_content,
+        [
+            "Identify the regex pattern used",
+            "Run secondary verification",
+            "Compute deviation",
+            "Cite verification method in verdict",
+        ],
+        hint="Step 6 4-step procedure canonical per B-490 spec",
+    )
