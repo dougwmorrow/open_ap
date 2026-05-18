@@ -1069,6 +1069,151 @@ class InlineFixClaimVerificationCheck(CommitMsgCheck):
         )
 
 
+# -------------------------------------------------------------------------
+# B-458 closure: retrospective closure-annotation-consistency check
+# -------------------------------------------------------------------------
+# Empirical anchor commit `20fe33a` (Phase 1 R1 R3 audit retrospective):
+# subject + body claimed `**B-409 CLOSED**` + `**B-414 CLOSED**` but staged
+# BACKLOG.md diff applied closure annotation ONLY to B-408. Required Agent
+# 58 gap-check + e76078c remediation cycle to backfill the missing B-409
+# and B-414 closure annotations.
+#
+# Composes with B-451 as orthogonal failure-mode coverage:
+#   - B-451 catches FORWARD-LOOKING orphan-candidate phrasings
+#     (e.g., "deferred (B-N candidate for X)") that need new B-N openings
+#   - B-458 catches RETROSPECTIVE "B-N CLOSED" claims that need existing
+#     B-N closure annotations
+# Both are WARN-only Mechanism C-1 extensions per WSJF MEDIUM contract.
+
+# Claim regex: matches either bold form `**B-NNN CLOSED**` OR bare form
+# `B-NNN CLOSED` / `B-NNN ⚫ CLOSED`. Case-insensitive on CLOSED literal.
+_CLOSURE_CLAIM_RE = re.compile(
+    r"\*\*B-(\d+)\s+CLOSED\*\*"
+    r"|"
+    r"\bB-(\d+)\s+(?:⚫\s*)?CLOSED\b",
+    re.IGNORECASE,
+)
+
+# BACKLOG closure-annotation regex: matches `+ ` diff line containing the
+# canonical leading-badge form `**B-NNN** (⚫ CLOSED`. The `+` prefix marks
+# git-diff additions; MULTILINE mode anchors `^\+` per line in the full diff.
+_BACKLOG_CLOSURE_ANNOTATION_RE = re.compile(
+    r"^\+.*\*\*B-(\d+)\*\*\s*\(\s*⚫\s*CLOSED",
+    re.MULTILINE,
+)
+
+
+class ClosureAnnotationConsistencyCheck(CommitMsgCheck):
+    """B-458 closure (2026-05-18): retrospective-closure-without-BACKLOG-
+    annotation drift detection.
+
+    Empirical anchor: commit `20fe33a` claimed `**B-409 CLOSED**` +
+    `**B-414 CLOSED**` in subject + body but staged BACKLOG.md diff
+    applied closure annotation ONLY to B-408. Required Agent 58
+    gap-check + e76078c remediation cycle to backfill.
+
+    Detection logic (heuristic; WARN-only):
+        - Sanitize commit-msg (strip code blocks via `_strip_code_blocks`;
+          skip blockquote lines via `_is_inside_blockquote`).
+        - Find all `B-NNN CLOSED` claims via `_CLOSURE_CLAIM_RE`.
+        - Find all `**B-NNN** (⚫ CLOSED` annotations in BACKLOG.md staged
+          diff via `_BACKLOG_CLOSURE_ANNOTATION_RE`.
+        - WARN per claimed B-N that lacks corresponding staged annotation.
+
+    Severity: WARN per WSJF MEDIUM (matches B-449 + B-451 + B-470 contract).
+    Orthogonal-failure-mode complement to B-451 orphan-candidate forward-
+    prevention — composes via shared `_collect_staged_diffs` BACKLOG-diff
+    batching (requires_backlog_diff=True).
+    """
+    name = "closure_annotation"
+    severity: Literal["WARN", "BLOCK"] = "WARN"
+    requires_backlog_diff = True
+    requires_classification = False
+
+    def scan(self, commit_msg: str, ctx: OrchestrationContext) -> CheckResult:
+        sanitized = _strip_code_blocks(commit_msg)
+        if not sanitized.strip():
+            return CheckResult(passed=True, findings=[])
+
+        # Extract claimed B-N closures from commit-msg (skip blockquote lines
+        # to avoid quoted-reviewer-output false positives).
+        lines = sanitized.splitlines()
+        claimed: dict[str, int] = {}  # bn -> 1-based line number
+        for i, line in enumerate(lines):
+            if _is_inside_blockquote(lines, i):
+                continue
+            for m in _CLOSURE_CLAIM_RE.finditer(line):
+                bn_num = m.group(1) or m.group(2)
+                if bn_num:
+                    bn = f"B-{bn_num}"
+                    if bn not in claimed:
+                        claimed[bn] = i + 1
+
+        if not claimed:
+            return CheckResult(passed=True, findings=[])
+
+        # Fetch BACKLOG.md staged diff from ctx (collected by
+        # _collect_staged_diffs since requires_backlog_diff=True).
+        backlog_diff = ctx.staged_diffs.get("docs/migration/BACKLOG.md", "")
+        if not backlog_diff:
+            # No BACKLOG.md staged — cannot verify; silently skip per
+            # conservative WARN heuristic.
+            return CheckResult(passed=True, findings=[])
+
+        annotated: set[str] = set()
+        for m in _BACKLOG_CLOSURE_ANNOTATION_RE.finditer(backlog_diff):
+            annotated.add(f"B-{m.group(1)}")
+
+        unannotated = sorted(
+            set(claimed) - annotated, key=lambda x: int(x.split("-")[1]),
+        )
+        if not unannotated:
+            return CheckResult(passed=True, findings=[])
+
+        findings: list[str] = []
+        for bn in unannotated[:10]:
+            line_num = claimed[bn]
+            findings.append(
+                f"{bn} CLOSED claim cited in commit-msg (line {line_num}) "
+                f"but BACKLOG.md staged diff does NOT contain corresponding "
+                f"`**{bn}** (⚫ CLOSED` closure annotation. "
+                f"Empirical anchor commit `20fe33a` per B-458 closure 2026-05-18. "
+                f"Either (a) stage the BACKLOG.md closure annotation for {bn} "
+                f"OR (b) remove the CLOSED claim if premature."
+            )
+        return CheckResult(passed=False, findings=findings)
+
+    def render_findings_to_stderr(self, findings: list[str]) -> None:
+        """Per B-468: emit closure-annotation WARN boilerplate with
+        resolution-options footer."""
+        print(
+            f"\n[commit-msg WARN] {len(findings)} retrospective B-N CLOSED "
+            "claim(s) in commit-msg without corresponding BACKLOG.md closure "
+            "annotation in staged diff "
+            "(per B-458; 1st-event empirical anchor commit `20fe33a`):",
+            file=sys.stderr,
+        )
+        for f in findings:
+            print(f"  - {f}", file=sys.stderr)
+        print("\nResolution options:", file=sys.stderr)
+        print(
+            "  - Stage the BACKLOG.md closure annotation "
+            "(~~strikethrough~~ + `**B-NNN** (⚫ CLOSED YYYY-MM-DD; ...)`) "
+            "for each cited B-N",
+            file=sys.stderr,
+        )
+        print(
+            "  - Remove the CLOSED claim from commit-msg if premature "
+            "(reverts to pending-state phrasing)",
+            file=sys.stderr,
+        )
+        print(
+            "This is a WARN (not BLOCK); commit will still proceed. "
+            "Escalation to BLOCK reserved for pipeline-lead post-baseline period.",
+            file=sys.stderr,
+        )
+
+
 # CHECKS registry per B-459 — single point of registration for orchestrator.
 # Order matters only for stderr-emission deterministic display; audit-row
 # JSON keys are independent.
@@ -1078,6 +1223,7 @@ CHECKS: list[CommitMsgCheck] = [
     PytestCountDisambiguationCheck(),
     UnresolvedForwardPreventionCandidatesCheck(),
     InlineFixClaimVerificationCheck(),  # B-470 closure 2026-05-18
+    ClosureAnnotationConsistencyCheck(),  # B-458 closure 2026-05-18
 ]
 
 

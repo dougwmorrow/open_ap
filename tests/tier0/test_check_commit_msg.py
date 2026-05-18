@@ -791,20 +791,20 @@ def test_checks_registry_present():
 
 
 def test_each_check_has_unique_name():
-    """B-459 Assertion 53 (updated B-470 2026-05-18): each CHECKS entry has
-    a unique name attribute. Canonical name set extended from 4 → 5 with
-    `inline_fix_claim` (B-470 closure)."""
+    """B-459 Assertion 53 (updated B-470 + B-458 2026-05-18): each CHECKS
+    entry has a unique name attribute. Canonical name set evolved 4 → 5 → 6
+    via B-470 (`inline_fix_claim`) + B-458 (`closure_annotation`) closures."""
     import tools.check_commit_msg as ccm
     names = [c.name for c in ccm.CHECKS]
     assert len(names) == len(set(names)), f"Duplicate check names: {names}"
     canonical_b459_names = {
         "exemption_phrase", "cascade_evidence", "pytest_count", "orphan_candidate",
     }
-    canonical_b470_names = canonical_b459_names | {"inline_fix_claim"}
-    # Accept either set — pins back-compat (pre-B-470 expectation) AND
-    # forward-compat (post-B-470 expectation):
-    assert set(names) == canonical_b470_names, (
-        f"CHECKS names must equal {canonical_b470_names}; got {set(names)}"
+    canonical_b458_names = canonical_b459_names | {
+        "inline_fix_claim", "closure_annotation",
+    }
+    assert set(names) == canonical_b458_names, (
+        f"CHECKS names must equal {canonical_b458_names}; got {set(names)}"
     )
 
 
@@ -825,10 +825,10 @@ def test_each_check_has_requires_backlog_diff_attribute():
 
 
 def test_block_checks_are_exemption_and_cascade():
-    """B-459 Assertion 56 (updated B-470 2026-05-18): BLOCK severity is
-    exemption_phrase + cascade_evidence (preserves pre-B-459 BLOCK contract).
-    WARN severity expanded from {pytest_count, orphan_candidate} to
-    {pytest_count, orphan_candidate, inline_fix_claim} per B-470 closure."""
+    """B-459 Assertion 56 (updated B-470 + B-458 2026-05-18): BLOCK severity
+    is exemption_phrase + cascade_evidence (preserves pre-B-459 BLOCK
+    contract). WARN severity expanded 2 → 3 → 4 across B-470 + B-458
+    closures."""
     import tools.check_commit_msg as ccm
     by_severity = {"BLOCK": set(), "WARN": set()}
     for check in ccm.CHECKS:
@@ -836,15 +836,17 @@ def test_block_checks_are_exemption_and_cascade():
     assert by_severity["BLOCK"] == {"exemption_phrase", "cascade_evidence"}
     assert by_severity["WARN"] == {
         "pytest_count", "orphan_candidate", "inline_fix_claim",
+        "closure_annotation",
     }
 
 
 def test_only_orphan_check_requires_backlog_diff():
-    """B-459 Assertion 57: only orphan_candidate check requires BACKLOG diff
-    (other 3 checks operate on commit_msg text only)."""
+    """B-459 Assertion 57 (updated B-458 2026-05-18): checks needing BACKLOG
+    staged-diff are now BOTH orphan_candidate (B-451) AND closure_annotation
+    (B-458) — both batch through `_collect_staged_diffs`."""
     import tools.check_commit_msg as ccm
     needs_backlog = {c.name for c in ccm.CHECKS if c.requires_backlog_diff}
-    assert needs_backlog == {"orphan_candidate"}
+    assert needs_backlog == {"orphan_candidate", "closure_annotation"}
 
 
 def test_exemption_phrase_check_scan_block_on_match():
@@ -1994,3 +1996,267 @@ def test_inline_fix_check_unknown_kind_skipped_silently(monkeypatch):
     result = check.scan(commit_msg, ctx)
     assert result.passed is True
     assert result.findings == []
+
+
+def test_inline_fix_check_passes_silently_on_missing_staged_content(monkeypatch):
+    """B-475 Assertion 113: when `_fetch_staged_content` returns "" (file not
+    in git index OR git unavailable), `scan()` skips the claim silently and
+    returns PASS. Closes B-470 coverage gap surfaced by PRE-COMMIT reviewer
+    `a7677c73928581c43` 2026-05-18 Scope 3.
+
+    Pins conservative WARN heuristic intent (per scan() L997-998 graceful
+    skip) against future refactor that could elevate "missing staged content"
+    to a false-positive finding."""
+    import tools.check_commit_msg as ccm
+    # Mock _fetch_staged_content to ALWAYS return "" (file not staged)
+    monkeypatch.setattr(ccm, "_fetch_staged_content", lambda path: "")
+    commit_msg = (
+        "build: substantive work\n\n"
+        "Independent pre-commit reviewer Agent 99 (deadbeef123):\n"
+        "1. Pitfall #9.j: B-999 BACKLOG L100 leading badge \"X Open\" -> "
+        "\"Y CLOSED 2026-05-18\"\n"
+        "2. Pitfall #9.l: GLOSSARY \"old-sig\" -> \"new-sig\"\n"
+    )
+    check = ccm.InlineFixClaimVerificationCheck()
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    result = check.scan(commit_msg, ctx)
+    # Both claims would normally trigger findings if staged content showed
+    # mismatch — but missing staged content means scan() cannot verify;
+    # falls through to PASS per WARN heuristic intent.
+    assert result.passed is True
+    assert result.findings == []
+
+
+# ---------------------------------------------------------------------------
+# B-458 closure: ClosureAnnotationConsistencyCheck — retrospective B-N
+# CLOSED claims without BACKLOG.md staged-diff closure annotation
+# (1st-event empirical anchor commit `20fe33a`; orthogonal-failure-mode
+# complement to B-451 forward-prevention)
+# ---------------------------------------------------------------------------
+
+
+def test_closure_annotation_check_registered_in_checks():
+    """B-458 Assertion 114: ClosureAnnotationConsistencyCheck registered in
+    CHECKS list as the 6th check + severity is WARN + requires_backlog_diff
+    True (composes with orphan-candidate check via shared _collect_staged_diffs
+    BACKLOG fetch)."""
+    import tools.check_commit_msg as ccm
+    names = [c.name for c in ccm.CHECKS]
+    assert "closure_annotation" in names
+    closure_check = next(c for c in ccm.CHECKS if c.name == "closure_annotation")
+    assert closure_check.severity == "WARN"
+    assert closure_check.requires_backlog_diff is True
+    assert closure_check.requires_classification is False
+    assert len(ccm.CHECKS) >= 6  # forward-compat lower bound
+
+
+def test_closure_annotation_check_passes_on_no_closure_claims():
+    """B-458 Assertion 115: commits with no B-N CLOSED claims in commit-msg
+    return PASS regardless of BACKLOG diff state."""
+    import tools.check_commit_msg as ccm
+    commit_msg = "fix: bug fix\n\nOrdinary commit with no closure claims.\n"
+    backlog_diff = "diff text containing **B-100** (⚫ CLOSED ..."
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_closure_annotation_check_warns_on_unannotated_claim():
+    """B-458 Assertion 116: commit-msg claiming `**B-409 CLOSED**` without
+    corresponding BACKLOG.md staged-diff `**B-409** (⚫ CLOSED` annotation
+    returns WARN finding (the EXACT 20fe33a empirical pattern)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "docs(round-6): B-409 + B-414 CLOSED + B-408 closure annotation\n\n"
+        "**B-409 CLOSED**: anti-trigger contradiction resolution.\n"
+        "**B-414 CLOSED**: CARVE-OUT Tier 0 assertion.\n"
+    )
+    # BACKLOG diff has only B-408 annotation (B-409 + B-414 missing)
+    backlog_diff = (
+        "diff --git a/docs/migration/BACKLOG.md b/docs/migration/BACKLOG.md\n"
+        "@@ -100,1 +100,1 @@\n"
+        "+- **B-408** (⚫ CLOSED 2026-05-17; ...): ~~foo~~ **⚫ CLOSED**\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is False
+    assert len(result.findings) == 2
+    # Findings sorted by B-N numerically (B-409 first, B-414 second)
+    assert "B-409" in result.findings[0]
+    assert "B-414" in result.findings[1]
+    assert all("20fe33a" in f for f in result.findings)
+
+
+def test_closure_annotation_check_passes_when_all_annotated():
+    """B-458 Assertion 117: commit-msg claiming `B-N CLOSED` for B-N values
+    that ALL have corresponding BACKLOG.md `**B-N** (⚫ CLOSED` annotations
+    returns PASS (positive case)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "docs(round-6): B-408 + B-409 + B-414 CLOSED\n\n"
+        "**B-408 CLOSED** + **B-409 CLOSED** + **B-414 CLOSED**\n"
+    )
+    backlog_diff = (
+        "diff --git a/docs/migration/BACKLOG.md b/docs/migration/BACKLOG.md\n"
+        "@@ -100,3 +100,3 @@\n"
+        "+- **B-408** (⚫ CLOSED 2026-05-17; ...): ~~foo~~\n"
+        "+- **B-409** (⚫ CLOSED 2026-05-17; ...): ~~bar~~\n"
+        "+- **B-414** (⚫ CLOSED 2026-05-17; ...): ~~baz~~\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_closure_annotation_check_recognizes_bare_form():
+    """B-458 Assertion 118: bare form `B-NNN CLOSED` (no `**` bold) triggers
+    claim detection PLUS conservative-fallback "no BACKLOG staged → PASS".
+
+    Coverage scope (per PRE-COMMIT reviewer `a56030f11be41025b` 2026-05-18):
+    `_CLOSURE_CLAIM_RE` bare-form alternation `\\bB-(\\d+)\\s+(?:⚫\\s*)?CLOSED\\b`
+    only extracts the LAST B-N adjacent to CLOSED — so for shared-CLOSED
+    patterns like `B-409 + B-414 CLOSED`, ONLY `B-414` is captured (B-409 is
+    not adjacent to CLOSED). This test exercises BOTH the bare-form regex
+    (matches B-414) AND the fallback path (no BACKLOG.md staged → return PASS
+    before annotation checking). Full shared-CLOSED capture is tracked as
+    B-478 LOW WSJF 0.5 (extend regex with lookahead/multi-BN-prefix branch)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = "docs: B-409 + B-414 CLOSED\n\nBody text.\n"
+    backlog_diff = ""  # No BACKLOG.md staged → cannot verify
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": backlog_diff},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    # No BACKLOG.md staged → silently pass (conservative WARN heuristic)
+    assert result.passed is True
+
+
+def test_closure_annotation_check_skips_blockquote_lines():
+    """B-458 Assertion 119: B-NNN CLOSED phrases inside markdown blockquotes
+    (lines starting with `>`) are NOT treated as claims (quoted reviewer
+    output should not trigger false positives)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: substantive work\n\n"
+        "Reviewer cited:\n"
+        "> Per prior commit history: B-409 CLOSED at commit abc123.\n"
+        "> Per prior reviewer: **B-414 CLOSED** at commit def456.\n"
+        "\n"
+        "Body without any actual closure claims.\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": "some diff text"},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    # Claims inside `>` blockquote lines are filtered out → no claims to
+    # verify → PASS.
+    assert result.passed is True
+    assert result.findings == []
+
+
+def test_closure_annotation_check_skips_code_blocks():
+    """B-458 Assertion 120: B-NNN CLOSED phrases inside fenced code blocks
+    are stripped via `_strip_code_blocks` and do NOT trigger claim detection
+    (preserves the canonical pattern shared with B-449 + B-451 checks)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = (
+        "build: work\n\n"
+        "Example output from prior commit:\n"
+        "```\n"
+        "**B-409 CLOSED** + **B-414 CLOSED** — historical reference\n"
+        "```\n"
+        "Body without claims.\n"
+    )
+    ctx = ccm.OrchestrationContext(
+        staged_diffs={"docs/migration/BACKLOG.md": "some diff text"},
+        classification=None,
+    )
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+
+
+def test_closure_annotation_check_passes_with_no_backlog_staged():
+    """B-458 Assertion 121: commit-msg has CLOSED claims but BACKLOG.md is
+    NOT in staged diffs — cannot verify; conservative WARN heuristic passes
+    silently (per `if not backlog_diff: return PASS` graceful fallback)."""
+    import tools.check_commit_msg as ccm
+    commit_msg = "docs: **B-409 CLOSED**\n\nBody.\n"
+    ctx = ccm.OrchestrationContext(staged_diffs={}, classification=None)
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    result = check.scan(commit_msg, ctx)
+    assert result.passed is True
+
+
+def test_closure_annotation_check_render_findings_emits_warn_footer(capsys):
+    """B-458 Assertion 122: render_findings_to_stderr emits `[commit-msg WARN]`
+    header + 20fe33a empirical-anchor reference + resolution-options footer
+    (matches B-449/B-451/B-470 contract style)."""
+    import tools.check_commit_msg as ccm
+    check = ccm.ClosureAnnotationConsistencyCheck()
+    check.render_findings_to_stderr([
+        "B-409 CLOSED claim cited in commit-msg (line 2) but BACKLOG.md "
+        "staged diff does NOT contain corresponding annotation...",
+    ])
+    err = capsys.readouterr().err
+    assert "[commit-msg WARN]" in err
+    assert "B-458" in err
+    assert "20fe33a" in err
+    assert "Stage the BACKLOG.md closure annotation" in err
+    assert "WARN (not BLOCK)" in err
+
+
+def test_closure_annotation_check_via_main_orchestrator(tmp_path, monkeypatch, capsys):
+    """B-458 Assertion 123: end-to-end via `main()` orchestrator — commit-msg
+    with unannotated CLOSED claim + BACKLOG.md staged-diff missing the
+    annotation produces stderr WARN finding but does NOT BLOCK (exit code 0).
+
+    Verifies B-459 abstraction + B-468 render_findings + new check integrate
+    cleanly end-to-end."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    backlog_diff = (
+        "diff --git a/docs/migration/BACKLOG.md b/docs/migration/BACKLOG.md\n"
+        "+- **B-408** (⚫ CLOSED 2026-05-17; ...): ~~foo~~\n"
+    )
+    def fake_subprocess_run(cmd, *args, **kwargs):
+        r = type("R", (), {})()
+        r.returncode = 0
+        r.stdout = backlog_diff if "BACKLOG.md" in " ".join(cmd) else ""
+        return r
+    monkeypatch.setattr(ccm.subprocess, "run", fake_subprocess_run)
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: B-409 CLOSED + B-414 CLOSED\n\n"
+        "**B-409 CLOSED**: foo\n**B-414 CLOSED**: bar\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    captured = capsys.readouterr()
+    # WARN-only, does NOT block (exit code 0)
+    assert rc == ccm.EXIT_SUCCESS
+    # Stderr contains B-458 WARN footer + B-409 + B-414 mentions
+    assert "B-458" in captured.err
+    assert "B-409" in captured.err
+    assert "B-414" in captured.err
