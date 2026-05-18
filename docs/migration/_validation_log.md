@@ -2,6 +2,47 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — B-489 `_false_positive_log.md` discipline tracker (LOW WSJF 1.5; Layer 4 of false-positive prevention architecture)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-18 (udm-next-step-cascade invocation). B-489 selected as highest-priority LOW WSJF 1.5 (vs B-486 / B-481 / B-478 / B-479 / B-486 LOW WSJF 1.0).
+
+**Scope**: 1 B-N closure (B-489) — NEW tracker file + Tier 0 self-tests + tracker updates. 5 files modified: `docs/migration/_false_positive_log.md` (NEW; ~180 LOC append-only audit trail) + `tests/tier0/test_false_positive_log.py` (NEW; 5 assertions) + `docs/migration/BACKLOG.md` (closure annotation) + `docs/migration/CURRENT_STATE.md` (narrative prepend) + `docs/migration/HANDOFF.md` §14 (narrative prepend) + this entry.
+
+**Producer**: parent agent (this session).
+
+**Architectural significance**: COMPLETES the 4-layer false-positive prevention architecture authored across this 2026-05-18 session arc:
+
+| Layer | B-N | Cadence | Description |
+|---|---|---|---|
+| 1. Severity discipline | (pre-existing) | per-fire | WARN-only for heuristic checks; never BLOCK |
+| 2. Shared context helper | B-488 | per-commit | `_is_empirical_anchor_context()` suppresses self-references |
+| 3. Reviewer methodology | B-490 | per-cohort | Mechanism A Step 6 regex-completeness verification |
+| 4. Accumulation tracker | **B-489** | **per-event → round-aggregate** | **`_false_positive_log.md`** |
+
+**B-489 implementation**: 
+- NEW `docs/migration/_false_positive_log.md` (~180 LOC):
+  - 8 canonical sections: Purpose / When to log / Schema / Aggregation discipline / Composition / Initial event corpus / Aggregation findings / Next aggregation trigger
+  - 7-field event schema: trigger_pattern / actual_semantic / empirical_anchor_commit / detected_by / remediation_status / forward_prevention_B_N / class
+  - Seeded with 4 historical events from 2026-05-18 session: FP-1 (CLAUDE.md wc -l staleness; B-481 deferred) + FP-2 (B-458 self-firing on quoted B-414 CLOSED; B-480 → B-488 absorbed) + FP-3 (B-464 self-firing on quoted 62 skip; B-487 → B-488 absorbed) + FP-4 (cross-cohort review grep methodology blind-spot; B-490 absorbed)
+  - Aggregation findings: 3 classes documented (self-reference meta-pattern 2-event ✅ closed; reviewer-methodology 1-event ✅ closed; Pitfall #9.h 1-event 🟡 deferred)
+- Composition with existing trackers: parallels `_validation_log.md` (per-cohort validation) + `_reviewer_effectiveness.md` (per-reviewer-event round-level). Round close-out cascade walks this log at aggregation cadence.
+
+**Tier 0 coverage**: 5 NEW assertions at `tests/tier0/test_false_positive_log.py`:
+- Assertion 1: tracker file exists at canonical path
+- Assertion 2: 8 required canonical section headers present
+- Assertion 3: 4-event initial corpus (FP-1 through FP-4) present
+- Assertion 4: 3 canonical false-positive classes documented + forward-prevention B-N references for each
+- Assertion 5: 7-field schema documented (trigger_pattern + actual_semantic + empirical_anchor_commit + detected_by + remediation_status + forward_prevention_B_N + class)
+
+**Cumulative session delta UPDATED at B-489 closure**: 98 NEW B-Ns UNCHANGED (B-489 was pre-existing open). **18 B-Ns CLOSED multi-session arc** (cumulative; 17 prior + B-489). 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2798 → **2803 pass / 10 skip / 0 fail** (+5).
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — `docs/migration/_false_positive_log.md` NEW + `tests/tier0/*` + tracker mirrors):
+- TEST: pytest 2803 verified live per cascade Step 3.1 — full-suite tier0+tier1+unit+property+regression. 5/5 NEW B-489 assertions PASS in 0.26s. Smoke test verified: file exists at canonical path; sections present; schema fields documented; event corpus complete.
+- GAP ANALYSIS: udm-next-step-cascade Step 2 gap-check scheduled post-commit.
+- REVIEW: PRE-COMMIT independent reviewer spawn via general-purpose subagent BEFORE commit per hard rule 14 substrate-edit clause.
+
+---
+
 ## 2026-05-18 — Cross-cohort review drift remediation (Pitfall #9.k arithmetic-propagation 95 → 98 NEW B-Ns)
 
 **Trigger**: user-direction "Run a gap analysis of the recent enhancements" 2026-05-18 → 4th formal `udm-cohort-review` invocation `a0461577f1ab9137d` on commits `ba487a8` + `e1a1449` returned 🟡 ISSUES verdict.
