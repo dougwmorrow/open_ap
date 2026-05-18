@@ -1,6 +1,6 @@
 # UDM Pipeline Migration — Edge Case Register
 
-Consolidated catalog of every edge case identified during planning. Six series, each prefixed by an identifier:
+Consolidated catalog of every edge case identified during planning. **13 canonical series**, each prefixed by an identifier:
 
 - **M-series**: Math / lookback / lateness
 - **S-series**: SCD2 reliability
@@ -11,6 +11,10 @@ Consolidated catalog of every edge case identified during planning. Six series, 
 - **D-series**: 2x/day cadence
 - **F-series**: Failover / cross-server parity
 - **V-series**: Vault provenance
+- **DP-series**: Deployment pipeline (Round 6; per B121)
+- **T-series**: Testing (Rounds 5+6; per B108 + B121)
+- **SI-series**: Self-improvement discipline (Round 8; per D95-D99)
+- **SE-series**: Source-exactness invariants (Phase A; per D115 + D116 + B-373)
 
 Each row: edge case description, current handling status, mitigation.
 
@@ -294,21 +298,23 @@ NEW 13th series (after M/S/I/N/P/G/D/F/V/DP/T/SI). Each SE-N entry encodes a bin
 | ID | Edge case / Invariant | Status | Mitigation |
 |---|---|---|---|
 | SE1 | Parquet column count must equal source query column count (no row count mismatch silently masking schema drift) | 🟡 | Schema-diff assertion at Parquet write time in `parquet_writer.write_snapshot()`; raises `SourceExactnessError` on mismatch; B-373 Tier 1 test |
-| SE2 | Parquet column dtypes correspond 1:1 to source dtypes per documented mapping table (Oracle → Parquet per Oracle docs; SQL Server → Parquet per pyarrow defaults) | 🟡 | Documented exceptions: SQL Server DATETIME2(7) → Parquet timestamp[us] is factor-of-10 truncation (B-367; `allow_truncated_timestamps=True`); ConnectorX Oracle DATE overflow ≥ 2262-04-12 (B-366 defensive assertion); Oracle NUMBER(p>38) cannot be Parquet DECIMAL (rare; document) |
-| SE3 | Parquet column VALUES (after PME decryption for PII columns in Phase B; plaintext in Phase A) byte-equivalent to source query result | 🟡 | Sample-based round-trip test per Parquet write at Tier 1 (B-373); Phase B adds decrypt-then-compare for PME columns |
+| SE2 | Parquet column dtypes correspond 1:1 to source dtypes per documented mapping table (Oracle → Parquet per Oracle docs; SQL Server → Parquet per pyarrow defaults). **Documented exceptions** (each constitutes accepted-as-documented precision loss; NOT silent corruption): (a) SQL Server DATETIME2(7) → Parquet timestamp[us] is factor-of-10 truncation per B-367 (`allow_truncated_timestamps=True`); (b) ConnectorX Oracle DATE overflow ≥ 2262-04-12 per B-366 defensive assertion; (c) **Oracle NUMBER(p>38) cannot be Parquet DECIMAL** per B-377 (pyarrow DECIMAL precision ≤ 38; Oracle NUMBER without precision = DECIMAL(126) source-side; affects DNA + EPICOR wide-precision NUMBER columns); (d) Oracle DATE via ConnectorX returns `timestamp[ns]` zero-filling sub-second (preserves time component vs Oracle Cloud DATE mapping which is date-only); (e) Polars Decimal128 → Parquet round-trip bugs per `pola-rs/polars#12375` + `#21684` (verify production version per B-377) | 🟡 | Author defensive assertions at Parquet write time for (c); document (a)/(b)/(d)/(e) per B-377 + B-366 + B-367 + `CLAUDE_GOTCHAS.md`; B-373 Tier 1 test verifies all documented exceptions |
+| SE3 | Parquet column VALUES (after PME decryption for PII columns in Phase B; plaintext in Phase A) byte-equivalent to source query result. **Verification mechanism**: ALL-rows `assert_frame_equal(check_dtypes=False)` against source DataFrame for non-exception columns + specific value assertions for exception columns (per design-reviewer D3 finding — "sample-based" is insufficient for audit-grade test) | 🟡 | B-373 Tier 1 test reads full Parquet + asserts `pl.testing.assert_frame_equal()` against source extraction DataFrame; Phase B adds decrypt-then-compare for PME columns |
 | SE4 | NO additive columns in Parquet schema (`_row_hash`, `_extracted_at`, `_cdc_operation`, etc. — these are pipeline-internal artifacts, NOT source data) | 🟡 | `data_load/parquet_writer.py` enforces schema = source schema; pipeline metadata stored in `key_value_metadata` footer (per D116), NOT data columns |
-| SE5 | Control characters (`\t`, `\n`, `\r`, `\x00`) preserved in Parquet string columns | 🟡 | Parquet handles control characters natively; `sanitize_strings()` is BCP-CSV-only (in-memory path); MUST NOT apply to DataFrame written to Parquet |
+| SE5 | Control characters (`\t`, `\n`, `\r`, `\x00`) preserved in Parquet string columns | 🟡 | Parquet handles control characters natively; `sanitize_strings()` is BCP-CSV-only (in-memory path); MUST NOT apply to DataFrame written to Parquet; B-373 Tier 1 test includes fixture row with embedded `\t` + `\n` |
 | SE6 | Source row count must equal Parquet row count (no row filtering during extraction-to-Parquet step) | 🟡 | Row-count assertion at Parquet write + `udm_row_count` key_value_metadata cross-check per D116 |
-| SE7 | Source row order preserved (or documented sort key in Hive partition layout per D45.2) | 🟡 | Polars `DataFrame.write_parquet()` preserves row order; `_extracted_at` sort applied only at SCD2-input stage (in-memory; NOT in Parquet) |
+| SE7 | Source row order is source-query-result order for the extraction window; no ORDER BY is applied during extraction; sort order within file is source-dependent. D45.2 sort order contract `(PK ASC, _extracted_at DESC)` applies to SCD2-input in-memory path, NOT to Parquet (Phase A reorder defers sort to after Parquet write). | 🟡 | `data_load/parquet_writer.py` writes Polars DataFrame in source-query-result order; D45.2 sort applied at in-memory pipeline step (after Parquet write); reconciliation per B-371 explicitly documents this separation |
 | SE8 | Source adds NEW PII column mid-pipeline-life: Parquet files written BEFORE PiiColumnList update contain plaintext PII; files are immutable (Phase B PME-coverage-gap until retroactive re-extraction) | 🔴 | B-362 — author SE-8 + new RB-N "retroactive PME classification procedure"; notify operator on schema evolution ADD branch; identify Parquet window with new column plaintext; offer re-extraction-with-PME path. Phase B scope. |
+| SE9 | **Replay path tokenization ordering** — when a Parquet snapshot is replayed via `data_load/parquet_replay.py`, the replay engine MUST apply tokenization (per D115 ordering) AFTER reading the plaintext Parquet and BEFORE passing to `scd2/engine.run_scd2()`. The `_row_hash` computed at replay time MUST be identical to the `_row_hash` computed at original-extraction time (vault SP-1 token determinism per D6 ensures this). Under Phase A, Parquet contains plaintext PII; SCD2 engine expects tokenized input; without explicit replay-path tokenize-then-hash step, replay produces a hash mismatch and breaks SCD2 chain reconstruction. | 🔴 | B-383 — refactor `parquet_replay.py` to apply `sanitize_strings()` + `tokenize_pii_columns()` + `add_row_hash()` after Parquet read and before SCD2 engine invocation. B-373 Tier 1 test extended with replay-path assertion: Parquet → tokenize → SCD2 chain produces IDENTICAL Bronze output to original-extraction → tokenize → SCD2 chain. Phase A R1 CRITICAL prereq. |
+| SE10 | **Column order preservation** — Parquet column order is source-query ordinal order (per P0-1 INFORMATION_SCHEMA ordinal); `reorder_columns_for_bcp()` applies only to in-memory BCP-CSV path and does NOT affect Parquet column order. Pyarrow `pq.read_table()` preserves column order as written. | 🟡 | `data_load/parquet_writer.py` writes Polars DataFrame in source-query column order; B-373 Tier 1 test verifies `parquet_schema.names == source_query_schema.names` (order-preserving equality) |
 
-Cross-refs: D115 (PII tokenization timing reorder) + D116 (extraction-timestamp via key_value_metadata) + `_research/r6-pme-extraction-time-2026-05-17.md` (R6 source-exactness verification patterns + R7 extraction-timestamp convention) + B-353 through B-373 (source-exact Parquet redesign brainstorm cohort) + `UDM_PIPELINE_PHASE_A_TOKENIZATION_REORDER_2026-05-17.md` (Phase A plan; canonical for SE-N enforcement).
+Cross-refs: D115 (PII tokenization timing reorder) + D116 (extraction-timestamp via key_value_metadata) + `_research/r6-pme-extraction-time-2026-05-17.md` (R6 source-exactness verification patterns + R7 extraction-timestamp convention) + B-353 through B-390 (source-exact Parquet redesign brainstorm cohort + Phase A 2nd-pass remediation) + `UDM_PIPELINE_PHASE_A_TOKENIZATION_REORDER_2026-05-17.md` (Phase A plan; canonical for SE-N enforcement).
 
 ---
 
 ## How to Add an Edge Case
 
-1. Pick the appropriate series (M/S/I/N/P/G/D/F/V/SI/SE)
+1. Pick the appropriate series (M/S/I/N/P/G/D/F/V/DP/T/SI/SE)
 2. Increment the next ID in that series
 3. Capture: description (one sentence), current status (✅/🟡/🔴), mitigation (what handles it or what needs to be built)
 4. Add `Phase X` reference if the mitigation lands in a specific phase

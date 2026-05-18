@@ -21,7 +21,7 @@
 | `udm-researcher` agent | 2026-05-17 (44th; `a54fcc995f87f919c`) | PS-1 mandatory | PME industry + KMS + Parquet metadata research → R6 persisted; informs D116 schema |
 | Independent gap-check agent | 2026-05-17 (45th; `afad0935ac58cd263`) | always-mandatory | 6-category gap-check on original plan → 🔴 6/6 → drove Phase A/B split decision |
 | `udm-decision-recorder` | 2026-05-17 (this session) | PS-8 mandatory | D115 + D116 opened as 🟡 Proposed in `03_DECISIONS.md` per this plan |
-| `udm-progress-logger` | 2026-05-17 (this session) | always-mandatory §2.3 | 21 NEW B-Ns + 4 R-Ns + SE-N series + narrative updates per pipeline-lead direction "log the issues found" |
+| `udm-progress-logger` | 2026-05-17 (this session) | always-mandatory §2.3 | 24 NEW B-Ns + 4 R-Ns + SE-N series + narrative updates per pipeline-lead direction "log the issues found"; **EXTENDED** 2026-05-17 at D56 2nd-pass remediation cycle: +14 NEW B-Ns (B-377-B-390) + R36 re-scored ⚪ 2 → 🟡 3 + R38 NEW + SE-9 + SE-10 + Phase A plan inline fixes per design-reviewer Agent 46 + gap-check Agent 47 cohort findings |
 | `udm-checks-and-balances` | scheduled at attestation | PS-1 + PS-8 mandatory | 5-gate validation pending |
 | `udm-edge-case-validator` | inline (this plan) | PS-1 implicit | SE1-SE7 invariants documented + SCD2-P1-* preservation verified |
 | `udm-step-10-verifier` | scheduled at attestation | mandatory per CLAUDE.md hard rule 9 Step 12 | New module surfaces (none in Phase A — refactor-only) |
@@ -77,9 +77,9 @@
 
 ### §2.3 Open work (for Phase A B-N enumeration only — additive)
 
-- **B-374** (will open at Phase A R1 build start; placeholder here): refactor `extract/` modules to capture + return extraction timestamps alongside DataFrame
-- **B-375** (will open): orchestration-layer wiring of timestamps through to `parquet_writer`
-- **B-376** (will open): test fixture migration if any test assumes current tokenize-before-Parquet ordering (audit at build time)
+- **B-374** (🟡 Open; opened during pre-commit cross-ref remediation per `fe53b4c`): refactor `extract/` modules to capture + return extraction timestamps alongside DataFrame
+- **B-375** (🟡 Open; opened during pre-commit cross-ref remediation per `fe53b4c`): orchestration-layer wiring of timestamps through to `parquet_writer`
+- **B-376** (🟡 Open; opened during pre-commit cross-ref remediation per `fe53b4c`): test fixture migration if any test assumes current tokenize-before-Parquet ordering (audit at build time)
 
 ---
 
@@ -133,7 +133,7 @@ T+5s: parquet_writer.write_snapshot(
 T+8s: ParquetSnapshotRegistry INSERT complete (Status='created')
 
 [Step 5 (NEW): In-memory downstream pipeline — TOKENIZED PATH]
-T+8s: df_in_memory = df  # Polars copy-on-write semantics; separate reference from Parquet-written df
+T+8s: df_in_memory = df  # After Parquet write completes (Step 4 T+8s), the original `df` reference can be mutated forward without affecting Parquet content because pyarrow conversion at §4.2 `polars_df.to_arrow()` already copies buffers to Arrow representation. Polars→Arrow conversion is the isolation boundary, NOT Polars COW semantics.
 T+8s: sanitize_strings(df_in_memory)  # BCP-CSV-only; in-memory only; NOT applied to Parquet
 T+8s: pii_tokenizer.tokenize_pii_columns(df_in_memory, T.PiiColumnList)  # per D115
       - Vault SP-1 unchanged (deterministic per D6 token-stability invariant)
@@ -212,13 +212,16 @@ schema_with_meta = arrow_table.schema.with_metadata({
     "udm_source_table": source_table,
     "udm_extraction_started_at": extraction_query_started_at.isoformat() + "Z",
     "udm_extraction_ended_at": extraction_query_completed_at.isoformat() + "Z",
-    "udm_parquet_written_at": datetime.utcnow().isoformat() + "Z",  # set immediately before write
+    "udm_parquet_written_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),  # set immediately before write; `datetime.utcnow()` deprecated in Python 3.12 per design-reviewer G4
     "udm_pipeline_batch_id": str(batch_id),
     "udm_pipeline_version": PIPELINE_VERSION,
     "udm_encryption_config": "none",
     "udm_row_count": str(len(polars_df)),
 })
-table_with_meta = arrow_table.cast(schema_with_meta)
+table_with_meta = arrow_table.replace_schema_metadata(schema_with_meta.metadata)
+# CRITICAL per design-reviewer A5 + R6 R1-2: pyarrow `Table.cast(schema)` performs DTYPE CASTING,
+# NOT schema metadata attachment. `replace_schema_metadata()` is the correct API to attach key_value_metadata.
+# Verify post-write via `pq.read_schema(filepath).metadata` containing the expected keys (see B-356 Tier 0 test).
 
 # Write with explicit precision handling per B-367
 pq.write_table(
@@ -235,12 +238,31 @@ pq.write_table(
 
 ```sql
 -- Migration: migrations/add_extraction_timestamps_to_parquet_registry.py
+-- D92 forward-only ALTER + joint SchemaContract row INSERT per D40 + Round 7 § 4.5 pattern (per B-387)
+
+BEGIN TRANSACTION;
+
 ALTER TABLE General.ops.ParquetSnapshotRegistry
 ADD ExtractionQueryStartedAt DATETIME2(3) NULL,
     ExtractionQueryCompletedAt DATETIME2(3) NULL;
 
+INSERT INTO General.ops.SchemaContract (
+    SourceName, ObjectName, ColumnName, ContractKey,
+    DataType, IsNullable, EffectiveFrom, EffectiveTo,
+    SupersededBy, AppliedBy, AppliedAt, MigrationScript
+) VALUES
+('General', 'ParquetSnapshotRegistry', 'ExtractionQueryStartedAt', 'd116_extraction_started_at_v1',
+ 'DATETIME2(3)', 1, SYSUTCDATETIME(), NULL, NULL,
+ SUSER_SNAME(), SYSUTCDATETIME(), 'add_extraction_timestamps_to_parquet_registry.py'),
+('General', 'ParquetSnapshotRegistry', 'ExtractionQueryCompletedAt', 'd116_extraction_completed_at_v1',
+ 'DATETIME2(3)', 1, SYSUTCDATETIME(), NULL, NULL,
+ SUSER_SNAME(), SYSUTCDATETIME(), 'add_extraction_timestamps_to_parquet_registry.py');
+
+COMMIT TRANSACTION;
+
 -- Backfill for existing rows: NULL is acceptable (pre-D116 rows have no recorded timestamps)
 -- New rows post-migration MUST be populated by parquet_writer
+-- Idempotency per B-379: migration script wraps ALTER in TRY/CATCH on duplicate-column error; SchemaContract INSERT is keyed on ContractKey unique; re-run is no-op
 ```
 
 ### §4.4 Reading extraction timestamps (operator query)
@@ -282,7 +304,11 @@ print(f"{source_table}: extracted at {extracted_at}, {row_count} rows, encryptio
 | `CLAUDE.md` Gotchas + Do-NOT rules | Add D116 key_value_metadata schema convention + B-367 DATETIME2 precision note | ~30 lines | B-371 + B-367 |
 | `data_load/pii_tokenizer.py` | UNCHANGED (caller graph changes; module itself unchanged) | 0 lines | n/a |
 | `scd2/engine.py` | UNCHANGED per D2 + D18 commitments | 0 lines | n/a |
-| **TOTAL** | | ~700 lines | 9 B-Ns |
+| `data_load/parquet_replay.py` | **CRITICAL Phase A change** (per design-reviewer B8) — apply `sanitize_strings()` + `tokenize_pii_columns()` + `add_row_hash()` after reading plaintext Parquet and before passing to `scd2/engine.run_scd2()`. Replay path was implicit-tokenized in pre-Phase-A architecture (Stage table held tokens). Phase A reorder requires explicit replay-path tokenize-then-hash for SCD2 hash-stability + chain reconstruction. Defensive metadata fallback per B-380 for pre-Phase-A files. | ~100 lines | B-383 (CRITICAL) + B-380 |
+| `tests/tier1/test_parquet_source_exactness.py` (NEW; extended scope) | Includes REPLAY-path acceptance test per SE-9: Parquet → tokenize → SCD2 chain produces IDENTICAL Bronze output to original-extraction → tokenize → SCD2 chain | +100 lines on top of B-373 base | B-373 (extended scope) |
+| `data_load/parquet_writer.py` | **EXTENSION**: WRITER PATH SWITCH from Polars-native `df.write_parquet(use_pyarrow=False)` → pyarrow `pq.write_table()` to support `key_value_metadata` (Polars Rust writer does NOT support PME schema metadata). **Behavioral consequence**: SHA-256 hash of Parquet file CHANGES (different internal encoding between Polars-native vs pyarrow writer for identical data); `ParquetSnapshotRegistry.ContentChecksum` values from pre-Phase-A Polars-native files are NOT comparable to post-Phase-A pyarrow files. Greenfield project per `02_PHASES.md` L5 → no migration needed; operator awareness only. D45.2 contract preservation table: ZSTD-3 → `pq.write_table(compression='zstd', compression_level=3)`; statistics enabled → `pq.write_table(write_statistics=True)`; sort order → applied at in-memory step (NOT Parquet per SE-7); Hive partition layout preserved via `pq.write_to_dataset(partition_cols=...)`. **NEW**: `os.chmod(0o440)` after atomic rename per design-reviewer E1 (compensating control for R36 Phase A plaintext PII; current umask 0644 = world-readable security regression vs stated control). | additional ~50 lines on top of base | B-356 + R36 mitigation |
+| `migrations/add_extraction_timestamps_to_parquet_registry.py` | EXTENDED: includes SchemaContract row INSERT per D40 + Round 7 § 4.5 joint migration pattern (per gap-check G3 9.l + B-387) | +30 lines on top of base | B-387 |
+| **TOTAL** | | ~980 lines | 12 B-Ns (B-356/366/367/371/373/374/375/376/380/383/386/387) |
 
 **Effort estimate**: ~3-4 cycles for Phase A R1 (vs original plan's 6-9 cycles for PME-inclusive version). Greenfield advantage preserved.
 
@@ -303,7 +329,7 @@ All D2 + D18 commitments preserved:
 What changes for SCD2 input:
 - `df_current` passed to `scd2/engine.run_scd2()` is now POST-tokenization (in-memory) instead of from Stage table
 - Token-determinism invariant (per D6 vault SP-1): same source plaintext → same token → same `_row_hash` → SCD2 hash compare stable across runs
-- **NEW invariant documented**: `_extracted_at` EXCLUDED from `_row_hash` inputs (it's a pipeline artifact, NOT source data; equivalent to `ExcludeFromHash` treatment per SCD2-R10.2)
+- **NEW invariant documented at SE-N canonical location (04_EDGE_CASES.md SE-9)**: `_extracted_at` EXCLUDED from `_row_hash` inputs (it's a pipeline artifact, NOT source data; equivalent to `ExcludeFromHash` treatment per SCD2-R10.2). This invariant is load-bearing for SCD2 hash-stability across happy-path runs vs replay-path runs — replay path SYNTHESIZES `_extracted_at` from `ParquetSnapshotRegistry.CreatedAt` (NOT from current wall-clock), preserving hash-stability for SCD2 chain reconstruction.
 
 ---
 
@@ -337,9 +363,13 @@ Phase A writes plaintext PII to Parquet (no PME — that's Phase B). Compensatin
 
 1. **D115 locked** (PII tokenization timing reorder partially supersedes D6) — pipeline-lead sign-off required
 2. **D116 locked** (extraction-timestamp via key_value_metadata + 2 new ParquetSnapshotRegistry columns) — pipeline-lead sign-off required
-3. **D6 supersession crumb added to D6 body** — leading badge flip 🟢 → ⚫ Superseded (partial; with link to D115)
+3. **D6 supersession crumb added to D6 body** — leading badge flip 🟢 → ⚫ Superseded (partial; with link to D115); tracked per B-384
 4. **B-356 closed** (D-NEW-D revision; satisfied by D116 lock — this becomes a same-cycle closure)
 5. **B-371 cross-doc cascade complete** OR explicitly scoped to land alongside Phase A R1 build
+6. **Compliance determination gate** (per design-reviewer Agent 46 Section F4 BLOCK + R38 NEW 2026-05-17) — **pipeline-lead or data governance team confirms Phase A plaintext-PII-in-Parquet posture is permissible under applicable regulation and organizational data policy, WITH DOCUMENTATION**. Required because Phase A introduces a new PII-at-rest surface that did not exist before (pre-Phase-A Parquet has NO plaintext PII; SCD2 Bronze has tokens). Plaintext-PII window estimated 3-6 months until Phase B PME lands (Phase B gated on B-353+B-354+B-355+B-357+B-364+B-389 external legal counsel review weeks-to-months). Without compliance attestation, Phase A deployment risks immediate-rollback if compliance finding surfaces post-deployment. Pipeline subject to financial-services data classification policy + CCPA "reasonable security" standard + potential PCI DSS Requirement 3.5 if card data present in DNA. Acceptance: written attestation from pipeline-lead OR data governance team citing applicable regulation review.
+7. **R36 compensating controls verified implemented** (R36 currently 🟡 3; returns to ⚪ 2 when all 3 verified): (a) `os.chmod(0o440)` after Parquet atomic rename in `parquet_writer.py` (per design-reviewer E1); (b) auditd watch rule on H drive Parquet directory root per B-381 (per design-reviewer E2); (c) backup tape encryption verified on H drive's storage infrastructure (per design-reviewer E5). Without these 3 controls, D103 Layer 6 / Layer 9 protections claimed in Phase A §7 are paper-only.
+8. **B-353 (pyarrow PME RHEL availability spike)** — even though Phase A doesn't use PME, the spike confirms Phase B viability and informs Phase A→B timeline (R38 risk-window quantification)
+9. **B-377 (Polars Decimal128 → Parquet round-trip verification)** on production version (per design-reviewer A3); document as SE-2 exception if unfixed; defensive assertion if affecting source-exactness for DNA/EPICOR NUMBER columns
 
 ### §8.2 Phase A R1 build steps (sequenced)
 
@@ -405,7 +435,7 @@ Phase A writes plaintext PII to Parquet (no PME — that's Phase B). Compensatin
 
 ## §10. Phase B preview (DEFERRED — separate future plan)
 
-Phase B will layer the following ON TOP of Phase A (additive; D-NEW-A through Phase A's D115/D116 remain valid):
+Phase B will layer the following ON TOP of Phase A (additive; Phase A's D115/D116 remain valid; the original-plan "D-NEW-A" candidate IS NOW D115; the original-plan "D-NEW-D" candidate IS NOW D116; only "D-NEW-B" / "D-NEW-C" / "D-NEW-E" remain as Phase B candidate D-N numbers TBD):
 
 1. **Parquet Modular Encryption (PME)** per D-NEW-B candidate — column-level AES-GCM via pyarrow; `plaintext_footer=True` per R6 R1-4
 2. **Per-subject keys + KmsClient bridge** per D-NEW-E candidate — `PiiSubjectKeys` table; TPM2-sealed master KEK wraps per-subject DEKs; custom `PyArrowKmsClient` implementation per B-355
@@ -436,7 +466,7 @@ Phase B will layer the following ON TOP of Phase A (additive; D-NEW-A through Ph
 - [x] R6 research persisted (`_research/r6-pme-extraction-time-2026-05-17.md`)
 - [x] Original plan inline-superseded (header added per §11.3 below)
 - [x] D115 + D116 opened as 🟡 Proposed in 03_DECISIONS.md
-- [x] B-353 through B-373 opened in BACKLOG.md
+- [x] B-353 through B-390 opened in BACKLOG.md (24 from initial cohort at `7cb7659` + 14 from D56 2nd-pass remediation this commit)
 - [x] R34-R37 opened in RISKS.md
 - [x] SE1-SE8 added to 04_EDGE_CASES.md (NEW SE-N series)
 - [x] CURRENT_STATE L7 + HANDOFF §14 narrative prepended
@@ -475,7 +505,7 @@ Reason for supersession:
 - `docs/migration/03_DECISIONS.md` D2 + D6 (partially superseded by D115) + D15 + D16 + D18 + D25 + D102 + D103 + D107 + D110 + D115 (NEW 🟡) + D116 (NEW 🟡)
 - `docs/migration/04_EDGE_CASES.md` SE-N series (NEW SE1-SE7 for Phase A; SE8 deferred)
 - `docs/migration/RISKS.md` R34-R37 (NEW; R34/R35 Phase B-related; R36/R37 Phase A-active)
-- `docs/migration/BACKLOG.md` B-353 through B-373 (21 NEW B-Ns; majority Phase B; B-356/366/367/370/371/373 Phase A)
+- `docs/migration/BACKLOG.md` B-353 through B-390 (38 NEW B-Ns total: 24 from initial cohort + 14 from 2nd-pass remediation; Phase A-active: B-356/366/367/370/371/373/374/375/376/377/379/380/381/382/383/384/385/386/387/390; Phase B: remainder; B-388 + B-389 = forward-prevention discipline)
 - CLAUDE.md hard rule 14 anti-rationalization clause — Phase A/B split satisfies "explicit anti-trigger claim with justification" via gap-check Agent 45 cohort evidence
 - `phase1/01c_data_flow_walkthrough.md` § 3 (current canonical flow; will be cascaded per B-371)
 - `data_load/parquet_writer.py` (extension target; ~80 LOC change)

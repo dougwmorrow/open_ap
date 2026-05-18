@@ -2,6 +2,49 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-17 — Phase A Plan D56 2nd-Pass Cohort + Remediation (14 NEW B-Ns + 1 NEW R-N + 2 NEW SE-N entries + R36 re-score + Phase A plan inline fixes; D115/D116 lock-blocked pending pipeline-lead compliance attestation per R38)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" → independent D56 2nd-pass on Phase A plan per D55+D56 discipline (the 3-agent cohort at commit `7cb7659` reviewed the ORIGINAL plan now superseded; Phase A plan is FRESH content requiring separate verification).
+
+**2-agent 2nd-pass cohort spawned in parallel**:
+- design-reviewer Agent 46 `a4931f8fa7b61e36a`: 🔴 BLOCK on 4 architectural gaps (A5 pyarrow `Table.cast(schema)` API bug silently drops metadata; A6 Polars→pyarrow writer switch undocumented incl SHA-256 non-comparability; B8 `parquet_replay.py` not addressed [Phase A breaks replay; missing SE-9 + B-N + acceptance test]; F4 compliance-determination gate missing [plaintext PII 3-6 month window has no compliance attestation]) + 10 🟡 IMPROVEs + 5 NEW B-N candidates (B-377-B-381)
+- gap-check Agent 47 `a91c35743a4d321d2`: 🔴 BLOCK 6/6 categories incl G1 5 stale "21 NEW B-Ns/B-353-B-373" references in Phase A plan + _validation_log L26; G3 9.k 4 NEW arithmetic-drift instances + G3 9.n **14 stale "M/S/I/N/P/G/D/F/V" series-enumeration locations** across 13 canonical project docs + G3 9.o instance 10 (Mechanism C-1 commit-msg trigger detection bypassed at `7cb7659` REVIEW section via avoidance phrasings); G5 9 NEW B-N candidates; G6 4 just-noticed inline-fixable findings
+
+**Pipeline-lead decisions resolved at remediation cycle**:
+- **Decision A** (compliance-determination gate per F4): **Option (a) chosen** — added §8.1 gate-blocker item 6 to Phase A plan requiring pipeline-lead or data governance team attestation that plaintext-PII-in-Parquet posture is permissible under applicable regulation + organizational data policy WITH DOCUMENTATION; opens R38 NEW risk (Low × High = 3 🟡) tracking; gate composes with R36 compensating controls (now 🟡 3 not ⚪ 2 until file-mode 0440 + auditd H drive + backup tape encryption all verified implemented)
+- **Decision B** (Pitfall #9.o instance 10 handling per G3.9.o): **Option (a) chosen** — accept this gap-check Agent 47 output as functional Mechanism B verifier output; cite explicitly in remediation commit message; open B-388 for forward-prevention via `.githooks/commit-msg` trigger list extension covering "substantively cover" / "quote-cite from [N]-agent cohort" / "Layer N termination valid when files reviewed by Layer N agents fully overlap" avoidance phrasings
+
+**Artifacts** (this commit, ~30 inline fixes + 14 new B-Ns + 1 new R-N + 2 new SE-N entries + 4 SE-N cascade locations):
+- **BACKLOG.md**: 14 NEW B-Ns opened (B-377 Polars Decimal128 verify + B-378 source-system commit timestamp + B-379 migration idempotency test + B-380 defensive metadata fallback + B-381 auditd H drive watch + B-382 SE-N cascade across remaining 10 doc locations + B-383 parquet_replay.py CRITICAL refactor + B-384 D6 supersession crumb + B-385 1-week soak procedure RB-N + B-386 GLOSSARY update + B-387 SchemaContract row for ParquetSnapshotRegistry ALTER + B-388 udm-exemption-verifier trigger extension + B-389 Phase B legal counsel review tracking + B-390 CLAUDE.md udm_ prefix convention registration)
+- **RISKS.md**: R36 RE-SCORED ⚪ 2 → 🟡 3 (Low × High; returns to ⚪ 2 when 3 compensating controls verified); R38 NEW (Phase A compliance-determination gap; Low × High = 3 🟡)
+- **04_EDGE_CASES.md**: SE-9 NEW (replay path tokenization ordering; CRITICAL Phase A R1 prereq per B-383); SE-10 NEW (column order preservation); SE-2 UPDATED with Oracle NUMBER(p>38) exception per design-reviewer A1; SE-3 UPDATED with ALL-rows `assert_frame_equal` per design-reviewer D3; SE-7 reconciled with D45.2 sort-order discipline; preamble updated to 13 canonical series including SE
+- **Phase A plan** ~12 inline fixes: stale "21" references; §3.1 COW comment; §4.2 pyarrow `cast()` → `replace_schema_metadata()` per design-reviewer A5 BLOCK; §4.2 `datetime.utcnow()` → `datetime.now(timezone.utc)`; §4.3 SQL extended with BEGIN TRAN + SchemaContract row + idempotency comment per B-387 + B-379; §5 EXTENDED with `parquet_replay.py` CRITICAL per B-383 + writer-path-switch documentation + os.chmod(0o440) per E1; §5 TOTAL row corrected; §6 _extracted_at routed to SE-9 canonical location; §8.1 EXTENDED with 4 NEW gate-blockers (items 6-9); §10 D-NEW-A vs D115 framing clarified
+- **CLAUDE.md** L448 + **INDEX.md** L37 + **GLOSSARY.md** L633 + **04_EDGE_CASES.md** L3-L13: SE-N cascade to 4 highest-impact canonical anchors; remaining 10 stale-enumeration locations tracked via B-382
+
+**Empirical verification (2-agent application sequence)**:
+- Agent 46 (`a4931f8fa7b61e36a` udm-design-reviewer 46th cumulative): walked CCL Stage 1+2+3 + design-reviewer 5-gate equivalent + udm-edge-case-validator on SCD2-P1-* + SE1-SE7; found pyarrow API misuse in plan §4.2 L221 (also present in R6 research doc L43); confirmed Polars current `parquet_writer.py` L746 uses `df.write_parquet(use_pyarrow=False)` requiring switch to pyarrow path for `key_value_metadata`; quantified Phase A→B realistic gap as 3-6 months including external legal counsel weeks-to-months wait
+- Agent 47 (`a91c35743a4d321d2` general-purpose gap-check 47th cumulative): walked udm-gap-check 6-category G1-G6 audit; verified specific line numbers in 7 canonical trackers + identified 14 stale series-enumeration locations across 13 docs; functional Mechanism B verifier output per Decision B option (a) — `.githooks/commit-msg` trigger-list incompleteness empirically demonstrated (commit `7cb7659` REVIEW section "3-agent cohort substantively cover" phrasing bypassed Mechanism C-1 trigger detection that should have BLOCKED commit until verifier output cited)
+
+**Pitfall #9 sub-class instances surfaced + addressed in this remediation**:
+- 9.k (arithmetic-propagation drift): 5 NEW instances at Phase A plan + §5 TOTAL drift; addressed via inline fixes (this is the 6th-9th instance recurrence; 5-event convention now empirically exceeded; B-388 forward-prevention via trigger extension)
+- 9.l (canonical-spec-detail-drift): §4.3 SchemaContract row missing per D40 + Round 7 § 4.5 pattern; addressed via inline migration script extension per B-387
+- 9.m (discipline-not-applied-to-tracker): this commit IS the discipline application (#9.k self-application + #9.n SE-N convention-registration + #9.l SchemaContract row); closes the would-be 9.m instances
+- 9.n (convention-registration): SE-N series cascade to 4 highest-impact canonical anchors; remaining 10 locations tracked via B-382
+- 9.o (instance 10 at commit `7cb7659`): functional Mechanism B verifier output documented (Agent 47); B-388 forward-prevention via `.githooks/commit-msg` trigger extension
+
+**Hard rule 14 cascade applied**:
+- **TEST**: pytest 2471 pass / 10 skip / 0 fail (baseline preserved; no code changes in commit); Mechanism C-1 pre-commit hook will run on this commit; markdown_cross_refs expected PASS (all B-377-B-390 + SE-9 + SE-10 + R38 + D115/D116 opened THIS COMMIT → cross-refs resolve)
+- **GAP ANALYSIS**: Agent 47 explicit 6-category audit; verdict 🔴 BLOCK → this commit IS the remediation. Inline fixes address ALL 4 design-reviewer blockers + 9 gap-check sub-class instances. NEW B-Ns track deferred work (B-381 + B-382 + B-385 + B-389 cannot land in single commit due to scope).
+- **REVIEW**: Agent 46 substantive architectural review on Phase A plan body + R6 research; quote-citable verdicts on each design section. Decision A + Decision B resolved per Mechanism A + B discipline (this gap-check Agent 47 = functional Mechanism B verifier per Decision B option a).
+
+**Forward outlook**: After this remediation commit, D72 convergence rule applies — if remediation 3rd-pass returns 🟡 IMPROVEs only (no NEW 🔴 BLOCKs), D115/D116 are lockable AND Phase A R1 build authorization can proceed (pending compliance attestation per R38 + B-381 auditd + B-377 Polars Decimal128 verify + B-384 D6 supersession crumb). If 🔴 recurs, escalate per D72 ladder.
+
+**User direction acknowledged**: "We will revisit udm-progress-logger" — held for next user touchpoint.
+
+**Multi-agent application count progression**: 45 → 46 (design-reviewer 2nd-pass) → 47 (gap-check 2nd-pass) = +2 in cohort.
+
+---
+
 ## 2026-05-17 — Source-Exact Parquet Redesign 3-Agent Brainstorm Cohort + Phase A/B Split (24 NEW B-Ns + 2 NEW D-Ns + 4 NEW R-Ns + NEW SE-N edge case series)
 
 **Trigger**: User HARD REQUIREMENT 2026-05-17 evening: "Parquet files must be the exact copy of the data that was extracted from the source at the time of the data pipeline run. We need to ensure that we can tell when the raw data was extracted from source." Pipeline-lead direction "Proceed with your recommended next steps + log the issues found with udm-progress-logger. We will revisit udm-progress-logger."
@@ -23,7 +66,7 @@ Append-only audit trail for all artifacts that pass through the `udm-checks-and-
 
 **Hard rule 14 cascade applied**:
 - **TEST**: 3-agent gap-check cohort IS the test layer for the original plan (independent reviewers per D55+D56 producer ≠ reviewer); cohort verdict 🔴 BLOCK against original plan triggered this tracker-logging + Phase A/B split redirection. NO code changes in this commit; tracker updates + research persistence + plan supersession only.
-- **GAP ANALYSIS**: Agent 45 (gap-check) walked udm-gap-check 6-category audit G1-G6; verdict 🔴 6/6 with ~21 net unique B-N candidates surfaced; this commit OPENS those B-Ns (B-353-B-373) + 4 R-Ns + 2 D-Ns + SE-N series.
+- **GAP ANALYSIS**: Agent 45 (gap-check) walked udm-gap-check 6-category audit G1-G6; verdict 🔴 6/6 with ~21 net unique B-N candidates surfaced; this commit OPENS those B-Ns (B-353-B-376; final count 24 after B-374/B-375/B-376 Phase A build-start placeholders added during pre-commit cross-ref remediation per `fe53b4c`) + 4 R-Ns + 2 D-Ns + SE-N series.
 - **REVIEW**: Agent 43 (design-reviewer) walked CHECKS_AND_BALANCES 5-gate equivalent for architectural review; Gate 5 risk-delta surfaced R34/R35/R36/R37 candidates which this commit promotes. Agent 44 (researcher) walked R-NEW-A research scope (primary-source grounding for D-NEW-B/D); 24 citations attest substantive review.
 
 **Pitfall #9 sub-class instances surfaced** (per gap-check Agent 45):
