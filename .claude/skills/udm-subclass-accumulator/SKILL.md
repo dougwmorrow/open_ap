@@ -1,6 +1,6 @@
 ---
 name: udm-subclass-accumulator
-description: Scans Round N 🔴 findings; identifies bug patterns recurring ≥2 times that don't match existing Pitfall #9 sub-classes (9.a-9.j); proposes new sub-class with first-evidence entry + producer self-check directive. Round 8 close-out lands sub-class 9.j (B-item status-render discipline) per B144 2-event evidence base (R6 unscoped + R7 first-production Pattern F). Invoked AFTER `udm-retrospective-collector`; per Round 8 D96.
+description: Scans Round N 🔴 findings; identifies bug patterns recurring ≥2 times that don't match existing Pitfall #9 sub-classes (9.a-9.o); proposes new sub-class with first-evidence entry + producer self-check directive. Round 8 close-out lands sub-class 9.j (B-item status-render discipline) per B144 2-event evidence base (R6 unscoped + R7 first-production Pattern F). Invoked AFTER `udm-retrospective-collector`; per Round 8 D96.
 ---
 
 # UDM Sub-Class Accumulator

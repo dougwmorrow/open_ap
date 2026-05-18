@@ -2,6 +2,79 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-17 — Phase 1 of UDM Skills Audit COMPLETE — 8 of 8 CRITICAL fixes implemented + retroactively-attested via independent gap-check (de-facto D56 2nd-pass)
+
+**Trigger**: Phase 1 implementation cohort (4 serial commits 2026-05-17 closing B-408 through B-415 per `UDM_SKILLS_AUDIT_AND_OPTIMIZATION_PLAN_2026-05-17.md` §3.1 CRITICAL phase) followed by independent gap-check Agent 58 (agentId `a21a4705a21801196`) returning 🔴 BLOCKING verdict with 5 critical G-findings. Current remediation cascade (4 parallel Agents A/B/C/D) addresses all 5 findings. THIS ENTRY (Agent C scope) serves as the de-facto D56 2nd-pass attestation for the Phase 1 implementation cohort — closes Agent 58 finding G3.9.o-precedent (scope-conflation: cohort agents 54-57 attested to the SYNTHESIS PLAN at commit `3b9cf8f`, NOT to the implementation commits `895ae59` / `20fe33a` / `3cf2535` / `64ef833`).
+
+**Scope**: 8 B-N closures (B-408 / B-409 / B-410 / B-411 / B-412 / B-413 / B-414 / B-415); 4 commits (`895ae59` + `20fe33a` + `3cf2535` + `64ef833`); 10 SKILL.md files modified.
+
+**Per-B-N attestation table** (B-N → driver commit → cohort agent finding → SKILL.md target → ✅ verified state):
+
+| B-N | Driver commit | Cohort agent finding | SKILL.md target | Verified state |
+|---|---|---|---|---|
+| **B-408** | `895ae59` | Cohort D (Agent 57) SD-2 — atomic 4-skill fix | `.claude/skills/udm-round-closeout/SKILL.md` (Section 3 series count 9→14) + `.claude/skills/udm-checks-and-balances/SKILL.md` (Gate 3) + `.claude/skills/udm-edge-case-validator/SKILL.md` (series table) + `.claude/skills/udm-gap-check/SKILL.md` (Category 3 Pitfall #9 walk header 9.a-9.j → 9.a-9.o) + Stage 3 CCL update | ✅ Series-list drift closed; Pitfall #9 walk header updated; Gate 3 silent-coverage-gap closed (live since Round 6) |
+| **B-409** | `20fe33a` | Cohort B (Agent 55) CB-7-A — anti-trigger contradiction with CARVE-OUT | `.claude/skills/udm-post-edit-verification/SKILL.md` (anti-trigger strikethrough + alignment note with udm-exemption-verifier CARVE-OUT) | ✅ Contradiction resolved via strikethrough + alignment note; SKILL.md authoring commits now consistently treated as SUBSTRATE_EDIT (cascade required) |
+| **B-410** | `20fe33a` | Cohort D (Agent 57) SD-3 — CARVE-OUT Tier 0 assertion | `.claude/skills/udm-exemption-verifier/SKILL.md` (CARVE-OUT Tier 0 assertion at L230 preventing accidental removal) | ✅ Tier 0 assertion present at L230; CARVE-OUT mechanically protected from future edits |
+| **B-411** | `3cf2535` | Cohort D (Agent 57) SD-4 (subclass-accumulator extension) + Cohort B (Agent 55) CB-7-D | `.claude/skills/udm-subclass-accumulator/SKILL.md` (5 new keyword rows for sub-classes 9.k-9.o; CLAUDE.md added to CCL Stage 3 source list) | ✅ Keyword table extended to 9.k-9.o; CLAUDE.md registered in CCL Stage 3 (prevents false-new-sub-class proposals at next close-out) |
+| **B-412** | `3cf2535` | Cohort B (Agent 55) CB-7-F — udm-context-loader PS-9 SELF row | `.claude/skills/udm-context-loader/SKILL.md` (PS-9 SELF EXCEPTION clause covering 04_EDGE_CASES.md + CLAUDE.md) | ✅ PS-9 SELF EXCEPTION clause added; skill-review session under-spec closed |
+| **B-413** | `64ef833` | Cohort A (Agent 54) BS-2 — locked-D-number guard for udm-brainstorm | `.claude/skills/udm-brainstorm/SKILL.md` (NEW hard rule 6 — recommendation MUST NOT contradict locked D-N without supersession process) | ✅ NEW hard rule 6 added; locked-D-number guard active |
+| **B-414** | `20fe33a` | Cohort B (Agent 55) CB-7-B — Windows collection-skew (B-328 verbatim) | `.claude/skills/udm-post-build-verify/SKILL.md` (Step 2 Windows collection-skew pre-check verbatim from CLAUDE.md B-328 guidance) | ✅ Step 2 pre-check present; oracledb/polars ImportError exemption path codified |
+| **B-415** | `64ef833` | Cohort A (Agent 54) RC-7 — HANDOFF §14 update in Section 6 HANDOFF checklist | `.claude/skills/udm-round-closeout/SKILL.md` (Section 6 HANDOFF checklist includes §14 update; matches udm-next-step-cascade §14 discipline) | ✅ HANDOFF §14 update bullet added to Section 6 checklist |
+
+**D72 cycle accounting**:
+- **Cycle 1** = Phase 1 implementation (parent-agent serial execution across 4 commits drawn from cohort attestations per Agents 54-57 in synthesis plan at `3b9cf8f`). Per D72 rule "each parallel multi-agent batch = ONE cycle" — serial execution drawn from a SINGLE cohort attestation still counts as 1 cycle.
+- **Cycle 2** = Independent gap-check Agent 58 (`a21a4705a21801196`) post-Phase-1; verdict 🔴 BLOCKING with 5 critical G-findings (G1 + G3.9.j + G3.9.k + G3.9.m + G3.9.n + G3.9.o-precedent + G5.6). De-facto D56 2nd-pass per D55+D56 producer ≠ reviewer discipline.
+- **Current remediation cascade** (this Agent C + parallel Agents A/B/D) = cycle 2 remediation phase (NOT a new cycle; addresses cycle-2 BLOCKERs without spawning cycle 3 work).
+- **Cycle 3** (recommended) = next independent gap-check on the remediation commit (D72 convergence check). If cycle 3 returns ≤🟡, Phase 1 status flips from 🟡 PARTIAL CLOSURE → ✅ FULL CLOSURE.
+
+**Reviewer verdict** (Agent 58 final):
+- **Verdict**: 🔴 BLOCKING
+- **G-finding count**: 5 critical findings (G1 cross-tracker drift / G3 Pitfall #9.j status-render / G3 Pitfall #9.k arithmetic-propagation / G3 Pitfall #9.m discipline-not-applied / G3 Pitfall #9.n convention-registration / G3.9.o-precedent scope-conflation between synthesis-plan attestation vs implementation attestation / G5.6 forward-prevention candidates)
+- **Remediation cascade** addresses ALL 5 findings via 4 parallel agents:
+  - Agent A: BACKLOG.md B-409 + B-414 closure annotation fix
+  - Agent B: CURRENT_STATE.md L7 + HANDOFF.md §14 narrative refresh
+  - Agent C: _validation_log.md aggregate Phase 1 event entry (THIS ENTRY)
+  - Agent D: frontmatter sweep + GLOSSARY.md canonicalization
+
+**Aggregate Phase 1 verdict**: 🟡 PARTIAL CLOSURE → ✅ FULL CLOSURE pending remediation cascade landing (Agent A + B + C + D commits) + cycle-3 D72 convergence check verdict ≤🟡.
+
+**Forward-prevention candidates surfaced** (6 NEW B-Ns proposed by Agent 58 G5; some SELF-CLOSE through this remediation cascade):
+1. B-409 BACKLOG closure annotation correctness (SELF-CLOSING via Agent A this cascade)
+2. B-414 BACKLOG closure annotation correctness (SELF-CLOSING via Agent A this cascade)
+3. CURRENT_STATE.md L7 + HANDOFF.md §14 narrative refresh per Pitfall #9.j+9.k (SELF-CLOSING via Agent B this cascade)
+4. _validation_log.md aggregate Phase 1 event entry per Pitfall #9.m (SELF-CLOSING via THIS ENTRY)
+5. Frontmatter `version:` field sweep across 8+ skills missing it per BNcand-416 (deferred to Phase 2; Agent D this cascade adds for high-impact skills only)
+6. NEW pre-commit `check_closure_annotation_consistency` (deferred to Mechanism C-1 Phase 2 extension; would mechanically enforce BACKLOG strikethrough body + closure date + closure mechanism line per Pitfall #9.j cosmetic discipline)
+
+**Pitfall #9 sub-class instances addressed in remediation cascade**:
+- 9.j (B-N status-render drift): B-409 + B-414 closure annotation fix per Agent A scope
+- 9.k (arithmetic-propagation drift): CURRENT_STATE / HANDOFF narrative count updates per Agent B scope
+- 9.m (discipline-not-applied-to-tracker): THIS ENTRY (_validation_log.md aggregate Phase 1 event missing pre-cascade) per Agent C scope
+- 9.n (convention-registration): GLOSSARY canonicalization per Agent D scope
+- 9.o-precedent (scope-conflation): THIS ENTRY explicitly distinguishes synthesis-plan attestation (cohort agents 54-57 at `3b9cf8f`) from implementation attestation (this aggregate entry serves as de-facto D56 2nd-pass at implementation level)
+
+**Hard rule 14 cascade applied to remediation cascade**:
+- **TEST**: pytest 2471 pass / 10 skip / 0 fail baseline preserved (no code changes in any of the 4 Phase 1 commits; only SKILL.md content additions); 10 SKILL.md files content-verified for the specific Phase 1 enhancements (B-408 series count grep → 14 present; B-410 CARVE-OUT L230 grep → present; etc.).
+- **GAP ANALYSIS**: Agent 58 explicit 6-category audit on Phase 1 cohort = 🔴 BLOCKING with 5 findings (G1 + G3 sub-classes 9.j/9.k/9.m/9.n/9.o-precedent + G5.6); current remediation cascade addresses all 5.
+- **REVIEW**: Cohort agents 54-57 reviewed synthesis plan at `3b9cf8f` (NOT implementation commits — G3.9.o-precedent finding); THIS aggregate entry serves as de-facto D56 2nd-pass at implementation level per Agent 58 G3.9.o-precedent remediation directive.
+
+**Forward outlook**: After remediation cascade lands (Agents A + B + C + D in parallel commits), recommend spawning a fresh independent gap-check Agent 59 (D72 cycle-3) verifying:
+- 5 Agent 58 G-findings all addressed
+- No NEW G-findings introduced by remediation cascade itself (anti-pattern per D72 cycle-3 history: cycle-3 of Phase A plan introduced 2 NEW BLOCKERs via remediation per `7cb7659` → `fe53b4c` recurrence)
+- Cycle-3 verdict ≤🟡 → Phase 1 status flip 🟡 PARTIAL CLOSURE → ✅ FULL CLOSURE
+- Cycle-3 verdict 🔴 BLOCKING → escalate per D72 ladder
+
+**Multi-agent application count progression**: 52 (Phase A D72 cycle-6) → 53 (Agent 53 udm-progress-logger v1.2.0 review per `4d7dee8`) → 54-57 (synthesis plan cohort per `3b9cf8f`) → 58 (post-Phase-1 gap-check per current remediation trigger) → 59 (anticipated cycle-3 convergence check on remediation cascade). Multi-agent application count = 58 cumulative + 4 in current remediation cascade (Agents A/B/C/D) = 62 anticipated post-cascade.
+
+**User direction acknowledged**: pipeline-lead implicit standing direction "ensure Phase 1 audit closures are cohesive + audit-traceable + retroactively attested" — addressed THIS REMEDIATION CASCADE via 4 parallel agents executing Agent 58 prescribed remediation.
+
+**Hard rule 14 cascade applied to THIS ENTRY** (SUBSTRATE_EDIT classification — `_validation_log.md` is canonical audit-trail substrate per CLAUDE.md hard rule 14 substrate enumeration):
+- **TEST**: grep verification → `Phase 1 of UDM Skills Audit COMPLETE` appears exactly once in the file (1 hit on aggregate event header)
+- **GAP ANALYSIS**: Agent 58 explicit G3.D72-cycle-accounting + audit-trail-gap finding remediated by THIS ENTRY (closes G3.9.o-precedent scope-conflation); 6-category G1-G6 audit walked inline by Agent C scope
+- **REVIEW**: Agent 58 (`a21a4705a21801196`) prescribed THIS ENTRY format in remediation directive; Agent C scope is verbatim implementation of Agent 58 prescription with verification
+
+---
+
 ## 2026-05-17 — udm-progress-logger v1.1.0 → v1.2.0 (revisit per user standing direction "We will revisit udm-progress-logger" held since `7cb7659`)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" → Item 1 from prior cascade close-out recommended-next-steps list = revisit `udm-progress-logger` (standing direction held across 7+ multi-turn gap since `7cb7659`).

@@ -1,6 +1,6 @@
 ---
 name: udm-edge-case-validator
-description: Walks the M/S/I/N/P/G/D/F/V edge case series in 04_EDGE_CASES.md and checks if a given design or change addresses relevant ones. Use before signing off a round, before merging a code change, before locking a decision. Catches edge cases the design implicitly addresses but doesn't document, AND edge cases the design doesn't yet address.
+description: Walks the M/S/I/N/P/G/D/F/V/DP/T/SI/SE/PL edge case series in 04_EDGE_CASES.md and checks if a given design or change addresses relevant ones. Use before signing off a round, before merging a code change, before locking a decision. Catches edge cases the design implicitly addresses but doesn't document, AND edge cases the design doesn't yet address.
 ---
 
 # UDM Edge Case Validator

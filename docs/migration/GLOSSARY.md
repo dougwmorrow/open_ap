@@ -521,7 +521,7 @@ Per `CHECKS_AND_BALANCES.md`. Every artifact passes 5 gates before being declare
 |---|---|---|
 | Gate 1 | Cross-reference | Consistent with the rest of the doc set |
 | Gate 2 | Quality assurance (independent review) | A second pair of eyes (different agent) confirms correctness |
-| Gate 3 | Edge case enumeration | M/S/I/N/P/G/D/F/V/DP/T/SI/SE series walked |
+| Gate 3 | Edge case enumeration | M/S/I/N/P/G/D/F/V/DP/T/SI/SE/PL series walked |
 | Gate 4 | Edge case validation | Every ✅-claimed case has tangible verification |
 | Gate 5 | Idempotency / regression | D15 invariant preserved; no broken prior work |
 
@@ -630,7 +630,7 @@ When introducing a new code family during a round:
 | Pattern A-F | `MULTI_AGENT_GUIDE.md` |
 | SP-N (stored procedures) | `phase1/01_database_schema.md` |
 | RB-N (runbooks) | `05_RUNBOOKS.md` |
-| Edge case series (M/S/I/N/P/G/D/F/V/T/DP/SI/SE/PL) | `04_EDGE_CASES.md` |
+| Edge case series (M/S/I/N/P/G/D/F/V/DP/T/SI/SE/PL) | `04_EDGE_CASES.md` |
 | Phase N | `02_PHASES.md` |
 | CLAUDE.md code-level (B-N / E-N / V-N / W-N / OBS-N / SCD2-*) | `CLAUDE.md` (project root) |
 | Tier 0-5 (test pyramid) | `06_TESTING.md` |
