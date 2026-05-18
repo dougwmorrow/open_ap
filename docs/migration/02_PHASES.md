@@ -1,4 +1,4 @@
-# UDM Pipeline — Phase Plan
+﻿# UDM Pipeline — Phase Plan
 
 Each phase is independently shippable with an explicit validation gate before the next starts. Each phase follows the deep-dive cycle (plan → validate → QA → edge cases → edge case validation → sign-off) before advancing.
 
@@ -10,7 +10,7 @@ Each phase is independently shippable with an explicit validation gate before th
 1. PLAN — complete artifact list, sequencing, acceptance criteria
 2. VALIDATE THE PLAN — cross-reference architecture, edge cases, runbooks
 3. QUALITY ASSURANCE — peer review of DDL, modules, tests
-4. EDGE CASE ENUMERATION — walk the M/S/I/N/P/G/D/F/V register
+4. EDGE CASE ENUMERATION — walk the M/S/I/N/P/G/D/F/V/DP/T/SI/SE register
 5. VALIDATE EDGE CASES — write tests / verify config / write runbook section
 6. PHASE COMPLETE — validation gate green, stakeholder sign-off
 ```

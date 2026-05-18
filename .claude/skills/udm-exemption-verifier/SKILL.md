@@ -229,6 +229,7 @@ If invocation cost exceeds ceiling, escalate to user for prioritization decision
 - Verify procedure has 5 steps
 - Verify examples reference 3 prior Pitfall #9.o instances (5, 6, 7)
 - Verify hard-rule list has ≥6 rules
+- **Verify CRITICAL CARVE-OUT section present at L62-L68 area** (added 2026-05-17 per B-414 closure + Cohort B Agent 55 CB-6-E finding): grep SKILL.md for "CRITICAL CARVE-OUT" header + "SKILL.md authoring commits" + "INSTANCE 8" reference + "carve-out applies ONLY to verifier OUTPUT, NOT to authoring commits" clarification text. The CARVE-OUT is LOAD-BEARING for Pitfall #9.o instance-8 forward-prevention; if silently removed during a future refactor, the discipline regression is undetectable WITHOUT this assertion. Test failure surfaces any accidental removal.
 
 ## Examples of when to invoke
 

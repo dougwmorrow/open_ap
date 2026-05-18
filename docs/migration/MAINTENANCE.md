@@ -1,4 +1,4 @@
-# UDM Pipeline — Maintenance Practices
+﻿# UDM Pipeline — Maintenance Practices
 
 This document covers ongoing practices for keeping the pipeline, the documentation, and the audit posture healthy after the migration phases complete.
 
@@ -26,7 +26,7 @@ This document covers ongoing practices for keeping the pipeline, the documentati
 ### Update workflow
 
 1. **Adding a decision**: increment D-number, write rationale, set status to 🟡, capture trade-offs. Lock to 🟢 after sign-off. Never delete superseded decisions; mark ⚫ Superseded with link to replacement.
-2. **Adding an edge case**: pick the appropriate series (M/S/I/N/P/G/D/F/V), increment, document mitigation status (✅/🟡/🔴).
+2. **Adding an edge case**: pick the appropriate series (M/S/I/N/P/G/D/F/V/DP/T/SI/SE), increment, document mitigation status (✅/🟡/🔴).
 3. **Adding a runbook**: increment RB-number, document When/Pre-flight/Procedure/Validation/Rollback. Test in dev before adding.
 4. **Updating CLAUDE.md**: reflect operational changes, new "Do NOT" rules learned from incidents, new tools.
 5. **Quarterly doc review**: a 30-min meeting per quarter to walk the doc map and flag stale content.
@@ -277,7 +277,7 @@ For any third-party skill:
 
 We can author project-specific skills under `.claude/skills/<name>/SKILL.md`. These are pure markdown files version-controlled with the repo. Candidate skills for our project:
 
-- `.claude/skills/udm-edge-case-validator/SKILL.md` — references the M/S/I/N/P/G/D/F/V series, prompts when designing new code to check against the register
+- `.claude/skills/udm-edge-case-validator/SKILL.md` — references the M/S/I/N/P/G/D/F/V/DP/T/SI/SE series, prompts when designing new code to check against the register
 - `.claude/skills/udm-decision-recorder/SKILL.md` — when a new decision is being made, prompts to add it to `03_DECISIONS.md` with the right structure
 - `.claude/skills/udm-runbook-author/SKILL.md` — template enforcement for new runbooks (When/Pre-flight/Procedure/Validation/Rollback)
 - `.claude/skills/udm-power-bi-query-builder/SKILL.md` — generates Power BI-compatible SQL queries against `General.ops` tables

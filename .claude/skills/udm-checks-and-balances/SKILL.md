@@ -67,7 +67,7 @@ Output: review report. 🔴 items block validation.
 
 ### Gate 3: Edge case enumeration
 
-Goal: walk the M/S/I/N/P/G/D/F/V series and catalog applicability.
+Goal: walk the **14 canonical series** (M/S/I/N/P/G/D/F/V/DP/T/SI/SE/PL) and catalog applicability. (Updated 2026-05-17 per B-408 atomic 4-skill series-list fix; was stale at 9 series since Round 6 DP addition — every Gate 3 walk silently incomplete since then.)
 
 ```
 For each series:

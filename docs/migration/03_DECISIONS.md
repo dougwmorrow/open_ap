@@ -1,4 +1,4 @@
-# UDM Pipeline Migration — Decision Log
+﻿# UDM Pipeline Migration — Decision Log
 
 Every architectural decision made during the planning phase, with rationale and status. New decisions append to this log; superseded decisions stay in place with a `superseded by` link.
 
@@ -738,7 +738,7 @@ Code is throwaway. Run on dev only. Output: confirmation each integration works 
 |---|---|
 | `udm-planning` | Round task decomposition with verification |
 | `udm-brainstorm` | Force ≥3 alternatives before locking |
-| `udm-edge-case-validator` | M/S/I/N/P/G/D/F/V series check |
+| `udm-edge-case-validator` | M/S/I/N/P/G/D/F/V/DP/T/SI/SE series check |
 | `udm-decision-recorder` | D-number / status / rationale enforcement |
 | `udm-runbook-author` | Runbook structure enforcement |
 | `udm-data-engineer-review` | CDC/SCD2/Polars/Parquet pattern review |
@@ -913,7 +913,7 @@ Initial v2 was prematurely declared 🟢. The validation agent (per `CHECKS_AND_
 The 5 gates:
 1. **Cross-reference** — verify consistency with rest of doc set (decisions, edge cases, runbooks)
 2. **Quality assurance** — independent review (separate agent or human, not the producer)
-3. **Edge case enumeration** — walk M/S/I/N/P/G/D/F/V series; flag gaps and new cases
+3. **Edge case enumeration** — walk M/S/I/N/P/G/D/F/V/DP/T/SI/SE series; flag gaps and new cases
 4. **Edge case validation** — every "addressed" case has tangible verification (test, constraint, runbook step)
 5. **Idempotency / regression** — D15 invariant preserved; no previously-validated work broken
 
@@ -3344,6 +3344,89 @@ Each plan covers canonical structure: Purpose + Why-this-phase-exists + For-engi
 - **DE-ESCALATED R28 sub-class** (cascade self-attestation gap): `protect-primary-docs.py` adds a low-friction reminder whenever a protected primary doc is edited, providing structural defense against unauthorized cascade edits. Not full mitigation of R28; de-escalates the subclass of "cascade edit proceeds without awareness."
 
 **See also**: `BACKLOG.md` B-293 / B-294 / B-295 + `_validation_log.md` 2026-05-16 entries (AppLaunchpad adoption + B-295 sub-items 8 + 9 closure) + HANDOFF §8 Pitfall #9.o + AppLaunchpad source spec `agentic-architecture.md` + research artifacts above + `_session_logs/cli_query_blindspots_<date>.log` (live audit trail).
+
+---
+
+## D115 — PII tokenization timing reorder: source-exact Parquet write BEFORE in-memory tokenization (Phase A scope; supersedes D6 partially)
+
+**Status**: 🟡 Proposed 2026-05-17 (per pipeline-lead Phase A/B split direction; lock target Phase A R1 prerequisite)
+
+**Driver**: User HARD REQUIREMENT 2026-05-17: "Parquet files must be the exact copy of the data that was extracted from the source at the time of the data pipeline run." Current architecture (per `01c_data_flow_walkthrough.md` § 3) calls `pii_tokenizer.tokenize_pii_columns(df)` BEFORE `parquet_writer.write_snapshot(df)` (Step 3 → Step 4 ordering) per D6 (PII tokenization at extraction). Tokenization REPLACES source plaintext PII with vault tokens BEFORE Parquet write — Parquet thus contains tokens, NOT source-exact data. Violates user hard requirement.
+
+**Decision**: Reorder the per-table pipeline flow so that Parquet write happens BEFORE in-memory tokenization. Source-exact data lands in Parquet (subject to format-structural transformations only); in-memory copy of the DataFrame is passed forward through `sanitize_strings()` → `tokenize_pii_columns()` → `add_row_hash()` → SCD2 promotion. Bronze still receives tokenized data (current behavior preserved). Parquet file contains plaintext PII (Phase A only; Phase B layers PME on top per future D-N).
+
+**Rationale**:
+- User hard requirement is binding; D6's tokenization-at-extraction timing must change
+- D6's compliance INTENT (PII protection through vault tokens) is preserved by tokenization-at-promotion (still happens before Bronze); only the TIMING shifts
+- Parquet plaintext PII during Phase A is mitigated by D103 13-layer security model (filesystem ACLs + `/debi` boundary + no-Claude-on-prod) — same posture as `/etc/pipeline/.env` plaintext credentials per D103
+- Greenfield project (per `02_PHASES.md` L5): no production Parquet to migrate; refactor before first pipeline run
+- SCD2 engine unchanged per D2 + D18 commitments (still receives in-memory tokenized DataFrame)
+- E-12 phantom-update detection + D18 verify-before-close unaffected (operate on tokenized DataFrame, which is hash-stable per vault SP-1 determinism)
+
+**Trade-offs accepted**:
+- Plaintext PII in Parquet during Phase A (compensating: D103 ACLs + 13-layer defense; R36 opened)
+- Code refactor required across `orchestration/small_tables.py` + `orchestration/large_tables.py` + `data_load/parquet_writer.py` (small per `02_PHASES.md` L5 greenfield)
+- Phase B PME layer needed to fully meet GDPR/EDPB-irreversibility standard (per R5 research finding; R5 noted vault-soft-delete inadequate)
+
+**Supersedes**: D6 PARTIALLY (timing-of-tokenization clause superseded; vault-token-as-PII-protection mechanism preserved). D6 remains canonical for vault SP-1 + SP-2 contracts + audit-trail invariants. Cross-reference required in D6 body at lock time.
+
+**Pillar mapping** (per D61): Pillar 1 (Audit-grade traceability) — Parquet self-describing as source-of-truth artifact preserves regulator-grade record per user binding constraint #2 ("blob storage = source of truth"). Pillar 2 (Operational simplicity) — clean separation between source-exact archive and downstream-consumer-tokenized data.
+
+**Risk delta**:
+- 🆕 NEW R36 (plaintext PII in Parquet during Phase A) — Low × Medium = 2 ⚪ (compensating: D103 13-layer defense)
+- Existing R09 (PII compliance audit timing) — UNCHANGED at Phase A; Phase B PME layer will provide additional crypto-shred-irreversibility mitigation
+- DE-ESCALATED: ✅ NONE (Phase A doesn't change existing risks; Phase B will)
+
+**Cross-references**: D6 (partially superseded), D2 (compatible), D18 (compatible), D102 (vault encryption unchanged), D103 (compensating control for Phase A Parquet plaintext), `_research/r6-pme-extraction-time-2026-05-17.md` (Phase B design grounding), `UDM_PIPELINE_REDESIGN_PARQUET_SOURCE_EXACT_2026-05-17.md` §2.2 (architectural framing; now superseded by Phase A plan per pipeline-lead 2026-05-17), B-370 (Phase A/B split tracking), B-371 (canonical-doc cascade B-N).
+
+**Reversibility**: Reversible. If Phase A reveals tokenization-at-promotion semantically incompatible with downstream Bronze contract, future D-N can re-restore D6 ordering. Pre-revert escape hatch: orchestrator call-graph centralized in 2 files (small_tables + large_tables); refactor cost symmetric in either direction.
+
+---
+
+## D116 — Extraction-timestamp recording via Parquet file-level `key_value_metadata` (plaintext footer)
+
+**Status**: 🟡 Proposed 2026-05-17 (per pipeline-lead Phase A/B split direction; lock target Phase A R1 prerequisite)
+
+**Driver**: User HARD REQUIREMENT 2026-05-17 (second clause): "We need to ensure that we can tell when the raw data was extracted from source." Currently, extraction time is recorded only in `ParquetSnapshotRegistry.CreatedAt` (per D45.2 / D25). Registry is mutable SQL table (could be corrupted, schema-evolved, archived); Parquet file (immutable post-write; D30 7-year retention) may outlive its registry row. For audit-grade self-describing compliance (Pillar 1), Parquet file MUST be self-auditing regarding WHEN extraction occurred.
+
+**Decision**: Store extraction timestamps as `key_value_metadata` in the Parquet file footer (Apache Parquet structural feature; immutable post-write; `pq.write_table(metadata=...)` API). Use plaintext-footer mode (Phase B PME caveat — encrypted-footer mode would hide metadata; per `_research/r6-pme-extraction-time-2026-05-17.md` R1-4). Recommended key schema (R7 synthesis):
+
+```
+udm_source_system          : "DNA" | "CCM" | "EPICOR"
+udm_source_schema          : e.g., "osibank"
+udm_source_table           : e.g., "ACCT"
+udm_extraction_started_at  : ISO-8601 UTC — when source SQL query was submitted
+udm_extraction_ended_at    : ISO-8601 UTC — when Polars DataFrame fully materialized
+udm_parquet_written_at     : ISO-8601 UTC — when pq.write_table completed (post-fsync)
+udm_pipeline_batch_id      : batch GUID from PipelineBatchSequence
+udm_pipeline_version       : pipeline release tag
+udm_encryption_config      : "none" (Phase A) | "pme_plaintext_footer_aes_gcm_v1" (Phase B)
+udm_row_count              : string(int) — SE-6 invariant cross-check
+```
+
+Plus 2 new ParquetSnapshotRegistry columns (D92 forward-only ALTER): `ExtractionQueryStartedAt DATETIME2(3) NULL` + `ExtractionQueryCompletedAt DATETIME2(3) NULL` — for SQL-queryable index (secondary; Parquet file is primary).
+
+**Rationale**:
+- File-level `key_value_metadata` is the Apache Parquet canonical mechanism (per `_research/r6-pme-extraction-time-2026-05-17.md` R1; pyarrow API stable; <1KB per file overhead)
+- Three timestamps (started / ended / written) allow reconstructing end-to-end extraction latency without DB query
+- Exceeds what Iceberg / Delta / Hudi natively capture (those record COMMIT time, not SOURCE EXTRACTION time)
+- `udm_` prefix avoids collisions with reserved `b"ARROW:schema"` and `b"pandas"` keys
+- Plaintext-footer mode preserves operator + monitoring access; integrity GCM signature still prevents tampering (Phase B caveat: footer signature requires PME footer-key for verification; pre-Phase-B, no signature — SE-3 ContentChecksum in registry provides tamper detection)
+
+**Trade-offs accepted**:
+- File-level metadata is immutable post-write (cannot append verification timestamps later; if needed, separate sidecar JSON OR registry column)
+- No industry standard for key naming — we coin our own with `udm_` prefix (documented in `CLAUDE.md` Gotchas as project convention)
+- Phase B PME interaction requires plaintext-footer mode (encrypted footer would hide metadata; per R1-4)
+
+**Pillar mapping** (per D61): Pillar 1 (Audit-grade traceability) — self-describing Parquet directly answers user's "when was extracted" auditor question without DB lookup. Pillar 2 (Operational simplicity) — single-source-of-truth (file itself) reduces cross-system reconciliation burden.
+
+**Risk delta**:
+- 🆕 NEW R37 (Parquet metadata schema drift across versions) — Low × Low = 1 ⚪ (mitigation: `udm_pipeline_version` key allows multi-version replay)
+- DE-ESCALATED: implicit DE-ESCALATION of R15 (DR scope) — Parquet file alone proves WHEN extracted; reduces dependency on `ParquetSnapshotRegistry` survival
+
+**Cross-references**: D25 (ParquetSnapshotRegistry), D45.2 (Hive partition + ZSTD), D92 (forward-only schema discipline), D110 (DC-loss-no-DR posture; self-describing Parquet survives DC loss), `_research/r6-pme-extraction-time-2026-05-17.md` R1 + R7 (primary-source grounding), B-356 (revise-D-NEW-D B-N now satisfied by this D-N).
+
+**Reversibility**: Reversible at the registry-columns layer (D92 forward-only ALTER); irreversible for already-written Parquet files (metadata baked in at write time). If schema needs revision, append new keys (additive) — old keys remain valid; old Parquet files remain readable.
 
 ---
 

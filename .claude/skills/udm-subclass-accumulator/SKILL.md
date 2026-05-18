@@ -1,6 +1,6 @@
 ---
 name: udm-subclass-accumulator
-description: Scans Round N 🔴 findings; identifies bug patterns recurring ≥2 times that don't match existing Pitfall #9 sub-classes (9.a-9.j); proposes new sub-class with first-evidence entry + producer self-check directive. Round 8 close-out lands sub-class 9.j (B-item status-render discipline) per B144 2-event evidence base (R6 unscoped + R7 first-production Pattern F). Invoked AFTER `udm-retrospective-collector`; per Round 8 D96.
+description: Scans Round N 🔴 findings; identifies bug patterns recurring ≥2 times that don't match existing Pitfall #9 sub-classes (9.a-9.o); proposes new sub-class with first-evidence entry + producer self-check directive. Round 8 close-out lands sub-class 9.j (B-item status-render discipline) per B144 2-event evidence base (R6 unscoped + R7 first-production Pattern F). Invoked AFTER `udm-retrospective-collector`; per Round 8 D96.
 ---
 
 # UDM Sub-Class Accumulator
@@ -18,14 +18,14 @@ Third close-out analysis skill. Detects emerging Pitfall #9 sub-class patterns +
 - **Stage 0**: `docs/migration/INDEX.md` (routing manifest; recommended-not-mandatory; added 2026-05-15 per D62 amendment + D.2 INDEX.md per MARKDOWN_REFACTOR_PLAN.md §7.1 task 1.3; read FIRST when uncertain which downstream Stage 1+2+3 docs your task needs; skip when you already know).
 - **Stage 1**: `NORTH_STAR.md` + `HANDOFF.md` (§8 sub-class accumulator) + `CURRENT_STATE.md` + `CHECKS_AND_BALANCES.md`
 - **Stage 2**: `RISKS.md` + `BACKLOG.md` + `_validation_log.md` (this round's entry + prior rounds for cross-round pattern matching)
-- **Stage 3**: `_reviewer_effectiveness.md` (specialty correlation); prior subclass-accumulator outputs at `docs/migration/_agent_evolution/subclass-accumulator-round*-*.md`
+- **Stage 3**: `_reviewer_effectiveness.md` (specialty correlation); prior subclass-accumulator outputs at `docs/migration/_agent_evolution/subclass-accumulator-round*-*.md`; **`CLAUDE.md` (hard rule 14 + Pitfall sub-class additions in hard rules section)** — added 2026-05-17 per B-411 closure because sub-classes 9.k through 9.o are documented in CLAUDE.md hard rule 14, NOT in HANDOFF §8 alone; without this CCL extension, the skill missed 5 most-recently-formalized sub-classes when classifying new findings
 - **Stage 4**: grep `_validation_log.md` for 🔴 findings text matching candidate patterns
 
 ## Pattern-matching algorithm
 
 For each 🔴 finding in Round N:
 
-1. **Match against existing sub-classes** by keyword:
+1. **Match against existing sub-classes** by keyword (**15 sub-classes total — updated 2026-05-17 per B-411 closure; was stale at 9.a-9.j missing 9.k through 9.o**):
    - 9.a column-name — keywords: "column", "invented column", "canonical column"
    - 9.b parameter-name — keywords: "parameter", "@", "SP signature"
    - 9.c enum-value — keywords: "enum", "CHECK constraint", "status value"
@@ -36,6 +36,11 @@ For each 🔴 finding in Round N:
    - 9.h wrong-section — keywords: "section", "§", "invented section"
    - 9.i process-discipline — keywords: "false-closure", "stale B-range", "silent omission", "trailing summary"
    - 9.j B-item status-render — keywords: "leading badge", "🟡 Open + CLOSED inline"
+   - 9.k arithmetic-propagation — keywords: "count drift", "arithmetic", "stale narrative count", "B-N range mismatch", "R-N score stale", "enumeration count"
+   - 9.l canonical-schema-detail — keywords: "canonical schema", "DDL re-read", "SchemaContract column", "canonical INSERT pattern", "spec doc detail drift"
+   - 9.m discipline-not-applied-to-own — keywords: "self-apply", "own authoring", "new discipline misses own rule", "tracker discipline not applied"
+   - 9.n convention-registration — keywords: "CLAUDE.md Structure", "GLOSSARY register", "Step 10", "new public surface", "convention not cascaded", "canonical anchor missing"
+   - 9.o anti-rationalization-clause compliance — keywords: "exemption claim", "quote-cite", "cite-by-quotation", "META-COMMIT review", "cascade-evidence", "Layer N termination", "udm-exemption-verifier trigger"
 
 2. **Unclassified findings** → potential new sub-class candidate
 

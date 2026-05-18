@@ -1,6 +1,6 @@
 # UDM Pipeline Migration — Edge Case Register
 
-Consolidated catalog of every edge case identified during planning. Six series, each prefixed by an identifier:
+Consolidated catalog of every edge case identified during planning. **14 canonical series**, each prefixed by an identifier:
 
 - **M-series**: Math / lookback / lateness
 - **S-series**: SCD2 reliability
@@ -11,6 +11,11 @@ Consolidated catalog of every edge case identified during planning. Six series, 
 - **D-series**: 2x/day cadence
 - **F-series**: Failover / cross-server parity
 - **V-series**: Vault provenance
+- **DP-series**: Deployment pipeline (Round 6; per B121)
+- **T-series**: Testing (Rounds 5+6; per B108 + B121)
+- **SI-series**: Self-improvement discipline (Round 8; per D95-D99)
+- **SE-series**: Source-exactness invariants (Phase A; per D115 + D116 + B-373)
+- **PL-series**: udm-progress-logger discipline (added 2026-05-17 per `UDM_PROGRESS_LOGGER_REVIEW_AND_OPTIMIZATION_PLAN_2026-05-17.md` + B-405 closure; 15 NEW canonical entries PL1-PL17 minus PL14+PL15 existing-discipline)
 
 Each row: edge case description, current handling status, mitigation.
 
@@ -287,9 +292,58 @@ Cross-refs: `docs/migration/phase1/08_sub_agent_self_improvement.md` § 10 (orig
 
 ---
 
+## SE-Series: Source-Exactness Invariants (added 2026-05-17 at source-exact Parquet redesign Phase A scope per D115 + D116 + B-373)
+
+NEW 13th series (after M/S/I/N/P/G/D/F/V/DP/T/SI). Each SE-N entry encodes a binding invariant that Parquet writes MUST satisfy per user HARD REQUIREMENT 2026-05-17 ("Parquet files must be the exact copy of the data that was extracted from the source"). Verified via Tier 1 round-trip test per B-373.
+
+| ID | Edge case / Invariant | Status | Mitigation |
+|---|---|---|---|
+| SE1 | Parquet column count must equal source query column count (no row count mismatch silently masking schema drift) | 🟡 | Schema-diff assertion at Parquet write time in `parquet_writer.write_snapshot()`; raises `SourceExactnessError` on mismatch; B-373 Tier 1 test |
+| SE2 | Parquet column dtypes correspond 1:1 to source dtypes per documented mapping table (Oracle → Parquet per Oracle docs; SQL Server → Parquet per pyarrow defaults). **Documented exceptions** (each constitutes accepted-as-documented precision loss; NOT silent corruption): (a) SQL Server DATETIME2(7) → Parquet timestamp[us] is factor-of-10 truncation per B-367 (`allow_truncated_timestamps=True`); (b) ConnectorX Oracle DATE overflow ≥ 2262-04-12 per B-366 defensive assertion; (c) **Oracle NUMBER(p>38) cannot be Parquet DECIMAL** per B-377 (pyarrow DECIMAL precision ≤ 38; Oracle NUMBER without precision = DECIMAL(126) source-side; affects DNA + EPICOR wide-precision NUMBER columns); (d) Oracle DATE via ConnectorX returns `timestamp[ns]` zero-filling sub-second (preserves time component vs Oracle Cloud DATE mapping which is date-only); (e) Polars Decimal128 → Parquet round-trip bugs per `pola-rs/polars#12375` + `#21684` (verify production version per B-377) | 🟡 | Author defensive assertions at Parquet write time for (c); document (a)/(b)/(d)/(e) per B-377 + B-366 + B-367 + `CLAUDE_GOTCHAS.md`; B-373 Tier 1 test verifies all documented exceptions |
+| SE3 | Parquet column VALUES (after PME decryption for PII columns in Phase B; plaintext in Phase A) byte-equivalent to source query result. **Verification mechanism**: ALL-rows `assert_frame_equal(check_dtypes=False)` against source DataFrame for non-exception columns + specific value assertions for exception columns (per design-reviewer D3 finding — "sample-based" is insufficient for audit-grade test) | 🟡 | B-373 Tier 1 test reads full Parquet + asserts `pl.testing.assert_frame_equal()` against source extraction DataFrame; Phase B adds decrypt-then-compare for PME columns |
+| SE4 | NO additive columns in Parquet schema (`_row_hash`, `_extracted_at`, `_cdc_operation`, etc. — these are pipeline-internal artifacts, NOT source data) | 🟡 | `data_load/parquet_writer.py` enforces schema = source schema; pipeline metadata stored in `key_value_metadata` footer (per D116), NOT data columns |
+| SE5 | Control characters (`\t`, `\n`, `\r`, `\x00`) preserved in Parquet string columns | 🟡 | Parquet handles control characters natively; `sanitize_strings()` is BCP-CSV-only (in-memory path); MUST NOT apply to DataFrame written to Parquet; B-373 Tier 1 test includes fixture row with embedded `\t` + `\n` |
+| SE6 | Source row count must equal Parquet row count (no row filtering during extraction-to-Parquet step) | 🟡 | Row-count assertion at Parquet write + `udm_row_count` key_value_metadata cross-check per D116 |
+| SE7 | Source row order is source-query-result order for the extraction window; no ORDER BY is applied during extraction; sort order within file is source-dependent. D45.2 sort order contract `(PK ASC, _extracted_at DESC)` applies to SCD2-input in-memory path, NOT to Parquet (Phase A reorder defers sort to after Parquet write). | 🟡 | `data_load/parquet_writer.py` writes Polars DataFrame in source-query-result order; D45.2 sort applied at in-memory pipeline step (after Parquet write); reconciliation per B-371 explicitly documents this separation |
+| SE8 | Source adds NEW PII column mid-pipeline-life: Parquet files written BEFORE PiiColumnList update contain plaintext PII; files are immutable (Phase B PME-coverage-gap until retroactive re-extraction) | 🔴 | B-362 — author SE-8 + new RB-N "retroactive PME classification procedure"; notify operator on schema evolution ADD branch; identify Parquet window with new column plaintext; offer re-extraction-with-PME path. Phase B scope. |
+| SE9 | **Replay path tokenization ordering** — when a Parquet snapshot is replayed via `data_load/parquet_replay.py`, the replay engine MUST apply tokenization (per D115 ordering) AFTER reading the plaintext Parquet and BEFORE passing to `scd2/engine.run_scd2()`. The `_row_hash` computed at replay time MUST be identical to the `_row_hash` computed at original-extraction time (vault SP-1 token determinism per D6 ensures this). Under Phase A, Parquet contains plaintext PII; SCD2 engine expects tokenized input; without explicit replay-path tokenize-then-hash step, replay produces a hash mismatch and breaks SCD2 chain reconstruction. | 🔴 | B-383 — refactor `parquet_replay.py` to apply `sanitize_strings()` + `tokenize_pii_columns()` + `add_row_hash()` after Parquet read and before SCD2 engine invocation. B-373 Tier 1 test extended with replay-path assertion: Parquet → tokenize → SCD2 chain produces IDENTICAL Bronze output to original-extraction → tokenize → SCD2 chain. Phase A R1 CRITICAL prereq. |
+| SE10 | **Column order preservation** — Parquet column order is source-query ordinal order (per P0-1 INFORMATION_SCHEMA ordinal); `reorder_columns_for_bcp()` applies only to in-memory BCP-CSV path and does NOT affect Parquet column order. Pyarrow `pq.read_table()` preserves column order as written. | 🟡 | `data_load/parquet_writer.py` writes Polars DataFrame in source-query column order; B-373 Tier 1 test verifies `parquet_schema.names == source_query_schema.names` (order-preserving equality) |
+
+Cross-refs: D115 (PII tokenization timing reorder) + D116 (extraction-timestamp via key_value_metadata) + `_research/r6-pme-extraction-time-2026-05-17.md` (R6 source-exactness verification patterns + R7 extraction-timestamp convention) + B-353 through B-390 (source-exact Parquet redesign brainstorm cohort + Phase A 2nd-pass remediation) + `UDM_PIPELINE_PHASE_A_TOKENIZATION_REORDER_2026-05-17.md` (Phase A plan; canonical for SE-N enforcement).
+
+---
+
+## PL-Series: udm-progress-logger discipline edge cases (added 2026-05-17 at `UDM_PROGRESS_LOGGER_REVIEW_AND_OPTIMIZATION_PLAN_2026-05-17.md` per B-405 closure)
+
+NEW 14th canonical series (after M/S/I/N/P/G/D/F/V/DP/T/SI/SE). Each PL-N entry encodes an edge case in the `udm-progress-logger` skill discipline (v1.2.0 currently; Phase 1 optimization plan tracked via B-393 through B-407). Empirical anchors trace to D72 6-cycle ladder on Phase A plan (Agents 43-52) + Agent 53 udm-progress-logger optimization-plan review.
+
+| ID | Edge case / Discipline gap | Status | Mitigation |
+|---|---|---|---|
+| PL1 | Concurrent invocation — 2 sub-agents finish substantive work simultaneously; both invoke the skill; race condition on `_validation_log.md` append | 🟡 | Agent-coordination convention: multi-agent teams designate ONE logging agent; designated agent runs Step 1-5; others wait until Step 5 report emitted (POSIX `fcntl.flock` is harness-level mitigation; tracked separately if recurrence observed per Agent 53 reframe) |
+| PL2 | Idempotent re-invocation — skill invoked twice for same completion event | 🟡 | Step 4 checks for existing same-date/same-event row before append; dedup key = `(date, B-N/D-N/R-N reference, EventType)`; idempotent re-run produces zero net writes; report cites `DEDUP — prior entry at YYYY-MM-DD found` |
+| PL3 | Skill never invoked despite substantive work completing (silent skip) — G-class gap | 🔴 | B-397 Mechanism C-1 9th check `check_progress_logger_compliance` — pre-commit hook detects substantive commit per ANY of 4 trigger arms WITHOUT corresponding `_validation_log.md` entry → BLOCK; 4th arm (per Agent 53 fix) covers documentation-only B-N closure case |
+| PL4 | Skill invoked too early (before all sub-tasks land within logical completion) | 🟡 | Hard rule 6 partial-cohort handling + Step 0 post-compaction tracker re-Read; PL-4-specific guard candidate in B-395 Step 0.5 scope |
+| PL5 | Skill version drift (bidirectional) — agent invokes v1.0.0 expectations against v1.2.0 OR v1.3.0 expectations against v1.2.0 | 🟡 | B-395 NEW Step 0.5 (skill-version cross-check) — bidirectional per Agent 53 IMPROVE: (a) if SKILL.md HIGHER, read changelog diff for NEW mandatory steps; (b) if SKILL.md LOWER, surface to parent |
+| PL6 | Step 4.5 false-positive grep — legitimate historical-context references could be flagged | 🟡 | B-396 false-positive guidance: framing-words exclusion ("previously"/"was"/"before"/"originally") + code-fence exclusion (per Agent 53 IMPROVE) |
+| PL7 | Step 4.5 grep noise outside `docs/migration/` — re-scoring R-N referenced in external artifacts (legal docs, compliance reports) | ⚪ | Acknowledged scope limitation; new B-N if scope expands |
+| PL8 | Convention-cascade enumeration limit — what is comprehensive enumeration of "all canonical doc anchor locations"? | 🟡 | B-404 `tools/find_canonical_enumerations.py` scans repo for "M/S/I/N/P/G/D/F/V" pattern; outputs comprehensive list per new series introduction |
+| PL9 | 🟠 PARTIAL CLOSURE state transition — partial state changes (11/14 → 13/14); trigger for PARTIAL → ⚫ CLOSED flip undefined | 🟡 | Skill Step 2 sub-bullet (v1.3.0 candidate): PARTIAL state changes require inline-annotation update; trigger for full closure flip is "remainder B-N reaches ⚫ CLOSED status" — skill Reads remainder B-N during Step 1 routing; if closed, flips parent |
+| PL10 | Skill self-recurrence on its own enhancements — v1.2.0 commit produced trackers but did NOT explicitly self-apply Step 4.5 | ✅ | N/A scoped (per Agent 53 IMPROVE — narrow scope to initial-introduction commit only); SUBSEQUENT skill-revision OR plan-revision commits MUST apply Step 4.5 to producer's own work product if count/range/score delta introduced |
+| PL11 | Hook BLOCK mid-write — pre-commit hook BLOCKs while skill is mid-execution; tracker writes partially landed | ✅ | Tracker writes happen BEFORE git commit attempt (per Step 1-4 sequence); hook BLOCK affects commit, not tracker state; correctly ordered |
+| PL12 | Skill conflict with udm-round-closeout at round boundary — which takes precedence? | ✅ | No conflict; complementary cadences. Hard rule 1 mandates per-completion timing; round-closeout consumes prior per-completion entries |
+| PL13 | Tracker write succeeds but commit fails — `_validation_log.md` updated but no audit trail in git | 🟡 | Step 0 EXTENSION (per Agent 53 IMPROVE): at session start, skill runs `git status --short docs/migration/`; if uncommitted tracker writes observed from prior session, verify whether completion was committed OR roll back manually before proceeding |
+| PL14 | Empirical evidence base obsolescence — Hard rule added in v1.0.0 becomes obsolete as workflow evolves | ✅ | SI series + udm-cascade-audit-evolver Round 8 cadence reviews skill rules at quarterly cadence per MAINTENANCE.md; obsolete rules transition to ⚫ Deprecated in changelog (existing-discipline) |
+| PL15 | Cross-session continuity — skill writes `_validation_log.md` at session N; session N+1 starts with stale state | ✅ | Step 0 (post-compaction tracker re-Read) is existing mitigation; covers fresh-session start (existing-discipline) |
+| PL16 | Cohort cross-agent state drift — different from PL1; cohort agents each update DIFFERENT trackers based on PARTIAL view; resulting tracker state consistent per-unit but collectively incoherent (NEW per Agent 53) | 🟡 | Per PL1 convention, designated logging agent reads ALL cohort outputs before Step 1 (not just own); Step 4.5 sweep runs on UNION of cohort-touched canonical references |
+| PL17 | PL-series introduction itself triggers convention-cascade per Pitfall #9.n + Pitfall #9.m self-application (NEW per Agent 53) | 🟡 | B-406 explicitly tracks ~21+ canonical doc location cascade (PARTIAL CLOSURE pattern — 4 anchors this commit; remainder deferred); v1.3.0 SKILL.md edits introducing PL-series must apply Step 4.5 to own work product per Anti-pattern v1.2.0 directive |
+
+Cross-refs: `UDM_PROGRESS_LOGGER_REVIEW_AND_OPTIMIZATION_PLAN_2026-05-17.md` §3.2 (canonical) + B-393-B-407 (optimization B-Ns) + R39-R43 (R-PL risks) + D72 6-cycle ladder Agents 43-52 (empirical anchor) + Agent 53 udm-design-reviewer plan review (PL-16 + PL-17 + recommendations).
+
+---
+
 ## How to Add an Edge Case
 
-1. Pick the appropriate series (M/S/I/N/P/G/D/F/V/SI)
+1. Pick the appropriate series (M/S/I/N/P/G/D/F/V/DP/T/SI/SE/PL)
 2. Increment the next ID in that series
 3. Capture: description (one sentence), current status (✅/🟡/🔴), mitigation (what handles it or what needs to be built)
 4. Add `Phase X` reference if the mitigation lands in a specific phase

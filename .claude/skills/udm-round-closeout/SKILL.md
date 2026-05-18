@@ -59,7 +59,7 @@ If any artifact is 🟢 without a log entry: **block close-out**; either add the
 
 ### Section 3 — Edge case register updates
 
-- [ ] Any new edge cases discovered this round added to `04_EDGE_CASES.md` with appropriate series prefix (M/S/I/N/P/G/D/F/V)
+- [ ] Any new edge cases discovered this round added to `04_EDGE_CASES.md` with appropriate series prefix (M/S/I/N/P/G/D/F/V/DP/T/SI/SE/PL) — **14 canonical series total** (updated 2026-05-17 per B-408 atomic 4-skill series-list fix; was stale at 9 since Round 6 DP series addition)
 - [ ] Status of existing edge cases updated if this round addressed or changed them
 - [ ] Edge case → DDL/runbook/test mapping table is current (where applicable)
 
@@ -93,6 +93,7 @@ This is what the close-out protocol exists to enforce:
 - [ ] §8 "Pitfalls" — new lessons learned (3-5 sentence summary; full detail in validation log)
 - [ ] §11 "Round history" (new section per D60) — one-line round summary appended
 - [ ] §13 "Last updated" date current
+- [ ] **§14 "Last updated" narrative** — prepend round-close-out event narrative with cumulative delta (mirrors udm-next-step-cascade Step 1.4 forward-motion discipline; matches "UNTOUCHED-AS-EXPECTED (reason)" requirement); added 2026-05-17 per B-415 closure + Cohort A Agent 54 RC-7 finding (forward-motion cascade enforced HANDOFF §14 update but round-closeout omitted; asymmetry was a discipline gap)
 
 #### BACKLOG.md
 - [ ] New B-numbered items appended for this round's 🟡 follow-ups
@@ -197,7 +198,7 @@ Hard rule per D95: NO autonomous prompt-rewrite — human review preserved at ev
 - [ ] Emit `docs/migration/_agent_evolution/specialty-tuner-round<N>-<date>.md` with proposed deltas
 
 **Sub-section 10.3 — udm-subclass-accumulator (8.C)**:
-- [ ] Scan this round's 🔴 findings; classify against Pitfall #9 sub-classes 9.a-9.j
+- [ ] Scan this round's 🔴 findings; classify against Pitfall #9 sub-classes 9.a-9.o (15 sub-classes total — updated 2026-05-17 per B-408 atomic fix; was stale at 9.a-9.j missing 9.k arithmetic-propagation + 9.l canonical-schema-detail + 9.m discipline-not-applied + 9.n convention-registration + 9.o anti-rationalization-clause compliance)
 - [ ] Cluster unclassified findings; propose new sub-class candidates at ≥2-event evidence threshold
 - [ ] Emit `docs/migration/_agent_evolution/subclass-accumulator-round<N>-<date>.md`
 

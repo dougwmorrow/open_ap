@@ -1,8 +1,33 @@
-# Phase 1 Deep Dive Plan
+﻿# Phase 1 Deep Dive Plan
 
 **Status**: 🟡 Proposed structure; awaiting user confirmation to begin
 
 This document outlines the deep dive sequence for Phase 1 (Foundation Infrastructure). Following the deep dive cycle from `02_PHASES.md`, each sub-area gets its own complete plan, validation, QA, edge case enumeration, and edge case validation.
+
+## §0. Planning session provenance
+
+**RETROACTIVE BACKFILL per B-391 closure 2026-05-17** (authored BEFORE udm-planning-session-startup skill discipline was formalized 2026-05-15 per CLAUDE.md hard rule 13; Pitfall #9.m discipline-applied-retroactively). Original plan authored 2026-05-12 at commit `b73220c` (Initial Commit); this §0 section backfills the audit trail for which planning-discipline skills WOULD HAVE BEEN applied per the matrix at `docs/migration/PLANNING_DISCIPLINE.md` §2 for scope PS-1 ARCH.
+
+**Note on temporal context**: this plan predates the planning-discipline skill suite by ~3 days (skill formalized 2026-05-15; plan authored 2026-05-12). The 8 sub-area sequence (Database Schema → Configuration → Core Modules → Tools → Tests → Deployment → Schema Evolution Governance → Sub-Agent Self-Improvement) became the canonical Phase 1 round structure executed across Rounds 1-8 (2026-04 through 2026-05); the plan has been load-bearing for ~5 weeks of Phase 1 execution without §0 provenance. Backfill records what WOULD HAVE BEEN invoked at original authoring per current matrix.
+
+**Scope**: PS-1 ARCH (primary; Phase round structure + architectural scope decomposition + new module family planning) + PS-7 CLOSEOUT (secondary; per-round close-out cadence baked into the 6-step cycle: N.1 PLAN → N.6 SIGN-OFF)
+
+**Skills that WOULD HAVE BEEN invoked at session start** (per matrix lookup; not invoked at original authoring time because skill discipline didn't exist; recorded here for audit trail consistency):
+
+| Skill | Rationale per matrix |
+|---|---|
+| `udm-design-reviewer` (agent) | PS-1 ARCH mandatory at session start — architectural review for phase round structure + 8-sub-area decomposition |
+| `udm-checks-and-balances` (skill/agent) | PS-1 ARCH mandatory at session start — 5-gate validation orchestration per D55 for plan attestation |
+| `udm-researcher` (agent) | PS-1 ARCH mandatory at session start — primary-source grounding for round-cycle methodology (deep-dive cadence borrowed from `02_PHASES.md` referenced in plan L4) |
+| `udm-decision-recorder` (skill) | PS-1 ARCH conditional — fires for D-N candidates; plan introduces 8-round structure (would have warranted D-N lock for the canonical round sequence) |
+| `udm-execution-classifier` (skill) | PS-1 ARCH conditional — fires if new tools introduced (plan enumerates ~37+ tools across Rounds 3-4 for execution classification at build-time) |
+| `udm-test-author` (agent) | PS-1 ARCH conditional — fires for test sketches (Round 5 sub-area Tests dedicated round; would warrant test-sketch alignment) |
+| `udm-brainstorm` (skill) | PS-1 ARCH conditional — fires for open design questions (plan §1-8 listed 8 sub-areas; would have warranted at-least-3-alternatives validation for the 8-sub-area decomposition vs alternatives) |
+| `udm-round-closeout` (skill) | PS-7 CLOSEOUT (secondary scope) mandatory — plan's 6-step cycle (N.1-N.6) inherently maps to round close-out cadence |
+| `udm-gap-check` (skill) | Always-mandatory at attestation per CLAUDE.md hard rule 11 |
+| `udm-progress-logger` (skill) | Always-mandatory throughout per CLAUDE.md hard rule 9 |
+
+**Note**: This §0 section was added 2026-05-17 to satisfy hard rule 13 + the `check_planning_provenance` Mechanism C-1 pre-commit hook (introduced 2026-05-16 per B-275-class closure). Future revisions to this plan MUST update §0 per `udm-planning-session-startup` Step 5 contract; this backfill establishes the baseline audit trail.
 
 ## Sub-areas of Phase 1
 
@@ -24,7 +49,7 @@ Round N (sub-area S):
   N.1 — PLAN: complete artifact list for S
   N.2 — VALIDATE: cross-reference against architecture, edge cases, runbooks
   N.3 — QA: peer review correctness
-  N.4 — EDGE CASES: enumerate from M/S/I/N/P/G/D/F/V register
+  N.4 — EDGE CASES: enumerate from M/S/I/N/P/G/D/F/V/DP/T/SI/SE register
   N.5 — VALIDATE EDGE CASES: write tests / verify config / runbook check
   N.6 — SIGN-OFF: stakeholder approval, recorded in 03_DECISIONS.md
 ```
