@@ -740,3 +740,364 @@ def test_orphan_candidate_bncand_n_pattern_warns():
     passed, findings = check_unresolved_forward_prevention_candidates(msg, "")
     assert not passed
     assert len(findings) >= 1
+
+
+# ---------------------------------------------------------------------------
+# B-459 closure: CommitMsgCheck ABC abstraction
+# (Agent 68 architectural design review 2026-05-18 Scope 2 Concern 2.1;
+# extracted ABC + CheckResult dataclass + 4 subclass migrations + unified
+# audit-row findings dict field)
+# ---------------------------------------------------------------------------
+
+
+def test_commit_msg_check_abc_class_present():
+    """B-459 Assertion 49: CommitMsgCheck ABC class is exported + is abstract."""
+    import tools.check_commit_msg as ccm
+    from abc import ABC
+    assert hasattr(ccm, "CommitMsgCheck")
+    assert issubclass(ccm.CommitMsgCheck, ABC)
+
+
+def test_commit_msg_check_is_abstract_cannot_instantiate():
+    """B-459 Assertion 50: CommitMsgCheck cannot be instantiated directly
+    (abstract scan() prevents instantiation per Python ABC contract)."""
+    import tools.check_commit_msg as ccm
+    with pytest.raises(TypeError):
+        ccm.CommitMsgCheck()  # type: ignore[abstract]
+
+
+def test_check_result_dataclass_shape():
+    """B-459 Assertion 51: CheckResult dataclass has passed + findings fields."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "CheckResult")
+    res = ccm.CheckResult(passed=True, findings=[])
+    assert res.passed is True
+    assert res.findings == []
+    res2 = ccm.CheckResult(passed=False, findings=["finding 1", "finding 2"])
+    assert res2.passed is False
+    assert res2.findings == ["finding 1", "finding 2"]
+
+
+def test_checks_registry_present():
+    """B-459 Assertion 52: CHECKS registry list present + 4 check instances."""
+    import tools.check_commit_msg as ccm
+    assert hasattr(ccm, "CHECKS")
+    assert isinstance(ccm.CHECKS, list)
+    assert len(ccm.CHECKS) == 4
+    for check in ccm.CHECKS:
+        assert isinstance(check, ccm.CommitMsgCheck)
+
+
+def test_each_check_has_unique_name():
+    """B-459 Assertion 53: each CHECKS entry has a unique name attribute
+    (required for audit-row findings dict keying)."""
+    import tools.check_commit_msg as ccm
+    names = [c.name for c in ccm.CHECKS]
+    assert len(names) == len(set(names)), f"Duplicate check names: {names}"
+    # Canonical name set (B-459 migration of the 4 pre-existing checks):
+    assert set(names) == {
+        "exemption_phrase", "cascade_evidence", "pytest_count", "orphan_candidate",
+    }
+
+
+def test_each_check_has_severity_attribute():
+    """B-459 Assertion 54: each CHECKS entry declares severity as WARN or BLOCK."""
+    import tools.check_commit_msg as ccm
+    for check in ccm.CHECKS:
+        assert check.severity in ("WARN", "BLOCK"), (
+            f"{check.name} severity {check.severity!r} not WARN or BLOCK"
+        )
+
+
+def test_each_check_has_requires_backlog_diff_attribute():
+    """B-459 Assertion 55: each CHECKS entry declares requires_backlog_diff as bool."""
+    import tools.check_commit_msg as ccm
+    for check in ccm.CHECKS:
+        assert isinstance(check.requires_backlog_diff, bool)
+
+
+def test_block_checks_are_exemption_and_cascade():
+    """B-459 Assertion 56: BLOCK severity is exemption_phrase + cascade_evidence
+    (preserves pre-B-459 BLOCK contract); WARN severity is pytest_count +
+    orphan_candidate (preserves WSJF MEDIUM WARN-only contract)."""
+    import tools.check_commit_msg as ccm
+    by_severity = {"BLOCK": set(), "WARN": set()}
+    for check in ccm.CHECKS:
+        by_severity[check.severity].add(check.name)
+    assert by_severity["BLOCK"] == {"exemption_phrase", "cascade_evidence"}
+    assert by_severity["WARN"] == {"pytest_count", "orphan_candidate"}
+
+
+def test_only_orphan_check_requires_backlog_diff():
+    """B-459 Assertion 57: only orphan_candidate check requires BACKLOG diff
+    (other 3 checks operate on commit_msg text only)."""
+    import tools.check_commit_msg as ccm
+    needs_backlog = {c.name for c in ccm.CHECKS if c.requires_backlog_diff}
+    assert needs_backlog == {"orphan_candidate"}
+
+
+def test_exemption_phrase_check_scan_block_on_match():
+    """B-459 Assertion 58: ExemptionPhraseCheck.scan() returns BLOCK CheckResult
+    on exemption-phrase match (preserves B-303 trigger-phrase BLOCK contract)."""
+    import tools.check_commit_msg as ccm
+    check = ccm.ExemptionPhraseCheck()
+    result = check.scan("docs: applying Layer N+1 termination\n", {})
+    assert not result.passed
+    assert any("Layer N+1 termination" in f for f in result.findings)
+
+
+def test_exemption_phrase_check_scan_pass_on_clean_msg():
+    """B-459 Assertion 59: ExemptionPhraseCheck.scan() returns PASS on
+    clean commit message with no exemption phrase."""
+    import tools.check_commit_msg as ccm
+    check = ccm.ExemptionPhraseCheck()
+    result = check.scan("feat: clean message\n", {})
+    assert result.passed
+    assert result.findings == []
+
+
+def test_pytest_count_check_scan_pass_on_scoped_count():
+    """B-459 Assertion 60: PytestCountDisambiguationCheck.scan() PASS on
+    scoped pytest count (preserves B-449 pass behavior post-migration)."""
+    import tools.check_commit_msg as ccm
+    check = ccm.PytestCountDisambiguationCheck()
+    msg = (
+        "feat: change\n\n"
+        "## TEST\n"
+        "- pytest tier0+tier1: 2418 pass / 10 skip / 0 fail (baseline preserved)\n"
+    )
+    result = check.scan(msg, {})
+    assert result.passed, f"Expected pass; findings: {result.findings}"
+
+
+def test_pytest_count_check_scan_warn_on_bare_count():
+    """B-459 Assertion 61: PytestCountDisambiguationCheck.scan() WARN on
+    bare count (preserves B-449 WARN behavior post-migration)."""
+    import tools.check_commit_msg as ccm
+    check = ccm.PytestCountDisambiguationCheck()
+    msg = "feat: change\n\n## TEST\n- pytest 2418 pass\n"
+    result = check.scan(msg, {})
+    assert not result.passed
+    assert any("2418" in f for f in result.findings)
+
+
+def test_orphan_check_scan_pass_with_backlog_opening_in_staged_diffs():
+    """B-459 Assertion 62: UnresolvedForwardPreventionCandidatesCheck.scan()
+    reads staged_diffs dict for BACKLOG.md content (preserves B-451 PASS
+    behavior when BACKLOG opening is present in staged diffs)."""
+    import tools.check_commit_msg as ccm
+    check = ccm.UnresolvedForwardPreventionCandidatesCheck()
+    msg = (
+        "feat: change\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for orphan tracking)\n"
+    )
+    staged_diffs = {
+        "docs/migration/BACKLOG.md": (
+            "+- **B-451** (🟡 Open; MEDIUM; WSJF 1.5): orphan tracking check\n"
+        )
+    }
+    result = check.scan(msg, staged_diffs)
+    assert result.passed, f"Expected pass; findings: {result.findings}"
+
+
+def test_orphan_check_scan_warn_without_backlog_in_staged_diffs():
+    """B-459 Assertion 63: UnresolvedForwardPreventionCandidatesCheck.scan()
+    WARN when BACKLOG.md not in staged_diffs and orphan-candidate cited
+    (preserves B-451 WARN behavior post-migration)."""
+    import tools.check_commit_msg as ccm
+    check = ccm.UnresolvedForwardPreventionCandidatesCheck()
+    msg = (
+        "feat: change\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for orphan tracking)\n"
+    )
+    result = check.scan(msg, {"docs/migration/BACKLOG.md": ""})
+    assert not result.passed
+    assert any("orphan-candidate" in f for f in result.findings)
+
+
+def test_audit_row_unified_findings_dict_present(tmp_path, monkeypatch):
+    """B-459 Assertion 64: audit-row JSON contains unified `findings` dict
+    field keyed by check.name (NEW B-459 contract)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: minor edit\n\n"
+        "## TEST\n"
+        "- pytest 2471 pass\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path)])
+    assert rc == ccm.EXIT_SUCCESS  # WARN-only finding does not block
+    log_files = list((tmp_path / "_session_logs").glob("cli_check_commit_msg_*.log"))
+    assert len(log_files) == 1
+    content = log_files[0].read_text(encoding="utf-8")
+    # Unified findings dict is present per B-459 contract
+    assert '"findings":' in content
+    import json as _json
+    # Parse the JSON line and verify findings dict shape
+    parsed = _json.loads(content.strip().splitlines()[0])
+    assert isinstance(parsed["findings"], dict)
+    assert "pytest_count" in parsed["findings"]
+    assert any("2471" in f for f in parsed["findings"]["pytest_count"])
+
+
+def test_audit_row_per_check_top_level_mirrors_preserved(tmp_path, monkeypatch):
+    """B-459 Assertion 65: per-check top-level mirror fields PRESERVED for
+    backward compatibility (Tier 0 tests at assertions 30 + 45 already pin
+    pytest_count_findings + orphan_candidate_findings top-level fields;
+    those must still appear). B-459 is additive — adds `findings` dict
+    without removing top-level mirrors."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: minor edit\n\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for X)\n"
+        "\n## TEST\n"
+        "- pytest 2471 pass\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path)])
+    assert rc == ccm.EXIT_SUCCESS
+    log_files = list((tmp_path / "_session_logs").glob("cli_check_commit_msg_*.log"))
+    assert len(log_files) == 1
+    content = log_files[0].read_text(encoding="utf-8")
+    # Per-check top-level mirrors must still appear for backward compatibility
+    assert "matched_phrases" in content
+    assert "missing_sections" in content
+    assert "pytest_count_findings" in content
+    assert "orphan_candidate_findings" in content
+
+
+def test_warn_only_severity_does_not_block_exit_code(tmp_path, monkeypatch):
+    """B-459 Assertion 66: orchestrator only flips exit code on severity=BLOCK
+    findings (WARN findings present + cleanly classified anti-trigger commit
+    -> EXIT_SUCCESS)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: minor edit\n\n"
+        "## TEST\n"
+        "- pytest 2471 pass\n"
+        "## GAP ANALYSIS\n"
+        "- deferred (B-NEW-1 candidate for Y)\n",
+        encoding="utf-8",
+    )
+    # Both pytest_count + orphan_candidate are WARN; no BLOCK findings
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    assert rc == ccm.EXIT_SUCCESS
+
+
+def test_block_severity_check_flips_exit_code(tmp_path, monkeypatch):
+    """B-459 Assertion 67: orchestrator flips exit code on severity=BLOCK
+    finding (exemption-phrase BLOCK -> EXIT_BLOCKED)."""
+    import tools.check_commit_msg as ccm
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text(
+        "docs: applying Layer N+1 termination\n",
+        encoding="utf-8",
+    )
+    rc = ccm.main(["check_commit_msg.py", str(msg_path), "--no-audit"])
+    assert rc == ccm.EXIT_BLOCKED
+
+
+def test_collect_staged_diffs_only_fetches_for_required_checks():
+    """B-459 Assertion 68: `_collect_staged_diffs(checks)` only fetches files
+    declared via `requires_backlog_diff=True` (avoids redundant subprocess
+    calls when no check needs BACKLOG diff)."""
+    import tools.check_commit_msg as ccm
+    # Subset with NO check requiring backlog diff -> empty dict
+    no_backlog_checks: list[ccm.CommitMsgCheck] = [
+        ccm.ExemptionPhraseCheck(),
+        ccm.PytestCountDisambiguationCheck(),
+    ]
+    diffs = ccm._collect_staged_diffs(no_backlog_checks)
+    assert diffs == {}
+    # Subset WITH orphan check -> fetches BACKLOG.md key (value may be empty
+    # string if git unavailable in test env; key itself is the contract)
+    with_backlog_checks: list[ccm.CommitMsgCheck] = [
+        ccm.UnresolvedForwardPreventionCandidatesCheck(),
+    ]
+    diffs2 = ccm._collect_staged_diffs(with_backlog_checks)
+    assert "docs/migration/BACKLOG.md" in diffs2
+
+
+def test_top_level_compat_wrappers_preserved():
+    """B-459 Assertion 69: top-level compatibility wrappers (the pre-B-459
+    public-surface functions) are preserved + delegate to subclass scan()."""
+    import tools.check_commit_msg as ccm
+    # Top-level wrappers must still exist
+    assert callable(ccm.check_pytest_count_disambiguation)
+    assert callable(ccm.check_unresolved_forward_prevention_candidates)
+    # Top-level wrapper output must match subclass scan() output for the
+    # same input (back-compat verification)
+    msg = "feat: change\n\n## TEST\n- pytest 2471 pass\n"
+    p1, f1 = ccm.check_pytest_count_disambiguation(msg)
+    res = ccm.PytestCountDisambiguationCheck().scan(msg, {})
+    assert p1 == res.passed
+    assert f1 == res.findings
+
+
+def test_audit_row_findings_dict_omits_passed_checks(tmp_path, monkeypatch):
+    """B-459 Assertion 70: audit-row `findings` dict only contains keys for
+    checks that produced findings; PASSED checks omitted (lean payload)."""
+    import tools.check_commit_msg as ccm
+    from tools.cascade_classifier import CommitClassification, CLASS_TYPO
+    monkeypatch.setattr(ccm, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(ccm, "classify_commit",
+                        lambda: CommitClassification(CLASS_TYPO, "test", True, False, 1, 2))
+    monkeypatch.setattr(
+        ccm.subprocess, "run",
+        lambda *a, **kw: type("R", (), {"returncode": 0, "stdout": ""})(),
+    )
+
+    msg_path = tmp_path / "COMMIT_EDITMSG"
+    msg_path.write_text("feat: completely clean commit\n", encoding="utf-8")
+    rc = ccm.main(["check_commit_msg.py", str(msg_path)])
+    assert rc == ccm.EXIT_SUCCESS
+    log_files = list((tmp_path / "_session_logs").glob("cli_check_commit_msg_*.log"))
+    assert len(log_files) == 1
+    import json as _json
+    parsed = _json.loads(log_files[0].read_text(encoding="utf-8").strip().splitlines()[0])
+    # No checks produced findings -> findings dict is empty
+    assert parsed["findings"] == {}
+
+
+def test_check_result_is_frozen_dataclass():
+    """B-459 Assertion 71: CheckResult is a frozen dataclass (immutability
+    prevents accidental mutation of orchestrator-collected results)."""
+    import tools.check_commit_msg as ccm
+    res = ccm.CheckResult(passed=True, findings=[])
+    with pytest.raises((AttributeError, Exception)):
+        # frozen=True -> attempting to mutate raises FrozenInstanceError
+        # (which is a subclass of AttributeError in stdlib dataclasses)
+        res.passed = False  # type: ignore[misc]

@@ -2,6 +2,41 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## 2026-05-18 — Architectural debt cohort (B-459 HIGH WSJF 3.0 + B-461 MEDIUM WSJF 2.0) via 2-parallel-agent team
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps. Use a multi-agent team if you think it will help." 2026-05-18.
+
+**Scope**: 2 B-N closures (B-459 CommitMsgCheck abstraction + B-461 Tier 0 _skill_test_base.py); +37 NEW Tier 0 assertions; 6 files modified/created.
+
+**2-parallel-agent team**:
+
+- **Agent A** (`a0facc9456a161443`) — B-459 closure (HIGH WSJF 3.0; BEFORE B-458 implementation): extracted `CommitMsgCheck` ABC class in `tools/check_commit_msg.py` with `name: str` + `severity: Literal["WARN", "BLOCK"]` + `requires_backlog_diff: bool` + abstract `scan(commit_msg, staged_diffs) -> CheckResult` method. Migrated 4 existing checks to subclasses (ExemptionPhraseCheck + CascadeEvidenceCheck + PytestCountDisambiguationCheck + UnresolvedForwardPreventionCandidatesCheck). NEW CHECKS registry + `_collect_staged_diffs(checks)` helper batches BACKLOG.md diff fetch only when needed. Refactored main() to iterate CHECKS registry + collect findings into unified `findings: dict[str, list[str]]` audit-row field keyed by check.name. PRESERVED per-check top-level mirrors as additive backward-compatibility shim. Top-level wrapper functions preserved for external-caller compat. 23 NEW Tier 0 assertions added at `tests/tier0/test_check_commit_msg.py` (48 → 71 total) covering ABC contract + dataclass shape + CHECKS registry uniqueness + severity declaration + back-compat verification + audit-row contract + WARN-vs-BLOCK exit-code behavior + helper function correctness. CLAUDE.md L98 Structure row updated with B-459 closure citation + abstraction summary + unified findings dict field description.
+
+- **Agent B** (`a4c6df68c15435840`) — B-461 closure (MEDIUM WSJF 2.0; BEFORE next SKILL.md Tier 0 cohort): authored NEW `tests/tier0/_skill_test_base.py` module (203 LOC) providing shared scaffolding for SKILL.md regression tests. 8 public helpers (1 module constant + 7 callables): REPO_ROOT constant + get_skill_path(skill_name) + make_skill_content_fixture(skill_name) factory + CanonicalAssertion frozen dataclass (forward-extensible per Agent 68 🟡 IMPROVE for multi-form assertions) + assert_skill_contains_substrings + assert_skill_matches_regexes + make_baseline_test_skill_exists / make_baseline_test_frontmatter_name factories. 14 NEW self-test assertions at `tests/tier0/test_skill_test_base.py` (255 LOC) covering all 8 public helpers (1 module constant + 7 callables) + dataclass shape + factory output correctness + error message hints. **Migration scope decision**: DEFERRED migration of 4 existing test_skill_*.py files entirely — abstraction PROVEN via 14 self-tests; existing test files unchanged (zero risk of subtle test-discovery breakage); next-cycle ~19 remaining SKILL.md files Tier 0 pinning consumes the abstraction.
+
+**Cumulative session delta UPDATED at post-architectural-debt-cohort**: 72 NEW B-Ns UNCHANGED (B-393-B-464; no new opens — B-459 + B-461 were pre-existing opens). 2 B-Ns CLOSED this cohort. 11 NEW R-Ns unchanged. 14 canonical edge case series unchanged. pytest 2664 → **2701 pass / 10 skip / 0 fail** (+37 baseline = +23 B-459 + +14 B-461; matches sum of agent assertions per cascade Step 3.1 full-suite scope verified live by parent agent post-cohort).
+
+**Forward-prevention layering established**:
+- B-459 (HIGH closed) → enables B-458 implementation as single CommitMsgCheck subclass + CHECKS registry append (no orchestrator changes)
+- B-459 → enables B-464 narrative pytest-claim verification as another CommitMsgCheck subclass
+- B-461 (MEDIUM closed) → enables next-cycle ~19 SKILL.md Tier 0 pinning at substantially reduced authoring overhead
+
+**Architectural concerns ADDRESSED from Agent 68 review**:
+- Scope 2 Concern 2.1 (CommitMsgCheck abstraction) — CLOSED via B-459
+- Scope 3 Concern 3.3 (Tier 0 shared scaffolding) — CLOSED via B-461
+
+**Architectural concerns STILL OPEN from Agent 68 review** (deferred to future cycles):
+- Scope 1 Concerns 1.1 + 1.2 (udm-progress-logger v2.0.0 MAJOR consolidation) — tracked as B-460
+- Scope 5 Concern 5.3 (PRE-COMMIT reviewer prompts invoke query_blindspots Step 0) — tracked as B-462
+- Scope 2 Concern 2.3 (WARN→BLOCK escalation gate codification) — tracked as B-463
+
+**Hard rule 14 cascade applied** (SUBSTRATE_EDIT — tools/check_commit_msg.py + CLAUDE.md + _validation_log.md all substrate):
+- **TEST**: pytest 2701 verified live per cascade Step 3.1; per-agent reports cite targeted PASS counts + grep verifications; backward-compat verified via assertion 69 (top-level wrappers match subclass scan() output)
+- **GAP ANALYSIS**: per-agent G1-G6 inline audits + v1.3.2 self-application sweeps; Agent A reported B-454/B-455 sweeps CLEAN on own narrative; Agent B reported assertion-count verified via grep
+- **REVIEW**: pre-commit independent reviewer SPAWN per hard rule 14 substrate-edit clause for combined cohort commit; this entry composed by parent agent with cite-by-quotation discipline
+
+---
+
 ## 2026-05-18 — MEDIUM + LOW B-N cohort closure (B-452 + B-454 + B-455 + B-456 + B-457) via 4-parallel-agent team
 
 **Trigger**: pipeline-lead "Use a multi-agent team to tackle the remaining medium and low priority tasks" 2026-05-18.
