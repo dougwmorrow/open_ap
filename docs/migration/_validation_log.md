@@ -12,6 +12,23 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-18 — Cross-cohort gap-check remediation: CLAUDE.md L99 surface-count drift fix + B-496 open (empirical-anchor context suppression for check_file_path_existence)
+
+**Trigger**: pipeline-lead "Run a gap analysis, check for any gaps" 2026-05-18 — independent cross-cohort gap-check reviewer `a9330411976057db7` spawned on 7-commit cohort 1233bc8..2ac353b.
+
+**Model**: claude-opus-4-7. **Context pressure**: medium-high (long session arc). **CCL completed**: yes.
+
+**Reviewer attribution**: cross-cohort gap-check agent `a9330411976057db7` (general-purpose; claude-sonnet-4-6; context pressure medium-high). Walked 10-category audit (udm-gap-check G1-G6 + udm-cohort-review §1-§6 deduplicated). Verdict: 🟡 3 findings (none BLOCK).
+
+**Findings**:
+- **G4-finding (MEDIUM)**: `check_file_path_existence` self-fires WARN on 37 historical path citations in `_validation_log.md` historical entries. Pattern parallel to B-491 deferred empirical-anchor suppression for `check_wc_line_count_claims`. Opened as B-496 LOW WSJF 0.5.
+- **G5-finding (HIGH inline-fixable)**: CLAUDE.md L99 surface enumeration cited "9 `check_*` functions" + "Tier 0 test 46/46 pass" but actual was **10 functions + 54/54 test pass** post-B-495 closure. **Remediated inline at this commit**.
+- **G10-finding (LOW; no-action)**: snapshot stale "9-CHECKS" forward-reference acceptable per append-only narrative discipline. No action.
+
+**Cumulative session delta UPDATED at gap-check remediation**: **103 → 104 NEW B-Ns** (B-393-B-496) / 26 B-Ns CLOSED unchanged / pytest 2837 unchanged (CLAUDE.md surface inventory + BACKLOG B-N open only; no code changes).
+
+**Status**: ⚫ COMPLETE — cross-cohort gap-check verdict surfaced 1 HIGH (remediated inline) + 1 MEDIUM (opened as B-496) + 1 LOW (no-action) finding; no BLOCK.
+
 ## 2026-05-18 — B-495 closure: check_file_path_existence 10th Phase 1 quality check (LLM file-path-confabulation forward-prevention)
 
 **Trigger**: pipeline-lead "Proceed with your recommendations" 2026-05-18 — cascade fire on prior-turn recommendation to build B-495 with FP-policy resolved inline.
