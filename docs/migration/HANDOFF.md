@@ -424,7 +424,9 @@ Per D60, this section appends one row per round during close-out. Read top-to-bo
 
 ## §14. Last updated
 
-2026-05-18 (**udm-session-compactor loose-end tie-up cohort — CLAUDE.md discoverability cross-ref + B-494 Phase 2 tracking**): CLAUDE.md hard rule 14 extended with session-state compression extension citation (parallel to udm-cohort-review at B-483); B-494 opened for Phase 2 token-tracking subsystem tracking (defer-trigger per skill Owner section). **Cumulative**: **101 → 102 NEW B-Ns** (B-393-B-494) / 25 CLOSED unchanged / pytest 2827 unchanged.
+2026-05-18 (**Research-driven discipline extensions cohort — udm-session-compactor trim-policy taxonomy + _validation_log model-attribution convention + B-495 file-path-existence check opened**): Per udm-researcher artifact 2026-05-18 (12 primary sources). Rec 1 executed (trim-policy taxonomy at SKILL.md per CMV paper). Rec 2 executed (3-field convention at _validation_log + CHECKS_AND_BALANCES Gate 2 per NIST AI 600-1 + EU AI Act). Rec 3 opened as B-495 (file-path-existence 10th check; blocked on FP-policy). **Cumulative**: **102 → 103 NEW B-Ns** (B-393-B-495) / 25 CLOSED unchanged / pytest 2827 → **2829 pass / 10 skip / 0 fail** (+2).
+
+Earlier 2026-05-18 (**udm-session-compactor loose-end tie-up cohort — CLAUDE.md discoverability cross-ref + B-494 Phase 2 tracking**): CLAUDE.md hard rule 14 extended with session-state compression extension citation (parallel to udm-cohort-review at B-483); B-494 opened for Phase 2 token-tracking subsystem tracking (defer-trigger per skill Owner section). **Cumulative**: **101 → 102 NEW B-Ns** (B-393-B-494) / 25 CLOSED unchanged / pytest 2827 unchanged.
 
 Earlier 2026-05-18 (**B-493 query_blindspots check_9o allowlist extension for `_session_snapshots/` — recurring self-firing class closure**): ~9 LOC + 2 Tier 1 assertions; closed early (vs 2nd-event) because recurrence is structurally predictable on every future udm-session-compactor invocation. **Cumulative**: **100 → 101 NEW B-Ns** (B-393-B-493) / **25 CLOSED** (+B-493) / pytest 2825 → **2827 pass / 10 skip / 0 fail** (+2).
 

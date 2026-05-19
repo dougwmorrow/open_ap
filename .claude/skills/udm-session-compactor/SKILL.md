@@ -118,6 +118,47 @@ This is the section that distinguishes the snapshot from the lightweight resume 
 - BACKLOG.md sections to scan
 - _false_positive_log.md if false-positive prevention work was substantive
 
+## Content durability — regenerable vs irreplaceable (trim-policy taxonomy)
+
+Per research finding 2026-05-18 (Contextual Memory Virtualisation paper, Imperial College London; `_research/llm-handoffs-traceability-hallucination-2026-05-18.md` Finding 1.1): naive compaction destroys ~98% of nuanced session reasoning while preserving only surface summary. The CMV alternative achieves 12-86% reduction (median 20%) by preserving every irreplaceable element verbatim and discarding only regenerable raw output. This taxonomy operationalizes that distinction for snapshot authoring.
+
+### Regenerable content (MAY be omitted or compressed in snapshots)
+
+Content that can be reconstructed mechanically from primary docs / git / file system. Authoring agents SHOULD omit verbatim and reference by pointer:
+
+- Raw `grep` / `Glob` / file-listing outputs (re-run anytime via Bash tool)
+- `git log --oneline` / `git diff --stat` outputs (re-derivable from git)
+- Verbatim test stdout (re-derivable via `pytest`)
+- Raw file content quotations (cite path + line number; re-readable via Read tool)
+- Tool-call success confirmations / boilerplate progress updates
+- Verbatim BACKLOG.md entries (cite B-N + line number; re-readable)
+- Tracker-update mechanics ("propagated 99→100 NEW B-Ns" — count is in tracker; re-readable)
+
+### Irreplaceable content (MUST be preserved verbatim or in structured form)
+
+Content that exists ONLY in the conversation transcript and is lost on compaction. Authoring agents MUST preserve verbatim:
+
+- **Architectural decisions + rejected alternatives + why-not justifications** — these are NOT in commit messages or D-N bodies; they exist only in conversation
+- **Reviewer rationale text** (verbatim quotation of reviewer agent verdicts + key findings + delta-from-prior-reviewer) — agent IDs are pointers; the reasoning behind verdicts is irreplaceable
+- **Empirical-evidence accumulations** (event count + commit anchors + threshold-status for formalization) — the meta-pattern aggregation is irreplaceable; individual commits are recoverable
+- **Pipeline-lead direction at session start / pivot points** (verbatim user-direction quote) — context for WHY work happened
+- **Cross-cohort pattern observations** — patterns visible only across multiple commits; would require re-deriving from full session transcript
+- **Convergence-discipline events** — multi-iteration discovery of correct discipline rule; rationale is irreplaceable
+- **Defer-trigger criteria for B-Ns** — the "when to come back" condition that determines whether a deferred B-N stays deferred
+- **Meta-discipline observations** — emergent patterns about how the project's discipline stack works
+
+### Trim-policy enforcement (producer-side check)
+
+When authoring §1-§5 of a snapshot:
+- For each bullet/paragraph: ask "can this be re-derived from primary docs + git + file system?" If YES → consider omitting + replacing with pointer. If NO → preserve verbatim.
+- Bias toward preservation when in doubt — under-trimming is recoverable (re-trim at next snapshot); over-trimming is lossy (irreplaceable content is gone).
+- §4 Deeper insights is structurally biased toward irreplaceable content; aggressive preservation expected.
+- §1 Active work + §2 Completed deliverables + §3 Open runway + §5 Pointer-back cross-refs are structurally mixed; apply per-bullet judgment.
+
+### Empirical anchor for trim-policy
+
+1-event 2026-05-18: this session's compaction caused 2-3 cohort lag in SESSION_RESUME.md L10-L15 cumulative-count drift (surfaced by gap-check reviewer `ab45539c33d1cebd1` G2 finding 2026-05-18). The information lost was IRREPLACEABLE (WHY the count was at a specific state; what reviewer findings drove the increments). The CMV paper confirms this is the systematic failure mode of naive compaction. The trim-policy formalized here closes the failure-mode class at producer-time before snapshots are authored.
+
 ## Output contract
 
 The snapshot file at `docs/migration/_session_snapshots/<YYYY-MM-DD>-<commit-hash-prefix-7>.md` MUST contain:

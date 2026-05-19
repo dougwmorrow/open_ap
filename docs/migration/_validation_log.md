@@ -2,6 +2,57 @@
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
+## Event row convention (per Rec 2 of `_research/llm-handoffs-traceability-hallucination-2026-05-18.md`)
+
+Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19 actor-level attribution; high-risk AI timeline begins August 2026): every new event row authored after 2026-05-18 SHOULD include the following 3 fields somewhere in the event body (typically near the Producer or Trigger line):
+
+- **Model**: identifier of the producing model (e.g., `claude-opus-4-7` / `claude-sonnet-4-6` / `claude-haiku-4-5`)
+- **Context pressure**: producer-judgment indicator `high / medium / low` (high = ≥70% of context window utilized; medium = 30-70%; low = <30%; estimate from rough turn count when no token API access available)
+- **CCL completed**: `yes / no / partial` indicating whether Canonical Context Load (D62) Stage 1+2+3 was completed before the event
+
+This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
+
+## 2026-05-18 — Research-driven discipline extensions cohort (Rec 1 trim-policy taxonomy + Rec 2 model-attribution convention + B-495 Rec 3 file-path-existence opened)
+
+**Trigger**: pipeline-lead "Proceed with your recommendation" 2026-05-18 — explicit cascade fire after my recommendation to execute Rec 1 + Rec 2 + open Rec 3 from udm-researcher artifact `_research/llm-handoffs-traceability-hallucination-2026-05-18.md`.
+
+**Model**: claude-opus-4-7 (1M context). **Context pressure**: medium-high (long session arc; multiple compaction events observed via summary mechanism). **CCL completed**: yes (Stage 1+2+3 read at session start + per-cohort refresh; verified via prior cascade Step 10 verifier results).
+
+**Scope**: 2 substantive changes + 1 B-N open:
+1. Rec 1 EXECUTED: trim-policy taxonomy at `.claude/skills/udm-session-compactor/SKILL.md` (~75 LOC added)
+2. Rec 2 EXECUTED: 3-field convention header at `docs/migration/_validation_log.md` + Gate 2 reviewer-attribution note at `docs/migration/CHECKS_AND_BALANCES.md`
+3. Rec 3 OPENED as B-495 (MEDIUM WSJF 2.5) for file-path-existence 10th Phase 1 check
+
+**Producer**: parent agent (this session) — claude-opus-4-7.
+
+**Research basis**: udm-researcher artifact 2026-05-18 (371 LOC; 12 primary sources from arXiv / Anthropic / NIST / ISO 42001 / ACM FSE 2025; produced by agent `a1874f2bb5e4b7a23`):
+- Finding 1.1 (Contextual Memory Virtualisation paper; Imperial College London 2026; arXiv 2602.22402): naive compaction destroys ~98% of nuanced reasoning; structured trim preserves 12-86% reduction range
+- Finding 2.1 (EU AI Act Articles 12/19): actor-level attribution at AI-assisted decision events; high-risk AI timeline begins August 2026
+- Finding 2.3 (NIST AI 600-1 July 2024): individual or system ID with timestamp per-event requirement
+- Finding 3.1 (Code Hallucination Systematic Review; arXiv 2511.00776): file-path confabulation is LEAST-MITIGATED sub-type in code-generation systems
+
+**Rec 1 implementation details**:
+- NEW section "Content durability — regenerable vs irreplaceable (trim-policy taxonomy)" inserted at SKILL.md between §5 Pointer-back cross-refs and Output contract
+- 4 sub-sections: regenerable-content enumeration + irreplaceable-content enumeration + trim-policy enforcement (producer-side check) + empirical anchor (1-event 2026-05-18 + ab45539c33d1cebd1 G2 finding citation)
+- Regenerable content category (MAY be omitted/compressed): raw grep/glob/file-listing outputs / git log diff / verbatim test stdout / raw file content quotations / tool-call boilerplate / verbatim BACKLOG entries / tracker-update mechanics
+- Irreplaceable content category (MUST preserve verbatim): architectural decisions + rejected alternatives + why-not justifications / reviewer rationale text / empirical-evidence accumulations / pipeline-lead direction quotes / cross-cohort patterns / convergence-discipline events / defer-trigger criteria / meta-discipline observations
+- 2 NEW Tier 0 assertions (test_trim_policy_taxonomy_present + test_trim_policy_cites_cmv_research_anchor) — 10/10 pass
+
+**Rec 2 implementation details**:
+- NEW header section at _validation_log.md L4-12 documenting 3-field convention (Model / Context pressure / CCL completed)
+- Companion note added to CHECKS_AND_BALANCES.md L66 (Gate 2 reviewer attribution convention)
+- Documentation-only convention; no mechanical enforcement initially; future 10th `check_*` candidate at `tools/pre_commit_checks.py` if pattern drift observed
+- Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline
+- This event row applies the convention (Model + Context pressure + CCL completed cited above)
+
+**Rec 3 implementation**: B-495 opened in BACKLOG (MEDIUM WSJF 2.5) — file-path-existence validation as 10th Phase 1 check. False-positive policy questions documented (future-planned paths in D-N proposals; allowlist for canonical phase1/09_*.md placeholders; committed-only vs staged-new scope). Blocked on policy resolution before build.
+
+**Tests**: 10/10 NEW Tier 0 PASS in 0.27s (cohort scope; +2 from prior 8); full-suite expected 2827 + 2 = 2829.
+
+**Cumulative session delta UPDATED at research-driven extensions cohort**: **102 → 103 NEW B-Ns** (B-393-B-495) / 25 B-Ns CLOSED unchanged (Rec 1+2 are extensions not closures) / pytest 2827 → **2829 pass / 10 skip / 0 fail** (+2).
+
+**Status**: substrate-edit per hard rule 14 — `.claude/skills/udm-session-compactor/SKILL.md` is substrate per `tools/cascade_classifier.py::SUBSTRATE_FILES`; PRE-COMMIT reviewer to be spawned before commit lands. CHECKS_AND_BALANCES.md + _validation_log.md are non-substrate trackers (extensions are convention-additions only).
+
 ## 2026-05-18 — udm-session-compactor loose-end tie-up cohort (CLAUDE.md discoverability cross-ref + B-494 Phase 2 tracking)
 
 **Trigger**: pipeline-lead "Let's move onto tieing up any loose ends with regard to udm-session-compactor" 2026-05-18 — explicit tie-up directive.

@@ -131,6 +131,45 @@ def test_output_contract_pins_canonical_snapshot_path(skill_content: str) -> Non
     )
 
 
+def test_trim_policy_taxonomy_present(skill_content: str) -> None:
+    """B-495-class Assertion 9 (added 2026-05-18 per research Rec 1): trim-policy
+    taxonomy distinguishing regenerable vs irreplaceable content present in skill body.
+
+    Per `_research/llm-handoffs-traceability-hallucination-2026-05-18.md` Finding 1.1
+    (CMV paper, Imperial College London 2026): naive compaction destroys ~98% of
+    nuanced reasoning while preserving surface summary. Trim-policy taxonomy is the
+    load-bearing distinction for preserving context across compaction.
+    """
+    assert_skill_contains_substrings(
+        skill_content,
+        [
+            "Content durability",
+            "regenerable vs irreplaceable",
+            "Regenerable content",
+            "Irreplaceable content",
+            "Trim-policy enforcement",
+            "Empirical anchor for trim-policy",
+        ],
+        hint="Trim-policy taxonomy must be documented per research recommendation 2026-05-18",
+    )
+
+
+def test_trim_policy_cites_cmv_research_anchor(skill_content: str) -> None:
+    """B-495-class Assertion 10 (added 2026-05-18 per research Rec 1): trim-policy
+    taxonomy cites the CMV research artifact + Imperial College London + ab45539c33d1cebd1
+    empirical anchor. Forward-prevention against drift over time.
+    """
+    assert_skill_contains_substrings(
+        skill_content,
+        [
+            "_research/llm-handoffs-traceability-hallucination-2026-05-18.md",
+            "Imperial College London",
+            "ab45539c33d1cebd1",
+        ],
+        hint="Trim-policy section must cite research artifact + empirical anchor",
+    )
+
+
 def test_empirical_anchor_cited(skill_content: str) -> None:
     """B-492 Assertion 8: empirical anchor 1-event evidence base cited.
 

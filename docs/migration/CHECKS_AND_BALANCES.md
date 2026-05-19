@@ -63,6 +63,8 @@ A second pair of eyes confirms correctness.
 
 Mandatory: review must produce a structured report with categorized findings (✅ / 🟡 / 🔴). 🔴 items block validation.
 
+**Reviewer attribution convention (per Rec 2 of `_research/llm-handoffs-traceability-hallucination-2026-05-18.md`)**: when authoring the Gate 2 verdict for `_validation_log.md`, cite (a) reviewer agent ID (`agentId: ...`); (b) reviewer model name (e.g., `claude-opus-4-7`); (c) context pressure indicator (`high / medium / low`). Closes EU AI Act Articles 12/19 + NIST AI 600-1 actor-level attribution gap at zero enforcement cost.
+
 ### Gate 3 — Edge case enumeration
 
 Walk the M/S/I/N/P/G/D/F/V/DP/T/SI/SE series. For each:
