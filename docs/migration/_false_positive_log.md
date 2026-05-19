@@ -53,6 +53,26 @@ At round close-out cascade (per `udm-round-closeout` SKILL.md):
 
 Empirical evidence base accumulated through 2026-05-18 session arc. Events sorted most-recent-first.
 
+### 2026-05-18 — FP-6 — `check_file_path_existence` self-firing on historical path citations (B-496 → bundled-closure with B-491 via B-488 shared helper)
+
+- **trigger_pattern**: `_BACKTICK_PATH_RE = re.compile(r"`([^`\s\*\?<>\{\}]+/[^`\s\*\?<>\{\}]+)`")` post-filtered via `_is_credible_path_candidate` (whitelisted-prefix + whitelisted-extension OR trailing slash)
+- **actual_semantic**: regex matched 37 path tokens inside `_validation_log.md` historical entries (e.g., `tools/query_parquet.py` / `tests/smoke/test_pii_tokenizer.py` / `data_load/idempotency_ledger.py` / `phase1/09_*.md`) — paths existed/were planned at original authoring but were renamed/moved/never-built in subsequent refactors. Append-only narrative discipline preserves citations verbatim; check WARN-fired on these historical references during normal commit cycles. Self-firing on the discipline's own closure commit (10th check addresses LLM file-path-confabulation hallucination class).
+- **empirical_anchor_commit**: `2ac353b` (B-495 closure commit; check self-fired against staged BACKLOG.md + _validation_log.md)
+- **detected_by**: cross-cohort gap-check reviewer `a9330411976057db7` G4-finding 2026-05-18 post-B-495 closure
+- **remediation_status**: ABSORBED via B-491+B-496 bundled closure at commit `a7813df` — shared `is_empirical_anchor_context()` helper extracted to NEW `tools/anchor_context.py` module (per B-488 cross-module reuse pattern) + applied to `check_file_path_existence` line-by-line iteration loop
+- **forward_prevention_B_N**: `B-496` (closed 2026-05-18 bundled with B-491) → ABSORBS into shared-helper consolidation
+- **class**: self-reference meta-pattern (Pitfall #9-class; FP-6 = recurring with FP-2 + FP-3 + FP-5)
+
+### 2026-05-18 — FP-5 — `check_wc_line_count_claims` self-firing on historical wc -l citations (B-491 → bundled-closure with B-496 via B-488 shared helper)
+
+- **trigger_pattern**: `_WC_LINE_COUNT_CLAIM_RE = re.compile(r"\`(?P<filename>[^\`\s]+)\`[^(]*\([^)]*?(?P<count>\d+)\s+lines?\s+per\s+actual\s+\`?wc\s+-l\`?", re.IGNORECASE)` against staged markdown content + canonical filename map resolution
+- **actual_semantic**: regex matched 3 wc -l citations in BACKLOG.md L408 + 2 corresponding `_validation_log.md` historical entries — citations were TRUE at B-307 authoring era (~2026-05-16) but BECAME stale post-multiple-refactors (.githooks/pre-commit 177 → 68; .githooks/commit-msg 117 → 41). Per append-only narrative discipline: historical citations preserved verbatim; check WARN-fired on these historical references during the very B-481 closure cohort that added the check.
+- **empirical_anchor_commit**: `c781c9b` (B-481 closure commit; check self-fired against staged BACKLOG.md)
+- **detected_by**: PRE-COMMIT reviewer `a4310f90ef3b89357` 2026-05-18 self-firing finding at B-481 closure cohort
+- **remediation_status**: ABSORBED via B-491+B-496 bundled closure at commit `a7813df` — shared `is_empirical_anchor_context()` helper extracted to NEW `tools/anchor_context.py` module + applied to `check_wc_line_count_claims` line-aware iteration (compute line index from match.start() then 5-line lookback for anchor markers)
+- **forward_prevention_B_N**: `B-491` (closed 2026-05-18 bundled with B-496) → ABSORBS into shared-helper consolidation
+- **class**: self-reference meta-pattern (Pitfall #9-class; FP-5 = recurring with FP-2 + FP-3)
+
 ### 2026-05-18 — FP-4 — cross-cohort review grep methodology (B-490 closure absorbed)
 
 - **trigger_pattern**: `grep -oE "^- \*\*B-[0-9]+\*\*" docs/migration/BACKLOG.md` — primary regex for B-N row enumeration
@@ -95,18 +115,20 @@ Empirical evidence base accumulated through 2026-05-18 session arc. Events sorte
 
 ## Aggregation findings (round close-out classification)
 
-**As of 2026-05-18 close-out (round 6 in progress)**:
+**As of 2026-05-18 close-out (round 6 in progress; UPDATED at B-491+B-496 bundled closure cohort `a7813df`)**:
 
 | Class | Event count | Forward-prevention status |
 |---|---|---|
-| self-reference meta-pattern | 2 (FP-2 + FP-3) | ✅ CLOSED via B-488 shared helper |
+| self-reference meta-pattern | **4** (FP-2 + FP-3 + FP-5 + FP-6) | ✅ CLOSED via B-488 shared helper + ✅ CLOSED via B-491+B-496 bundled extension (shared helper extracted to `tools/anchor_context.py` for cross-module reuse) |
 | reviewer-methodology blind-spot | 1 (FP-4) | ✅ CLOSED via B-490 Step 6 |
-| Pitfall #9.h staleness | 1 (FP-1) | 🟡 B-481 open; defer-trigger 2nd-event |
+| Pitfall #9.h staleness | 1 (FP-1) | ⚫ CLOSED via B-481 mechanical detection (check_wc_line_count_claims 9th Phase 1 check) + FP-5 deferred-then-absorbed via B-491 shared-helper suppression |
 
-**Pattern observations**:
-- self-reference meta-pattern reached 2-event evidence → forward-prevention authored (B-488); ✅ working as designed
+**Pattern observations (updated 2026-05-18 at a7813df)**:
+- self-reference meta-pattern reached **4-event evidence** across 2 layers (check_commit_msg.py B-488 + pre_commit_checks.py B-491+B-496 bundled) → forward-prevention SHARED-HELPER extraction completed; ✅ canonical resolution per HANDOFF §8 2-event-then-bundle convention
 - reviewer-methodology blind-spot at 1-event → forward-prevention authored anyway at producer judgment (B-490 closure); validation pending more events
-- Pitfall #9.h at 1-event → deferred per established 2-event threshold for new mechanism authoring
+- Pitfall #9.h at 1-event → mechanical detection added (B-481) + when self-fired on own closure → bundled into B-491+B-496 shared-helper consolidation. Full lifecycle now exemplified: empirical anchor → mechanical detection → self-firing on closure → context-aware suppression via shared helper.
+
+**Meta-observation**: The self-reference meta-pattern class has now demonstrated the CANONICAL FULL LIFECYCLE for heuristic-check forward-prevention: (1) 1st-event surfaces → deferred per 2-event convention; (2) 2nd-event surfaces → bundled closure via shared-helper extraction; (3) shared helper enables cross-module reuse without per-check duplication; (4) accumulation tracker (this log) catalyzes the architectural recognition. Pattern reusable for future check-class self-firing.
 
 ## Next aggregation trigger
 
