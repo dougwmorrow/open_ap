@@ -36,7 +36,18 @@ if str(_PROJECT_ROOT) not in sys.path:
 def _stub_production_modules():
     """Pre-patch sys.modules so `import orchestration.pipeline_steps` works
     on Windows dev workstations without polars / connectorx / pyodbc /
-    oracledb / data_load deps available."""
+    oracledb / data_load deps available.
+
+    Cross-file test-pollution defense (backported from
+    test_parquet_replay_step_apply_path.py per B-567 closure 2026-05-19):
+    Python's `from <package> import <submodule>` semantics check the
+    PACKAGE'S attribute cache (set when submodule was first imported),
+    bypassing `sys.modules`. Empirical anchor: B-564 closure cohort
+    2026-05-19 surfaced cross-file pollution between this file + the
+    new B-564 apply-path test file (CDCResult MagicMock call_count
+    accumulated across both tests). Without delattr backport, new
+    B-563 test file (forthcoming) would hit the same class.
+    """
 
     saved = {}
     stub_names = [
@@ -59,6 +70,11 @@ def _stub_production_modules():
     # Force re-import of orchestration.pipeline_steps
     saved["orchestration.pipeline_steps"] = sys.modules.get("orchestration.pipeline_steps")
     sys.modules.pop("orchestration.pipeline_steps", None)
+    # B-567: also remove package-attribute cache so
+    # `from orchestration import pipeline_steps` triggers fresh import.
+    _orch_pkg = sys.modules.get("orchestration")
+    if _orch_pkg is not None and hasattr(_orch_pkg, "pipeline_steps"):
+        delattr(_orch_pkg, "pipeline_steps")
 
     yield
 
@@ -68,6 +84,11 @@ def _stub_production_modules():
         else:
             sys.modules[name] = mod
     sys.modules.pop("orchestration.pipeline_steps", None)
+    # B-567: repeat package-attribute cleanup at fixture exit so
+    # subsequent tests in OTHER files don't inherit polluted ps reference.
+    _orch_pkg = sys.modules.get("orchestration")
+    if _orch_pkg is not None and hasattr(_orch_pkg, "pipeline_steps"):
+        delattr(_orch_pkg, "pipeline_steps")
 
 
 def _import_ps():

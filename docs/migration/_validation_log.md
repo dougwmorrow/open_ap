@@ -1,4 +1,4 @@
-# Validation Log
+ Validation Log
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
@@ -13746,3 +13746,37 @@ Plus reviewer-affirmed design choices:
 **D125 arc status post-B-564 closure**: B-552 v1 production-ready for SMALL tables (ACCT pilot unblocked). Apply-path test layer in place to prevent regression class. Outstanding for large-table cutover: B-563 (day-N vs day-N-1 Parquet diff delete-detection; reviewer-suggested HIGH WSJF 3.5) + B-555 (per-PK hash parity definition; MEDIUM WSJF 3.5).
 
 **Next-step recommendation**: B-563 (large-table delete-detection) using the B-564 4-layer test harness pattern as template -- ensures B-563 cannot ship with the same MagicMock false-coverage class that B-552 v1 hit. Alternative: B-555 (per-PK hash parity) for parity-check tool interpretation gap closure. Both are prerequisites for first large-table production cutover.
+
+## 2026-05-19 -- Phase 1 cleanup cohort: G1.1 + G2.1 + B-566 + B-567 closures + 9-event B-541 milestone
+
+**Event**: udm-progress-logger per CLAUDE.md hard rule 9 for cleanup-cohort closure pre-B-563 substantive work + 9-event B-541 read-only audit contract empirical evidence milestone extension (gap-check reviewer ``a121478077f0b7713`` 2026-05-19 honored contract; 9 consecutive reviewers = 180% of HANDOFF 5-event formalization threshold).
+
+**Phase 1 cleanup scope** (small commit; closes drift before B-563 substantive work):
+
+| Item | Type | Closure mechanism |
+|---|---|---|
+| G1.1 | Inline-fix | scd2.md pytest baseline ``~133`` -> ``156`` (Pitfall #9.k sum-vs-enumeration drift) |
+| G2.1 | Inline-fix | BACKLOG B-563 entry refreshed with B-564 unblock note + B-566 harness availability cite |
+| B-566 | New B-N + closure | ``tests/tier1/_replay_test_helpers.py`` extracts generalized ``make_signature_validating_stub`` + ``extract_kwonly_arg_names_from_source`` + ``CANONICAL_REPLAY_KWARGS``; B-564 test file refactored to import shared utilities |
+| B-567 | New B-N + closure | ``tests/tier1/test_orchestrator_cdc_mode_dispatch.py`` ``_stub_production_modules`` fixture extended with ``delattr(_orch_pkg, 'pipeline_steps')`` at setup + teardown (cross-file pollution defense backport from B-564 closure cohort empirical discovery) |
+
+**Test count delta**: 0 (no new tests; refactor + shared utility extract). Cohort regression 39/39 PASS post-B-566 refactor + B-567 backport. Test runtime 0.32s.
+
+**Forward-prevention class addressed**: copy-paste-of-test-pattern-for-future-similar-cohorts. B-563 (large-table delete-detection) implementation will need:
+- New `_make_signature_validating_delete_detection_stub` → now just `make_signature_validating_stub(canonical_kwargs=CANONICAL_DELETE_DETECTION_KWARGS, ...)`
+- AST extraction of new helper's signature → now just `extract_kwonly_arg_names_from_source(source_path=..., function_name="run_parquet_delete_detection_step")`
+
+**B-541 9-event empirical milestone**: 9 consecutive cross-cohort/second-pass/gap-check reviewers honored read-only audit contract without violation:
+- `a843ad09d24f2a607` (post-B-541 closure)
+- `ac2dd8d0ec814dc7e` (post-D125 plan)
+- `ad50cb5cceda3f90c` (post-D125 implementation cohort)
+- `adc861405ff006766` (post-D125 toolkit completion)
+- `a8130cf417bb5692a` (post-B-553/B-554 closure)
+- `a95d8cc8b0ce3b7b6` (post-B-547 + arc review)
+- `a234fda11b870c78d` (post-B-552 v1 closure -- verdict BLOCK)
+- `aea6c9174151af2f5` (D56 second-pass on `0c06961` BLOCK remediation -- verdict ATTENTION)
+- `a121478077f0b7713` (gap-check on B-552 v1 + B-564 cohort -- verdict ATTENTION with 3 minor drifts + 2 new B-N opportunities; drove THIS COMMIT cleanup)
+
+**Empirical pattern observation (CONTINUED from prior log rows)**: gap-check reviewers can be spawned IN-FLIGHT during cohort work without violating the read-only contract; results compose with prior cross-cohort + D56 second-pass scope. The 9-event milestone empirically validates B-541 structural fix across DIVERSE reviewer-types (cross-cohort + second-pass + gap-check), not just cross-cohort.
+
+**Phase 2 next-step**: B-563 (large-table delete-detection day-N vs day-N-1 Parquet diff) using the now-available shared test utilities + harness pattern. Estimated ~3-4 hours: new ``query_latest_snapshot_for_date()`` helper in ``data_load/parquet_registry_client.py`` + new ``run_parquet_delete_detection_step()`` helper in ``orchestration/pipeline_steps.py`` + ``orchestration/large_tables.py`` parquet_snapshot branch extension + Tier 1 tests applying B-564 4-layer pattern via the new shared utilities.

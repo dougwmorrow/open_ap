@@ -1,4 +1,4 @@
-# SESSION_RESUME -- scd2 chat (D125 implementation arc complete + B-552 v1 closure + B-564 forward-prevention + 8-event B-541 milestone)
+ SESSION_RESUME -- scd2 chat (D125 implementation arc complete + B-552 v1 closure + B-564 forward-prevention + 8-event B-541 milestone)
 
 **Chat scope**: D125 3-mode CDC dispatch (CDCMode `'change_detect'` / `'parquet_snapshot'` / `'both'`) + SCD2 + CDC + Bronze + replay-from-Parquet pipeline core + RB-16 production cutover procedure + B-541 read-only audit contract empirical validation + B-564 apply-path Tier 1 test layer. Does NOT touch udm-* skills + Phase 1 quality checks + producer-discipline meta-work (separate `meta-discipline.md` chat per parallel session).
 
@@ -18,7 +18,7 @@
   - `d192cee` -- B-547 closure -- RB-16 procedure rewrite for 2-step D125 cutover (supersedes B-501 historical 2-phase design)
   - (Earlier arc commits enumerated in snapshot Section 5)
 - **Push status**: HELD -- `git rev-list --count origin/round-6-post-merge-tracking..HEAD` ahead by N commits (verify at next session start; default-hold convention)
-- **pytest baseline (this chat's D125 module scope)**: ~133 Tier 0/1 tests pass across D125 implementation modules at HEAD (post-B-564 +14 tests; refreshed 2026-05-19 inline per D56 second-pass minor-finding G6.2):
+- **pytest baseline (this chat's D125 module scope)**: 156 Tier 0/1 tests pass across D125 implementation modules at HEAD (refreshed 2026-05-19 per gap-check reviewer `a121478077f0b7713` G1.1 -- prior `~133` claim was a Pitfall #9.k sum-vs-enumeration drift; enumeration below sums to 156):
   - `tests/tier0/test_cdc_mode_column.py` -- 11 tests (B-542 migration)
   - `tests/tier1/test_table_config_cdc_mode.py` -- 13 tests (B-543 TableConfig field)
   - `tests/tier1/test_orchestrator_cdc_mode_dispatch.py` -- 25 tests (B-544 v1 orchestrator dispatch + B-552 v1 Class E)

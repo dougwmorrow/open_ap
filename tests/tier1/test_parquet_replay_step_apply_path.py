@@ -75,21 +75,18 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 
 # ---------------------------------------------------------------------------
-# Canonical signature pin
+# Canonical signature pin + shared stub factory
 # ---------------------------------------------------------------------------
-# Pinned 2026-05-19 per data_load/parquet_replay.py replay_parquet_snapshot
-# signature (B-552 v1 BLOCK remediation cohort at commit 0c06961). If the
-# real signature changes, TestB564CanonicalSignatureAST will fail; update
-# this constant AND all callers (orchestration/pipeline_steps.py) in
-# lockstep with the source change.
+# Per B-566 closure 2026-05-19, the canonical-kwargs constant + shared
+# signature-validating stub factory + AST extractor were promoted to
+# tests/tier1/_replay_test_helpers.py so B-563 (large-table delete-detection)
+# can reuse the same forward-prevention pattern without copy-paste.
 # ---------------------------------------------------------------------------
 
-CANONICAL_REPLAY_KWARGS = (
-    "source_name",
-    "table_name",
-    "business_date",
-    "original_batch_id",
-    "replay_batch_id",
+from tests.tier1._replay_test_helpers import (  # noqa: E402
+    CANONICAL_REPLAY_KWARGS,
+    extract_kwonly_arg_names_from_source,
+    make_signature_validating_stub,
 )
 
 
@@ -170,43 +167,16 @@ def _import_ps():
 def _make_signature_validating_replay_stub(
     *, return_value=None, canonical_kwargs=CANONICAL_REPLAY_KWARGS,
 ):
-    """Return a callable that mimics replay_parquet_snapshot's real signature.
-
-    Calling with kwargs that don't match the canonical set raises TypeError
-    --- the SAME failure mode the REAL function would have. This is the
-    structural forward-prevention against B-552 v1 Finding 1.1: MagicMock
-    auto-attribute generation accepts ANY kwargs without canonical-signature
-    validation.
-
-    :param return_value: returned on successful kwargs match (e.g. a mocked
-        ReplayResult).
-    :param canonical_kwargs: tuple of canonical kwarg names (default:
-        module-level CANONICAL_REPLAY_KWARGS).
+    """Thin wrapper around the shared :func:`make_signature_validating_stub`
+    factory pinned to ``CANONICAL_REPLAY_KWARGS`` by default. Per B-566
+    closure, the generic factory lives in
+    ``tests/tier1/_replay_test_helpers.py`` so B-563 + future apply-path
+    tests can reuse the same forward-prevention pattern.
     """
-
-    expected = set(canonical_kwargs)
-
-    def _stub(*args, **kwargs):
-        if args:
-            raise TypeError(
-                f"replay_parquet_snapshot() takes 0 positional arguments but "
-                f"{len(args)} given"
-            )
-        actual = set(kwargs.keys())
-        if actual != expected:
-            unexpected = actual - expected
-            missing = expected - actual
-            parts = []
-            if unexpected:
-                parts.append(f"unexpected kwargs: {sorted(unexpected)}")
-            if missing:
-                parts.append(f"missing required kwargs: {sorted(missing)}")
-            raise TypeError(
-                f"replay_parquet_snapshot() kwargs mismatch: {'; '.join(parts)}"
-            )
-        return return_value
-
-    return _stub
+    return make_signature_validating_stub(
+        canonical_kwargs=canonical_kwargs,
+        return_value=return_value,
+    )
 
 
 # ===========================================================================
@@ -224,39 +194,26 @@ class TestB564CanonicalSignatureAST:
         """B-564: parse parquet_replay.py source AST to extract the actual
         signature of replay_parquet_snapshot(). Compare against test
         constant. If the real signature changes (kwarg added/removed/renamed),
-        this test fails + the constant must be updated in lockstep."""
+        this test fails + the constant must be updated in lockstep.
+
+        Per B-566 closure, this test now composes the shared
+        :func:`extract_kwonly_arg_names_from_source` helper.
+        """
 
         replay_src_path = _PROJECT_ROOT / "data_load" / "parquet_replay.py"
-        assert replay_src_path.exists(), (
-            f"Canonical source file missing: {replay_src_path}"
+
+        kwonly_arg_names = extract_kwonly_arg_names_from_source(
+            source_path=replay_src_path,
+            function_name="replay_parquet_snapshot",
         )
-
-        src = replay_src_path.read_text(encoding="utf-8")
-        tree = ast.parse(src)
-
-        func_node = None
-        for node in ast.walk(tree):
-            if (
-                isinstance(node, ast.FunctionDef)
-                and node.name == "replay_parquet_snapshot"
-            ):
-                func_node = node
-                break
-
-        assert func_node is not None, (
-            "Canonical source missing 'def replay_parquet_snapshot' --- "
-            "module surface broken"
-        )
-
-        kwonly_arg_names = tuple(arg.arg for arg in func_node.args.kwonlyargs)
 
         assert kwonly_arg_names == CANONICAL_REPLAY_KWARGS, (
             f"Canonical signature drift detected!\n"
             f"  Test constant CANONICAL_REPLAY_KWARGS: {CANONICAL_REPLAY_KWARGS}\n"
             f"  Real signature in parquet_replay.py: {kwonly_arg_names}\n"
-            f"  Fix: update CANONICAL_REPLAY_KWARGS in this test file AND "
-            f"verify all callers (orchestration/pipeline_steps.py) pass the "
-            f"new kwargs."
+            f"  Fix: update CANONICAL_REPLAY_KWARGS in "
+            f"tests/tier1/_replay_test_helpers.py AND verify all callers "
+            f"(orchestration/pipeline_steps.py) pass the new kwargs."
         )
 
     def test_canonical_signature_is_keyword_only(self):
