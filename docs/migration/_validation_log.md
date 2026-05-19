@@ -12,6 +12,26 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-562 open: multi-chat coordination cohort (B-N atomic claim CLI + SESSION_RESUME/ directory restructure)
+
+**Trigger**: pipeline-lead "Sounds good. Update our markdown files tracking this effort. Then proceed with your recommended next steps" 2026-05-19 — accepting my multi-chat coordination proposal.
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Empirical anchor**: B-N collision 2026-05-19 between this chat (`665f14d` opened B-558+B-559) and parallel chat (`9b1d7fb` attempted same opens; `7a810b9` renumbered to B-560+B-561 with "other-agent published first" note). Caught by manual-discipline-dependent BACKLOG re-read, NOT by git workflow.
+
+**Scope**: B-562 (HIGH WSJF 4.0; 2 sub-deliverables; ~3 hours total):
+- **(A)** `tools/claim_next_bn.py` atomic B-N claim CLI (~1 hour)
+- **(B)** `SESSION_RESUME/` directory restructure (~2 hours; `active/` + `_archive/` subdirectories)
+
+**Cumulative session delta UPDATED**: this-chat scope 106 → 107 NEW B-Ns (+B-562) / 29 CLOSED unchanged / pytest unchanged.
+
+**B-558 status**: still 🟡 Open mid-build (Component D ✅ at e3d8700; A+B+C+closure deferred to next session per snapshot 2026-05-19-e3d8700.md handoff).
+
+**Sequence**: this commit lands B-562 open + tracker updates; next commits begin Component A (atomic B-N claim CLI).
+
+**Status**: ⚫ COMPLETE — B-562 opened + trackers refreshed.
+
 ## 2026-05-19 — B-494 closure: udm-session-compactor Phase 2 auto-trigger extension (PostToolUse hook + stderr-warning + agent-side skill discipline)
 
 **Trigger**: pipeline-lead "extension of the Claude skill agent setup for ensuring an agent is triggered to save progress made before reaching a session compression limit" 2026-05-19. Stream 1 SCD2 review committed at `2f4ed23`; this is Stream 2.
