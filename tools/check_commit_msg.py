@@ -513,69 +513,15 @@ def _is_inside_blockquote(lines: list[str], idx: int) -> bool:
 # empirical anchor → B-487 candidate). Both events involved producer authoring
 # commit-msg about a check whose canonical-anchor citation triggered the
 # very pattern the check detects (self-reference meta-pattern).
-_EMPIRICAL_ANCHOR_MARKERS: tuple[str, ...] = (
-    "empirical anchor commit",
-    "empirical anchor",
-    "1st-event empirical anchor",
-    "1st-event",
-    "META-IRONY",
-    "meta-irony",
-    "historical reference",
-    "historical context",
-    "historical anchor",
-    "Quote-cite from reviewer",
-    "quote-cite from reviewer",
-    "Mechanism A step 5",
-    "per Cohort",
-    "per cohort",
-    "verbatim quote",
-    "reviewer quote",
-    "Reviewer cited",
-    "reviewer cited",
+# Per B-491 + B-496 bundled closure 2026-05-18: helper + markers extracted to
+# `tools/anchor_context.py` for reuse across pre_commit_checks.py Phase 1 checks
+# (check_wc_line_count_claims + check_file_path_existence) that have the same
+# self-firing-on-historical-citation class. Underscore-prefix aliases preserved
+# for back-compat with existing call sites + Tier 0 tests pinning module API.
+from tools.anchor_context import (
+    EMPIRICAL_ANCHOR_MARKERS as _EMPIRICAL_ANCHOR_MARKERS,
+    is_empirical_anchor_context as _is_empirical_anchor_context,
 )
-
-
-def _is_empirical_anchor_context(
-    lines: list[str], idx: int, lookback: int = 5,
-) -> bool:
-    """Per B-488 closure 2026-05-18: True if `lines[idx]` is within an
-    empirical-anchor citation context (within `lookback` lines after a marker
-    phrase like `empirical anchor commit`, `META-IRONY`, `Quote-cite from
-    reviewer`, etc.).
-
-    Used to suppress false-positive WARNs across heuristic checks
-    (ClosureAnnotationConsistencyCheck + NarrativePytestClaimVerificationCheck
-    + InlineFixClaimVerificationCheck) when commit-msg cites historical
-    pattern instances rather than asserting current-commit claims.
-
-    Empirical evidence base (3-event 2026-05-18):
-        - commit 133b212: B-458 fired on `**B-414 CLOSED**` inside REVIEW-section
-          quote-cite of prior reviewer's verdict (B-480 candidate)
-        - commit c6ba969: B-464 fired on `2664 pass / 62 skip / 0 fail` inside
-          empirical-anchor prose citing 1f74b72 META-IRONY (B-487 candidate)
-        - latent: B-470 InlineFixClaimVerificationCheck has same vulnerability
-          if commit-msg quotes a historical reviewer block
-
-    Args:
-        lines: split commit-msg lines (already sanitized via _strip_code_blocks).
-        idx: target line index to evaluate.
-        lookback: number of lines BEFORE idx to scan for markers (default 5).
-
-    Returns:
-        True if any line in `lines[idx-lookback:idx+1]` contains an empirical
-        anchor marker (case-sensitive match against `_EMPIRICAL_ANCHOR_MARKERS`).
-        False otherwise. Note: case-sensitive — `_EMPIRICAL_ANCHOR_MARKERS`
-        includes both common case variants explicitly.
-    """
-    if idx < 0 or idx >= len(lines):
-        return False
-    lo = max(0, idx - lookback)
-    window = lines[lo:idx + 1]
-    for line in window:
-        for marker in _EMPIRICAL_ANCHOR_MARKERS:
-            if marker in line:
-                return True
-    return False
 
 
 def check_unresolved_forward_prevention_candidates(

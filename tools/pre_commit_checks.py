@@ -64,6 +64,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
+# Per B-491 + B-496 bundled closure 2026-05-18: shared empirical-anchor context
+# detection helper extracted from tools/check_commit_msg.py (B-488 original
+# closure) for reuse across Phase 1 quality checks that have the same
+# self-firing-on-historical-citation class. sys.path manipulation required
+# because this module is invoked as a script by .githooks/pre-commit; Python
+# adds tools/ to sys.path (script dir) not the repo root, so `from tools.X`
+# fails without explicit REPO_ROOT insertion (mirrors check_commit_msg.py L88).
+_REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT_FOR_IMPORT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORT))
+from tools.anchor_context import is_empirical_anchor_context  # noqa: E402
+
 EVENT_TYPE = "CLI_PRE_COMMIT_CHECKS"
 EXIT_SUCCESS = 0
 EXIT_BLOCKED = 1
@@ -1170,8 +1182,18 @@ def check_wc_line_count_claims(staged_files: list[str]) -> CheckResult:
             content = md_path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
+        # Per B-491 closure 2026-05-18: empirical-anchor context suppression via
+        # shared `is_empirical_anchor_context` helper (extracted to
+        # tools/anchor_context.py at B-491+B-496 bundled closure 2-event threshold).
+        # Compute line index from match position to enable 5-line lookback for
+        # historical-citation markers ("per B-XXX closure" / "as of YYYY-MM-DD" /
+        # "empirical anchor" / etc.).
+        lines = content.splitlines()
         for m in _WC_LINE_COUNT_CLAIM_RE.finditer(content):
             total_claims += 1
+            line_idx = content[:m.start()].count("\n")
+            if is_empirical_anchor_context(lines, line_idx):
+                continue  # historical-anchor citation; suppress per B-491
             filename = m.group("filename")
             claimed = int(m.group("count"))
             target_rel = _resolve_wc_target_path(filename)
@@ -1337,6 +1359,13 @@ def check_file_path_existence(staged_files: list[str]) -> CheckResult:
             for m in _BACKTICK_PATH_RE.finditer(line):
                 token = m.group(1)
                 if not _is_credible_path_candidate(token):
+                    continue
+                # Per B-496 closure 2026-05-18: empirical-anchor context
+                # suppression via shared `is_empirical_anchor_context` helper.
+                # 5-line lookback for historical-citation markers; suppresses
+                # WARN on paths cited in historical context (e.g., paths existed
+                # at original authoring but renamed/moved/never-built since).
+                if is_empirical_anchor_context(lines, line_no - 1):
                     continue
                 total_candidates += 1
                 target = REPO_ROOT / token

@@ -38,6 +38,58 @@ def test_b481_check_registered_in_checks_registry():
     )
 
 
+def test_b491_empirical_anchor_suppression(tmp_path, monkeypatch):
+    """B-491 Assertion 8 (added 2026-05-18 per B-491+B-496 bundled closure):
+    check_wc_line_count_claims suppresses WARN on stale wc -l citations
+    inside empirical-anchor context.
+
+    Per shared `is_empirical_anchor_context` helper from tools/anchor_context.py
+    (5-line lookback for canonical anchor markers). Closes the recurring
+    false-positive class where check_wc_line_count_claims fires on historical
+    wc -l citations in BACKLOG.md / _validation_log.md narrative entries
+    (counts accurate at write-time but became stale post-multiple-refactors).
+    """
+    import re
+
+    md_file = tmp_path / "synthetic.md"
+    # Use a fake target file with a known line count to simulate the mismatch
+    target = tmp_path / ".githooks" / "pre-commit"
+    target.parent.mkdir(parents=True)
+    target.write_text("line1\nline2\nline3\n", encoding="utf-8")  # 3 lines actual
+    md_file.write_text(
+        "Per empirical anchor commit `abc123`, the prior cohort cited "
+        "`pre-commit` (177 lines per actual `wc -l`) but file has since been "
+        "refactored.",
+        encoding="utf-8",
+    )
+    from tools import pre_commit_checks
+    monkeypatch.setattr(pre_commit_checks, "REPO_ROOT", tmp_path)
+    result = pre_commit_checks.check_wc_line_count_claims(["synthetic.md"])
+    # Suppression applied — check passes silently despite stale 177 vs actual 3
+    assert result.passed is True, (
+        "Empirical-anchor context should suppress WARN per B-491 closure"
+    )
+
+
+def test_b491_no_suppression_outside_anchor_context(tmp_path, monkeypatch):
+    """B-491 Assertion 9 (regression-pin): suppression does NOT apply when no
+    empirical-anchor marker is present. Current-commit claims still WARN."""
+    md_file = tmp_path / "synthetic.md"
+    target = tmp_path / ".githooks" / "pre-commit"
+    target.parent.mkdir(parents=True)
+    target.write_text("line1\nline2\nline3\n", encoding="utf-8")  # 3 lines actual
+    md_file.write_text(
+        "Current claim: `pre-commit` (177 lines per actual `wc -l`).",
+        encoding="utf-8",
+    )
+    from tools import pre_commit_checks
+    monkeypatch.setattr(pre_commit_checks, "REPO_ROOT", tmp_path)
+    result = pre_commit_checks.check_wc_line_count_claims(["synthetic.md"])
+    # No suppression — WARN should fire
+    assert result.passed is False
+    assert result.severity == "warn"
+
+
 def test_b481_regex_matches_canonical_l98_pattern():
     """B-481 Assertion 3: regex matches the canonical CLAUDE.md L98 pattern
     `<filename>` (Python; N lines per actual `wc -l` ...)."""

@@ -12,6 +12,52 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-18 — B-491 + B-496 bundled closure: shared `is_empirical_anchor_context()` helper extracted to NEW `tools/anchor_context.py`; applied to `check_wc_line_count_claims` + `check_file_path_existence`
+
+**Trigger**: pipeline-lead "Proceed with your next recommendation" 2026-05-18 — cascade fire on prior-turn recommendation to bundle-close B-491 + B-496 via shared-helper extraction (2-event threshold structurally met).
+
+**Model**: claude-opus-4-7. **Context pressure**: medium-high (long session arc). **CCL completed**: yes.
+
+**Scope**: 2 B-N closures (B-491 + B-496 bundled). NEW shared module `tools/anchor_context.py` (~95 LOC) extracted from `tools/check_commit_msg.py` B-488 original closure. Back-compat aliases at `tools/check_commit_msg.py` preserve underscore-prefix-private call sites + Tier 0 test API. Applied to both `check_wc_line_count_claims` + `check_file_path_existence` Phase 1 quality checks at `tools/pre_commit_checks.py`. 12 NEW Tier 0 assertions: 8 module-level smoke tests at NEW `tests/tier0/test_anchor_context.py` + 2 B-491 suppression at `tests/tier0/test_pre_commit_checks_b481.py` + 2 B-496 suppression at `tests/tier0/test_pre_commit_checks_b495.py`.
+
+**Producer**: parent agent — claude-opus-4-7.
+
+**Empirical evidence base for closure-now decision**:
+- B-481 closure 2026-05-18 surfaced B-491 (1st-event self-firing on historical wc -l citations) → deferred per HANDOFF §8 2nd-event convention
+- B-495 closure 2026-05-18 surfaced B-496 (2nd-event self-firing on historical path citations) → deferred per same convention
+- 2-event threshold reached on the SAME class (self-firing on own-cohort historical citation content). Per HANDOFF §8 convention: bundling closure via shared-helper extraction IS the canonical resolution.
+- Prior reviewer `a9330411976057db7` G4-finding explicitly noted: "Pattern parallel to B-491... when 2nd-event surfaces empirically, may bundle B-491 + B-496 closure via single shared-helper extraction."
+
+**Implementation**:
+
+1. **NEW `tools/anchor_context.py`** (~95 LOC; pure stdlib; no I/O):
+   - `EMPIRICAL_ANCHOR_MARKERS: tuple[str, ...]` — canonical 18-marker set preserved verbatim from B-488 original
+   - `is_empirical_anchor_context(lines, idx, lookback=5) -> bool` — pure function; scans `lines[idx-lookback:idx+1]` for any marker phrase; case-sensitive match
+
+2. **`tools/check_commit_msg.py`** back-compat:
+   - DELETED local `_EMPIRICAL_ANCHOR_MARKERS` + `_is_empirical_anchor_context` definitions
+   - ADDED import + underscore-prefix aliases via `from tools.anchor_context import ... as _EMPIRICAL_ANCHOR_MARKERS, ... as _is_empirical_anchor_context`
+   - All 2 existing call sites at L1284 + L1483 unchanged (still reference `_is_empirical_anchor_context`)
+   - Existing Tier 0 tests at `test_check_commit_msg.py` L2435-2447 still pass via getattr-on-module pattern
+
+3. **`tools/pre_commit_checks.py`** suppression-application:
+   - ADDED top-level import `from tools.anchor_context import is_empirical_anchor_context`
+   - `check_wc_line_count_claims` refactored to line-aware iteration: `lines = content.splitlines()`; per-match `line_idx = content[:m.start()].count("\n")`; suppression check before existing filename/target/wc-l validation
+   - `check_file_path_existence` extended: suppression check before existing `target.exists()` validation (already line-by-line iteration)
+
+4. **12 NEW Tier 0 assertions**:
+   - 8 at NEW `tests/tier0/test_anchor_context.py`: module-exports / canonical-18-marker-set / marker-on-target-line / 5-line-lookback / outside-lookback-False / no-marker-False / invalid-idx-False / custom-lookback-window
+   - 2 at `tests/tier0/test_pre_commit_checks_b481.py`: B-491 positive suppression case + negative outside-anchor regression-pin
+   - 2 at `tests/tier0/test_pre_commit_checks_b495.py`: B-496 positive suppression case + negative outside-anchor regression-pin
+
+**Tests**: 27/27 NEW + extended Tier 0 PASS in 0.36s (cohort scope; 8 anchor_context + 9 B-481 [7 original + 2 new B-491] + 10 B-495 [8 original + 2 new B-496]); full-suite re-verify **2868 passed / 10 skipped / 0 failed in 54.33s** (HEAD baseline 2864 after parallel-session `864e91a` Phase 2 R1 cohort merged in + 4 net delta this cohort = 2868 sum-matches; LOC-authored = 12 NEW test functions [8 + 2 + 2] but state-divergence absorbed 8 of them into `bcb05df` separately).
+
+**State-divergence note**: This commit COMPLETES the B-491+B-496 bundled closure arc that was interrupted between my prior commit `a0f0326` (gap-check remediation; opened B-496) and the parallel Claude session's commits `bcb05df` (Phase 2 large-tables plan v5) + `864e91a` (Phase 2 R1 cohort B-503+B-523+B-535). The parallel session's `bcb05df` merge picked up my partially-staged BACKLOG.md B-491+B-496 closure annotations AND my partial `tools/pre_commit_checks.py` work AND my CURRENT_STATE/HANDOFF cumulative-count updates from working tree; this commit lands the REMAINING supporting files: NEW `tools/anchor_context.py` module + `tools/check_commit_msg.py` back-compat aliases + `tools/pre_commit_checks.py` import + suppression applications + `tests/tier0/test_anchor_context.py` NEW 8 tests + 2 NEW B-491 tests at `tests/tier0/test_pre_commit_checks_b481.py` + 2 NEW B-496 tests at `tests/tier0/test_pre_commit_checks_b495.py` + this corrected narrative.
+
+**Cumulative session delta UPDATED at B-491+B-496 bundled closure**: 104 NEW B-Ns unchanged (B-393-B-496; parallel session's B-497-B-535 separate scope) / **26 → 28 B-Ns CLOSED multi-session arc** (+B-491 + B-496 bundled) / pytest 2864 → **2868 pass / 10 skip / 0 fail** (+4 net delta vs HEAD baseline post-`864e91a`). Pitfall #9.k arithmetic-propagation drift caught inline by PRE-COMMIT reviewer `a8b3220ad407537b9` (meta-irony — the closure addressing historical-citation handling self-fired its own drift class).
+
+**Status**: substrate-edit per hard rule 14 — `tools/check_commit_msg.py` + `tools/pre_commit_checks.py` are substrate per `tools/cascade_classifier.py::SUBSTRATE_FILES`; PRE-COMMIT reviewer to be spawned before commit lands.
+
 ## 2026-05-18 — Cross-cohort gap-check remediation: CLAUDE.md L99 surface-count drift fix + B-496 open (empirical-anchor context suppression for check_file_path_existence)
 
 **Trigger**: pipeline-lead "Run a gap analysis, check for any gaps" 2026-05-18 — independent cross-cohort gap-check reviewer `a9330411976057db7` spawned on 7-commit cohort 1233bc8..2ac353b.

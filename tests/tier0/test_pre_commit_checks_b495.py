@@ -140,3 +140,52 @@ def test_no_staged_md_returns_info_skip() -> None:
     assert result.passed is True
     assert result.severity == "info"
     assert "no staged markdown files" in result.diagnostic.lower()
+
+
+def test_b496_empirical_anchor_suppression(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """B-496 Assertion 9 (added 2026-05-18 per B-491+B-496 bundled closure):
+    check suppresses WARN on missing paths inside empirical-anchor context.
+
+    Per shared `is_empirical_anchor_context` helper from tools/anchor_context.py
+    (5-line lookback for canonical anchor markers). Closes the recurring
+    false-positive class where check_file_path_existence fires on historical
+    path citations in _validation_log.md narrative entries (paths that
+    existed/were planned at original authoring but were renamed/moved/never-built
+    in subsequent refactors).
+    """
+    md_file = tmp_path / "synthetic.md"
+    md_file.write_text(
+        "Per empirical anchor commit `abc123`, the historical pattern fired on "
+        "`tools/nonexistent_phantom_file.py` which does not exist anymore.",
+        encoding="utf-8",
+    )
+    from tools import pre_commit_checks
+    monkeypatch.setattr(pre_commit_checks, "REPO_ROOT", tmp_path)
+    (tmp_path / "tools").mkdir()
+    result = check_file_path_existence(["synthetic.md"])
+    # Suppression applied — check passes silently despite nonexistent path
+    assert result.passed is True, (
+        "Empirical-anchor context should suppress WARN per B-496 closure"
+    )
+
+
+def test_b496_no_suppression_outside_anchor_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """B-496 Assertion 10 (regression-pin): suppression does NOT apply when no
+    empirical-anchor marker is present.
+
+    Prevents over-broad suppression — only historical-context citations
+    suppress; current-commit claims still WARN on missing paths.
+    """
+    md_file = tmp_path / "synthetic.md"
+    md_file.write_text(
+        "Current-commit claim: `tools/nonexistent_phantom_file.py` does not exist.",
+        encoding="utf-8",
+    )
+    from tools import pre_commit_checks
+    monkeypatch.setattr(pre_commit_checks, "REPO_ROOT", tmp_path)
+    (tmp_path / "tools").mkdir()
+    result = check_file_path_existence(["synthetic.md"])
+    # No suppression — WARN should fire
+    assert result.passed is False
+    assert result.severity == "warn"
+    assert "nonexistent_phantom_file.py" in result.diagnostic
