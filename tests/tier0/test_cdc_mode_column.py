@@ -172,7 +172,9 @@ def test_apply_dry_run_partial_recovery_when_only_column_present():
     assert result["event_kind"] == "apply"
     assert result["would_add_column"] is False
     assert result["would_add_constraint"] is True
-    assert result["idempotency_path"] == "partial"
+    # Standardized to 'partial-recovery' per cohort-review Agent
+    # ad50cb5cceda3f90c 2026-05-19 IMPROVE — dry-run/apply path symmetry.
+    assert result["idempotency_path"] == "partial-recovery"
 
 
 def test_apply_dry_run_returns_required_keys():

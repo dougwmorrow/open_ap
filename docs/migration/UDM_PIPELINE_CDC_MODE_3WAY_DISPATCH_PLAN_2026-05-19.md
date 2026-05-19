@@ -340,6 +340,7 @@ def process_large_table(table_config: TableConfig, ...) -> bool:
 
 ### §8.3. R2 — post-ACCT-validation
 
+- [ ] **B-552**: v2 of B-544 — `cdc_mode='parquet_snapshot'` end-to-end Parquet→replay→SCD2 path (HARD-BLOCKER for R3 cutover; opened at B-544 v1 partial closure commit `60f1283` 2026-05-19; added to checklist per cohort-review Agent ad50cb5cceda3f90c 2026-05-19 Scope 6 finding)
 - [ ] B-540: production `tools/scd2_replay_range_smoke.py` (depends on B-NEW-3 dispatch wiring being production-stable)
 - [ ] B-332: `data_load/parquet_replay.py::replay_parquet_range()`
 - [ ] B-NEW-4: Parity-check tool authored + tested

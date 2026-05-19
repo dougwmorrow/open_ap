@@ -212,7 +212,10 @@ def apply(connection, *, actor: str, justification: str, server: str,
             "event_kind": "apply" if (needs_column or needs_check) else "noop",
             "ddl_applied": False,
             "idempotency_path": "first" if needs_column else (
-                "partial" if needs_check else "no-op"
+                # IMPROVE per cohort-review Agent ad50cb5cceda3f90c 2026-05-19
+                # Scope 1 finding: standardized to 'partial-recovery' to match
+                # apply() path (lines 260, 281) for dry-run/apply string symmetry.
+                "partial-recovery" if needs_check else "no-op"
             ),
             "ddl_statements_executed": 0,
             "server": server,

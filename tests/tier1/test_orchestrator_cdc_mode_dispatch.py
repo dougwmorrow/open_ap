@@ -236,6 +236,46 @@ def test_run_parquet_write_step_calls_write_parquet_snapshot():
     assert result is mock_result
 
 
+def test_run_parquet_write_step_propagates_exception():
+    """CRITICAL CLAUDE.md Do-NOT rule (Parquet-before-CDC failure propagation):
+    if write_parquet_snapshot raises, run_parquet_write_step MUST NOT catch +
+    swallow the exception. Orchestrator control-flow then exits the function
+    BEFORE run_cdc_promotion is reached, preserving the audit-substrate-before-
+    Bronze-change invariant. Pinned by cohort-review Agent ad50cb5cceda3f90c
+    2026-05-19 Scope 2 IMPROVE finding."""
+
+    ps = _import_ps()
+
+    tracker = MagicMock()
+    track_cm = MagicMock()
+    tracker.track.return_value = track_cm
+    track_cm.__enter__ = MagicMock(return_value=track_cm)
+    track_cm.__exit__ = MagicMock(return_value=False)
+    tracker.batch_id = 99
+
+    tc = MagicMock()
+    tc.source_name = "DNA"
+    tc.source_object_name = "ACCT"
+
+    # write_parquet_snapshot raises — helper MUST NOT swallow it
+    ps.write_parquet_snapshot = MagicMock(
+        side_effect=RuntimeError("Simulated Parquet write failure")
+    )
+
+    from datetime import date
+    df = MagicMock()
+    with pytest.raises(RuntimeError, match="Simulated Parquet write failure"):
+        ps.run_parquet_write_step(
+            tc, df, tracker,
+            business_date=date(2026, 5, 19),
+        )
+
+    # Event tracking SHOULD have been entered (event_tracker.track() context
+    # manager wraps the call); the __exit__ propagates the exception by
+    # returning False (not suppressing).
+    tracker.track.assert_called_once_with("PARQUET_WRITE", tc)
+
+
 # ---------------------------------------------------------------------------
 # Class D — Source-text invariants for orchestrator dispatch
 # ---------------------------------------------------------------------------
