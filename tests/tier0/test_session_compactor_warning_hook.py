@@ -173,6 +173,68 @@ def test_estimate_token_usage_byte_ratio() -> None:
         tmp_path.unlink()
 
 
+def test_b558_resolve_transcript_path_uses_payload_field(tmp_path: Path) -> None:
+    """B-558 Assertion 11 (Component D 2026-05-19): _resolve_transcript_path uses
+    payload['transcript_path'] directly per claude-code-guide research.
+
+    Validates Path E refinement — eliminates the glob-search-based collision
+    risk by using the canonical hook-payload field that Claude Code populates
+    with the fully-qualified absolute path.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("compactor_hook", HOOK_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    # Create a fake transcript file
+    fake_transcript = tmp_path / "session-abc123.jsonl"
+    fake_transcript.write_text("synthetic transcript\n", encoding="utf-8")
+
+    # Payload with transcript_path set → should return that path directly
+    payload = {
+        "session_id": "abc123",
+        "transcript_path": str(fake_transcript),
+    }
+    result = module._resolve_transcript_path(payload)
+    assert result is not None
+    assert result == fake_transcript
+
+
+def test_b558_resolve_transcript_path_falls_back_when_payload_field_missing() -> None:
+    """B-558 Assertion 12 (Component D 2026-05-19): _resolve_transcript_path
+    falls back to glob-search when payload['transcript_path'] is missing OR
+    points to a non-existent file. Defensive design for older Claude Code
+    versions OR test contexts that lack the canonical field.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("compactor_hook", HOOK_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    # Payload with missing transcript_path AND unknown session_id → returns None
+    payload = {"session_id": "nonexistent-session-uuid-b558-test"}
+    result = module._resolve_transcript_path(payload)
+    assert result is None
+
+
+def test_b558_resolve_transcript_path_handles_invalid_payload_field(tmp_path: Path) -> None:
+    """B-558 Assertion 13 (Component D 2026-05-19): defensive coding when
+    payload['transcript_path'] is non-string or path points to non-existent file
+    — falls through to glob-search path; no exceptions raised.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("compactor_hook", HOOK_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    # Invalid types should not raise
+    for invalid in (None, 123, [], {"nested": "value"}):
+        payload = {"session_id": "x", "transcript_path": invalid}
+        # Should not raise; should return None (since session not in projects either)
+        result = module._resolve_transcript_path(payload)
+        assert result is None
+
+
 def test_has_warned_this_session_detection() -> None:
     """B-494 Assertion 10: warning suppression marker detected correctly."""
     import importlib.util

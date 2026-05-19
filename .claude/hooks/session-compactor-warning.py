@@ -65,20 +65,42 @@ def _resolve_threshold_pct() -> int:
         return _DEFAULT_THRESHOLD_PCT
 
 
-def _find_transcript_jsonl(session_id: str) -> Path | None:
-    """Locate Claude Code transcript JSONL for the current session.
+def _resolve_transcript_path(payload: dict) -> Path | None:
+    """Resolve transcript JSONL path from PostToolUse hook payload.
 
-    Per claude-code-guide research: transcripts live at
-    `~/.claude/projects/<project-slug>/<session-uuid>.jsonl`.
+    Per B-558 closure 2026-05-19 (Component D): use `payload["transcript_path"]`
+    directly. Per claude-code-guide research `a7778dca8c0fdb8b8`: the harness
+    passes the fully-qualified absolute path of the originating session's
+    transcript in the hook payload. This is the CANONICAL session-identification
+    field — guaranteed unique + correct even when concurrent sessions run on
+    the same machine.
 
-    Returns None if not found (silent skip).
+    Pre-B-558 implementation iterated `~/.claude/projects/*/<session-uuid>.jsonl`
+    via glob — inefficient + carried a (small) concurrent-session collision risk
+    surface that the payload-field approach eliminates entirely.
+
+    Fallback to glob-based search if payload field absent (e.g., older Claude
+    Code versions OR test contexts) — silent skip per defensive pattern.
+
+    Returns None if path can't be resolved (silent skip).
     """
+    # Primary: use payload field (Claude Code canonical per research)
+    transcript_path_str = payload.get("transcript_path", "")
+    if transcript_path_str:
+        try:
+            candidate = Path(transcript_path_str)
+            if candidate.is_file():
+                return candidate
+        except (TypeError, ValueError):
+            pass
+
+    # Fallback: glob-based search (compatibility with older Claude Code OR test contexts)
+    session_id = payload.get("session_id", "")
     if not session_id:
         return None
     claude_projects_dir = Path.home() / ".claude" / "projects"
     if not claude_projects_dir.is_dir():
         return None
-    # Search all project slugs for matching session_id.jsonl
     for project_dir in claude_projects_dir.iterdir():
         if not project_dir.is_dir():
             continue
@@ -227,7 +249,7 @@ def main() -> int:
     session_start = payload.get("session_start", None)
     threshold_pct = _resolve_threshold_pct()
 
-    transcript_path = _find_transcript_jsonl(session_id)
+    transcript_path = _resolve_transcript_path(payload)
     if transcript_path is None:
         return 0  # silent skip; can't measure without transcript
 
