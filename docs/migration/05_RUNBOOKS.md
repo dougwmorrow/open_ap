@@ -1543,3 +1543,40 @@ Pipeline lead authorizes; sysadmin (or pipeline operator with sudo) executes; pi
 2. Write following the structure: When-to-use → Pre-flight → Procedure → Validation → Rollback (if applicable)
 3. Test the runbook in dev before adding it here
 4. Reference from the relevant phase in `02_PHASES.md` or edge case in `04_EDGE_CASES.md`
+
+
+### RB-15 — SCD2 corruption replay (FULL BODY authored at Phase 2 R2.12 deliverable)
+
+**Status**: 🟡 Placeholder 2026-05-18; full body at Phase 2 R2 build (closes B-344)
+**When**: SCD2 invariant violation detected (V-4 duplicate actives / SCD2-P1-c sentinel drift / B-4 orphans / row-count cliff)
+**Pre-flight**: `tools/validate_scd2.py` confirms violation; `tools/diagnose_parquet_bronze_gap.py` characterizes gap; no in-flight pipeline; ledger has no stale IN_PROGRESS; archive path readable
+**Procedure**: backup current Bronze via BCP OUT; acquire sp_getapplock on (source, table); invoke `tools/scd2_replay_range_smoke.py --apply --ccpa-snapshot-as-of <ts> --start-date <s> --end-date <e>`; monitor PipelineEventLog; validate via `validate_scd2.py`
+**Validation**: Bronze row count = source (tolerance); sample-N PK cross-check; V-4 + SCD2-P1-* 🟢
+**Rollback**: BCP IN defensive backup; file P0 incident
+**Source**: B-344 + Phase 2 large-tables plan v5
+
+### RB-16 — AuditLog production cutover (FULL BODY authored at Phase 2 R4.1 deliverable; 2-phase per Q7 BLOCK)
+
+**Status**: 🟡 Placeholder 2026-05-18; full body at Phase 2 R4 (closes B-501)
+**When**: R5 cutover day; R4 dry-run-on-test signed off
+**Pre-flight**: R3 + R4 acceptance gates 🟢; .env migration confirmed; R5.2 historical backfill complete; pipeline-lead + DBA + compliance ack present
+**Procedure** (2-phase per B-501):
+- Phase 1 (pre-cutover Stage cleanup, 03:30-05:30 AM low-traffic gap, OUTSIDE main txn): acquire Stage-only sp_getapplock; loop `UPDATE TOP (4000) UDM_Stage.ccm.AuditLog SET _cdc_is_current = 0 WHERE _cdc_is_current = 1` with commit-between-batches until 0 rows affected; verify count=0; release Stage lock
+- Phase 2 (atomic cutover, target < 60s): acquire (CCM, AuditLog) sp_getapplock 5min timeout; begin txn: INSERT PipelineEventLog (EventType='CDC_MODE_CUTOVER') + UPDATE UdmTablesList SET CDCMode='parquet_snapshot'; commit; release; activate Automic JOB_PARQUET_AUDITLOG_INCR per D120; first post-cutover run within 24h monitored
+**Validation**: first post-cutover incremental completes; PipelineEventLog row present; CDCMode flipped; Bronze count consistent across cutover
+**Rollback** (≤ 1h): UPDATE UdmTablesList SET CDCMode='legacy' WHERE ...; disable Automic INCR; re-activate legacy; file post-mortem
+**Source**: B-501 + Phase 2 large-tables plan v5 + design-reviewer Q7 BLOCK
+
+### RB-17 — Snowflake audit replay (FULL BODY authored at Phase 2 R2.26 deliverable)
+
+**Status**: 🟡 Placeholder 2026-05-18; full body at Phase 2 R2 (closes B-522 + B-530)
+**When**: Regulator / compliance asks "what did Snowflake receive on date X for source.table" OR "what would Snowflake receive NOW"
+**Pre-flight**: Identify RegistryId via ParquetSnapshotRegistry; confirm raw parquet exists at registry.NetworkDrivePath; identify audit purpose (AS_OF vs CURRENT)
+**Procedure**:
+- Fast path: if 30-day sidecar still active (per UdmTablesList.SidecarRetentionDays) → inspect /VendorFiles/_audit_retention/<source>/<table>/year=Y/month=M/day=D/<batch>.masked.parquet directly
+- AS_OF mode: `python3 -m tools.replay_snowflake_upload --registry-id N --mode AS_OF --as-of-date YYYY-MM-DD --output-path /tmp/replay.parquet`
+- CURRENT mode: `python3 -m tools.replay_snowflake_upload --registry-id N --mode CURRENT --output-path /tmp/replay.parquet`
+- Verify: `sha256sum /tmp/replay.parquet` should match SnowflakeReplicationLog.MaskedContentChecksum (AS_OF + upload-date replay)
+**Validation**: AS_OF + replay date == upload date → SHA matches; AS_OF + replay date > deletion date → token returns original; CURRENT + token deleted → NULL/sentinel
+**Rollback**: read-only; no rollback
+**Source**: B-522 + B-530 + D122 + LT-AT-15 + RB-10 extension via B-526

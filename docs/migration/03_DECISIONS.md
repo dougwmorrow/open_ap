@@ -3437,3 +3437,53 @@ Plus 2 new ParquetSnapshotRegistry columns (D92 forward-only ALTER): `Extraction
 3. Capture: driver (what prompted it), decision (what was chosen), rationale (why), trade-offs (what we accept), and any links to research or prior decisions
 4. After sign-off, update status to 🟢 Locked
 5. If superseding an earlier decision, update that decision's status to ⚫ and link forward
+
+
+### D117 — CCPA + Parquet replay = Option A4 time-aware filter with REQUIRED `ccpa_snapshot_as_of`
+
+**Status**: 🟡 Proposed 2026-05-18
+**NORTH_STAR pillars**: 1 + 4 + 5
+**Body**: `replay_parquet_range()` accepts `ccpa_snapshot_as_of: datetime` as REQUIRED (no None→now() default). Per-row filter: token + not in CcpaDeletionLog before snapshot → INSERT; token + deleted before snapshot → synthesize SCD2 Flag=2 close at deletion date; token absent → INSERT as-is. For zero-PII tables (AuditLog per B-N-LT-AT-8): fast-path returns DataFrame unchanged. Locks B-341.
+**Source**: Option B reviewer Q4 BLOCK 2026-05-18
+
+### D118 — AuditLog (CCM, 96M) as Phase 2 large-tables pilot in lieu of ACCT
+
+**Status**: 🟡 Proposed 2026-05-18
+**Body**: Supersedes D104 (DNA.ACCT pilot) for THIS Phase 2 large-tables effort only; D104 stays canonical for paused Phase 2 ACCT plan. Reshapes Phase 3 pilot scope per 02_PHASES.md:185 — AuditLog takes "first large-table pilot" slot. Risk trade-off per plan §2.3.
+**Source**: user direction 2026-05-18 + plan v5 §1 #10 + §2.3
+
+### D119 — `SCD2_PROMOTION_D2` IdempotencyLedger EventType column value (additive per D92)
+
+**Status**: 🟡 Proposed 2026-05-18 (v4 venue clarification per gap-check G3-4)
+**Body**: NEW IdempotencyLedger `EventType` column value (NOT a `PipelineEventLog` EventType family). Creates clean post-D2 partition; old `'SCD2_PROMOTION'` rows preserved for forensics. `startup_recovery_sweep` per D85 + `utils/idempotency_ledger.py` updated: old `'SCD2_PROMOTION'` IN_PROGRESS rows NOT reset by post-D2 sweep.
+**Source**: Plan v2 + v3 gap-check G3-4 venue clarification 2026-05-18
+
+### D120 — Autonomous Automic schedule for AuditLog: frozen-11 → frozen-13 (two NEW jobs)
+
+**Status**: 🟡 Proposed 2026-05-18
+**Body**: NEW `JOB_PARQUET_AUDITLOG_INCR` (AM 02:00 + PM 17:00 per D109); NEW `JOB_SNOWFLAKE_REPLICATE_AUDITLOG` (AM 03:00 + PM 18:00; 1-hour offset; does NOT hold sp_getapplock during Snowflake I/O). Extends frozen-11 → frozen-13. SchemaContract MIGRATION_AUTOMIC_INVENTORY rows track both transitions.
+**Source**: Plan v2 + v3 Option B reviewer Q4 IMPROVE 2026-05-18
+
+### D121 — Single raw on /VendorFiles; ephemeral masked to Snowflake; SnowflakeReplicationLog as audit witness
+
+**Status**: 🟡 Proposed 2026-05-18 (v4 prominent exception display per v3 gap-check G6-3)
+**Body**: /VendorFiles holds RAW parquet permanently. Snowflake-bound masked parquet NEVER persists to /VendorFiles in steady-state operation. **🟡 DELIBERATE 30-DAY EXCEPTION (top-level deviation, NOT sub-clause)**: during first 30 days (configurable per UdmTablesList.SidecarRetentionDays) after Phase 2 cutover, masked parquet ALSO writes to /VendorFiles/_audit_retention/ for operator/compliance/DBA inspection. Steady-state resumes after retention sweep. Audit witness = SnowflakeReplicationLog; re-mask reproducibility via D6 + D26.
+**Source**: user direction 2026-05-18 + Option B brainstorm + v3 gap-check G6-3 display elevation
+
+### D122 — `ReplayMode.AS_OF` vs `ReplayMode.CURRENT` split for Snowflake audit replay
+
+**Status**: 🟡 Proposed 2026-05-18
+**Body**: AS_OF mode reproduces "what Snowflake saw on date X" — predicate `PiiVault.StatusChangedAt > as_of_date` includes tokens not-yet-deleted-as-of-date; tokens deleted AFTER as_of_date reproduced as ORIGINAL token. CURRENT mode applies CURRENT vault state — `PiiVault.Status='deleted_per_request'` returns NULL/sentinel. Two distinct code paths; operator must select explicitly via `tools/replay_snowflake_upload.py --mode` flag (REQUIRED; no default). Witness uses `PiiVault.StatusChangedAt` (vault row's status-flip moment), NOT `CcpaDeletionLog.ProcessedAt`.
+**Source**: Option B reviewer Q5 BLOCK 2026-05-18
+
+### D123 — INSERT-first crash-safety pattern for SnowflakeReplicationLog
+
+**Status**: 🟡 Proposed 2026-05-18
+**Body**: Snowflake replication orchestrator MUST INSERT `SnowflakeReplicationLog (Status='in_progress', VaultTokenSnapshotMarker=...)` BEFORE issuing COPY INTO. After successful COPY: UPDATE `Status='replicated'`. Mirrors SCD2 E-2 + D15 + D17. `startup_recovery_sweep` per D85 extended to find `Status='in_progress'` rows older than 10 min; queries Snowflake COPY_HISTORY by stage path; reconciles or opens new attempt. Graceful-degrade if Snowflake API unreachable (defer to next cycle; do NOT block startup).
+**Source**: Option B reviewer Q9 BLOCK + v3 gap-check G2-3 graceful-degrade extension 2026-05-18
+
+### D124 — Deterministic Snowflake stage-path using canonical `SNOWFLAKE_STAGE_NAME`
+
+**Status**: 🟡 Proposed 2026-05-18 (v4 canonical env var lock per v3 gap-check G2-4)
+**Body**: Stage path format: `{SNOWFLAKE_STAGE_NAME}/{source}/{table}/{registry_id}/attempt_{N}/masked.parquet`. `SNOWFLAKE_STAGE_NAME` is the canonical existing env var per `data_load/snowflake_uploader.py:693` (default `@UDM_BRONZE_STAGE`); NO new env var introduced. Per-retry stage-path uniqueness via `attempt_{N}` segment. Snowflake COPY_HISTORY partitions cleanly. Idempotency: same `(RegistryId, attempt=N)` → same path.
+**Source**: Option B reviewer Q2 BLOCK + v3 gap-check G2-4 canonical env var lock 2026-05-18

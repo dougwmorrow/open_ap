@@ -477,3 +477,10 @@ Both are required for any substantive commit that introduces an artifact AND mod
 - Large table OOM -> extraction window too wide for available memory. Reduce LookbackDays or verify the per-day processing path is being used (orchestration/large_tables.py processes one day at a time)
 - Schema evolution error skipping table -> a source column changed type. Requires manual resolution: verify the type change is intentional, ALTER the target column or re-create the table, then re-run with `--force`
 - Table lock not acquired -> another pipeline run is processing the same table. Wait for it to complete, or check for stale sessions if the other run crashed (Session-owned sp_getapplock locks auto-release on disconnect)
+
+
+### Phase 2 large-tables plan v5 EventType family additions (added 2026-05-18 per D119 + D121)
+
+- **SCD2_PROMOTION_D2** (per D119) — NEW IdempotencyLedger EventType column value (NOT a PipelineEventLog family). Replay engine filters this value only; old `SCD2_PROMOTION` rows preserved for forensics. `startup_recovery_sweep` per D85 does NOT reset old SCD2_PROMOTION IN_PROGRESS rows.
+- **SNOWFLAKE_REPLICATION_*** (per D121 + D123) — Snowflake replication lifecycle. Values: SNOWFLAKE_REPLICATION_INSERT_IN_PROGRESS / SNOWFLAKE_REPLICATION_REPLICATED / SNOWFLAKE_REPLICATION_FAILED / SNOWFLAKE_REPLICATION_PURGED_PER_CCPA. Metadata: registry_id / replication_attempt / stage_path / copy_history_id / rows_copied / vault_token_snapshot_marker / actor.
+- **CLI_** count update — 24 baseline + 4 NEW (CLI_QUERY_PARQUET + CLI_DIAGNOSE_PARQUET_BRONZE_GAP + CLI_SCD2_REPLAY_RANGE_SMOKE + CLI_REPLAY_SNOWFLAKE_UPLOAD per B-530) = **28 tools FINAL after entire v5 cohort lands**.
