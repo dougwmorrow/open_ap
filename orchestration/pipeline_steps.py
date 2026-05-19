@@ -649,3 +649,189 @@ def run_parquet_replay_step(
     )
     return cdc_result
 
+
+
+# ---------------------------------------------------------------------------
+# B-563 — Large-table delete-detection via day-N vs day-N-1 Parquet diff
+#
+# Per B-563 closure 2026-05-19 (HARD-PREREQUISITE for FIRST large-table
+# cutover to 'parquet_snapshot' mode; CCM.AuditLog at 96M, DNA.CARDTXN at
+# 214M, etc.). B-552 v1 routed ALL parquet_snapshot mode through
+# run_scd2_promotion(targeted=False) which uses run_scd2() full-path
+# Bronze anti-join for delete detection — memory-heavy for 3B+ row tables
+# (all active Bronze rows held in memory simultaneously).
+#
+# The proper large-table delete-detection mechanism is the day-N vs
+# day-N-1 Parquet diff: query ParquetSnapshotRegistry for prior-day
+# snapshot, replay it, compute PK set-difference vs current-day's
+# replayed PKs, emit deleted_pks DataFrame. This populates
+# CDCResult.deleted_pks so run_scd2_promotion(targeted=True) can use
+# the PK-targeted Bronze read (memory-bounded per P1-3) + close only
+# the rows whose PKs are absent from current source state.
+#
+# First-load case: when no prior-day replay-eligible snapshot exists
+# (e.g., first run for this table; OR prior-day Parquet still in
+# Status='created' awaiting verification), the helper returns the
+# cdc_result UNCHANGED (deleted_pks=None) + the caller falls back to
+# run_scd2_promotion(targeted=False) for full Bronze anti-join.
+# This preserves B-552 v1 semantics for first-load + matches the
+# canonical "absence is None" contract.
+#
+# Memory strategy (per BACKLOG B-563 estimate "two simultaneous replay
+# invocations (memory consideration — could be sequential with disk-
+# cache)"): SEQUENTIAL replay. The prior-day Parquet is replayed,
+# its PK columns extracted into a small DataFrame, the full
+# ReplayResult released + gc.collect() called BEFORE the anti-join.
+# Peak memory = max(current_replay.df, prior_pks) NOT
+# current_replay.df + prior_replay.df simultaneously.
+# ---------------------------------------------------------------------------
+
+
+def run_parquet_delete_detection_step(
+    table_config: "TableConfig",
+    cdc_result: "CDCResult",
+    event_tracker: "PipelineEventTracker",
+    *,
+    business_date: date,
+) -> "CDCResult":
+    """Augment ``cdc_result`` with ``deleted_pks`` via day-N vs day-N-1
+    Parquet diff.
+
+    Composes:
+
+    * :func:`data_load.parquet_registry_client.query_latest_snapshot_for_date`
+      — looks up the prior-day snapshot's registry row by
+      ``(source_name, table_name, business_date - 1 day)``.
+    * :func:`data_load.parquet_replay.replay_parquet_snapshot` — replays
+      the prior-day Parquet (SHA-verified + ledger-gated per D15).
+    * Polars anti-join on PK columns — computes the
+      ``prior_pks - current_pks`` set-difference.
+
+    First-load case (no prior-day snapshot exists OR no replay-eligible
+    snapshot exists for prior date): returns ``cdc_result`` UNCHANGED
+    (``deleted_pks=None``). Caller (large_tables.py parquet_snapshot
+    branch) detects this + falls back to
+    ``run_scd2_promotion(targeted=False)`` for full Bronze anti-join
+    delete detection — preserves B-552 v1 semantics.
+
+    Empty-pk_columns case: if the table has no PK columns (defensive
+    against UdmTablesColumnsList misconfig), returns ``cdc_result``
+    unchanged (cannot compute set-diff without a key).
+
+    Empty-current-state case: if ``cdc_result.df_current`` is empty
+    (current-day extraction returned 0 rows -- which would normally be
+    blocked by the empty-extraction guard P1-1, but defensive against
+    that guard being explicitly disabled with ``--force``), all
+    prior-day PKs become deletes.
+
+    :param table_config: Table being processed.
+    :param cdc_result: Output of :func:`run_parquet_replay_step` — provides
+        ``df_current`` (current-day replayed DataFrame) + ``pk_columns``.
+        Returned with ``deleted_pks`` populated (or unchanged on
+        first-load / empty-pk fallback).
+    :param event_tracker: For PipelineEventLog REPLAY row emission on the
+        prior-day replay invocation.
+    :param business_date: Current-day business date. Prior-day computed
+        as ``business_date - timedelta(days=1)``.
+    :returns: ``CDCResult`` with ``deleted_pks`` populated when prior-day
+        diff was computable; otherwise ``cdc_result`` unchanged.
+
+    Side effects:
+        * Queries ``General.ops.ParquetSnapshotRegistry`` once for
+          prior-day lookup.
+        * If prior-day snapshot found: invokes
+          ``replay_parquet_snapshot()`` once + emits one ``REPLAY``
+          PipelineEventLog row + INSERTs one ``General.ops.IdempotencyLedger``
+          row.
+        * Releases prior-day ``ReplayResult.df`` immediately after PK
+          extraction + calls ``gc.collect()`` to bound peak memory.
+
+    Memory: peak = ``max(cdc_result.df_current, prior_pks)`` (NOT
+    ``cdc_result.df_current + prior_replay.df`` simultaneously). For a
+    3B-row table with 5 PK columns, ``prior_pks`` is approximately
+    5 columns × 3B rows × ~50 bytes ≈ 750 GB raw, but Polars columnar
+    storage with dictionary encoding typically compresses 10-50x.
+    Operators should monitor memory pressure for tables exceeding
+    ~1B rows; consider deferring delete-detection per environment
+    config in future B-N work.
+    """
+    from datetime import timedelta  # noqa: PLC0415
+    import gc  # noqa: PLC0415
+    from data_load.parquet_registry_client import query_latest_snapshot_for_date  # noqa: PLC0415
+    from data_load.parquet_replay import replay_parquet_snapshot  # noqa: PLC0415
+
+    if not cdc_result.pk_columns:
+        logger.info(
+            "run_parquet_delete_detection_step: %s.%s has no pk_columns; "
+            "skipping diff (deleted_pks=None preserved). Caller should "
+            "fall back to run_scd2_promotion(targeted=False).",
+            table_config.source_name,
+            table_config.source_object_name,
+        )
+        return cdc_result
+
+    prior_business_date = business_date - timedelta(days=1)
+
+    prior_row = query_latest_snapshot_for_date(
+        source_name=table_config.source_name,
+        table_name=table_config.source_object_name,
+        business_date=prior_business_date,
+    )
+
+    if prior_row is None:
+        logger.info(
+            "run_parquet_delete_detection_step: %s.%s no replay-eligible "
+            "snapshot for prior-day %s (first-load OR not-verified); "
+            "deleted_pks=None preserved -- caller should fall back to "
+            "run_scd2_promotion(targeted=False) per B-552 v1 semantics.",
+            table_config.source_name,
+            table_config.source_object_name,
+            prior_business_date,
+        )
+        return cdc_result
+
+    prior_original_batch_id = int(prior_row["BatchId"])
+
+    with event_tracker.track("REPLAY", table_config) as prior_replay_event:
+        prior_replay_event.event_detail = (
+            f"prior-day {prior_business_date} registry_id="
+            f"{prior_row['RegistryId']} (B-563 delete-detection)"
+        )
+
+        prior_replay = replay_parquet_snapshot(
+            source_name=table_config.source_name,
+            table_name=table_config.source_object_name,
+            business_date=prior_business_date,
+            original_batch_id=prior_original_batch_id,
+            replay_batch_id=event_tracker.batch_id,
+        )
+        prior_replay_event.rows_processed = prior_replay.row_count
+
+    # Memory bounding: extract PK columns FIRST, release full DataFrame
+    # immediately, then gc.collect. Peak memory is bounded to
+    # max(cdc_result.df_current, prior_pks).
+    prior_pks = prior_replay.df.select(cdc_result.pk_columns)
+    del prior_replay
+    gc.collect()
+
+    # Anti-join: PKs in prior but not in current = deletes.
+    current_pks = cdc_result.df_current.select(cdc_result.pk_columns)
+    deleted_pks = prior_pks.join(
+        current_pks,
+        on=cdc_result.pk_columns,
+        how="anti",
+    )
+
+    logger.info(
+        "run_parquet_delete_detection_step: %s.%s prior=%d current=%d "
+        "deletes=%d",
+        table_config.source_name,
+        table_config.source_object_name,
+        len(prior_pks),
+        len(current_pks),
+        len(deleted_pks),
+    )
+
+    # Augment cdc_result with deleted_pks. Other fields preserved.
+    cdc_result.deleted_pks = deleted_pks
+    return cdc_result

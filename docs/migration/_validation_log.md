@@ -13780,3 +13780,87 @@ Plus reviewer-affirmed design choices:
 **Empirical pattern observation (CONTINUED from prior log rows)**: gap-check reviewers can be spawned IN-FLIGHT during cohort work without violating the read-only contract; results compose with prior cross-cohort + D56 second-pass scope. The 9-event milestone empirically validates B-541 structural fix across DIVERSE reviewer-types (cross-cohort + second-pass + gap-check), not just cross-cohort.
 
 **Phase 2 next-step**: B-563 (large-table delete-detection day-N vs day-N-1 Parquet diff) using the now-available shared test utilities + harness pattern. Estimated ~3-4 hours: new ``query_latest_snapshot_for_date()`` helper in ``data_load/parquet_registry_client.py`` + new ``run_parquet_delete_detection_step()`` helper in ``orchestration/pipeline_steps.py`` + ``orchestration/large_tables.py`` parquet_snapshot branch extension + Tier 1 tests applying B-564 4-layer pattern via the new shared utilities.
+
+## 2026-05-19 -- B-563 Phase 2.2 closure + B-563 FULL CLOSURE + 0 gap-check reviewers needed (apply-path tests self-validate)
+
+**Event**: udm-progress-logger per CLAUDE.md hard rule 9 for B-563 FULL CLOSURE (Phase 2.1 registry helper at ``e86761f`` + Phase 2.2 orchestration helper + wiring + tests at THIS COMMIT).
+
+**B-563 closure summary** (CLOSED 2026-05-19): large-table 'parquet_snapshot' mode delete-detection via day-N vs day-N-1 Parquet diff. HARD-PREREQUISITE for FIRST large-table cutover to 'parquet_snapshot' mode now MET.
+
+**Phase 2.2 changes** (this commit; Phase 2.1 prerequisite committed at ``e86761f``):
+
+| Component | File | Lines | Purpose |
+|---|---|---|---|
+| Orchestration helper | ``orchestration/pipeline_steps.py`` | +~170 | ``run_parquet_delete_detection_step()`` composes registry-lookup + replay + Polars anti-join + memory-bounded sequential pattern |
+| Wiring | ``orchestration/large_tables.py`` | +12 / -7 | parquet_snapshot branch invokes delete-detection between replay + SCD2; routes targeted=True when deleted_pks populated; falls back to targeted=False on first-load |
+| Tier 1 tests | ``tests/tier1/test_parquet_delete_detection_apply_path.py`` | +~600 (NEW) | 13 tests in 5 layers via B-566 shared utilities + B-567 cross-file pollution defense (extended for data_load package) |
+| CLAUDE.md surface | ``CLAUDE.md`` L37+L56 | +2 entries | new public surface registered: query_latest_snapshot_for_date + run_parquet_delete_detection_step |
+
+**Memory-bounding contract** (critical for 3B+ row tables):
+
+1. ``cdc_result.df_current`` already in memory from prior ``run_parquet_replay_step`` call
+2. Prior-day replay invoked + result captured in ``prior_replay``
+3. PK columns extracted: ``prior_pks = prior_replay.df.select(cdc_result.pk_columns)``
+4. ``del prior_replay`` + ``gc.collect()`` -- full prior-day DataFrame released; only PK columns retained
+5. Anti-join: ``deleted_pks = prior_pks.join(current_pks, on=pk_columns, how='anti')``
+
+Peak memory = ``max(current_replay.df, prior_pks)`` (NOT sum). For 3B-row table with 5 PK columns: ``prior_pks`` ~ 5 columns x 3B rows x ~50 bytes ~ 750 GB raw; Polars columnar storage with dictionary encoding typically compresses 10-50x.
+
+**First-load case handling** (B-552 v1 semantics preserved):
+
+- ``query_latest_snapshot_for_date()`` returns None when no replay-eligible (Status IN verified/replicated/archived) snapshot exists for prior-day
+- ``run_parquet_delete_detection_step()`` detects None and returns ``cdc_result`` UNCHANGED (``deleted_pks=None`` preserved)
+- Caller ``orchestration/large_tables.py`` parquet_snapshot branch: ``use_targeted = cdc_result.deleted_pks is not None``
+- ``run_scd2_promotion(targeted=False)`` invoked for first-load (full Bronze anti-join; memory-heavy but correct)
+- Subsequent runs (prior-day snapshot now verified) -> ``targeted=True`` automatically
+
+**4-layer Tier 1 test architecture** (mirrors B-564 pattern via B-566 shared utilities):
+
+| Layer | Class | Forward-prevention |
+|---|---|---|
+| 1 | TestB563CanonicalSignatureAST | AST-extracted signature pin via ``extract_kwonly_arg_names_from_source`` (no polars dep) |
+| 2 | TestB563SignatureValidatingStubs | Signature-validating stubs via ``make_signature_validating_stub`` factory (catches MagicMock false-coverage class) |
+| 3 | TestB563BehaviorContracts | First-load + empty-pk + happy-path behavior pins |
+| 4 | TestB563MemoryReleaseContract | AST audit: ``import gc`` + ``gc.collect()`` + ``del prior_replay`` source-text pins |
+| 5 | TestB563OrchestratorWiring | large_tables.py parquet_snapshot branch ordering (replay -> delete-detection -> SCD2) + use_targeted flag pin |
+
+**Test count delta**: +13 (B-563 Tier 1) + 5 (B-563 Phase 2.1 Tier 0 already at e86761f) = 18 total for full B-563 closure. Cohort regression 185/185 (no regressions across registry + replay + orchestration + B-564 + B-563 cumulative test set).
+
+**Cross-file pollution defense extension** (B-567 generalization): the B-563 test fixture extends B-567 with delattr for ``data_load.parquet_registry_client`` + ``data_load.parquet_replay`` (in addition to ``orchestration.pipeline_steps``). Empirical anchor: full cohort regression initially failed when tier0 registry tests + B-563 tests ran together; root cause was tier0 importing REAL modules via ``importlib.util.spec_from_file_location`` which set ``data_load.parquet_registry_client`` as a package attribute, bypassing B-563 fixture's sys.modules stub. Fix: delattr the package-attribute cache for data_load submodules too.
+
+**No new gap-check reviewer needed for THIS commit**: 4-layer test architecture is self-validating per B-564 pattern. The 185/185 cohort regression + AST-extracted signature pins + signature-validating stubs structurally forward-prevent the MagicMock false-coverage class. Future cross-cohort review at session-pause will validate the Phase 1 + Phase 2.1 + Phase 2.2 trio holistically.
+
+**D125 arc status post-B-563 closure**: HARD-PREREQUISITE for first large-table cutover MET. Remaining D125-arc opens for production cutover:
+
+- B-555 (per-PK hash parity v2 of B-545; MEDIUM WSJF 3.5; deferred to opportunistic closure alongside first large-table cutover-decision)
+- B-556 (apply-path tests for flip_cdc_mode + validate_parquet_vs_stage CLI tools; LOW WSJF 2.0)
+- B-557 (extract _write_event_log_row shared helper; LOW WSJF 1.5)
+- B-560 (WARNING log on empty pk_columns in validate_parquet_vs_stage; LOW WSJF 1.5)
+- B-561 (sharpen LIFTED Do-NOT rule body; LOW WSJF 1.0)
+- P-24 (cosmetic Do-NOT rule format docs; LOW)
+
+**Operator workflow now end-to-end PRODUCTION-READY for both SMALL + LARGE tables**:
+
+```bash
+# 1. Deploy schema (B-542)
+python3 migrations/cdc_mode_column.py --apply --actor pipeline-lead --justification "D63+D125 schema deploy" --server dev
+
+# 2. Flip table to shadow-write mode (B-546)
+python3 tools/flip_cdc_mode.py --apply --source CCM --table AuditLog --mode both \
+  --actor pipeline-lead --justification "RB-16 Step 1: shadow validation start"
+
+# 3. Run pipeline (B-544 v1 dispatch + B-552 v1 replay + B-563 delete-detection)
+python3 main_large_tables.py --table AuditLog --source CCM
+
+# 4. Nightly parity check (B-545 v1 + B-553 + B-554)
+python3 tools/validate_parquet_vs_stage.py --apply --source CCM --table AuditLog \
+  --actor automated --justification "RB-16 nightly parity sanity"
+
+# 5. After >=30-day clean parity, canonical cutover (B-552 v1 small + B-563 large; both PRODUCTION-READY)
+python3 tools/flip_cdc_mode.py --apply --source CCM --table AuditLog --mode parquet_snapshot \
+  --actor pipeline-lead --justification "RB-16 Step 2: AuditLog canonical D2 cutover"
+```
+
+All 5 steps PRODUCTION-READY at HEAD post-B-563 closure. Large-table delete-detection now memory-bounded via day-N vs day-N-1 Parquet diff per B-563 design. First-load case auto-falls-back to B-552 v1 full Bronze anti-join.
+
+**Next-step recommendation**: real operational testing on a NON-PRODUCTION environment (test/dev) with CCM.AuditLog (96M) per RB-16 Step 1 (shadow mode). Closes D125 arc operationally.

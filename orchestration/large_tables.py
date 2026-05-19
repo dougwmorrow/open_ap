@@ -35,7 +35,7 @@ from schema.column_sync import sync_columns
 from observability.event_tracker import PipelineEventTracker
 from orchestration.guards import run_daily_extraction_guard
 from orchestration.pipeline_state import get_dates_to_process, save_checkpoint
-from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion, dispatch_check_cdc_mode, run_parquet_write_step, run_parquet_replay_step, CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH
+from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion, dispatch_check_cdc_mode, run_parquet_write_step, run_parquet_replay_step, run_parquet_delete_detection_step, CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH
 from schema.evolution import SchemaEvolutionError, SchemaEvolutionResult, evolve_schema, validate_source_schema
 from schema.table_creator import ensure_bronze_table, ensure_bronze_point_in_time_index, ensure_bronze_unique_active_index, ensure_stage_table
 from orchestration.table_lock import acquire_table_lock, keep_lock_alive, release_table_lock
@@ -509,14 +509,22 @@ def _process_single_day(
                 table_config, parquet_write_result, event_tracker,
                 business_date=target_date,
             )
-            # B-552 v1: route through run_scd2_promotion(targeted=False)
-            # which uses run_scd2() (full path with Bronze anti-join delete
-            # detection). For large tables (3B+ rows), this is memory-heavy;
-            # large-table 'parquet_snapshot' mode requires the day-N vs day-N-1
-            # Parquet diff mechanism (follow-up B-N).
+            # B-563 closure 2026-05-19: augment cdc_result with deleted_pks
+            # via day-N vs day-N-1 Parquet diff. If prior-day replay-eligible
+            # snapshot exists, deleted_pks populated -- route through
+            # run_scd2_promotion(targeted=True) for memory-bounded PK-targeted
+            # Bronze read (per P1-3). If no prior-day snapshot (first-load OR
+            # Status='created'), deleted_pks remains None -- fall back to
+            # run_scd2_promotion(targeted=False) for full Bronze anti-join
+            # (B-552 v1 semantics; memory-heavy but correct).
+            cdc_result = run_parquet_delete_detection_step(
+                table_config, cdc_result, event_tracker,
+                business_date=target_date,
+            )
+            use_targeted = cdc_result.deleted_pks is not None
             run_scd2_promotion(
                 table_config, cdc_result, event_tracker, output_dir,
-                targeted=False,  # B-552 v1: full path; delete detection via Bronze anti-join
+                targeted=use_targeted,
                 target_date=target_date,
                 index_rebuild_threshold=INDEX_REBUILD_THRESHOLD,
             )
