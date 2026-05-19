@@ -1396,6 +1396,122 @@ def check_file_path_existence(staged_files: list[str]) -> CheckResult:
     )
 
 
+# =========================================================================
+# B-558 Phase 2.1 Component A 2026-05-19: snapshot-claim validation
+# =========================================================================
+# Per `docs/migration/UDM_SESSION_COMPACTOR_PHASE_2_1_PLAN_2026-05-19.md` §3.1.
+# Validates `docs/migration/_session_snapshots/*.md` files against actual repo
+# state at commit time. Closes the snapshot-hallucination class (snapshots
+# author claims like "commit_hash: abc1234" + "B-Ns CLOSED (29): ..." that
+# may drift from actual git/BACKLOG state during multi-cohort session arcs).
+#
+# Scope (v1):
+#   1. Frontmatter `commit_hash:` field — verify the cited hash exists in
+#      `git log --format=%H`. Detects typos / hallucinations / not-yet-
+#      committed references.
+#   2. NOTE: pytest-claim verification + B-N closure-count verification are
+#      out of scope for v1; tracked as B-558 Component C deferred work +
+#      future enhancement respectively.
+#
+# Severity: WARN (consistent with B-481 + B-495 precedent).
+# =========================================================================
+_SNAPSHOT_COMMIT_HASH_RE = re.compile(
+    r"^commit_hash:\s*([a-f0-9]{7,40})\s*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+_SNAPSHOT_DIR_PREFIX = "docs/migration/_session_snapshots/"
+
+
+def _git_log_contains_hash(candidate: str) -> bool:
+    """Return True if candidate hash is present in `git log --format=%H` output.
+
+    Defensive: returns False on subprocess failure (treated as unresolvable).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "log", "--format=%H"],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    if result.returncode != 0:
+        return False
+    candidate_lower = candidate.lower()
+    for line in result.stdout.splitlines():
+        if line.startswith(candidate_lower):
+            return True
+    return False
+
+
+def check_snapshot_claims(staged_files: list[str]) -> CheckResult:
+    """B-558 Phase 2.1 Component A closure 2026-05-19: snapshot frontmatter
+    commit-hash verification against actual `git log` output.
+
+    Scans staged `docs/migration/_session_snapshots/*.md` files for YAML
+    frontmatter `commit_hash:` claims and verifies each cited hash exists
+    in the git history. Closes the snapshot-frontmatter-hallucination class.
+
+    WARN severity (per FP-policy precedent of B-481 + B-495). Findings cap 10.
+
+    Returns:
+        INFO if no snapshot files staged.
+        PASS if all commit_hash claims resolve to real commits.
+        WARN with diagnostic enumerating unresolvable hashes.
+    """
+    snapshot_files = [
+        f.replace("\\", "/") for f in staged_files
+        if f.replace("\\", "/").startswith(_SNAPSHOT_DIR_PREFIX)
+        and f.replace("\\", "/").endswith(".md")
+    ]
+    if not snapshot_files:
+        return CheckResult(
+            "snapshot_claims", True, "info",
+            "no staged snapshot files; snapshot-claim verification skipped"
+        )
+
+    unresolved: list[tuple[str, str]] = []  # (snapshot_file, claimed_hash)
+    total_claims = 0
+
+    for snapshot_file in snapshot_files:
+        snapshot_path = REPO_ROOT / snapshot_file
+        try:
+            content = snapshot_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for m in _SNAPSHOT_COMMIT_HASH_RE.finditer(content):
+            total_claims += 1
+            claimed_hash = m.group(1)
+            if not _git_log_contains_hash(claimed_hash):
+                unresolved.append((snapshot_file, claimed_hash))
+
+    if unresolved:
+        return CheckResult(
+            "snapshot_claims", False, "warn",
+            f"{len(unresolved)} unresolvable commit_hash claim(s) in staged "
+            f"snapshot(s) (per B-558 Phase 2.1 Component A closure 2026-05-19; "
+            f"snapshot-frontmatter-hallucination forward-prevention; WARN-only "
+            f"per FP-policy):\n"
+            + "\n".join(
+                f"  - {snapshot}: commit_hash `{hash_}` not in git log"
+                for snapshot, hash_ in unresolved[:10]
+            )
+            + "\n\nVerify the commit hash exists (e.g., `git log --oneline | "
+              "grep <hash>`) OR fix the typo. This is a WARN (not BLOCK); "
+              "commit will still proceed."
+        )
+
+    return CheckResult(
+        "snapshot_claims", True, "info",
+        f"all {total_claims} commit_hash claim(s) in {len(snapshot_files)} "
+        f"staged snapshot file(s) resolve to git log"
+    )
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
@@ -1407,6 +1523,7 @@ CHECKS = [
     check_cli_registry_sync,
     check_wc_line_count_claims,  # B-481 closure 2026-05-18
     check_file_path_existence,   # B-495 closure 2026-05-18
+    check_snapshot_claims,       # B-558 Phase 2.1 Component A closure 2026-05-19
 ]
 
 

@@ -26,7 +26,7 @@ sys.path.insert(0, str(REPO_ROOT))
 # CHECKS grows: update THIS constant only. (Closes Pitfall #9.k arithmetic-
 # propagation risk on count update — same drift class B-481/B-495 closure
 # cohorts already exhibited at len(CHECKS) sites.)
-EXPECTED_CHECKS_COUNT = 10
+EXPECTED_CHECKS_COUNT = 11  # bumped 10 -> 11 per B-558 Phase 2.1 Component A closure 2026-05-19 (added check_snapshot_claims)
 
 
 def test_module_imports():

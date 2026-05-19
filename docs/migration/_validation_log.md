@@ -12,6 +12,38 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-558 Phase 2.1 Component A closure: `check_snapshot_claims` 11th Phase 1 quality check (snapshot-frontmatter-hallucination forward-prevention)
+
+**Trigger**: pipeline-lead "1. Push the updates to Github. 2. Proceed with your recommended next steps" 2026-05-19 — push fired first (`074e20a..553b345` to origin); then proceeded to MEDIUM-priority B-558 Phase 2.1 Component A per prior turn's recommended runway.
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Scope**: NEW `check_snapshot_claims(staged_files) -> CheckResult` at `tools/pre_commit_checks.py` (11th CHECKS registry entry). Per Phase 2.1 plan §3.1. Scans staged `_session_snapshots/*.md` for YAML `commit_hash:` claims + verifies each hash exists in `git log --format=%H` via NEW `_git_log_contains_hash()` subprocess helper (10s timeout + defensive False on failure). WARN severity per FP-policy precedent of B-481 + B-495. v1 scope = commit_hash only; Component C = pytest-claim verification; B-N closure-count cross-check = future enhancement.
+
+**TEST**: 8/8 PASS at `tests/tier0/test_pre_commit_checks_b558_snapshot_claims.py` (0.28s runtime).
+
+**Step 10 applied**: CLAUDE.md L99 CHECKS count 10 → 11; surface inventory +4 (`check_snapshot_claims`, `_git_log_contains_hash`, `_SNAPSHOT_COMMIT_HASH_RE`, `_SNAPSHOT_DIR_PREFIX`); Tier 0 count 54 → 62. GLOSSARY +2 rows (CHECKS body extended + check_snapshot_claims row + helper/regex row).
+
+**GAP ANALYSIS (G1-G6)**:
+- G1: N/A — B-558 still 🟡 Open partial; badge will flip at full closure.
+- G2: ✅ CHECKS 10→11 + Tier 0 54→62 propagated to CLAUDE.md L99 + GLOSSARY + this entry; test assertion 1 pins `CHECKS[-1] is check_snapshot_claims`.
+- G3: ✅ plan §3.1 verbatim re-read before implementation; mirrored B-481+B-495 structural template.
+- G4: ✅ Check IS forward-prevention for snapshot claims-vs-actual class; composes with B-562 multi-chat architecture.
+- G5: ✅ Step 10 applied across CLAUDE.md L99 + GLOSSARY.
+- G6: None surfaced; Component B+C+closure tracked under B-558.
+
+**Forward-prevention class addressed**: snapshot-frontmatter-hallucination. Empirical motivation: 29-gap audit Gap 1.2 + 3.1 surfaced potential for fabricated commit hashes (LLM hallucination per arXiv 2511.00776).
+
+**B-558 Phase 2.1 closure progress**:
+| Component | Status | Anchor |
+|---|---|---|
+| A: check_snapshot_claims commit-hash verification | ⚫ CLOSED | THIS COMMIT |
+| B: SKILL.md mandate + hook _has_recent_snapshot() extension | 🟡 Open | ~45 min effort |
+| C: check_snapshot_pytest_claims via Option B native fit | 🟡 Open | ~45 min effort |
+| D: hook refactor for payload['transcript_path'] | ⚫ CLOSED | `e3d8700` |
+
+---
+
 ## 2026-05-19 — B-562 ⚫ FULLY CLOSED: Component B Phase 3 final closure (udm-session-compactor SKILL.md Step 3 + CLAUDE.md CCL Stage 0 routing + CLAUDE.md L109 Structure subsection row for SESSION_RESUME/)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-19 — 3rd cascade firing in same session; HIGH-priority B-562 Phase 3 final closure.
