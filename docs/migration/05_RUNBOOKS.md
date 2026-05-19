@@ -1565,7 +1565,7 @@ Pipeline lead authorizes; sysadmin (or pipeline operator with sudo) executes; pi
 - Phase 1 (pre-cutover Stage cleanup, 03:30-05:30 AM low-traffic gap, OUTSIDE main txn): acquire Stage-only sp_getapplock; loop `UPDATE TOP (4000) UDM_Stage.ccm.AuditLog SET _cdc_is_current = 0 WHERE _cdc_is_current = 1` with commit-between-batches until 0 rows affected; verify count=0; release Stage lock
 - Phase 2 (atomic cutover, target < 60s): acquire (CCM, AuditLog) sp_getapplock 5min timeout; begin txn: INSERT PipelineEventLog (EventType='CDC_MODE_CUTOVER') + UPDATE UdmTablesList SET CDCMode='parquet_snapshot'; commit; release; activate Automic JOB_PARQUET_AUDITLOG_INCR per D120; first post-cutover run within 24h monitored
 **Validation**: first post-cutover incremental completes; PipelineEventLog row present; CDCMode flipped; Bronze count consistent across cutover
-**Rollback** (≤ 1h): UPDATE UdmTablesList SET CDCMode='legacy' WHERE ...; disable Automic INCR; re-activate legacy; file post-mortem
+**Rollback** (≤ 1h): UPDATE UdmTablesList SET CDCMode='change_detect' WHERE ...; disable Automic INCR; re-activate legacy; file post-mortem (**2026-05-19 inline-fix per B-548 + D125**: prior text said `='legacy'` but canonical D63 value is `'change_detect'`; Pitfall #9.k drift remediated. NEW: per D125 3-mode dispatch + B-547 rewrite, rollback may alternatively flip to `'both'` for shadow-mode safety pending B-547 procedure rewrite)
 **Source**: B-501 + Phase 2 large-tables plan v5 + design-reviewer Q7 BLOCK
 
 ### RB-17 — Snowflake audit replay (FULL BODY authored at Phase 2 R2.26 deliverable)

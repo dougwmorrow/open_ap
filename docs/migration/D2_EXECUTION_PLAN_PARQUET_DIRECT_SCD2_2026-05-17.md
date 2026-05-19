@@ -152,7 +152,7 @@ data_load/parquet_replay.replay_parquet_range(source, table, start_date, end_dat
 1. **`replay_parquet_range()`** in `data_load/parquet_replay.py` — sequential per-day with ledger_step gating; B-4 cleanup ONCE at range start; preserves SCD2-P1-b chain (B-N #1 below)
 2. **Add Parquet write to `orchestration/small_tables.py`** — small-table path currently lacks `write_parquet_snapshot()` call (B-N #4 below)
 3. **D18 source_verifier_fn closure**: `run_scd2(source_verifier_fn=...)` parameter; orchestrator assembles closure; `CDC_VERIFY_STRICT_ON_FAILURE` env var read in orchestrator (B-N #3 below)
-4. **Delete Stage write path from `orchestration/small_tables.py`** — surgical removal of BCP→UDM_Stage path
+4. **(2026-05-19 D125 amendment per `UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md`)** ~~Delete Stage write path from `orchestration/small_tables.py` — surgical removal of BCP→UDM_Stage path~~ — **AMENDED 2026-05-19**: Stage write path RETAINED during migration period for `CDCMode IN ('change_detect', 'both')` dispatch values (per D125 + B-544 3-mode dispatch wiring). Full Stage path removal deferred to Phase 2 R4+ AFTER all production tables successfully on `'parquet_snapshot'` for ≥90 days per RB-16 procedure (B-547). D2 original intent of "surgical removal of BCP→UDM_Stage" is preserved as eventual end-state; this commit just adds a validation window via 'both' mode shadow-write
 5. **IdempotencyLedger SUPERSEDED status** (or NEW `EventType='SCD2_PROMOTION_D2'`) for ACCT migration boundary — prevents false-short-circuit on replay (B-N #6 below)
 6. **`tools/query_parquet.py` CLI** — operator query migration (B-N #5 below)
 7. **Update CLAUDE.md Structure + L207 CLI_* family registry** — `CLI_QUERY_PARQUET` (25th member)

@@ -4,7 +4,15 @@
 **Author**: pipeline lead + parent agent (orchestrator role); skills invoked per §0
 **Status**: 🟡 Draft v5
 **Pilot table**: `CCM.AuditLog` (96M rows; multi-year history)
-**Operates atop**: `D2_EXECUTION_PLAN_PARQUET_DIRECT_SCD2_2026-05-17.md` + `UDM_PIPELINE_PHASE_A_TOKENIZATION_REORDER_2026-05-17.md` + `D2_GAP_RESOLUTION_PLAN_2026-05-17.md`
+**Operates atop**: `D2_EXECUTION_PLAN_PARQUET_DIRECT_SCD2_2026-05-17.md` + `UDM_PIPELINE_PHASE_A_TOKENIZATION_REORDER_2026-05-17.md` + `D2_GAP_RESOLUTION_PLAN_2026-05-17.md` + `UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md` (D125 3-mode dispatch extension)
+
+**v5+1 delta vs v5 (added 2026-05-19 per user direction `Update older plans so that we are properly tracking what is in scope`)**:
+- Cross-ref added to header: `UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md` (D125 3-mode dispatch extension)
+- R1 scope EXTENDED: 3 additional B-Ns (B-542 migration + B-543 TableConfig + B-544 3-mode dispatch) supersede prior B-336 + B-375 + portions of B-334 scope. Implementation now follows D125 3-mode dispatch (`'change_detect'` / `'parquet_snapshot'` / `'both'`) rather than direct cutover
+- R2 scope EXTENDED: 2 additional B-Ns (B-545 parity-check tool + B-546 mode-flip tool)
+- R4 scope EXTENDED: B-547 RB-16 procedure rewrite for 2-step cutover (`'change_detect'` → `'both'` for ≥30 days → `'parquet_snapshot'`)
+- R5 (post-Phase-2; previously implicit): legacy Stage write removal moves from Phase 2 R1 to Phase 2 R4+ (per D125 amendment to D2 plan §3.1 deliv #4)
+- Architecture / D-Ns / R-Ns / SE-series / LT-AT-series unchanged from v5
 
 **v5 delta vs v4** (mechanical-only):
 - B-N range renumbered B-496–B-534 → **B-497–B-535** (post-v4 commit `a0f0326` opened B-496 in HEAD, collided with v4's lowest B-N)

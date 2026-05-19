@@ -3487,3 +3487,45 @@ Plus 2 new ParquetSnapshotRegistry columns (D92 forward-only ALTER): `Extraction
 **Status**: 🟡 Proposed 2026-05-18 (v4 canonical env var lock per v3 gap-check G2-4)
 **Body**: Stage path format: `{SNOWFLAKE_STAGE_NAME}/{source}/{table}/{registry_id}/attempt_{N}/masked.parquet`. `SNOWFLAKE_STAGE_NAME` is the canonical existing env var per `data_load/snowflake_uploader.py:693` (default `@UDM_BRONZE_STAGE`); NO new env var introduced. Per-retry stage-path uniqueness via `attempt_{N}` segment. Snowflake COPY_HISTORY partitions cleanly. Idempotency: same `(RegistryId, attempt=N)` → same path.
 **Source**: Option B reviewer Q2 BLOCK + v3 gap-check G2-4 canonical env var lock 2026-05-18
+
+## D125 — CDCMode 3rd value `'both'` for dual-execute shadow safety (extends D63; 🟡 Proposed 2026-05-19)
+
+**Status**: 🟡 Proposed 2026-05-19; lock at attestation after `udm-design-reviewer` + `udm-gap-check` independent reviewers verdict 🟢
+
+**Driver**: User-direction 2026-05-19 — "we should be able to do both or choose one. We can set a 3rd option for CDCMode to do both." D63 locked a 2-value CDCMode enum (`'change_detect'`, `'parquet_snapshot'`) for D2 cutover atomicity. Direct flip between values offers no validation period — HIGH Bronze risk on first D2 cutover (ACCT pilot) since Parquet write path has zero production exercise as of 2026-05-19. Adding `'both'` value enables shadow-write safety pattern (capture Parquet substrate while legacy CDC continues driving Bronze).
+
+**Pillar(s) served** (per D61): **Audit-grade** (Parquet substrate captured during migration) + **Operational safety** (Bronze never at risk from unwired Parquet path during shadow period) + **Traceability** (per-table mode auditable via PipelineEventLog metadata)
+
+**Decision**: Extend D63's CDCMode CHECK constraint from 2 values to 3 values:
+
+- Before (D63 canonical): `CHECK (CDCMode IN ('change_detect', 'parquet_snapshot'))`
+- After (D125 extension): `CHECK (CDCMode IN ('change_detect', 'parquet_snapshot', 'both'))`
+
+The `'both'` value implements **BOTH_LEGACY_FEEDS** sub-variant in v1 (extract once → write Parquet → ALSO run legacy CDC+SCD2; legacy CDC drives Bronze; Parquet is shadow/audit substrate). Failure-mode: Parquet write must succeed BEFORE legacy CDC starts (preserves audit-substrate-before-Bronze-change semantic). Future sub-variants (`BOTH_PARQUET_FEEDS`, `BOTH_COMPARE`) may be added as additional CHECK values without breaking v1 callers per D92 forward-only-additive discipline.
+
+**Rationale**: D63's 2-value enum forces direct `'change_detect'` → `'parquet_snapshot'` cutover with no validation period. The 30-day-shadow-write pattern is canonical migration safety per industry standard (Google SRE Workbook + AWS Well-Architected Operational Excellence Pillar; cited in `_research/scd2-corruption-recovery-rb15-2026-05-18.md` §3 Pattern A). Per-table column flexibility (not runtime flag) means different tables can be at different migration stages — ACCT pilot in `'both'` for 30 days then `'parquet_snapshot'`; AuditLog cutover via RB-16 uses 2-step `'change_detect'` → `'both'` → `'parquet_snapshot'`.
+
+**Alternatives considered**:
+
+- (a) **Keep D63 2-value; direct cutover** — rejected: HIGH Bronze risk on first D2 cutover; no validation period; no shadow-write capture
+- (b) **Add 3rd value `'both'` (CHOSEN)** — incremental safety; forward-only-additive extension of D63; preserves D63 defaults for existing tables (`'change_detect'` remains default)
+- (c) **Add 3 sub-variants of `'both'` immediately** (`'both_legacy_feeds'`, `'both_parquet_feeds'`, `'both_compare'`) — rejected for v1: scope creep; only ONE sub-variant needed for v1; future enhancement enabled by D92
+- (d) **Runtime env-var or CLI flag** — rejected: per-table flexibility needed; D63 architecture already chose per-table column over runtime flag
+
+**Trade-offs accepted**:
+
+- BOTH mode adds ~30% I/O cost per run (Parquet write); storage budget per B-333 H drive capacity gate must accommodate this overhead during validation periods
+- BOTH mode requires 3-way orchestrator dispatch logic; testing surface 1.5x larger than 2-way D63 design
+- Future BOTH sub-variants deferred to separate D-Ns + B-Ns
+
+**Affects**:
+
+- Decisions: extends D63 (D92 forward-only-additive); supersedes implicit assumption in `docs/migration/D2_EXECUTION_PLAN_PARQUET_DIRECT_SCD2_2026-05-17.md` §1.4 ("Stage MUST BE REMOVED" softens to "Stage path retained for `'change_detect'` AND `'both'` modes during migration; full removal deferred to Phase 2 R4+ per RB-16 cutover")
+- Edge cases: T-series (3-mode parametrize); M-series (BOTH mode 1.3x memory); F-series (BOTH mode partial-failure semantic); N-series (NULL PK handling discrepancy between legacy CDC + Parquet path); see plan §9 for full series walk
+- Runbooks: RB-16 (AuditLog cutover) — procedure becomes 2-step `'change_detect'` → `'both'` for ≥30 days → `'parquet_snapshot'` (closes B-547); RB-18 (D2 cutover rollback) — extends to handle `'both'` value
+- Schema: `General.dbo.UdmTablesList.CDCMode` CHECK constraint extended; SchemaContract row required per § 1.2 of `phase1/01_database_schema.md`
+- Code modules: `orchestration/table_config.py::TableConfig.cdc_mode` field (D63-pending; built at B-543 closure); `orchestration/large_tables.py` + `orchestration/small_tables.py` 3-way dispatch logic (B-544)
+- Migrations: `migrations/cdc_mode_column.py` (D63-pending; verified missing 2026-05-19; built at B-542 closure with 3-value CHECK from day 1)
+- Docs: this entry (03_DECISIONS.md); `docs/migration/UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md` (canonical plan); 05_RUNBOOKS.md RB-16 update (B-547); `phase1/01a_control_tables.md` L158 (CHECK constraint update); `phase1/02_configuration.md` § 1.2 (value enumeration update)
+
+**Reversibility**: Reversible at the constraint level (DROP CHECK + recreate 2-value). But: once tables are configured with `'both'` value in production rows, reverting requires data preservation strategy. Treat as reversible during Phase 2 R1 prep; harder once R2 validation period populates Parquet substrate for production tables.
