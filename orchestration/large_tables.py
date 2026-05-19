@@ -493,10 +493,11 @@ def _process_single_day(
         # Per D125 plan §5.2 + D2 + D115 source-exactness invariants, the
         # Parquet IS the canonical source of truth; replay from the just-
         # written Parquet ENFORCES round-trip source-exactness before SCD2.
-        # Large-table delete-detection via day-N vs day-N-1 Parquet diff is
-        # NOT YET implemented in v1 — run_scd2_promotion(targeted=False)
-        # detects deletes via Bronze anti-join (memory-bounded for small
-        # tables; large-table optimization deferred to follow-up B-N).
+        # Large-table delete-detection via day-N vs day-N-1 Parquet diff
+        # IMPLEMENTED per B-563 closure 2026-05-19: run_parquet_delete_detection_step()
+        # composes query_latest_snapshot_for_date + replay_parquet_snapshot +
+        # Polars anti-join on PK columns. First-load case -> deleted_pks=None
+        # -> falls back to run_scd2_promotion(targeted=False) per B-552 v1 semantics.
         if cdc_mode == CDC_MODE_PARQUET_SNAPSHOT:
             # Release extraction df BEFORE replay loads its own from disk
             # (avoids 2x memory peak; replay.df becomes the canonical state).

@@ -1,4 +1,4 @@
- SESSION_RESUME -- scd2 chat (D125 implementation arc complete + B-552 v1 closure + B-564 forward-prevention + 8-event B-541 milestone)
+# SESSION_RESUME -- scd2 chat (D125 implementation arc PRODUCTION-READY for SMALL + LARGE + B-563 closure + 10-event B-541 milestone)
 
 **Chat scope**: D125 3-mode CDC dispatch (CDCMode `'change_detect'` / `'parquet_snapshot'` / `'both'`) + SCD2 + CDC + Bronze + replay-from-Parquet pipeline core + RB-16 production cutover procedure + B-541 read-only audit contract empirical validation + B-564 apply-path Tier 1 test layer. Does NOT touch udm-* skills + Phase 1 quality checks + producer-discipline meta-work (separate `meta-discipline.md` chat per parallel session).
 
