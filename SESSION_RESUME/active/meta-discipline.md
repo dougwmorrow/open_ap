@@ -34,8 +34,8 @@
   - `tests/tier0/test_session_snapshot_pii_scrub.py`: 7/7 PASS (NEW B-559)
   - **Cumulative this-cohort: 82/82 PASS** (was 75 pre-B-559; +7 for B-559)
 - **Cumulative session delta** (this chat's meta-discipline scope only):
-  - **110 NEW B-Ns** (B-393-B-569; +B-568 + B-569 opened post-session-completeness audit per user-direction "If a chat drifts to a new topic, we should have a warning pop-up" + "we should have an update for when a SESSION_RESUME.md file should be archived")
-  - **34 B-Ns CLOSED multi-session arc** (prior 30 + B-562 full + B-558 full + B-559 + B-565 = +4 net this session; B-568 + B-569 remain 🟡 Open)
+  - **110 NEW B-Ns** (B-393-B-569; +B-568 + B-569 opened post-session-completeness audit per user-direction)
+  - **35 B-Ns CLOSED multi-session arc** (prior 30 + B-562 full + B-558 full + B-559 + B-565 + B-569 = +5 net this session; B-568 remains 🟡 Open as the only outstanding gap)
   - **B-562** ⚫ FULLY CLOSED at `553b345` (all 4 phases)
   - **B-558** ⚫ FULLY CLOSED at `372e982` (all 4 components; +15 Tier 0)
   - **B-559** ⚫ CLOSED at `739eab1` (+7 Tier 0; PII scrub mechanical layer)

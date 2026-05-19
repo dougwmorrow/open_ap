@@ -12,6 +12,73 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-569 ⚫ CLOSED: `tools/archive_chat_session.py` mechanical lifecycle automation for B-562 multi-chat coordination architecture (session-close transition layer)
+
+**Trigger**: pipeline-lead user-direction 2026-05-19 ("we should have an update for when a SESSION_RESUME.md file should be archived and updated as completed"). Same-firing closure of B-569 opened at commit `b75ad81` (~1 hour effort).
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Scope**: NEW `tools/archive_chat_session.py` CLI (~210 LOC) for mechanical lifecycle automation of B-562 multi-chat coordination architecture. Replaces operator-manual `mv` workflow documented in `SESSION_RESUME/README.md` lifecycle section.
+
+**Implementation**:
+- NEW public functions: `main`, `cli_main`, `archive_chat(chat_name, closure_reason, abandoned_reason, dry_run) -> tuple[Path, Path, bool]`
+- NEW helpers: `_compute_archive_filename(chat_name, abandoned_reason)` (clean → `<YYYY-MM-DD>-<chat>.md`; abandoned → `<YYYY-MM-DD>-<chat>-ABANDONED-<reason-normalized>.md` with normalization lowercase + spaces/underscores → hyphens + non-alphanumeric stripped); `_build_closure_metadata(chat_name, closure_reason, abandoned_reason)` (archived-at + final-commit + chat-name + status + reason-line); `_update_router_active_table(chat_name, dry_run)` (regex row-removal; defensive silent no-op if row not found OR router missing); `_current_head_hash()` (subprocess `git rev-parse --short HEAD`; 5s timeout + 'unknown' fallback)
+- NEW constants: `EVENT_TYPE = "CLI_ARCHIVE_CHAT_SESSION"`; `EXIT_SUCCESS/WARNING/OPERATIONAL/FATAL = 0/1/2/3`; `ACTIVE_DIR` + `ARCHIVE_DIR` + `ROUTER_PATH` + `SESSION_LOG_DIR` paths
+- Operations: (1) verify active/<chat>.md exists → FileNotFoundError FATAL otherwise; (2) compute target via `_compute_archive_filename`; (3) append closure-metadata block via `_build_closure_metadata`; (4) write to `_archive/`; (5) delete source from `active/`; (6) update root SESSION_RESUME.md via `_update_router_active_table`
+- D74/D75/D76 contract: WARN-only check pattern not applicable (this is a CLI tool); D74 exit codes; D75 dry-run default; D76 audit row to `_session_logs/cli_archive_chat_session_<date>.log`
+
+**TEST**: 8/8 PASS at `tests/tier0/test_archive_chat_session.py` (0.25s runtime; below D67 5s ceiling). Test assertions:
+1. module imports + EVENT_TYPE + EXIT_* constants
+2. _compute_archive_filename clean-close format
+3. _compute_archive_filename abandoned with reason normalization (lowercase + spaces/underscores → hyphens + special-char strip)
+4. archive_chat raises FileNotFoundError on missing active/<chat>.md
+5. dry-run does NOT modify filesystem (source preserved; target not created)
+6. apply mode moves source → archive + appends metadata block (CLOSED-CLEAN status)
+7. abandoned variant marks ABANDONED status + filename suffix
+8. router active-chats table row removed for archived chat (other rows preserved)
+
+**Inline fix**: first CLI smoke (`python tools/archive_chat_session.py --chat meta-discipline`) failed with UnicodeEncodeError on Windows cp1252 stdout for `→` arrow character. Replaced all `→` with ASCII `->` in stdout-printed strings via `replace_all=true` Edit; CLI smoke + Tier 0 8/8 PASS verified post-fix.
+
+**CLI smoke**: dry-run preview for `meta-discipline` chat:
+```
+DRY-RUN: would archive `<active>/meta-discipline.md` -> `<_archive>/2026-05-19-meta-discipline.md`
+  status: CLOSED-CLEAN (session naturally closed)
+Pass --apply to execute the move + router update.
+```
+
+**Step 10 / Pitfall #9.n application**:
+- CLAUDE.md L100: NEW Structure row for `tools/archive_chat_session.py` inserted before `claim_next_bn.py` row
+- CLAUDE.md L211: CLI_* family registry count 27 → 28 + NEW CLI_ARCHIVE_CHAT_SESSION entry citing B-569 closure + B-562 multi-chat coordination follow-up
+- GLOSSARY.md: +7 rows (main + cli_main + archive_chat + _compute_archive_filename + _update_router_active_table + EVENT_TYPE + EXIT_* constants)
+
+**GAP ANALYSIS (G1-G6)**:
+- G1 (Pitfall #9.j leading-badge): ✅ B-569 leading-badge flipped 🟡 Open → ⚫ CLOSED + strikethrough applied per canonical closure-render convention.
+- G2 (Pitfall #9.k arithmetic-propagation): ✅ this-chat 110 NEW B-Ns unchanged / 34 → 35 CLOSED (+B-569) propagated to CURRENT_STATE + HANDOFF + meta-discipline.md + this entry; CLI_* family 27 → 28 propagated to CLAUDE.md L211 + GLOSSARY entry.
+- G3 (Pitfall #9.l canonical re-read): ✅ B-569 BACKLOG body spec verbatim re-read before implementation; structural pattern mirrored from B-562 Component A `tools/claim_next_bn.py` (same D74/D75/D76 contract template).
+- G4 (Pitfall #9.m discipline-applied-to-tracker): ✅ B-565 mechanical check satisfied (BACKLOG.md staged WITH closure annotation for B-569 + meta-discipline.md refreshed in same commit). Discipline-self-application complete.
+- G5 (Pitfall #9.n convention-registration): ✅ Step 10 applied across CLAUDE.md L100 (Structure row) + L211 (CLI_* registry) + GLOSSARY (+7 rows). NEW EventType CLI_ARCHIVE_CHAT_SESSION registered as 28th family member.
+- G6 (new B-N opportunities): None surfaced. B-568 (topic-drift warning) remains 🟡 Open per opportunistic-deferred policy.
+
+**Tracker updates**: BACKLOG L1121 (B-569 ⚫ CLOSED + strikethrough) + CURRENT_STATE L7 + HANDOFF §14 L427 + this entry + meta-discipline.md (refreshed per B-565 mechanical mandate).
+
+**Net delta**: this-chat 110 NEW B-Ns unchanged / **34 → 35 CLOSED** (+B-569) / pytest **+8 NEW Tier 0 PASS**.
+
+**4-layer B-562 multi-chat coordination architecture status**:
+| Layer | B-N | Status | Function |
+|---|---|---|---|
+| 1. Substrate | B-562 | ⚫ FULLY CLOSED | Directory + per-chat pointers + root router |
+| 2. In-session refresh enforcement | B-565 | ⚫ CLOSED | `check_session_resume_active_refresh()` |
+| 3. In-session scope drift discipline | B-568 | 🟡 Open | `check_chat_scope_drift()` 14th Phase 1 check (~1.5 hrs) |
+| 4. Session-close transition | B-569 | ⚫ CLOSED | `tools/archive_chat_session.py` THIS COMMIT |
+
+3 of 4 layers complete. Only B-568 (scope drift) remains; ~1.5 hours effort; opportunistic.
+
+**Self-application opportunity**: B-569 CLI is now available to demo-archive THIS chat at session-close. Operator can invoke `python tools/archive_chat_session.py --chat meta-discipline --closure-reason "B-562+B-558+B-559+B-565+B-569 closure milestone" --apply` to demonstrate the convention.
+
+**Forward-prevention class addressed**: per-chat-pointer lifecycle automation. Replaces operator-manual `mv active/<chat>.md _archive/<YYYY-MM-DD>-<chat>.md` (error-prone; no metadata + no router update) with mechanical CLI guaranteeing atomic transition + closure metadata + router consistency.
+
+---
+
 ## 2026-05-19 — B-568 + B-569 opened: B-562 multi-chat coordination architecture gap-closures (topic-drift warning + archive lifecycle automation)
 
 **Trigger**: pipeline-lead user-direction 2026-05-19: "If a chat drifts to a new topic, we should have a warning pop-up for solution with regard to a SESSION_RESUME.md file. Also we should have an update for when a SESSION_RESUME.md file should be archived and updated as completed."
