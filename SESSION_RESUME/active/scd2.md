@@ -1,4 +1,4 @@
-# SESSION_RESUME -- scd2 chat (D125 implementation arc PRODUCTION-READY for SMALL + LARGE + B-563 closure + 10-event B-541 milestone)
+# SESSION_RESUME -- scd2 chat (D125 arc FULLY CODE-COMPLETE 2026-05-19 + 25 B-Ns CLOSED + 12-event B-541 milestone)
 
 **Chat scope**: D125 3-mode CDC dispatch (CDCMode `'change_detect'` / `'parquet_snapshot'` / `'both'`) + SCD2 + CDC + Bronze + replay-from-Parquet pipeline core + RB-16 production cutover procedure + B-541 read-only audit contract empirical validation + B-564 apply-path Tier 1 test layer. Does NOT touch udm-* skills + Phase 1 quality checks + producer-discipline meta-work (separate `meta-discipline.md` chat per parallel session).
 
@@ -65,50 +65,42 @@ Read in this order:
 4. **`docs/migration/BACKLOG.md`** L1108 (B-552 closed) + L1116 (B-564 closed) + L1115 (B-563 large-table delete-detection open) + B-555 + B-556 + B-557 + B-560 + B-561 entries
 5. **`docs/migration/05_RUNBOOKS.md`** L1188 RB-13 (Permanent-Retire Table; canonical pattern reference) + L1558 RB-16 (D125 D2 production cutover; B-547 closure) + L1582 RB-18 (D2 cutover rollback for ACCT pilot; B-343 closure)
 6. **`docs/migration/03_DECISIONS.md`** D125 entry (tail; Locked 2026-05-19)
-7. **`CLAUDE.md`** L209+ CLI_* registry (now 27 tools post-B-562 Component A) + Do-NOT rules section (LIFTED B-545 rule + active BOTH-mode Parquet-before-CDC rule) + L215 PARQUET_* family entry (REPLAY registered post-B-552 v1)
+7. **`CLAUDE.md`** L209+ CLI_* registry (now 28 tools post-B-569 closure (tools/archive_chat_session.py at 5cdad13 added CLI_ARCHIVE_CHAT_SESSION as 28th member)) + Do-NOT rules section (LIFTED B-545 rule + active BOTH-mode Parquet-before-CDC rule) + L215 PARQUET_* family entry (REPLAY registered post-B-552 v1)
 8. **`CLAUDE.md`** L407+ substrate-edit enumeration (cascade-evidence requirement for any further D125 work)
 
 ## Open runway (priority-ordered; awaiting user direction)
 
-### HIGH priority -- production-cutover blockers
+### D125 arc FULLY CODE-COMPLETE 2026-05-19 -- all B-Ns CLOSED
 
-- ~~**B-552** (HIGH; WSJF 3.5): **v2 of B-544 -- `cdc_mode='parquet_snapshot'` end-to-end Parquet->replay->SCD2 path**~~ -- **CLOSED 2026-05-19** via commits `719b76b` (v1) + `0c06961` (BLOCK remediation per cross-cohort reviewer `a234fda11b870c78d`). Per D56 second-pass reviewer `aea6c9174151af2f5` 2026-05-19 verdict ACCEPT remediation: all 6 production/discipline fixes correct; only minor scd2.md drift remained (inline-remediated THIS COMMIT). Orchestrator NotImplementedError REMOVED for `cdc_mode == 'parquet_snapshot'` mode. Operator workflow end-to-end PRODUCTION-READY for SMALL tables (ACCT pilot unblocked). Large-table cutover requires B-563 (delete-detection day-N vs day-N-1 Parquet diff) PLUS B-555 (per-PK hash parity definition).
+**25 D125-arc B-Ns CLOSED + 1 P-N CLOSED**. All HIGH + MEDIUM + LOW WSJF items resolved post-Cohort 2 (commit `0a9c292`). B-Ns OPEN from this arc: **NONE**. Only 1 opportunistic candidate remains:
 
-### MEDIUM priority -- production-cutover sequence
-
-- **B-563** (MEDIUM; WSJF 2.5 -- reviewer-suggested HIGH 3.5): **Large-table delete-detection via day-N vs day-N-1 Parquet diff**. HARD-PREREQUISITE for FIRST large-table cutover to `'parquet_snapshot'` mode (CCM.AuditLog at 96M / DNA.CARDTXN at 214M / etc.). B-552 v1 routes ALL parquet_snapshot through `run_scd2_promotion(targeted=False)` which is memory-heavy for 3B+ row tables. ~80-100 LOC orchestrator extension. Closure target: Phase 2 R2 BEFORE first large-table cutover. ACCT pilot is SMALL-table so unblocked.
-- **B-555** (MEDIUM; WSJF 3.5): **v2 of B-545 -- per-PK hash comparison via polars Parquet read + Bronze `UdmHash` join**. Closes the row-count-only parity-check structural gap ("rows match but contents differ" silent failure) + the NULL-PK interpretation-gap (Parquet > Bronze drift attributable to NULL-PK noise). Symmetric to B-552 v2-of-B-544. Requires polars dep at tool level. Closure target: Phase 2 R2.
-- **B-556** (LOW; WSJF 2.0): **Apply-path Tier 0/1 tests for `tools/flip_cdc_mode.py` + `tools/validate_parquet_vs_stage.py`**. Currently only dry-run paths are tested; non-dry-run UPDATE/INSERT/commit/rollback paths mechanically uncovered. Closure target: opportunistic alongside B-563/B-555 OR next CLI-tool authoring. **B-564 closure 2026-05-19 (THIS COMMIT) addresses the run_parquet_replay_step subset of this scope but does NOT cover flip_cdc_mode or validate_parquet_vs_stage CLI tools** -- B-556 remains the open scope for those two CLIs.
-
-### LOW priority -- opportunistic discipline + cleanup
-
-- **B-557** (LOW; WSJF 1.5): **Extract `_write_event_log_row()` shared helper into `utils/cli_common.py`**. ~40 LOC of identical CLI-audit-row boilerplate replicated across 27+ CLI tools (cumulative ~1080 LOC). Closure target: opportunistic at next round close-out OR when 28th CLI_* tool authored.
-- **B-560** (LOW; WSJF 1.5): **Log WARNING when `tools/validate_parquet_vs_stage.py::_resolve_pk_columns()` returns empty list**. Operationally minor (Bronze excludes NULL-PK via legacy CDC's `_filter_null_pks()` (P0-4); defensive filter is no-op) but UdmTablesColumnsList unpopulated state likely indicates a separate operational issue worth surfacing. Closure target: opportunistic alongside B-556.
-- **B-561** (LOW; WSJF 1.0): **Sharpen LIFTED Do-NOT rule body in CLAUDE.md for NULL-PK caveat prominence**. Current LIFTED-rule body buries the NULL-PK caveat at the end; could be more prominent OR re-armed as softer "WARN for NULL-PK tables until B-555 ships". Closure target: opportunistic OR at B-555 closure.
-- **P-24** (LOW; cosmetic): **Document LIFTED-Do-NOT-rule format in CLAUDE.md Do-NOT-rules section header**. First instance precedent set at `00039a1`; format = strikethrough body + **LIFTED YYYY-MM-DD** annotation + B-N closure citations + empirical-anchor preservation. Closure target: opportunistic at next Do-NOT rule lift OR round close-out.
+- **Sampling-based hash comparison for 3B+ row tables** (deferred; opportunistic if operator hits OOM in B-555 v2 `--hash-check` path during large-table validation). Not opened pre-emptively per "no operator-driver yet" rationale -- will surface organically if 3B+ table operator reports memory pressure during real testing.
 
 ### Recommended next-step
 
-**B-563** is the highest-impact next deliverable -- closes the HARD-PREREQUISITE for FIRST large-table cutover to `'parquet_snapshot'` mode (CCM.AuditLog / DNA.CARDTXN). Substantive scope (~80-100 LOC orchestrator + day-N vs day-N-1 Parquet diff via Polars set-diff + Tier 1 tests via B-564 harness pattern). B-564 closure THIS COMMIT provides the test-authoring pattern for B-563 (AST-extracted canonical-signature pin + signature-validating stub) so B-563 cannot ship with the same MagicMock false-coverage class that B-552 v1 hit. Alternative: **B-555 (per-PK hash parity)** unblocks interpretation of B-545 nightly parity results before large-table cutover decision; B-563 + B-555 are both pre-requisites for first large-table cutover.
+Dev-side D125 arc has ZERO remaining code work. Path forward is **operator-driven real testing per RB-16 Step 1** (shadow mode against CCM.AuditLog 96M in test/dev) -- exercises full B-552 v1 + B-563 + B-555 v2 + flip + parity stack against real-data interaction patterns. Closes D125 arc operationally. Operator runbook: `docs/migration/05_RUNBOOKS.md` L1558 RB-16.
 
-## This session's commit chain (most-recent 12 D125-arc commits; older arc commits in snapshot Section 5)
+## This session's commit chain (D125 arc end-to-end; most-recent 14 + earlier in snapshot Section 5)
 
 ```
-<THIS COMMIT>  build(round-6): B-564 closure -- apply-path Tier 1 tests + AST-extracted canonical signature pin + scd2.md inline-remediation
+<gap-check inline-fixes>  trackers(round-6): 6 inline-fixes per gap-check reviewer a3850ca88a1d14b0a + 12-event B-541 milestone
+0a9c292  build(round-6): LOW-WSJF cleanup Cohort 2 -- B-556 closure (D125 arc FULLY CODE-COMPLETE)
+1a90cc1  build(round-6): LOW-WSJF cleanup Cohort 1 -- P-24 + B-560 + B-557 closures
+baae544  trackers(round-6): CURRENT_STATE + HANDOFF Section 14 D125 arc CODE-COMPLETE entry per scd2 chat session-close
+3a45b9c  build(round-6): post-B-555 inline-fixes (F4.1/F5.1/F6.1/F2.1) + B-561 closure + 11-event B-541 milestone
+fca6b01  build(round-6): B-555 closure -- v2 per-PK hash comparison for validate_parquet_vs_stage
+6349457  docs(round-6): 5 inline-fixes per gap-check reviewer ac5c9ea53cc34bce3 + 10-event B-541 milestone
+53dab18  build(round-6): B-563 FULL CLOSURE -- large-table delete-detection via day-N vs day-N-1 Parquet diff
+e86761f  build(round-6): B-563 Phase 2.1 -- query_latest_snapshot_for_date() registry helper + 5 Tier 0 tests
+7635678  build(round-6): Phase 1 cleanup cohort -- G1.1 + G2.1 + B-566 + B-567 closures pre-B-563 substantive work
+a1142ea  build(round-6): B-564 closure -- apply-path Tier 1 tests + AST canonical signature pin + scd2.md D56 inline-remediation
 0c06961  build(round-6): B-552 v1 BLOCK remediation -- 6 inline-fixes per cross-cohort reviewer a234fda11b870c78d
 719b76b  build(round-6): B-552 v1 closure -- cdc_mode='parquet_snapshot' end-to-end Parquet->replay->SCD2
-f42e200  docs(round-6): SESSION_RESUME/active/scd2.md authored per B-562 Component B Phase 1
 6868564  docs(round-6): gap-check remediation post-B-547 -- Pitfall #9.k + #9.m inline-fixes + 6-event B-541 milestone
 d192cee  build(round-6): B-547 closure -- RB-16 procedure rewrite for 2-step D125 cutover
-fc79ec7  docs(round-6): session snapshot @ 7a810b9 -- D125 implementation arc complete + B-541 5-event milestone
-7a810b9  docs(round-6): B-N collision renumber -- my B-558+B-559 -> B-560+B-561
-9b1d7fb  docs(round-6): cross-cohort review post-B-553/B-554 remediation
-00039a1  build(round-6): B-553 + B-554 bundled closure -- SS-1 + NULL-PK + Parquet-missed-data guard
-325eb7e  docs(round-6): D125 toolkit cohort gap-check remediation -- 5 inline-fixes + 5 B-N opens + Do-NOT rule
-1995aa3  docs(round-6): D125 cohort gap-check remediation -- 2 inline-fixes + 2 IMPROVEs + 43/43 tests
 ```
 
-(Earlier arc commits -- R1.3 + R1.7 + R1.8 cohort + B-344 adoption + D125 plan + B-542 + B-543 + B-544 v1 + B-343 RB-18 + B-545 v1 + B-546 -- enumerated in snapshot Section 5 with significance annotations.)
+(Earlier arc commits -- R1.3 + R1.7 + R1.8 cohort + B-344 adoption + D125 plan + B-542 + B-543 + B-544 v1 + B-343 RB-18 + B-545 v1 + B-546 + B-553/B-554 + B-558 collision renumber + snapshot -- enumerated in snapshot Section 5 with significance annotations.)
 
 ## Composition with B-562 Component B (multi-chat coordination)
 

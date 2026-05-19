@@ -945,7 +945,6 @@ def test_b556_apply_audit_failure_rolls_back_and_returns_fatal():
         [("AcctNo",), ("EffDate",)],
     ]
     # Make cursor.execute raise on INSERT (audit-row write)
-    original_execute = cursor.execute
     def _execute_side_effect(sql, *args, **kwargs):
         if "INSERT" in sql and "PipelineEventLog" in sql:
             raise RuntimeError("simulated audit-row INSERT failure")

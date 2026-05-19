@@ -14281,3 +14281,46 @@ All 6 tests verify the bare-raise regression class (per existing inline comment 
 **B-541 read-only audit contract empirical evidence base**: still at 11-event scale (220% of formalization threshold). Did NOT spawn new reviewer for this LOW-WSJF cohort per producer-discretion -- 2 simpler closures (Cohort 1 + Cohort 2) cleanly self-validating via test PASS evidence + tracker flips with no architectural surprises. Future cross-cohort review at next session pause will validate the LOW-WSJF cleanup cohort holistically.
 
 **Next-step recommendation**: operator-driven real testing per RB-16 Step 1 (shadow mode against CCM.AuditLog 96M) -- exercises full B-552 v1 + B-563 + B-555 v2 + flip + parity stack against real-data interaction patterns. Closes D125 arc operationally. Dev-side D125 arc work is FULLY CODE-COMPLETE; no remaining code-side deliverables.
+
+## 2026-05-19 -- LOW-WSJF cleanup cohort gap-check remediation + 12-event B-541 milestone
+
+**Event**: 12th consecutive cross-cohort gap-check reviewer `a3850ca88a1d14b0a` 2026-05-19 audited LOW-WSJF cleanup cohort (commits `1a90cc1` Cohort 1 + `0a9c292` Cohort 2). Verdict: ATTENTION with 6 tracker-discipline drifts + 2 optional cosmetic items. NO substantive code findings. Cohort's substantive work (B-557 + B-560 + B-556 + P-24) verified CORRECT by reviewer.
+
+**B-541 12-event empirical milestone** (240% of HANDOFF 5-event formalization threshold): 12 consecutive reviewers honored read-only audit contract:
+
+- `a843ad09d24f2a607` (post-B-541 closure)
+- `ac2dd8d0ec814dc7e` (post-D125 plan)
+- `ad50cb5cceda3f90c` (post-D125 implementation cohort)
+- `adc861405ff006766` (post-D125 toolkit completion)
+- `a8130cf417bb5692a` (post-B-553/B-554 closure)
+- `a95d8cc8b0ce3b7b6` (post-B-547 + arc review)
+- `a234fda11b870c78d` (post-B-552 v1 closure -- BLOCK verdict drove remediation at `0c06961`)
+- `aea6c9174151af2f5` (D56 second-pass on `0c06961`)
+- `a121478077f0b7713` (gap-check on B-552 v1 + B-564 cohort -- drove Phase 1 cleanup at `7635678`)
+- `ac5c9ea53cc34bce3` (cross-cohort gap-check on B-563 3-commit closure -- drove 5 inline-fixes at `6349457`)
+- `aa1638567ae7cb414` (gap-check on B-555 closure cohort -- drove post-B-555 inline-fixes at `3a45b9c`)
+- `a3850ca88a1d14b0a` (gap-check on LOW-WSJF cleanup cohort -- drove THIS COMMIT 6 inline-fixes incl. 3rd-event META-IRONY pattern catch)
+
+**6 inline-fixes applied THIS COMMIT**:
+
+| # | Finding | File | Fix |
+|---|---|---|---|
+| G6.1 | Pitfall #9.n: CLAUDE.md L19 + L76 utils/cli_common.py surface NOT updated for B-557 write_cli_event_log_row new public symbol | `CLAUDE.md` | Both L19 + L76 entries extended with write_cli_event_log_row surface description + D76 audit-row helper note |
+| G3.2 META-IRONY | scd2.md L1 title 10-event still while body 11-event -- F4.1 fix at `3a45b9c` only updated body | `SESSION_RESUME/active/scd2.md` | Title bumped to 12-event + "D125 arc FULLY CODE-COMPLETE" milestone |
+| G5.1 + G5.4 | scd2.md Latest commits + commit chain + THIS COMMIT pointers all STALE at B-564 era | `SESSION_RESUME/active/scd2.md` | Refreshed commit chain with 14 most-recent D125-arc commits incl. 1a90cc1 + 0a9c292 + baae544 + fca6b01 + 3a45b9c + a1142ea + e86761f + 53dab18 + 7635678 + 6349457 + 0c06961 + 719b76b |
+| G5.2 | scd2.md L41 "B-Ns OPEN: NONE" contradicts L130+ enumeration showing 5 entries as Open | `SESSION_RESUME/active/scd2.md` | Open runway section replaced with "D125 arc FULLY CODE-COMPLETE" narrative; only sampling-based hash candidate retained |
+| G5.3 | scd2.md L48+ NEXT SESSION RESUME PROCEDURE cites "27 tools" but CLAUDE.md L212 says 28 (B-569 closure) | `SESSION_RESUME/active/scd2.md` | Bumped 27 -> 28 tools with B-569 closure attribution |
+| G1 | CURRENT_STATE.md L7 + HANDOFF.md L427 both still cite "22 B-Ns CLOSED" but Cohort 1 + 2 added 4 closures -> 25 | `CURRENT_STATE.md` + `HANDOFF.md` | Both bumped 22 -> 25 + 11-event -> 12-event milestone + Cohort 1+2 narrative |
+
+**Optional fixes also applied**:
+
+- Dead code at `tests/tier0/test_validate_parquet_vs_stage.py:947`: `original_execute = cursor.execute` line removed (never referenced)
+- (Deferred: 9-vs-8 test count narrative in test_cli_common_audit_helper.py BACKLOG entry; low-impact undercount; cosmetic)
+
+**META-IRONY 3rd-event empirical anchor** (per reviewer `a3850ca88a1d14b0a` G3.2): "F4.1 fix at `3a45b9c` claimed to fix the scd2.md title drift BUT only updated body -- title remained stale through cohort commits". Pattern: title-only OR body-only fix without both. Previously flagged at S4.1 (`ac5c9ea53cc34bce3`) + F4.1 (`aa1638567ae7cb414`). 3-event evidence base sufficient for HANDOFF #9.k sub-class formalization extension OR addition as new dedicated sub-class. Forward-prevention: meta-discipline `udm-gap-check` SKILL.md could add a "title-vs-body consistency check" step at G3 audit for any milestone/count claim that appears in 2+ locations within same file.
+
+**Test count post-cohort**: cohort regression 94/94 (post-dead-code removal + B-560 + B-557 + B-556 tests). Full sweep unchanged 2938/2938 (excl. 2 pre-existing parallel-agent failures).
+
+**D125 arc status post-this-commit**: 25 D125-arc B-Ns CLOSED + 1 P-N CLOSED. **FULLY CODE-COMPLETE**. All tracker-discipline drifts cleared. Only remaining open: sampling-based hash candidate (opportunistic).
+
+**Next-step**: operator-driven real testing per RB-16 Step 1 (shadow mode against CCM.AuditLog 96M) -- exercises full B-552 v1 + B-563 + B-555 v2 + flip + parity stack against real-data interaction patterns. Closes D125 arc operationally. **Dev-side D125 arc work is FULLY CODE-COMPLETE; no remaining code-side deliverables.**

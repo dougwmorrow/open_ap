@@ -16,7 +16,7 @@ ETL pipeline extracting from Oracle (DNA) and SQL Server (CCM, EPICOR) sources i
 - config.py - env vars, DB names, BCP thresholds, paths (.env at `/etc/pipeline/.env` per D103; legacy `/debi/.env` deprecated)
 - sources.py - source system registry (Oracle/SQL Server connection factories)
 - connections.py - SQL Server target DB connections (Stage/Bronze/General), cursor_for() context manager
-- cli_common.py - shared CLI boilerplate (environment setup, logging, startup checks, RSS monitoring)
+- cli_common.py - shared CLI boilerplate (environment setup, logging, startup checks, RSS monitoring; B-557 closure 2026-05-19 adds write_cli_event_log_row(cursor, *, event_type, event_detail, metadata, status='SUCCESS', error_message=None, table_name=None, source_name=None) shared D76 audit-row helper -- single source of truth for CLI_* family audit-row INSERT schema; extracted from ~40 LOC of identical boilerplate across 27+ CLI tools; existing tools NOT migrated per blast-radius discipline; new tools SHOULD compose this helper)
 - main_small_tables.py - CLI entry point for small tables
 - main_large_tables.py - CLI entry point for large tables
 - extract/ — Source Data Extraction
@@ -73,7 +73,7 @@ ETL pipeline extracting from Oracle (DNA) and SQL Server (CCM, EPICOR) sources i
   - __init__.py - package marker
   - configuration.py - shared configuration constants + helpers (legacy `config.py` reference at top of Structure list also covers `.env` location per D103)
   - connections.py - SQL Server target DB connections (Stage/Bronze/General), cursor_for() context manager (also referenced top-of-Structure)
-  - cli_common.py - shared CLI boilerplate (environment setup, logging, startup checks, RSS monitoring) (also referenced top-of-Structure)
+  - cli_common.py - shared CLI boilerplate (environment setup, logging, startup checks, RSS monitoring; B-557 closure 2026-05-19 adds write_cli_event_log_row(cursor, *, event_type, event_detail, metadata, status='SUCCESS', error_message=None, table_name=None, source_name=None) shared D76 audit-row helper -- single source of truth for CLI_* family audit-row INSERT schema; extracted from ~40 LOC of identical boilerplate across 27+ CLI tools; existing tools NOT migrated per blast-radius discipline; new tools SHOULD compose this helper) (also referenced top-of-Structure)
   - sources.py - source system registry (Oracle/SQL Server connection factories) (also referenced top-of-Structure)
   - safe_concat.py - schema-validating `pl.concat()` wrapper (W-7 guardrail)
   - errors.py - canonical PipelineError two-tier hierarchy (PipelineFatalError / PipelineRetryableError + ~28 concrete subclasses) per D68; imported by every Round 3 module (Round 6 § 4.6 + Round 3 § 8.1; Wave 0 build 2026-05-13; surface: `PipelineError`, `PipelineFatalError`, `PipelineRetryableError` + concrete subclasses including `RegistryStatusInvalid`, `RegistryFileNotFound`, `RegistryHashMismatch`, `RegistryInsertConflict`, `RegistryNotFound`, `VaultUnavailable`, `VaultConfigError`, `LedgerStepFailed`, `LedgerStuck`, `LedgerConfigError`, `FilterConfigError`, `ParityFatalError`, `InvalidTrustGate`)
