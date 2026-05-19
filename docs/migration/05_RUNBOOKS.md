@@ -18,6 +18,7 @@ Procedures for the operations the team will run during migration and steady-stat
 | RB-10 | CCPA / CPRA right-to-deletion request | Customer requests data deletion under California privacy law |
 | RB-11 | 7-year retention enforcement | Monthly automated job; vault Status flips for expired tokens |
 | RB-12 | Pipeline Deployment (per D84-D87) | Scheduled per D86 cadence (dev nightly / test daily / prod weekly Monday window) OR emergency hotfix (with operator + pipeline-lead sign-off). Covers full deploy + rollback + recovery + TPM2 re-seal procedures |
+| RB-18 | D2 cutover rollback for ACCT pilot | Operator-triggered (BEFORE ACCT pilot D2 cutover validation); rolls back to pre-D2 Bronze snapshot via BCP OUT/IN + reverts deploy + opens divergence B-N. Closes B-343. **Number drift remediation**: B-343 + D2_GAP_RESOLUTION_PLAN §4.2 both cite "RB-12" but RB-12 is occupied (Pipeline Deployment); authored as RB-18 per next-available-runbook-number discipline (same Pitfall #9.k drift class as B-344 RB-13/RB-15) |
 | RB-13 | Permanent-retire Table | Source table permanently decommissioned; consumer + compliance sign-off obtained; ≥ 90-day cool-down (or `ExpectedRetentionDays`) elapsed |
 | RB-14 | `.env` Location Migration (`/debi/.env` → `/etc/pipeline/.env`) | One-time per-server migration per D103; closes B182; run BEFORE next pipeline deploy after 2026-05-11 |
 
@@ -1580,3 +1581,36 @@ Pipeline lead authorizes; sysadmin (or pipeline operator with sudo) executes; pi
 **Validation**: AS_OF + replay date == upload date → SHA matches; AS_OF + replay date > deletion date → token returns original; CURRENT + token deleted → NULL/sentinel
 **Rollback**: read-only; no rollback
 **Source**: B-522 + B-530 + D122 + LT-AT-15 + RB-10 extension via B-526
+
+### RB-18 — D2 cutover rollback for ACCT pilot (FULL BODY authored at Phase 2 R1 prep deliverable; closes B-343)
+
+**Status**: 🟢 Authored 2026-05-19 (Phase 2 R1 prep; BEFORE ACCT pilot D2 cutover); closes B-343
+**When**: ACCT pilot D2 cutover validation fails — Bronze diverges between pre-D2 (Stage→CDC→SCD2 path) and post-D2 (Parquet→SCD2 path); deploy must be rolled back to a known-good state before further D2 rollout. This is the FIRST production exercise of D2; corruption-class outcomes are higher-probability than later large-table cutovers.
+**Pre-flight** (BEFORE deploying D2 code; OUTSIDE the production maintenance window):
+1. `bcp UDM_Bronze.dna.ACCT_scd2_python out /backup/ACCT_scd2_pre_d2_<YYYYMMDD>.bcp -n -S <udm_host> -d UDM_Bronze -T -E` — full Bronze snapshot to filesystem (binary format; preserves IDENTITY column `_scd2_key` per CLAUDE.md Do-NOT rule)
+2. Acquire Bronze.ACCT lock: `EXEC General.dbo.sp_getapplock @Resource='UDM_Pipeline_DNA_ACCT', @LockMode='Exclusive', @LockOwner='Session', @LockTimeout=0` — verify return code 0 (acquired); abort if non-zero (concurrent run; investigate via PipelineEventLog before proceeding)
+3. Verify IdempotencyLedger has NO `IN_PROGRESS` rows for ACCT: `SELECT COUNT(*) FROM General.ops.IdempotencyLedger WHERE SourceName='DNA' AND TableName='ACCT' AND Status='IN_PROGRESS'` should return 0 — if >0, run `python3 -m utils.idempotency_ledger.startup_recovery_sweep` first OR escalate per B-337 D119 forensic-preservation discipline (legacy pre-D2 EventTypes preserved as forensic evidence)
+4. Record current `git log -1 --format=%H` HEAD commit hash (pre-D2 deploy baseline) + capture `tools/verify_server_parity.py --apply` result (D65 severity-tiered parity baseline)
+5. Confirm `/backup/ACCT_scd2_pre_d2_<YYYYMMDD>.bcp` size > 0 + sha256 captured (e.g., `sha256sum /backup/ACCT_scd2_pre_d2_<YYYYMMDD>.bcp > /backup/ACCT_pre_d2.sha256`)
+
+**Procedure** (D2 deploy + first ACCT run):
+6. Deploy D2 code: pull HEAD on production server; restart pipeline service; verify `git log -1` shows the deploy commit
+7. Trigger ACCT pilot: `python3 main_small_tables.py --table ACCT --source DNA --force` — emits `PipelineEventLog.EventType='EXTRACT'` + `PARQUET_WRITE` + `REPLAY` + `SCD2_PROMOTION_D2` rows per D119 cutover naming
+8. Verify §12.2 of `phase1/01c_data_flow_walkthrough.md` acceptance criteria: post-D2 ACCT Bronze must be byte-identical to pre-D2 (same `_row_hash` per PK; same `UdmEffectiveDateTime` semantics; same active-flag distribution)
+9. Stop further pipeline runs (revoke Automic job activation OR disable `UdmTablesList.IsEnabled` for ACCT if needed during validation window)
+
+**Validation** (post-D2 deployment; pre-rollout-decision):
+10. `bcp UDM_Bronze.dna.ACCT_scd2_python out /backup/ACCT_scd2_post_d2_<YYYYMMDD>.bcp -n -S <udm_host> -d UDM_Bronze -T -E` — full Bronze snapshot AFTER first D2 ACCT run
+11. DIFF pre vs post: for each PK (sample N=1000 random PKs + 100% of PKs marked LegalHold=1 if any), compare `_row_hash` + `UdmEffectiveDateTime` + `UdmEndDateTime` + `UdmActiveFlag` + `UdmSourceBeginDate` + `UdmSourceEndDate` between the two BCP snapshots. Use `tools/diagnose_stage_bronze_gap.py --source DNA --table ACCT --apply` (with caveat that diagnose tool runs against current Bronze state; for post-deploy diff use the BCP files directly via python-bcp comparison script or SQL Server LINKED SERVER if available)
+12. ROW-COUNT reconciliation: `SELECT COUNT(*) FROM UDM_Bronze.dna.ACCT_scd2_python WHERE UdmActiveFlag=1` post-D2 should match pre-D2 within tolerance (expect EXACTLY equal; any divergence = STOP)
+13. SCD2 invariants check: `tools/validate_scd2.py --source DNA --table ACCT --strict` returns 🟢; if 🟡 or 🔴, do NOT proceed with D2 rollout
+14. PipelineEventLog inspection: verify `EXTRACT` + `PARQUET_WRITE` + `REPLAY` + `SCD2_PROMOTION_D2` rows present; durations within historical range (extract <2× baseline; SCD2 <2× baseline); no `Status='FAILED'` rows
+15. IF diff exists or any validation step fails → ROLLBACK (steps 16-19); IF all validation 🟢 → proceed with cautious D2 expansion to next table (e.g., low-volume small table NEXT, not large table)
+
+**Rollback** (executed ONLY if validation fails):
+16. Acquire Bronze.ACCT lock if not already held (per Pre-flight step 2; same `@Resource='UDM_Pipeline_DNA_ACCT'`)
+17. `bcp UDM_Bronze.dna.ACCT_scd2_python in /backup/ACCT_scd2_pre_d2_<YYYYMMDD>.bcp -n -S <udm_host> -d UDM_Bronze -T -E -h "TABLOCK"` — restore pre-D2 Bronze EXACTLY (TABLOCK hint for atomicity; -E preserves IDENTITY values per CLAUDE.md Do-NOT rule on `_scd2_key`); verify rowcount matches pre-D2 snapshot rowcount before releasing lock
+18. Revert deploy: `git checkout <pre_d2_baseline_commit_hash>` on production server; restart pipeline service; verify `git log -1` matches pre-D2 baseline; re-enable legacy Stage→CDC→SCD2 path for ACCT (the legacy `main_small_tables.py` Stage write path was never removed at R1.3 — only the engine-side `source_verifier_fn` parameter was added; legacy CDC remains functional)
+19. Document divergence in `docs/migration/_validation_log.md` event-row (Pitfall #9.k forward-prevention discipline) + open new B-N for investigation (severity HIGH; closure target: BEFORE next D2 cutover attempt) + halt D2 rollout until divergence root-cause understood + reviewed by pipeline-lead
+
+**Source**: B-343 + `docs/migration/D2_GAP_RESOLUTION_PLAN_2026-05-17.md` §4.2 + Phase 2 R1 prep gap-check 2026-05-17. Number drift remediation (Pitfall #9.k): B-343 BACKLOG entry + D2_GAP_RESOLUTION_PLAN §4.2 both cite "RB-12" as the target runbook number, but RB-12 is occupied by Pipeline Deployment per D84-D87 at L1020 — same drift class as B-344's "RB-13" (occupied by Permanent-Retire Table at L1188; corrected to RB-15 at d6fab30 2026-05-19). Authored as RB-18 at this commit per next-available-runbook-number discipline. CLAUDE.md Do-NOT rule preservation: BCP IN with `-E` flag preserves `_scd2_key` IDENTITY values per "Do NOT include _scd2_key (IDENTITY) in INSERT DataFrames or BCP column lists" — applies symmetrically to the OUT/IN restore cycle. lock-resource format follows B-345 `TABLE_LOCK_RESOURCE_FORMAT = 'UDM_Pipeline_{source}_{table}'` canonical.
