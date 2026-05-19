@@ -42,6 +42,14 @@
             "command": ".venv\\Scripts\\python.exe .claude\\hooks\\auto-verify-step-10.py"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".venv\\Scripts\\python.exe .claude\\hooks\\session-compactor-warning.py"
+          }
+        ]
       }
     ]
   }

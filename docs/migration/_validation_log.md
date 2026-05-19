@@ -12,6 +12,43 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-494 closure: udm-session-compactor Phase 2 auto-trigger extension (PostToolUse hook + stderr-warning + agent-side skill discipline)
+
+**Trigger**: pipeline-lead "extension of the Claude skill agent setup for ensuring an agent is triggered to save progress made before reaching a session compression limit" 2026-05-19. Stream 1 SCD2 review committed at `2f4ed23`; this is Stream 2.
+
+**Model**: claude-opus-4-7. **Context pressure**: high (session arc has accumulated significant history). **CCL completed**: yes.
+
+**Scope**: B-494 closure. NEW `.claude/hooks/session-compactor-warning.py` (~210 LOC PostToolUse hook implementing Path E hybrid checkpoint pattern per claude-code-guide research 2026-05-18) + hook registration in `.claude/settings.json` (no matcher → fires on all tools) + auto-trigger awareness section appended to `.claude/skills/udm-session-compactor/SKILL.md` + 10 NEW Tier 0 assertions at `tests/tier0/test_session_compactor_warning_hook.py`.
+
+**Mechanism** (Path E indirect since hooks can't directly invoke Claude):
+
+```
+PostToolUse hook   → measures ~/.claude/projects/<slug>/<session-uuid>.jsonl size
+                   → byte-size / 5 ≈ estimated tokens (heuristic)
+                   → compares against threshold (default 70% of 1M context)
+                   → emits stderr warning if threshold crossed (AND no recent snapshot AND not already warned this session)
+                   → writes suppression marker + telemetry row
+Claude reads tool result + warning in next turn
+Claude (per SKILL.md auto-trigger contract) → invokes udm-session-compactor
+                   → snapshot lands → subsequent hook runs detect snapshot → suppress further warnings
+```
+
+**4 BACKLOG sub-deliverables** (per B-494 entry):
+- (a) ✅ heuristic checkpoint via PostToolUse measuring transcript JSONL byte size
+- (b) ⬜ Token Counting API ground-truth sampling — DEFERRED (telemetry rows enable retrospective calibration)
+- (c) ⬜ PreCompact hook integration — DEFERRED (research: PreCompact fires too late)
+- (d) ✅ automated threshold-based invocation via stderr-warning + skill discipline
+
+**Configurability**: `UDM_COMPACTOR_THRESHOLD_PCT` env var (default 70; valid range 10-95).
+
+**Tier 0 tests**: 10/10 PASS in 0.40s (hook exists / syntax check / threshold default + env-override + invalid-fallback / exit-zero on empty + unknown-session / warning text format / token byte-ratio / suppression marker detect + mark).
+
+**Full-suite test scope note**: full-suite shows 32 PRE-EXISTING failures in unit/property/regression scope (test_hash_determinism + test_change_detection + test_hash_stability + test_resurrection_pattern + test_cdc_now_ms_precision) from parallel session's in-progress D125 3-mode CDC dispatch work (commits `2d5a0c5..0ad5bcc` 2026-05-19). These failures are NOT caused by B-494 — hook scope is `.claude/hooks/` + `tests/tier0/` only; no plausible mechanism for affecting hash determinism / SCD2 / CDC modules. Out-of-scope this commit; parallel session owns remediation.
+
+**Cumulative session delta UPDATED at B-494 closure**: this-chat scope 28 → 29 B-Ns CLOSED multi-session arc (+B-494). Parallel session has separately added B-542 through B-546 + their own closures (D125 3-mode CDC dispatch cohort).
+
+**Status**: substrate-edit per hard rule 14 — `.claude/hooks/` + `.claude/settings.json` + `.claude/skills/udm-*/SKILL.md` are substrate per cascade_classifier::SUBSTRATE_FILES; PRE-COMMIT reviewer to be spawned before commit lands.
+
 ## 2026-05-18 — SESSION_RESUME.md refresh (post-`a7813df` state-pointer)
 
 **Trigger**: pipeline-lead "Proceed with your next recommendation" 2026-05-18 — cascade fire post-`a7813df` (B-491+B-496 bundled closure completion).

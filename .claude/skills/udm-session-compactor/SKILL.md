@@ -194,6 +194,58 @@ After authoring, parent agent:
 | `SESSION_RESUME.md` | Snapshot AUGMENTS resume doc; resume doc remains the pointer; snapshot is the substrate |
 | `udm-post-edit-verification` | Authoring the snapshot is itself a substrate-edit; cascade TEST + GAP ANALYSIS + REVIEW applies (TEST = Tier 0 pin; GAP = gap-check on the snapshot artifact; REVIEW = optional design-reviewer for high-stakes session arcs) |
 
+## Auto-trigger awareness (Phase 2 — landed 2026-05-19 per B-494 closure)
+
+When the parent agent sees a stderr warning of the form:
+
+```
+⚠️  SESSION COMPACTION APPROACHING (per B-494 udm-session-compactor Phase 2 auto-trigger)
+Transcript size: <X> MB (~<Y> estimated tokens; <Z>% of 1M Opus 4.7 context)
+Threshold crossed: <pct>%
+
+ACTION REQUIRED: Invoke `udm-session-compactor` skill IMMEDIATELY to author session snapshot...
+```
+
+it is emitted by the **PostToolUse hook** at `.claude/hooks/session-compactor-warning.py` (per B-494 closure). The hook fires after every tool call, measures the session transcript JSONL byte size (`~/.claude/projects/<slug>/<session-uuid>.jsonl`), estimates token usage via the 5 bytes/token heuristic (per claude-code-guide research 2026-05-18 Path E hybrid), and compares against the configured threshold (default 70%; override via `UDM_COMPACTOR_THRESHOLD_PCT` env var).
+
+### Required agent response
+
+Per the auto-trigger contract:
+
+1. **Acknowledge the warning** — do not dismiss it; treat as high-priority signal
+2. **Pause current work at next safe boundary** — finish the current tool call cycle / commit if mid-cohort
+3. **Invoke this skill (`udm-session-compactor`)** to author a snapshot per the 5-section procedure at `docs/migration/_session_snapshots/<YYYY-MM-DD>-<commit-hash-prefix-7>.md`
+4. **Resume work after snapshot lands** — the warning is suppressed for the rest of the session once a snapshot file is detected in the directory
+
+### Suppression discipline
+
+The hook writes a suppression marker at `.claude/_session_metrics/<session-id>.compactor-warned` once the warning fires. Subsequent hook invocations in the same session skip warning emission until:
+- A snapshot file appears in `docs/migration/_session_snapshots/` modified after session start, AND
+- The suppression marker is cleared (which happens at next session start)
+
+This prevents warning-spam on every tool call after threshold-crossing.
+
+### Telemetry
+
+The hook also writes a per-tool-call telemetry row to `.claude/_session_metrics/<session-id>.jsonl` with fields `{ts, tool_name, estimated_tokens, transcript_bytes, threshold_pct, warning_fired}`. This enables retrospective drift analysis if the 5 bytes/token heuristic empirically diverges from ground-truth Token Counting API measurements (deferred to Phase 2.1 per B-494).
+
+### Architectural rationale
+
+Per claude-code-guide research 2026-05-18 (`a4c2c9ae8ebd639e1`): Claude Code hooks **cannot directly invoke Claude** to trigger skill invocation. The mechanism is indirect:
+
+```
+PostToolUse hook fires      → measures transcript size
+                            → compares against threshold
+                            → emits stderr warning if threshold crossed
+Claude reads tool result    → sees stderr warning in next turn
+Claude (per this skill body) → proactively invokes udm-session-compactor
+                            → snapshot lands
+                            → hook detects snapshot in subsequent runs
+                            → suppresses further warnings
+```
+
+This is the **Path E hybrid checkpoint pattern**. Active feature request `anthropics/claude-code#34340` (Claude Code expose `CLAUDE_CONTEXT_USED` env var to hooks) — when landed, this hook can use direct token measurement instead of JSONL byte-size heuristic.
+
 ## Phase 1 vs Phase 2 scope
 
 **Phase 1 (current — B-492 closure scope)**:
