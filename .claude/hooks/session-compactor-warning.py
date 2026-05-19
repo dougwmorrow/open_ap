@@ -126,12 +126,46 @@ def _estimate_token_usage(transcript_path: Path) -> tuple[int, int]:
     return estimated_tokens, size
 
 
+_MIN_SNAPSHOT_BYTES = 2048  # B-558 Phase 2.1 Component B 2026-05-19 — structural-validation floor
+_REQUIRED_SNAPSHOT_HEADERS = ("## §1 ", "## §2 ", "## §3 ", "## §4 ", "## §5 ")
+
+
+def _is_structurally_valid_snapshot(snapshot_file: Path) -> bool:
+    """Return True if snapshot file has minimum size + all 5 canonical headers.
+
+    Per B-558 Phase 2.1 Component B closure 2026-05-19: a snapshot file that
+    exists but lacks structural markers (e.g., authored as a stub before content
+    landed; truncated by a crash; placeholder file) should NOT suppress the
+    auto-trigger warning. Treating malformed snapshots as "no snapshot" forces
+    the agent to re-author properly.
+
+    Validation:
+    1. File size >= 2048 bytes (filters out single-line stubs)
+    2. All 5 canonical section headers present (## §1 through ## §5)
+
+    Defensive: returns False on OSError / UnicodeDecodeError.
+    """
+    try:
+        size = snapshot_file.stat().st_size
+        if size < _MIN_SNAPSHOT_BYTES:
+            return False
+        content = snapshot_file.read_text(encoding="utf-8", errors="replace")
+    except (OSError, UnicodeDecodeError):
+        return False
+    return all(header in content for header in _REQUIRED_SNAPSHOT_HEADERS)
+
+
 def _has_recent_snapshot(session_start_iso: str | None) -> bool:
-    """Return True if a session snapshot has been authored this session.
+    """Return True if a STRUCTURALLY VALID session snapshot has been authored this session.
 
     Looks for files in `docs/migration/_session_snapshots/` modified after
-    session start. If session_start_iso is missing, falls back to checking
-    for any file modified in the last 30 minutes.
+    session start AND passing structural validation (per B-558 Phase 2.1
+    Component B closure 2026-05-19: file size >= 2KB + all 5 canonical
+    section headers present). If session_start_iso is missing, falls back
+    to checking for any file modified in the last 30 minutes.
+
+    Malformed snapshots (stubs / truncated files / placeholder files) do
+    NOT suppress the auto-trigger warning — forces re-authoring.
     """
     if not SNAPSHOTS_DIR.is_dir():
         return False
@@ -152,10 +186,13 @@ def _has_recent_snapshot(session_start_iso: str | None) -> bool:
         if snapshot_file.suffix != ".md":
             continue
         try:
-            if snapshot_file.stat().st_mtime >= session_start_ts:
-                return True
+            if snapshot_file.stat().st_mtime < session_start_ts:
+                continue
         except OSError:
             continue
+        # Structural validation per B-558 Phase 2.1 Component B
+        if _is_structurally_valid_snapshot(snapshot_file):
+            return True
     return False
 
 

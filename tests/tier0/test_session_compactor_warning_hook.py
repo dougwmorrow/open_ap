@@ -256,3 +256,58 @@ def test_has_warned_this_session_detection() -> None:
         # Cleanup
         if marker.is_file():
             marker.unlink()
+
+
+def test_b558_structurally_valid_snapshot_accepts_full_file(tmp_path: Path) -> None:
+    """B-558 Component B Assertion 11: snapshot with all 5 headers + size >= 2KB → valid."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("compactor_hook", HOOK_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    snapshot = tmp_path / "valid-snapshot.md"
+    body = (
+        "---\nsnapshot_date: 2026-05-19\ncommit_hash: abc1234\n---\n\n"
+        "## §1 Active work context\n" + ("A" * 500) + "\n\n"
+        "## §2 Completed deliverables\n" + ("B" * 500) + "\n\n"
+        "## §3 Open runway\n" + ("C" * 500) + "\n\n"
+        "## §4 Deeper insights\n" + ("D" * 500) + "\n\n"
+        "## §5 Pointer-back cross-refs\nrefs\n"
+    )
+    snapshot.write_text(body, encoding="utf-8")
+    assert module._is_structurally_valid_snapshot(snapshot) is True
+
+
+def test_b558_structurally_valid_snapshot_rejects_undersized(tmp_path: Path) -> None:
+    """B-558 Component B Assertion 12: snapshot < 2KB → rejected (stub class)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("compactor_hook", HOOK_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    snapshot = tmp_path / "stub-snapshot.md"
+    snapshot.write_text(
+        "## §1 \n## §2 \n## §3 \n## §4 \n## §5 \nstub\n",
+        encoding="utf-8",
+    )
+    # All 5 headers present BUT file < 2KB
+    assert module._is_structurally_valid_snapshot(snapshot) is False
+
+
+def test_b558_structurally_valid_snapshot_rejects_missing_header(tmp_path: Path) -> None:
+    """B-558 Component B Assertion 13: snapshot >= 2KB but missing header → rejected."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("compactor_hook", HOOK_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    snapshot = tmp_path / "partial-snapshot.md"
+    body = (
+        "## §1 Active\n" + ("X" * 1000) + "\n"
+        "## §2 Done\n" + ("Y" * 1000) + "\n"
+        "## §3 Runway\n" + ("Z" * 500) + "\n"
+        # MISSING §4 + §5
+    )
+    snapshot.write_text(body, encoding="utf-8")
+    # File >= 2KB but missing §4 + §5 headers
+    assert module._is_structurally_valid_snapshot(snapshot) is False

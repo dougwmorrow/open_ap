@@ -166,14 +166,17 @@ The snapshot file at `docs/migration/_session_snapshots/<YYYY-MM-DD>-<commit-has
 - Top-level YAML frontmatter `--- snapshot_date / commit_hash / session_arc_scope ---` (3 fields)
 - All 5 canonical section headers (`## §1 ` through `## §5 `)
 - Minimum 1 entry per section (else the snapshot is premature)
+- File size ≥ 2KB (per B-558 Phase 2.1 Component B 2026-05-19 — `.claude/hooks/session-compactor-warning.py::_is_structurally_valid_snapshot()` mechanically enforces this floor; stub-class snapshots do NOT suppress the auto-trigger warning)
 - Footer with pointer to next-snapshot trigger criteria (when to refresh)
+- **§6 verification footer** (per B-558 Phase 2.1 Component B closure 2026-05-19 post-authoring verification mandate): single-line citation of `udm-gap-check` invocation + reviewer agent-ID + verdict. Format: `**Verification**: udm-gap-check reviewer <agent-id> verdict ✅ CLEAN / 🟡 IN-FLIGHT / 🔴 BLOCK on YYYY-MM-DD`. Absence of §6 indicates snapshot was authored WITHOUT post-authoring verification — discipline-debt class.
 
 After authoring, parent agent:
 
 1. Writes a `_validation_log.md` event row referencing the snapshot file
 2. Adds a row to BACKLOG.md (or POLISH_QUEUE.md if cosmetic) IF the snapshot surfaced new tracking-worthy items not already tracked
 3. **Refreshes `SESSION_RESUME/active/<chat-name>.md` state pointer** for THIS chat per B-562 Component B multi-chat coordination cohort (closed 2026-05-19). Update sections: state-as-of-session-end (branch / latest commit / push status / pytest baseline / cumulative session delta) + this-session commit chain + NEXT SESSION RESUME PROCEDURE + Open runway (priority-ordered). Do NOT touch other chats' active files. See `SESSION_RESUME/README.md` for chat-naming convention + lifecycle (active → _archive on clean session end). If `SESSION_RESUME/active/<chat-name>.md` does not yet exist for THIS chat: author it now (with chat-scope description + initial state); see `SESSION_RESUME/active/meta-discipline.md` as the canonical template
-4. Reports to user: snapshot path + 1-line summary of what's preserved beyond what `SESSION_RESUME/active/<chat-name>.md` captures
+4. **Invokes `udm-gap-check` (per B-558 Phase 2.1 Component B closure 2026-05-19 post-authoring verification mandate)** — spawns independent reviewer agent (per D55+D56 producer ≠ reviewer) to audit snapshot completeness against the 5-section contract. 6-category audit adapted for snapshot scope: G1 N/A (no leading-badge in snapshots) / G2 claims-vs-actual (verify cited commit hashes + pytest counts + B-N closure counts match actual repo state) / G3 cross-refs resolve (all cited paths exist) / G4 discipline applied (§5 cross-refs comprehensive) / G5 N/A (Convention-registration is producer-time Step 10, not snapshot-time) / G6 surfaced patterns (any new B-N candidates flagged in §4 deeper insights). Append §6 verification footer with reviewer agent-ID + verdict immediately after gap-check completes. 🔴 BLOCK verdict → fix-inline + re-spawn reviewer; 🟡 IN-FLIGHT → fix-inline OR escalate per D56 second-pass; ✅ CLEAN → proceed to Step 5.
+5. Reports to user: snapshot path + 1-line summary of what's preserved beyond what `SESSION_RESUME/active/<chat-name>.md` captures + gap-check verdict
 
 ## Edge cases
 

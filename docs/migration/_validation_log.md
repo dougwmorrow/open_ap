@@ -12,6 +12,52 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-558 ⚫ FULLY CLOSED: Phase 2.1 Component B final closure (SKILL.md post-authoring verification mandate + hook _has_recent_snapshot() structural validation)
+
+**Trigger**: pipeline-lead "proceed with your recommended next steps" 2026-05-19 — cascade trigger for HIGH-priority B-558 Component B final closure per prior turn's recommended runway (only sub-deliverable remaining after A + C + D landed).
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Scope**: B-558 Phase 2.1 Component B — final closure step of udm-session-compactor hardening cohort. 3 substrate edits:
+
+1. `.claude/hooks/session-compactor-warning.py`: NEW `_is_structurally_valid_snapshot(snapshot_file)` helper (~25 LOC) + extended `_has_recent_snapshot(session_start_iso)` to require structural validation. New constants `_MIN_SNAPSHOT_BYTES = 2048` + `_REQUIRED_SNAPSHOT_HEADERS = ("## §1 ", "## §2 ", "## §3 ", "## §4 ", "## §5 ")`. Validation: file size ≥ 2KB AND all 5 canonical section headers present. Defensive: returns False on OSError / UnicodeDecodeError. Malformed snapshots (stubs / truncated / placeholders) NO LONGER suppress auto-trigger warning — forces re-authoring.
+
+2. `.claude/skills/udm-session-compactor/SKILL.md` Output contract section: NEW file-size requirement bullet (≥2KB; mechanically enforced by hook); NEW §6 verification footer contract (`**Verification**: udm-gap-check reviewer <agent-id> verdict ✅/🟡/🔴 on YYYY-MM-DD`). Post-authoring steps 3-list expanded to 5 with NEW Step 4 ("Invokes `udm-gap-check`" — spawns independent reviewer per D55+D56; 6-category audit adapted for snapshot scope: G1 N/A / G2 claims-vs-actual verification of cited commit hashes + pytest counts + B-N counts / G3 cross-refs resolve / G4 discipline (§5 cross-refs comprehensive) / G5 N/A (Convention-registration is producer-time) / G6 surfaced patterns; 🔴 BLOCK → fix-inline + re-spawn; 🟡 → fix OR D56 escalate; ✅ → proceed). Step 5 (was Step 4) extended to report gap-check verdict to user.
+
+3. `tests/tier0/test_session_compactor_warning_hook.py`: 3 NEW Tier 0 assertions (16/16 PASS total; 13 prior + 3 NEW). Covers: (a) valid snapshot with all 5 headers + ≥2KB size → True; (b) all 5 headers but <2KB stub → False; (c) ≥2KB but missing §4 + §5 headers → False.
+
+**TEST**: 16/16 PASS at `tests/tier0/test_session_compactor_warning_hook.py` (0.46s).
+
+**GAP ANALYSIS (G1-G6)**:
+- G1 (Pitfall #9.j leading-badge): ✅ B-558 leading-badge flipped 🟡 Open → ⚫ CLOSED + strikethrough applied per canonical closure-render convention.
+- G2 (Pitfall #9.k arithmetic-propagation): ✅ this-chat 107 NEW B-Ns unchanged / 31 → 32 CLOSED (+B-558 full closure); Phase 2.1 contributed 15 NEW Tier 0 (3 Component B + 8 Component A + 4 Component C).
+- G3 (Pitfall #9.l canonical re-read): ✅ plan §3.2 spec re-read before implementation; structural-validation contract aligned with snapshot §1-§5 canonical headers per existing SKILL.md "5-section snapshot procedure" definition.
+- G4 (Pitfall #9.m discipline-applied-to-tracker): ✅ post-authoring verification mandate IS the discipline-applied-to-its-own-tracker per Pitfall #9.m forward-prevention — snapshot authoring now requires verification before claim.
+- G5 (Pitfall #9.n convention-registration): N/A — no new public Python surface to register in CLAUDE.md Structure or GLOSSARY. Hook helper `_is_structurally_valid_snapshot()` is private (underscore prefix); SKILL.md edits are content-discipline.
+- G6 (new B-N opportunities): None surfaced. B-559 Phase 2.2 (CCPA/PII scrubbing) remains tracked as separate B-N.
+
+**Tracker updates**:
+- BACKLOG.md L1110: B-558 leading-badge 🟡 → ⚫ CLOSED + strikethrough; closure annotation cites all 4 components + commit anchors + Tier 0 count.
+- CURRENT_STATE.md L7: new dated entry prepended; prior Component C entry demoted.
+- HANDOFF.md §14 L427: mirror of CURRENT_STATE prepended.
+- _validation_log.md: this entry replaces prior Component C header at top of 2026-05-19 cohort.
+
+**B-558 FULL CLOSURE 4-COMPONENT COHORT**:
+| Component | Status | Commit | Tier 0 |
+|---|---|---|---|
+| A: check_snapshot_claims commit-hash verification | ⚫ CLOSED | `e1738df` | +8 |
+| B: SKILL.md mandate + hook structural validation | ⚫ CLOSED | THIS COMMIT | +3 |
+| C: check_snapshot_pytest_claims via Option B native fit | ⚫ CLOSED | `83c9e67` | +4 |
+| D: hook refactor for payload['transcript_path'] | ⚫ CLOSED | `e3d8700` | +0 (pre-existing) |
+
+5-commit B-558 cohort total (D + A + A-trackers + C + B). 15 NEW Tier 0 Phase 2.1 contribution. Closes 5 HIGH-severity gaps from 29-gap audit (Gap 1.2 / 3.1 / 5.3 / 2.3 / 2.4).
+
+**Net delta**: this-chat 107 NEW B-Ns unchanged / **31 → 32 CLOSED** (+B-558 full closure) / pytest +3 NEW Tier 0 Component B; cumulative Phase 2.1 +15 NEW Tier 0.
+
+**Forward-prevention class addressed**: snapshot-stub-suppresses-warning class — malformed snapshots (stubs / truncated files / placeholder files) previously suppressed auto-trigger warning because `_has_recent_snapshot()` only checked file existence + mtime. Now mechanically validated against structural floor (2KB + 5 canonical headers) at every PostToolUse hook invocation. Composes with Component A (commit_hash verification) + Component C (pytest-scope verification) — together they close the full snapshot-claims-vs-actual forward-prevention surface per 29-gap audit Phase 2.1 scope.
+
+---
+
 ## 2026-05-19 — B-558 Phase 2.1 Component C closure: `check_snapshot_pytest_claims` 12th Phase 1 quality check (snapshot-pytest-scope-ambiguity forward-prevention; analog of B-449 at snapshot scope)
 
 **Trigger**: pipeline-lead "proceed with your recommended next steps" 2026-05-19 — cascade trigger for MEDIUM-priority Component C build per prior turn's recommended runway.
