@@ -175,6 +175,16 @@ class TableConfig:
     # Source: ``UdmTablesList.LastModifiedColumn``.
     last_modified_column: str | None = None
 
+    # D63 + D125 (2026-05-19) per-table CDC mode dispatch flag.
+    # Values: 'change_detect' (legacy Stage→CDC→SCD2; D63 default),
+    # 'parquet_snapshot' (D2 Parquet→replay→SCD2 path),
+    # 'both' (D125 BOTH_LEGACY_FEEDS: Parquet audit substrate + legacy
+    # CDC drives Bronze). Per-table column on UdmTablesList added by
+    # migrations/cdc_mode_column.py (B-542). Default 'change_detect'
+    # preserves current behavior on tables where the column is absent
+    # (defensive for pre-migration code paths).
+    cdc_mode: str = "change_detect"
+
     @property
     def effective_stage_name(self) -> str:
         return self.stage_table_name or self.source_object_name
@@ -267,7 +277,10 @@ class TableConfigLoader:
         "StripSuffix, "
         # Per-table extraction-guard override (added by
         # migrations/extraction_guard_per_table.py).
-        "MaxRowsPerDay "
+        "MaxRowsPerDay, "
+        # D63 + D125 per-table CDC mode dispatch flag (added by
+        # migrations/cdc_mode_column.py B-542 2026-05-19).
+        "CDCMode "
         "FROM dbo.UdmTablesList"
     )
 
@@ -380,6 +393,13 @@ class TableConfigLoader:
             # Per-table extraction-guard override. NULL → keep current behavior.
             _max_rows = row.get("MaxRowsPerDay")
             tc.max_rows_per_day = int(_max_rows) if _max_rows is not None else None
+
+            # D63 + D125 per-table CDC mode dispatch. Defaults to
+            # 'change_detect' when column is missing (pre-migration) OR
+            # when value is NULL (defensive against malformed UdmTablesList
+            # rows that bypass the CHECK constraint).
+            _cdc_mode = row.get("CDCMode")
+            tc.cdc_mode = str(_cdc_mode) if _cdc_mode is not None else "change_detect"
 
             # Set resolved schema casing from sys.schemas
             tc._resolved_stage_schema = schema_map.get((config.STAGE_DB, tc.source_name))
