@@ -55,7 +55,7 @@ ETL pipeline extracting from Oracle (DNA) and SQL Server (CCM, EPICOR) sources i
   - guards.py - shared extraction guard logic (parameterized thresholds, baseline retrieval)
   - pipeline_steps.py - shared CDC/SCD2 promotion steps
   - table_config.py - TableConfig + TableConfigLoader from General.dbo.UdmTablesList
-  - table_lock.py - sp_getapplock table-level locking to prevent concurrent runs (P1-2)
+  - table_lock.py - sp_getapplock table-level locking to prevent concurrent runs (P1-2); surface: `TABLE_LOCK_RESOURCE_FORMAT` (promoted from private `_LOCK_RESOURCE` per B-345 single-source-of-truth discipline; Phase 2 R1.7 build commit `4b3e5c9` 2026-05-18; future `data_load/parquet_replay.py::replay_table_lock` MUST import this canonical format string to ensure identical sp_getapplock @Resource across normal-cycle vs replay paths)
   - pipeline_state.py - extraction state tracking, gap detection, checkpoints
   - range_scheduler.py - windowed-CDC date-range planner (FirstLoadDate + LookbackDays + trust-gate composition over `cdc/extraction_state.py`); produces ordered date plan for large-table per-day processing (Round 3 § 5.1; Wave 2.1 build 2026-05-13; surface: `plan_extraction_range`, `ExtractionPlan`)
 - schema/ — DDL & Schema Management
