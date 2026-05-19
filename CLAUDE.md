@@ -306,6 +306,13 @@ No D105 mandate — existing conventions (PascalCase tables like `UdmTablesList`
 
 
 ## Do NOT
+
+**Rule format**: each rule is a single bullet starting with `Do NOT`. When a rule is later RETRACTED (because the underlying gap was closed structurally), apply the canonical **LIFTED-rule format** per P-24 closure 2026-05-19 instead of deleting the rule outright (preserves audit trail + cites closure substrate):
+
+`- ~~Do NOT <original rule body>~~ — **LIFTED YYYY-MM-DD** via <B-N closure citation>. <Closure mechanism summary>. <Operational guidance for post-LIFTED state>. <Original empirical anchor preserved for audit-trail>.`
+
+First instance precedent: B-545 production-safety pin LIFTED 2026-05-19 via B-553 + B-554 closures (CLAUDE.md L350 in this file). P-24 closure 2026-05-19 formalizes the format. Future Do-NOT rules that get superseded should follow this pattern. See also: gap-check reviewer `ac5c9ea53cc34bce3` 2026-05-19 G5.2 finding (stale forward-reference within LIFTED rule body — addressed via F5.1 inline-fix at `3a45b9c`).
+
 - Do NOT truncate Bronze tables — SCD2 is append-only by design
 - Do NOT use write_csv without batch_size=4096 on large DataFrames
 - Do NOT add quoting to BCP CSV output — quote_style must always be 'never'

@@ -824,3 +824,45 @@ def test_b555_check_table_parity_hash_check_drift_overrides_clean_row_count():
         f"got {result['verdict']!r}"
     )
     assert result["hash_check_verdict"] == tool.VERDICT_DRIFT
+
+
+def test_b560_resolve_pk_columns_empty_logs_warning(caplog):
+    """B-560 closure 2026-05-19: WARNING log surfaces UdmTablesColumnsList
+    gap when _resolve_pk_columns returns empty list. Operationally minor
+    (Bronze excludes NULL-PK via legacy CDC P0-4 filter; defensive filter
+    is no-op) but UdmTablesColumnsList unpopulated state likely indicates
+    a separate operational issue worth surfacing."""
+    import logging  # noqa: PLC0415
+    tool = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchall.return_value = []  # No PK columns
+
+    with caplog.at_level(logging.WARNING, logger="tools.validate_parquet_vs_stage"):
+        result = tool._resolve_pk_columns(cursor, "DNA", "ACCT")
+
+    assert result == []
+    assert any(
+        "no PK columns" in record.message and "DNA" in record.message and "ACCT" in record.message
+        for record in caplog.records
+    ), f"WARNING log missing or wrong content; records: {[r.message for r in caplog.records]}"
+
+
+def test_b560_resolve_pk_columns_non_empty_no_warning(caplog):
+    """B-560: when pk_columns ARE present, no WARNING logged (only the
+    empty-list case triggers the operator-attention signal)."""
+    import logging  # noqa: PLC0415
+    tool = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchall.return_value = [("AcctNo",), ("EffDate",)]
+
+    with caplog.at_level(logging.WARNING, logger="tools.validate_parquet_vs_stage"):
+        result = tool._resolve_pk_columns(cursor, "DNA", "ACCT")
+
+    assert result == ["AcctNo", "EffDate"]
+    # No WARNING records about pk columns
+    warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+    pk_warnings = [r for r in warning_records if "no PK columns" in r.message]
+    assert pk_warnings == [], (
+        f"Unexpected WARNING when pk_columns populated; got: "
+        f"{[r.message for r in pk_warnings]}"
+    )

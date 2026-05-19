@@ -231,7 +231,21 @@ def _resolve_pk_columns(cursor, source: str, table: str) -> list[str]:
         f"ORDER BY OrdinalPosition",
         source, table,
     )
-    return [row[0] for row in cursor.fetchall()]
+    pk_columns = [row[0] for row in cursor.fetchall()]
+    if not pk_columns:
+        # B-560 closure 2026-05-19: WARNING surfaces the UdmTablesColumnsList
+        # gap (PK columns absent for this table). Operationally minor since
+        # Bronze excludes NULL-PK via legacy CDC P0-4 filter, but operator
+        # config issue worth surfacing. Hash-check verdict will FATAL on
+        # empty pk_columns per check_table_parity defensive guard.
+        logger.warning(
+            "_resolve_pk_columns: no PK columns for %s.%s in UdmTablesColumnsList "
+            "(IsPrimaryKey=1 query returned 0 rows). Bronze NULL-PK defensive "
+            "filter will be a no-op; hash-check would FATAL. Investigate "
+            "UdmTablesColumnsList population for this table.",
+            source, table,
+        )
+    return pk_columns
 
 
 def _query_both_mode_tables(cursor) -> list[tuple[str, str]]:

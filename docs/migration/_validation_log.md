@@ -14204,3 +14204,42 @@ Earlier session iterations consumed 3 quote-truncation-and-restore cycles before
 - Sampling-based hash comparison candidate (opportunistic if 3B+ table operator hits OOM)
 
 **Next-step recommendation**: pause for real operational testing per RB-16 Step 1 (shadow mode against CCM.AuditLog 96M) -- exercises the full B-552 v1 + B-563 + B-555 v2 stack against real-data interaction patterns. Closes D125 arc operationally.
+
+## 2026-05-19 -- LOW-WSJF cleanup cohort: P-24 + B-560 + B-557 closures
+
+**Event**: per user-direction "Close remaining LOW WSJF items" 2026-05-19. Cohort 1 of 2 -- knocks out 3 smaller LOW-WSJF items (P-24 cosmetic + B-560 WARNING log + B-557 shared helper extract). Cohort 2 (B-556 apply-path tests for CLI tools) follows separately given larger scope.
+
+**Closures**:
+
+| # | Type | Scope | Files |
+|---|---|---|---|
+| P-24 | Cosmetic | LIFTED-Do-NOT-rule format documentation in CLAUDE.md L308+ header | ``CLAUDE.md`` + ``POLISH_QUEUE.md`` |
+| B-560 | LOW WSJF 1.5 | WARNING log when ``_resolve_pk_columns()`` returns empty list (surfaces UdmTablesColumnsList gap) | ``tools/validate_parquet_vs_stage.py`` + 2 new Tier 0 tests |
+| B-557 | LOW WSJF 1.5 | Extract ``write_cli_event_log_row()`` shared helper to ``utils/cli_common.py`` (single source of truth for CLI audit-row schema per D76) | ``utils/cli_common.py`` + NEW ``tests/tier0/test_cli_common_audit_helper.py`` (8 tests) |
+
+**Per-closure details**:
+
+### P-24: LIFTED-Do-NOT-rule format documentation
+- ``CLAUDE.md`` L308 Do-NOT section header extended with **Rule format** paragraph
+- Canonical format: ``- ~~Do NOT <body>~~ -- **LIFTED YYYY-MM-DD** via <B-N closure citation>. <Closure mechanism summary>. <Operational guidance>. <Original empirical anchor preserved>.``
+- First-instance precedent cite to B-545 LIFTED at L350 + reference to gap-check reviewer ``ac5c9ea53cc34bce3`` G5.2 finding
+
+### B-560: WARNING log on empty pk_columns
+- ``_resolve_pk_columns()`` extended with ``logger.warning()`` when ``cursor.fetchall()`` returns empty
+- WARNING message cites source + table + recommended action (investigate UdmTablesColumnsList population)
+- 2 new Tier 0 tests: empty-list triggers WARNING / non-empty-list does NOT trigger WARNING
+- Operationally minor (Bronze excludes NULL-PK via legacy CDC P0-4; defensive filter is no-op) but UdmTablesColumnsList unpopulated state is operator-config issue worth surfacing
+
+### B-557: write_cli_event_log_row shared helper
+- NEW ``write_cli_event_log_row(cursor, *, event_type, event_detail, metadata, status='SUCCESS', error_message=None, table_name=None, source_name=None)`` appended to ``utils/cli_common.py``
+- Canonical implementation per D76 audit-row contract (extracted from ~40 LOC of identical CLI-audit-row boilerplate replicated across 27+ CLI_* family tools cumulative ~1080 LOC pre-extraction)
+- NEW Tier 0 test file ``tests/tier0/test_cli_common_audit_helper.py`` with 8 tests: module surface + keyword-only enforcement + INSERT SQL schema verification + optional table/source defaults + metadata JSON serialization + status/error_message default + status=FAILED propagation
+- Existing 27+ tools NOT migrated (huge blast radius); migration opportunistic at next tool-edit OR when audit schema evolves
+
+**Test count delta**: +10 (2 B-560 in existing parquet_vs_stage file + 8 new B-557 tests in new test file). Cohort regression 67/67 (was 56 pre-B-560 + 2 added + new file 8 = 66... actual 67 includes one I miscounted).
+
+**Cohort regression**: ``py -3 -m pytest tests/tier0/test_validate_parquet_vs_stage.py tests/tier0/test_cli_common_audit_helper.py -q`` -> 67 passed in 0.43s.
+
+**D125 arc status post-this-commit**: 24 B-Ns CLOSED total. Remaining D125-arc open: B-556 (apply-path tests for CLI tools; LOW WSJF 2.0) + sampling-based hash candidate (opportunistic if 3B+ table operator hits OOM).
+
+**Next-step**: Cohort 2 of LOW WSJF cleanup -- B-556 apply-path tests for ``flip_cdc_mode.py`` + ``validate_parquet_vs_stage.py`` CLI tools via B-566 shared utility pattern (4-layer forward-prevention; friction-reduced ~50% per B-566).
