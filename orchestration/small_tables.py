@@ -27,7 +27,7 @@ from extract.router import extract_full
 from schema.column_sync import sync_columns
 from observability.event_tracker import PipelineEventTracker
 from orchestration.guards import run_extraction_guard
-from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion, dispatch_check_cdc_mode, run_parquet_write_step, CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH
+from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion, dispatch_check_cdc_mode, run_parquet_write_step, run_parquet_replay_step, CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH
 from schema.evolution import SchemaEvolutionError, SchemaEvolutionResult, evolve_schema, validate_source_schema
 from schema.table_creator import ensure_bronze_table, ensure_bronze_point_in_time_index, ensure_bronze_unique_active_index, ensure_stage_table
 from orchestration.table_lock import acquire_table_lock, release_table_lock
@@ -277,7 +277,7 @@ def process_small_table(
             # space during the memory-intensive CDC anti-join + SCD2 phases.
             _safe_delete_csv(csv_path)
 
-            # --- B-544: 3-MODE CDC DISPATCH per D63 + D125 ---
+            # --- B-544 + B-552: 3-MODE CDC DISPATCH per D63 + D125 ---
             cdc_mode = dispatch_check_cdc_mode(table_config)
 
             # Small tables lack a SourceAggregateColumnName (date column),
@@ -289,23 +289,41 @@ def process_small_table(
 
             # 'both' or 'parquet_snapshot': write Parquet BEFORE legacy CDC.
             # Per CLAUDE.md Do-NOT rule.
+            parquet_write_result = None
             if cdc_mode in (CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH):
-                run_parquet_write_step(
+                parquet_write_result = run_parquet_write_step(
                     table_config, df, event_tracker,
                     business_date=small_table_business_date,
                 )
 
-            # 'parquet_snapshot' v1 NOT YET IMPLEMENTED — same as large_tables.
+            # B-552 v1: 'parquet_snapshot' end-to-end Parquet→replay→SCD2 path.
+            # Same architecture as large_tables.py per D125 plan §5.2 +
+            # D2/D115 source-exactness invariants.
             if cdc_mode == CDC_MODE_PARQUET_SNAPSHOT:
-                raise NotImplementedError(
-                    f"B-544 v1: cdc_mode='parquet_snapshot' end-to-end "
-                    f"replay→SCD2 path NOT yet implemented for "
-                    f"{table_config.source_name}.{table_config.source_object_name}. "
-                    f"Parquet write SUCCEEDED (registry row created); operator "
-                    f"must either (a) flip table to 'both' mode for legacy CDC "
-                    f"to drive Bronze, OR (b) wait for B-552 closure. "
-                    f"Plan: docs/migration/UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md §5.2."
+                # Release extraction df BEFORE replay loads its own from disk
+                extracted_row_count = len(df)
+                del df
+                import gc; gc.collect()
+
+                cdc_result = run_parquet_replay_step(
+                    table_config, parquet_write_result, event_tracker,
+                    business_date=small_table_business_date,
                 )
+                # B-552 v1: small-tables canonical path is targeted=False.
+                # run_scd2() detects deletes via Bronze anti-join (full path).
+                run_scd2_promotion(
+                    table_config, cdc_result, event_tracker, output_dir,
+                )
+                # CSV cleanup still required even on parquet_snapshot path
+                with event_tracker.track("CSV_CLEANUP", table_config) as cleanup_event:
+                    cleaned = cleanup_csvs(output_dir, table_config)
+                    cleanup_event.rows_processed = cleaned
+                total_event.rows_processed = extracted_row_count
+                logger.info(
+                    "Successfully processed %s.%s (parquet_snapshot mode)",
+                    source_name, table_name,
+                )
+                return True  # Skip legacy CDC path for 'parquet_snapshot' mode
 
             # --- CDC PROMOTION — runs for 'change_detect' + 'both' ---
             cdc_result = run_cdc_promotion(

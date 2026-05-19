@@ -35,7 +35,7 @@ from schema.column_sync import sync_columns
 from observability.event_tracker import PipelineEventTracker
 from orchestration.guards import run_daily_extraction_guard
 from orchestration.pipeline_state import get_dates_to_process, save_checkpoint
-from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion, dispatch_check_cdc_mode, run_parquet_write_step, CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH
+from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion, dispatch_check_cdc_mode, run_parquet_write_step, run_parquet_replay_step, CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH
 from schema.evolution import SchemaEvolutionError, SchemaEvolutionResult, evolve_schema, validate_source_schema
 from schema.table_creator import ensure_bronze_table, ensure_bronze_point_in_time_index, ensure_bronze_unique_active_index, ensure_stage_table
 from orchestration.table_lock import acquire_table_lock, keep_lock_alive, release_table_lock
@@ -476,33 +476,51 @@ def _process_single_day(
                 f"establish PKs from source metadata."
             )
 
-        # --- B-544: 3-MODE CDC DISPATCH per D63 + D125 ---
+        # --- B-544 + B-552: 3-MODE CDC DISPATCH per D63 + D125 ---
         cdc_mode = dispatch_check_cdc_mode(table_config)
 
         # 'both' or 'parquet_snapshot': write Parquet BEFORE legacy CDC.
         # Per CLAUDE.md Do-NOT rule: Parquet write MUST succeed first
         # (audit-substrate-before-Bronze-change invariant for 'both' mode).
+        parquet_write_result = None
         if cdc_mode in (CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH):
-            run_parquet_write_step(
+            parquet_write_result = run_parquet_write_step(
                 table_config, df, event_tracker,
                 business_date=target_date,
             )
 
-        # 'parquet_snapshot' v1 NOT YET IMPLEMENTED — Phase 2 of B-544
-        # (B-552 follow-up) lands the pure Parquet→replay→SCD2 path.
-        # v1 of B-544 covers only 'change_detect' (unchanged) + 'both'
-        # (Parquet write + legacy CDC drives Bronze).
+        # B-552 v1: 'parquet_snapshot' end-to-end Parquet→replay→SCD2 path.
+        # Per D125 plan §5.2 + D2 + D115 source-exactness invariants, the
+        # Parquet IS the canonical source of truth; replay from the just-
+        # written Parquet ENFORCES round-trip source-exactness before SCD2.
+        # Large-table delete-detection via day-N vs day-N-1 Parquet diff is
+        # NOT YET implemented in v1 — run_scd2_promotion(targeted=False)
+        # detects deletes via Bronze anti-join (memory-bounded for small
+        # tables; large-table optimization deferred to follow-up B-N).
         if cdc_mode == CDC_MODE_PARQUET_SNAPSHOT:
-            raise NotImplementedError(
-                f"B-544 v1: cdc_mode='parquet_snapshot' end-to-end "
-                f"replay→SCD2 path NOT yet implemented for "
-                f"{table_config.source_name}.{table_config.source_object_name}. "
-                f"Parquet write SUCCEEDED (registry row created); operator "
-                f"must either (a) flip table to 'both' mode for legacy CDC "
-                f"to drive Bronze, OR (b) wait for B-552 closure (Phase 2 "
-                f"of B-544; full pure-Parquet→replay→SCD2 orchestration). "
-                f"Plan: docs/migration/UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md §5.2."
+            # Release extraction df BEFORE replay loads its own from disk
+            # (avoids 2x memory peak; replay.df becomes the canonical state).
+            extracted_row_count = len(df)
+            del df
+            gc.collect()
+            _check_memory_pressure(source_name, table_name, target_date)
+
+            cdc_result = run_parquet_replay_step(
+                table_config, parquet_write_result, event_tracker,
+                business_date=target_date,
             )
+            # B-552 v1: route through run_scd2_promotion(targeted=False)
+            # which uses run_scd2() (full path with Bronze anti-join delete
+            # detection). For large tables (3B+ rows), this is memory-heavy;
+            # large-table 'parquet_snapshot' mode requires the day-N vs day-N-1
+            # Parquet diff mechanism (follow-up B-N).
+            run_scd2_promotion(
+                table_config, cdc_result, event_tracker, output_dir,
+                targeted=False,  # B-552 v1: full path; delete detection via Bronze anti-join
+                target_date=target_date,
+                index_rebuild_threshold=INDEX_REBUILD_THRESHOLD,
+            )
+            return  # Skip legacy CDC path for 'parquet_snapshot' mode
 
         # --- WINDOWED CDC (P1-3/P1-4) — runs for 'change_detect' + 'both' ---
         cdc_result = run_cdc_promotion(

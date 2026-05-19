@@ -25,6 +25,8 @@ from cdc.engine import run_cdc, run_cdc_windowed
 from data_load import bcp_loader
 from data_load.index_management import disable_indexes, rebuild_indexes
 from data_load.parquet_writer import write_parquet_snapshot
+from data_load.parquet_replay import replay_parquet_snapshot
+from cdc.engine import CDCResult
 from extract.udm_connectorx_extractor import get_table_row_count, table_exists
 from scd2.engine import run_scd2, run_scd2_targeted
 from orchestration.pk_validation import require_pk_columns, NoPrimaryKeyError
@@ -552,4 +554,89 @@ def run_parquet_write_step(
         )
         parquet_event.rows_processed = result.row_count
     return result
+
+
+# ---------------------------------------------------------------------------
+# B-552 v1 — parquet_snapshot end-to-end orchestration helper
+# ---------------------------------------------------------------------------
+
+
+def run_parquet_replay_step(
+    table_config: TableConfig,
+    parquet_write_result,
+    event_tracker: PipelineEventTracker,
+    *,
+    business_date: date,
+) -> CDCResult:
+    """Replay the just-written Parquet snapshot + adapt to CDCResult for SCD2.
+
+    Called by orchestrators when `cdc_mode == 'parquet_snapshot'` per B-552.
+    Per D2 + D115 source-exactness invariants, the Parquet IS the canonical
+    source of truth — replay from the just-written Parquet ENFORCES the
+    source-exactness invariant rather than passing the in-memory extraction
+    DataFrame directly through to SCD2 (which would bypass the round-trip
+    check that Parquet write captured everything correctly).
+
+    The replay reads back the just-written Parquet via M2
+    `replay_parquet_snapshot()` (which composes M3 `verify_parquet_snapshot`
+    SHA-256 verification + idempotency ledger composition) + returns a
+    `ReplayResult` with the materialized Polars DataFrame.
+
+    This function adapts the `ReplayResult` to the `CDCResult` shape that
+    `run_scd2_promotion()` expects:
+
+      - `df_current` = `replay.df` (materialized from Parquet)
+      - `pk_columns` = `table_config.pk_columns` (resolved from UdmTablesList)
+      - `deleted_pks` = `None` (replay path does NOT compute deletes natively
+        — `run_scd2_promotion(targeted=False)` detects deletes via anti-join
+        against the full Bronze active-row set; large-table day-N vs day-N-1
+        Parquet diff for memory-bounded delete detection deferred to a
+        follow-up B-N)
+      - counts (`inserts`/`updates`/`deletes`/`unchanged`/`null_pk_rows`) = 0
+        (SCD2 promotion computes these itself; the adapter doesn't pre-compute)
+      - `verify_before_close` = `None` (verifier runs at SCD2 layer per D18 +
+        R1.3 B-498+B-334 closures; not at replay layer)
+
+    :param table_config: Table being processed.
+    :param parquet_write_result: ParquetWriteResult from prior
+        `run_parquet_write_step()` invocation; provides `registry_id` for
+        the replay target.
+    :param event_tracker: For PipelineEventLog REPLAY row emission.
+    :param business_date: Hive-partition date (for event-row tagging only;
+        replay reads by registry_id not by business_date).
+    :returns: `CDCResult` adapter populated from replay output; ready for
+        `run_scd2_promotion(table_config, cdc_result, ...)` consumption.
+    """
+
+    with event_tracker.track("REPLAY", table_config) as replay_event:
+        replay_event.event_detail = (
+            f"{business_date} registry_id={parquet_write_result.registry_id}"
+        )
+
+        # Allocate a new batch_id for the replay step itself per M2 contract
+        # (parquet_replay.replay_parquet_snapshot uses original_batch_id from
+        # registry + replay_batch_id for the replay's ledger step). We use
+        # the event_tracker.batch_id as the replay_batch_id so PipelineEventLog
+        # rows correlate.
+        replay_result = replay_parquet_snapshot(
+            registry_id=parquet_write_result.registry_id,
+            replay_batch_id=event_tracker.batch_id,
+        )
+        replay_event.rows_processed = replay_result.row_count
+
+    # Adapt ReplayResult → CDCResult for run_scd2_promotion() consumption.
+    # Counts (inserts/updates/deletes/unchanged) are computed by SCD2; the
+    # adapter just provides df_current + pk_columns shape.
+    cdc_result = CDCResult(
+        df_current=replay_result.df,
+        pk_columns=list(table_config.pk_columns) if table_config.pk_columns else None,
+        deleted_pks=None,  # SCD2 will compute via Bronze anti-join in run_scd2()
+        verify_before_close=None,
+        inserts=0,
+        updates=0,
+        deletes=0,
+        unchanged=0,
+        null_pk_rows=0,
+    )
+    return cdc_result
 

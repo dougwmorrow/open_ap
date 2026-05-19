@@ -326,18 +326,32 @@ def test_small_tables_parquet_before_cdc_per_donot_rule():
     )
 
 
-def test_large_tables_parquet_snapshot_raises_notimplemented():
+def test_large_tables_parquet_snapshot_invokes_replay_step():
+    """B-552 v1 closure 2026-05-19: 'parquet_snapshot' mode in large_tables.py
+    invokes run_parquet_replay_step() + run_scd2_promotion(targeted=False) +
+    early-return; NO longer raises NotImplementedError."""
+
     src = Path("orchestration/large_tables.py").read_text(encoding="utf-8")
-    assert "raise NotImplementedError" in src
-    assert "B-544 v1" in src
-    assert "B-552" in src
+    # B-552 v1 replaces the NotImplementedError stub with replay+SCD2 dispatch
+    assert "run_parquet_replay_step(" in src, \
+        "B-552 v1 closure: large_tables.py MUST invoke run_parquet_replay_step for 'parquet_snapshot' mode"
+    assert "B-552" in src, "B-552 reference must be preserved in dispatch comments"
+    # NotImplementedError stub from B-544 v1 should be REMOVED
+    assert "raise NotImplementedError" not in src, \
+        "B-552 v1 closure: large_tables.py should NOT raise NotImplementedError anymore"
 
 
-def test_small_tables_parquet_snapshot_raises_notimplemented():
+def test_small_tables_parquet_snapshot_invokes_replay_step():
+    """B-552 v1 closure 2026-05-19: 'parquet_snapshot' mode in small_tables.py
+    invokes run_parquet_replay_step() + run_scd2_promotion() + early-return;
+    NO longer raises NotImplementedError."""
+
     src = Path("orchestration/small_tables.py").read_text(encoding="utf-8")
-    assert "raise NotImplementedError" in src
-    assert "B-544 v1" in src
-    assert "B-552" in src
+    assert "run_parquet_replay_step(" in src, \
+        "B-552 v1 closure: small_tables.py MUST invoke run_parquet_replay_step for 'parquet_snapshot' mode"
+    assert "B-552" in src, "B-552 reference must be preserved in dispatch comments"
+    assert "raise NotImplementedError" not in src, \
+        "B-552 v1 closure: small_tables.py should NOT raise NotImplementedError anymore"
 
 
 def test_orchestrator_dispatch_blocks_legacy_string():
@@ -350,3 +364,151 @@ def test_orchestrator_dispatch_blocks_legacy_string():
     # implicitly rejects 'legacy'. Verify VALID_CDC_MODES does not include it.
     assert "'legacy'" not in str(ps.VALID_CDC_MODES)
     assert "legacy" not in src_ps.split("VALID_CDC_MODES = ")[1].split(")")[0]
+
+
+# ---------------------------------------------------------------------------
+# Class E — B-552 v1 closure tests (run_parquet_replay_step + replay→SCD2 ordering)
+# ---------------------------------------------------------------------------
+
+
+def test_pipeline_steps_exports_run_parquet_replay_step():
+    """B-552 v1: run_parquet_replay_step exported alongside existing helpers."""
+
+    ps = _import_ps()
+    assert hasattr(ps, "run_parquet_replay_step"), \
+        "B-552 v1: run_parquet_replay_step must be exported from pipeline_steps"
+
+
+def test_run_parquet_replay_step_returns_cdc_result_compatible_shape():
+    """B-552 v1: run_parquet_replay_step adapts ReplayResult → CDCResult shape
+    so run_scd2_promotion can consume it without further transformation."""
+
+    ps = _import_ps()
+
+    tracker = MagicMock()
+    track_cm = MagicMock()
+    tracker.track.return_value = track_cm
+    track_cm.__enter__ = MagicMock(return_value=track_cm)
+    track_cm.__exit__ = MagicMock(return_value=False)
+    tracker.batch_id = 999
+
+    tc = MagicMock()
+    tc.source_name = "DNA"
+    tc.source_object_name = "ACCT"
+    tc.pk_columns = ["AcctNo", "EffDate"]
+
+    parquet_write_result = MagicMock()
+    parquet_write_result.registry_id = 42
+
+    mock_df = MagicMock()
+    mock_replay_result = MagicMock()
+    mock_replay_result.df = mock_df
+    mock_replay_result.row_count = 5000
+
+    # Patch replay_parquet_snapshot at module level
+    ps.replay_parquet_snapshot = MagicMock(return_value=mock_replay_result)
+    # Use the real CDCResult dataclass (already imported by pipeline_steps)
+    from datetime import date
+    target = date(2026, 5, 19)
+
+    cdc_result = ps.run_parquet_replay_step(
+        tc, parquet_write_result, tracker,
+        business_date=target,
+    )
+
+    # REPLAY event tracked
+    tracker.track.assert_called_once_with("REPLAY", tc)
+    # replay_parquet_snapshot called with registry_id + replay_batch_id
+    ps.replay_parquet_snapshot.assert_called_once()
+    call_kwargs = ps.replay_parquet_snapshot.call_args.kwargs
+    assert call_kwargs["registry_id"] == 42
+    assert call_kwargs["replay_batch_id"] == 999
+    # CDCResult adapter shape verified via constructor call args (CDCResult
+    # class is mocked at module-import time via cdc.engine sys.modules stub;
+    # asserting on the returned cdc_result.<attr> tests the MagicMock not the
+    # adapter logic. Instead verify what kwargs CDCResult() was called with).
+    ps.CDCResult.assert_called_once()
+    cdc_kwargs = ps.CDCResult.call_args.kwargs
+    assert cdc_kwargs["df_current"] is mock_df
+    assert cdc_kwargs["pk_columns"] == ["AcctNo", "EffDate"]
+    # B-552 v1 scope: deleted_pks=None; counts=0; verify_before_close=None
+    assert cdc_kwargs["deleted_pks"] is None
+    assert cdc_kwargs["inserts"] == 0
+    assert cdc_kwargs["verify_before_close"] is None
+    # Event detail tagged with business_date + registry_id
+    assert "2026-05-19" in str(track_cm.event_detail)
+    assert "registry_id=42" in str(track_cm.event_detail)
+    # rows_processed populated from replay result
+    assert track_cm.rows_processed == 5000
+
+
+def test_large_tables_replay_before_scd2_per_b552_v1_ordering():
+    """B-552 v1 source-text ordering: run_parquet_replay_step MUST appear
+    BEFORE the run_scd2_promotion in the 'parquet_snapshot' dispatch block.
+    Per D2 + D115 source-exactness invariants — Parquet is canonical source;
+    SCD2 consumes the replayed materialized state, not the original df."""
+
+    src = Path("orchestration/large_tables.py").read_text(encoding="utf-8")
+    replay_pos = src.find("cdc_result = run_parquet_replay_step(")
+    assert replay_pos >= 0, "run_parquet_replay_step call site missing in 'parquet_snapshot' branch"
+    # Find the run_scd2_promotion call AFTER the replay invocation
+    scd2_after_replay_pos = src.find("run_scd2_promotion(", replay_pos)
+    assert scd2_after_replay_pos >= 0, (
+        "run_scd2_promotion call after replay missing — 'parquet_snapshot' branch incomplete"
+    )
+    # Verify they're in the same dispatch block (no intervening other dispatch)
+    # (replay_pos < scd2_after_replay_pos is guaranteed since find() is forward)
+    assert scd2_after_replay_pos > replay_pos
+
+
+def test_small_tables_replay_before_scd2_per_b552_v1_ordering():
+    """Same B-552 v1 ordering invariant for small_tables.py."""
+
+    src = Path("orchestration/small_tables.py").read_text(encoding="utf-8")
+    replay_pos = src.find("run_parquet_replay_step(")
+    # small_tables.py uses run_scd2_promotion() without targeted= (default targeted=False)
+    # Anchor on the parquet_snapshot branch's SCD2 call which uses cdc_result from replay
+    scd2_after_replay_pos = src.find('cdc_result = run_parquet_replay_step(')
+    # Find run_scd2_promotion AFTER that point
+    if scd2_after_replay_pos >= 0:
+        scd2_after_replay_pos = src.find('run_scd2_promotion(', scd2_after_replay_pos)
+    assert replay_pos >= 0, "run_parquet_replay_step call site missing in small_tables.py"
+    assert scd2_after_replay_pos >= 0, "Post-replay SCD2 call site missing in small_tables.py"
+    assert replay_pos < scd2_after_replay_pos, (
+        "B-552 v1 ordering invariant: run_parquet_replay_step MUST appear before "
+        "post-replay run_scd2_promotion in small_tables.py source order"
+    )
+
+
+def test_orchestrators_b552_v1_use_targeted_false_for_parquet_snapshot_mode():
+    """B-552 v1 routes ALL parquet_snapshot mode through run_scd2_promotion(targeted=False)
+    regardless of table size. Large-table delete-detection via day-N vs day-N-1
+    Parquet diff deferred to B-563 follow-up. Pin the v1 scope via source-text."""
+
+    lt_src = Path("orchestration/large_tables.py").read_text(encoding="utf-8")
+    # In large_tables.py 'parquet_snapshot' branch should explicitly say targeted=False
+    # (the other run_scd2_promotion call elsewhere uses targeted=True for legacy windowed CDC)
+    assert "targeted=False" in lt_src, \
+        "B-552 v1: large_tables.py 'parquet_snapshot' branch MUST use targeted=False"
+    # small_tables.py only has run_scd2_promotion() default-args (targeted=False is default)
+    # so we don't pin the targeted=False keyword for small_tables specifically
+
+
+def test_b552_v1_does_not_break_classify_parity_or_dispatch():
+    """Regression check: B-552 v1 closure should NOT change dispatch logic
+    for 'change_detect' or 'both' modes; only 'parquet_snapshot' path changes."""
+
+    ps = _import_ps()
+    # All 3 modes still valid
+    assert ps.VALID_CDC_MODES == ("change_detect", "parquet_snapshot", "both")
+    # Constants unchanged
+    assert ps.CDC_MODE_CHANGE_DETECT == "change_detect"
+    assert ps.CDC_MODE_PARQUET_SNAPSHOT == "parquet_snapshot"
+    assert ps.CDC_MODE_BOTH == "both"
+    # dispatch_check_cdc_mode unchanged
+    tc = MagicMock()
+    tc.source_name = "DNA"
+    tc.source_object_name = "ACCT"
+    tc.cdc_mode = "change_detect"
+    assert ps.dispatch_check_cdc_mode(tc) == "change_detect"
+
