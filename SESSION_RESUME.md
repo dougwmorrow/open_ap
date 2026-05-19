@@ -1,18 +1,23 @@
-# SESSION_RESUME — 2026-05-18 (end of session)
+# SESSION_RESUME — 2026-05-19 (end of session; B-558 Component D milestone bridge)
 
 **For fresh Claude session**: read this first, then `docs/migration/INDEX.md` → `CURRENT_STATE.md` → `HANDOFF.md` → `CLAUDE.md` per CCL Stage 0+1 discipline.
+
+**CRITICAL — resume context**: B-558 Phase 2.1 hardening cohort is **MID-BUILD**. Component D ✅ landed at `e3d8700`. Components A + B + C + closure commit remain (~2.5 hours). See snapshot at `docs/migration/_session_snapshots/2026-05-19-e3d8700.md` (§4 Deeper insights captures architectural decisions + workflow innovations) + plan at `docs/migration/UDM_SESSION_COMPACTOR_PHASE_2_1_PLAN_2026-05-19.md` for next-session continuation.
 
 ---
 
 ## State as of session end
 
 - **Branch**: `round-6-post-merge-tracking`
-- **Latest commit (this chat)**: `a7813df` (B-491 + B-496 bundled closure COMPLETION — shared `is_empirical_anchor_context` helper supporting files after state-divergence event)
+- **Latest commit (this chat)**: `548f655` (session snapshot 2026-05-19 @ e3d8700 — B-558 Component D milestone bridge)
+- **Most-recent build commit (this chat)**: `e3d8700` (B-558 Component D — hook refactor to use payload['transcript_path'])
 - **Push status**: PUSHED — 0 commits ahead of `origin/round-6-post-merge-tracking`
-- **pytest baseline** (authoritative per cascade Step 3.1): **2868 pass / 10 skip / 0 fail** on `tier0+tier1+unit+property+regression` scope (HEAD baseline includes parallel-session `bcb05df` + `864e91a` Phase 2 R1 cohort additions)
-- **Cumulative session delta vs `c8145de`** (Phase A Plan convergence anchor) — **THIS CHAT'S meta-discipline scope only; parallel-session B-497-B-535 separate**:
-  - **104 NEW B-Ns** (B-393-B-496 in this chat's arc)
-  - **28 B-Ns CLOSED multi-session arc** (prior 23 + B-492 udm-session-compactor + B-493 query_blindspots allowlist + B-495 check_file_path_existence + B-491 + B-496 bundled-closure)
+- **pytest baseline (this chat sub-cohort scope)**: 13/13 PASS on `tests/tier0/test_session_compactor_warning_hook.py` at `e3d8700` (10 pre-existing B-494 + 3 NEW B-558 Component D assertions). Full-suite: 32 pre-existing failures from parallel session's D125 3-mode CDC dispatch work (commits `2d5a0c5..0ad5bcc`); out-of-scope for this chat.
+- **Cumulative session delta vs `c8145de`** (Phase A Plan convergence anchor) — **THIS CHAT'S meta-discipline scope only; parallel-session B-497-B-557 separate**:
+  - **106 NEW B-Ns** (B-393-B-559 in this chat's arc; +B-558 + B-559 opened 2026-05-19 in Phase 2.1 plan commit)
+  - **29 B-Ns CLOSED multi-session arc** (prior 28 + B-494 udm-session-compactor Phase 2 auto-trigger baseline 2026-05-19)
+  - **B-558** 🟡 Open MID-BUILD: Component D ✅ landed; Components A + B + C + closure commit remaining
+  - **B-559** 🟡 Open deferred (Phase 2.2 CCPA/PII scrubbing)
   - **11 NEW R-Ns** (R39-R49) — unchanged this chat
   - **14 canonical edge case series** (added PL + SE) — unchanged this chat
   - **udm-progress-logger**: v1.2.0 → v1.3.2 (4 PATCH iterations; unchanged this chat)
@@ -26,7 +31,26 @@
   - **GLOSSARY**: 30+ entries this chat (skill rows + tracker rows + check rows + module rows)
   - **CLAUDE.md hard rule 14 extensions this chat**: udm-cohort-review discipline (B-483) + udm-session-compactor discipline (B-492)
 - **Multi-agent applications this chat session**: ~95+ cumulative agent spawns (~87 prior + ~8 this chat — claude-code-guide research + gap-check reviewer `ab45539c33d1cebd1` + cross-cohort reviewer `a9330411976057db7` + udm-researcher `a1874f2bb5e4b7a23` + PRE-COMMIT reviewers `a922f99d2ec4fcf74` + `afc2539005da881dc` + `ae867948599ef26af` + `a4ac607d18b0111d4` + `a8b3220ad407537b9`)
-- **Parallel session state-divergence note**: parallel Claude session committed `bcb05df` (Phase 2 large-tables plan v5; B-497-B-535 + D117-D124 + R50-R64 + RB-15-17 + LT-AT + SE11-13) + `864e91a` (Phase 2 R1 cohort: B-503 udm-data-engineer-review agent + B-523 SnowflakeReplicationLog migration + B-535 SnowflakeCcpaPurgeLog migration) on this branch. These are OUT-OF-SCOPE for this chat per separation directive but present in commit chain.
+- **Parallel session state-divergence note**: parallel Claude session committed `bcb05df` + `864e91a` (Phase 2 large-tables plan v5 + R1 cohort) PLUS extensive 2026-05-19 work (`2d5a0c5..0ad5bcc` D125 3-mode CDC dispatch cohort: B-542-B-546 + B-552-B-557 closures + B-343 RB-18 D2 cutover rollback runbook + D125 proposal/remediation cycles). 32 pre-existing test failures in unit/property/regression scope from parallel D125 in-progress work. OUT-OF-SCOPE for this chat per separation directive.
+
+## NEXT SESSION RESUME PROCEDURE (B-558 Phase 2.1 continuation)
+
+Read in this order:
+1. **This file** (state pointer)
+2. **`docs/migration/_session_snapshots/2026-05-19-e3d8700.md`** (snapshot §1 Active work + §3 Open runway + §4 Deeper insights = full arc context)
+3. **`docs/migration/UDM_SESSION_COMPACTOR_PHASE_2_1_PLAN_2026-05-19.md`** (plan §3.1 Component A + §3.2 Component B + §3.3 Component C specifications)
+4. **`docs/migration/BACKLOG.md`** L1107+ (B-558 + B-559 entries)
+5. **`docs/migration/UDM_SESSION_COMPACTOR_REVIEW_2026-05-19.md`** (29-gap audit context if needed)
+
+Build resumption order (per Phase 2.1 plan §6 effort table):
+- **Component A** (~1 hour): NEW `tools/check_snapshot_claims.py` Phase 1 quality check — validates snapshot file claims against actual repo state. Spec at plan §3.1.
+- **Component B** (~45 min): `.claude/skills/udm-session-compactor/SKILL.md` post-authoring verification mandate + hook `_has_recent_snapshot()` extension. Spec at plan §3.2.
+- **Component C** (~45 min): NEW `check_snapshot_pytest_claims` Phase 1 check (Option B per gate-2 reviewer ABC contract analysis). Spec at plan §3.3.
+- **B-558 closure commit** (~30 min): bundle A+B+C + tracker updates + PRE-COMMIT reviewer + B-558 ⚫ CLOSED render
+
+Pipeline-lead Q1 (BLOCK vs WARN for snapshot claims) — assumed WARN per B-449/B-481/B-495 precedent unless pipeline-lead redirects before build resumes.
+
+Phase 2.2 deferred (B-559): CCPA/PII compliance scrubbing for snapshots; opens at next SKILL.md edit cycle OR Phase 2.2 cohort start.
 
 ---
 
