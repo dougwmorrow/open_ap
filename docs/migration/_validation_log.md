@@ -13253,3 +13253,38 @@ Plus reviewer-affirmed design choices:
 **Snapshot trim-policy compliance** (per skill spec §4 trim-policy taxonomy): irreplaceable architectural decisions (6) + rejected alternatives + reviewer rationale (6 reviewers) + cross-cohort patterns (6) + convergence-discipline events (3) + empirical-evidence accumulations + meta-discipline observations (6) preserved verbatim in §4 Deeper insights. Regenerable content (raw `git log`, file contents, tracker mechanics) referenced by pointer per §5 cross-refs.
 
 **Status**: session-pause clean; no B-Ns in-flight; ready for next-window resume on B-547 (RB-16 procedure rewrite) OR B-552 (parquet_snapshot end-to-end) OR B-555 (per-PK hash) per pipeline-lead direction.
+
+## 2026-05-19 — B-547 closure post-snapshot + cross-cohort gap-check 6-event B-541 milestone strengthening
+
+**Event**: `udm-progress-logger` discipline applied retroactively for B-547 closure at commit `d192cee` (RB-16 procedure rewrite). **Pitfall #9.m instance**: per cross-cohort reviewer Agent `a95d8cc8b0ce3b7b6` 2026-05-19 Scope 6 finding, the B-547 closure landed without an event row despite being substantive work (~95-line operational runbook + BACKLOG closure annotation). CLAUDE.md hard rule 9 mandates per-completion `_validation_log.md` row; this event row remediates the discipline gap retroactively.
+
+**B-547 closure summary** (per commit `d192cee`):
+- RB-16 production cutover procedure rewritten: placeholder (5 lines; B-501 historical 2-phase Stage-cleanup-then-atomic-flip design) → full body (~95 lines; D125 plan §2.3 2-step shadow-write + cutover design)
+- Step 1 `change_detect → both` (shadow-write entry; via B-546 flip tool)
+- Step 1.5 ≥30-day parity validation (via B-545 nightly invocation; decision gates days 7/14/21/30)
+- Step 2 `both → parquet_snapshot` (canonical cutover; B-552 v2 closure PREREQUISITE)
+- 7 Pre-flight steps + 7 Validation steps + 3-step Rollback (R1 defensive / R2 full / R3 BCP IN restore via RB-18 pattern)
+- B-552 + B-555 forward-referenced as remaining D125 implementation arc work
+- B-501 forward-reference handling deferred to pipeline-lead review (CRITICAL severity; explicit deferral with justification)
+
+**Files touched at d192cee**:
+- `docs/migration/05_RUNBOOKS.md` (+115/-12 = 127 LOC delta; per actual `git show --shortstat`; commit body's "+117/-13" claim is Pitfall #9.k drift — acknowledged audit-trail)
+- `docs/migration/BACKLOG.md` (+1/-1; B-547 closure annotation per Pitfall #9.j leading-badge discipline)
+
+**Cross-cohort review** (6th consecutive read-only-compliant reviewer):
+- Agent `a95d8cc8b0ce3b7b6` 2026-05-19 verdict: 🟡 ATTENTION (4 findings; no 🔴 BLOCK)
+- Honored B-541 read-only audit contract (zero side-effect files / zero sub-agents / zero modifications)
+- **6-event empirical evidence base** strengthens prior 5-event B-541 milestone (`a843ad09d24f2a607` + `ac2dd8d0ec814dc7e` + `ad50cb5cceda3f90c` + `adc861405ff006766` + `a8130cf417bb5692a` + `a95d8cc8b0ce3b7b6`); B-541 structural fix beyond HANDOFF §8 5-event formalization threshold
+
+**Pitfall #9.k arithmetic drifts surfaced + acknowledged audit-trail-only** (committed commit messages cannot be retroactively edited):
+1. `fc79ec7` snapshot commit body claims "~600 LOC" but actual snapshot file = 326 LOC; perpetuated into prior `_validation_log.md` event row at this file
+2. `d192cee` commit body claims "+117/-13 = 130 LOC delta" but `git show --shortstat` = +115/-12 = 127 LOC
+3. `d192cee` BACKLOG L1095 originally said "5 Validation steps" (commit body correctly said 7); inline-fix applied at THIS commit per reviewer recommendation
+
+**SESSION_RESUME.md update direction**: per reviewer Scope 6 guidance, root `SESSION_RESUME.md` is currently other-agent's B-558 Phase 2.1 + B-562 substrate; my D125 effort SHOULD NOT directly merge there until B-562 Component B (SESSION_RESUME/ directory restructure) closes. Canonical substrate for D125 effort REMAINS the immutable snapshot at `_session_snapshots/2026-05-19-7a810b9.md`. Defer SESSION_RESUME.md root-file update to post-B-562-Component-B closure.
+
+**D125 implementation arc status post-B-547**:
+- Operator-facing toolkit COMPLETE: B-542 (migration) + B-543 (TableConfig) + B-544 v1 (orchestrator dispatch) + B-545 v1 (parity-check CLI) + B-546 (flip CLI) + B-553/B-554 (NULL-PK + SS-1) + B-547 (RB-16 procedure)
+- Outstanding D125 work: B-552 (v2 of B-544; HARD-PREREQUISITE for RB-16 Step 2) + B-555 (v2 of B-545; interpretation-gap closure) + B-556/B-557/B-560/B-561/B-559 candidate-tracking remediations
+
+**Next-step recommendation**: B-552 (v2 of B-544 — parquet_snapshot end-to-end Parquet→replay→SCD2) — closes the LAST production-cutover blocker. Substantive scope (~150-200 LOC orchestrator + cdc_result adapter + delete-detection + Tier 1 tests).
