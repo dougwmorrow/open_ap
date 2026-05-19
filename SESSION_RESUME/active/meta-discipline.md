@@ -34,8 +34,9 @@
   - `tests/tier0/test_session_snapshot_pii_scrub.py`: 7/7 PASS (NEW B-559)
   - **Cumulative this-cohort: 82/82 PASS** (was 75 pre-B-559; +7 for B-559)
 - **Cumulative session delta** (this chat's meta-discipline scope only):
-  - **112 NEW B-Ns** (B-393-B-571; +B-570 + B-571 opened post-gap-check reviewer `adaca11fe47c1bca9` G6 findings — Windows cp1252 stdout encoding helper + closure-metadata YAML-frontmatter standardization)
-  - **35 B-Ns CLOSED multi-session arc** (prior 30 + B-562 full + B-558 full + B-559 + B-565 + B-569 = +5 net this session; B-568 + B-570 + B-571 remain 🟡 Open as outstanding gaps)
+  - **113 NEW B-Ns** (B-393-B-572; +B-572 opened per user-direction "we should be tracking progress made before the build during our planning session, during the build, and after the build is complete")
+  - **35 B-Ns CLOSED multi-session arc** (prior 30 + B-562 full + B-558 full + B-559 + B-565 + B-569 = +5 net this session; B-572 🟠 PARTIAL CLOSURE per first-instance artifact authored this commit but Phase 2 design-decision deferred; B-568 + B-570 + B-571 + B-572 Phase 2 remain 🟡 Open)
+  - **NEW artifact class**: `docs/migration/SESSION_BUILD_EFFORT_META_DISCIPLINE_2026-05-19.md` (first canonical build-effort report; 7-section structure: §0 Executive summary + §1 Pre-build + §2 During-build + §3 Post-build + §4 Lessons learned + §5 Self-application + §6 Cross-references; per B-572 + user-direction 2026-05-19)
   - **B-562** ⚫ FULLY CLOSED at `553b345` (all 4 phases)
   - **B-558** ⚫ FULLY CLOSED at `372e982` (all 4 components; +15 Tier 0)
   - **B-559** ⚫ CLOSED at `739eab1` (+7 Tier 0; PII scrub mechanical layer)

@@ -12,6 +12,61 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — NEW canonical build-effort report authored + B-572 opened (pre-build / during-build / post-build tracking discipline gap-closure)
+
+**Trigger**: pipeline-lead user-direction 2026-05-19 (verbatim): *"Create a markdown file explaining the effort that went into this build. This idea shows another gap. We should be tracking progress made before the build during our planning session, during the build, and after the build is complete."*
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Scope**: Author the first canonical build-effort report covering this session's full arc + open B-572 establishing build-effort tracking discipline as recurring artifact class.
+
+**Artifact authored**: NEW `docs/migration/SESSION_BUILD_EFFORT_META_DISCIPLINE_2026-05-19.md` (~280 LOC). 7-section structure:
+
+| § | Section | Content |
+|---|---|---|
+| §0 | Executive summary | 16-commit chain + 5 closures + 4 reviewer chain + 4-layer B-562 architecture status |
+| §1 | Pre-build phase | 5 user-direction triggers + pre-build knowledge state + planning artifacts referenced |
+| §2 | During-build phase | 5-cohort build narrative + 7 inline fixes + 6 reviewer-chain entries with verdicts/remediation |
+| §3 | Post-build phase | Closure milestones + mechanical-enforcement layer status + deferred runway + test pass count + reviewer attestations |
+| §4 | Lessons learned | 3 what-worked-well + 3 needs-improvement + 3 sub-class candidates surfaced |
+| §5 | Self-application opportunity | `tools/archive_chat_session.py` demo for this chat's close |
+| §6 | Cross-references | All canonical trackers + plan deliverables + skill files |
+
+**NEW B-N opened**:
+- **B-572 (LOW WSJF 1.5; 🟠 PARTIAL CLOSURE 2026-05-19)**: Build-effort tracking discipline. First instance ⚫ CLOSED at THIS commit via the new artifact. Phase 2 design-decision deferred — needs choice between (a) `docs/migration/_build_efforts/<YYYY-MM-DD>-<topic>.md` directory pattern (mirrors `_session_snapshots/` + `SESSION_RESUME/active/`), (b) SKILL.md (`udm-build-effort-reporter`) auto-generating 7-section structure, (c) Phase 1 quality check `check_build_effort_authored()` enforcing artifact-presence on ≥3-B-N-closure cohorts, OR (d) documentation-only convention. ~1h Phase 2 effort opportunistic.
+
+**4-layer session-tracking discipline composition** (post-this-commit):
+| Layer | Substrate | B-N | Function |
+|---|---|---|---|
+| Per-completion audit | `_validation_log.md` | (canonical) | Per-event audit row at every completion |
+| Per-chat lightweight pointer | `SESSION_RESUME/active/<chat>.md` | B-562 | Resume context; current state |
+| Per-session deep snapshot | `_session_snapshots/<date>-<commit>.md` | B-492 | Architectural decisions + rejected alternatives |
+| **Per-build-effort report** | `SESSION_BUILD_EFFORT_<TOPIC>_<DATE>.md` | **B-572** | **Pre-build / during-build / post-build narrative — THIS COMMIT** |
+
+**TEST**: N/A — pure markdown authoring + B-N open + tracker propagation. No code paths changed; pytest baseline preserved.
+
+**GAP ANALYSIS (G1-G6)**:
+- G1 ✅ B-572 leading-badge 🟠 PARTIAL CLOSURE applied per canonical multi-phase convention; B-570 + B-571 unchanged 🟡 Open.
+- G2 (Pitfall #9.k arithmetic-propagation): ✅ this-chat 112 → 113 NEW B-Ns (+B-572) propagated to CURRENT_STATE + HANDOFF + meta-discipline (cumulative count + new artifact-class bullet at meta-discipline L48b).
+- G3 (Pitfall #9.l canonical re-read): ✅ user-direction quoted verbatim in B-572 BACKLOG body + build-effort report §0 + §1 + this entry.
+- G4 (Pitfall #9.m discipline-applied-to-tracker): ✅ THIS COMMIT IS discipline-self-application — meta-discipline.md refreshed in same commit as BACKLOG B-572 open + new artifact. B-565 mechanical check fires on closure-flips only (none in this commit; B-572 is PARTIAL CLOSURE annotation not a flip from 🟡 to ⚫); check is no-op for this commit (correct behavior).
+- G5 (Pitfall #9.n convention-registration): N/A — no new public Python surface. Convention-registration for the NEW artifact class itself is deferred to B-572 Phase 2 (which will decide if the convention warrants Structure-row registration in CLAUDE.md).
+- G6 (new B-N opportunities): None surfaced beyond B-572 itself. The B-572 Phase 2 design-decision IS the new tracking-mechanism opportunity.
+
+**Tracker updates**:
+- BACKLOG.md L1124 (NEW B-572) + CURRENT_STATE L7 + HANDOFF §14 + this entry + meta-discipline.md (cumulative count + NEW artifact class bullet)
+- NEW `docs/migration/SESSION_BUILD_EFFORT_META_DISCIPLINE_2026-05-19.md` (the artifact itself)
+
+**Net delta**: this-chat **112 → 113 NEW B-Ns** (+B-572) / 35 CLOSED unchanged (B-572 PARTIAL doesn't increment closure count) / pytest unchanged.
+
+**Forward-prevention class addressed**: build-effort tracking gap — session arcs previously captured fragmented across multiple substrates (`_validation_log.md` per-event + `SESSION_RESUME/active/<chat>.md` per-chat + `_session_snapshots/` per-snapshot + commit messages per-commit). No single artifact summarized end-to-end. This commit establishes the convention via first instance + opens B-572 for Phase 2 mechanism decision.
+
+**Empirical anchor**: 4 prior user-directions in this session (B-562 + B-558 hardening + B-559 + B-568/B-569) all surfaced as inline-during-session gap-identifications. This 5th direction surfaces a META-gap about how we TRACK builds. Pattern: user-direction → gap-identification → B-N open → mechanical-enforcement (or first-instance artifact + Phase 2 deferral). All 5 surfaced gaps are addressed at this commit (4 closed; 1 PARTIAL closure with Phase 2 deferred).
+
+**Reviewer-chain status**: 4 independent reviewers already validated this session arc (`a1074fe57efab3be3` + `a9e109076f0086b68` + `ae0e5ea9c1b3851c0` + `a33924a28e1e4a666` + `a7f466490e1f64dc5` + `adaca11fe47c1bca9` — actually 6 unique reviewer agents incl. cross-cohort + PRE-COMMIT). Chain converged; no further reviewers needed pre-pause.
+
+---
+
 ## 2026-05-19 — Gap-check remediation per reviewer `adaca11fe47c1bca9` — meta-discipline.md L44/L46/L48 partial-refresh drift fix + B-570 + B-571 opens
 
 **Trigger**: pipeline-lead "Run a gap review to see if anything was missed regarding your recent enhancements" 2026-05-19 — 4th independent reviewer of this session arc.
