@@ -115,3 +115,22 @@ Round 3 CODE-build campaign (5 waves, 17 modules + 1 prereq, 1,063 new tests) cl
 - **No new R-numbers opened** during Round 3 build campaign. All systemic patterns surfaced (F-4/F-6 recurrence + task-prompt-vs-spec drift) fit cleanly under existing Pitfall #9 sub-class accumulator structure; no new risk classes emerged.
 
 - **2026-05-14 addendum (Round 6 Tier 2 + B-262 empirical evidence)**: Tier 2 Hypothesis property tests landed (53 properties across 8 files per `tests/property/` — § 5.1-5.8 of `phase1/06_observability_and_test_strategy.md`); 1 production bug surfaced + fixed in-session (**B-262 NFC-vs-Categorical hash ordering** — property test `test_hash_stability` caught a Categorical column hashing the physical integer instead of the NFC-normalized string, fix landed in `data_load/bcp_csv.py::add_row_hash()` cast-to-Utf8 path before NFC); **Tier 1 ↔ Tier 2 feedback loop operationalized** (Hypothesis-discovered counter-examples backfilled as Tier 1 regressions per `tests/regression/test_b262_*.py`). Empirical evidence that the test pyramid catches production bugs early — ⬇️ further reduces **R11** (validation discipline drift) confidence (Tier 2 closing the gap below Tier 1 unit-level catch) and **R28** sub-class (round-level cascade self-attestation — Tier 2 is structural defense BEFORE Pattern F runs at round close-out). No score change (1-event evidence; monitor for 2-event confirmation at next Tier 2 round close-out).
+
+
+### Phase 2 large-tables plan v5 cohort risks R50-R64 — added 2026-05-18
+
+- **R50** (🟡 4 = Medium × Medium): Skipping ACCT pilot trades risk-reduction-via-staircase for time-to-value. Mitigation: §2.3 trade-off matrix; R3 + R4 gates; extensive Tier 1-4 coverage. Source: 3-agent reviewer cohort 2026-05-18.
+- **R51** (🟡 6 = Medium × High): Phase A R1 doesn't close in time for Phase 2 R1 build. Mitigation: B-502 tracks commitment; B-497 interface freeze enables parallel build. Source: design-reviewer Q1.
+- **R52** (🟢 3 = Low × High): B-341/D117 CCPA-replay decision delayed. Mitigation: Option A4 already in D2 gap plan §2.2. Source: design-reviewer.
+- **R53** (🔴 9 = High × High; ESCALATED from R-NEW-D Medium × High in v1): 24-48h SLA for AuditLog full-historical replay not achievable. Mitigation: B-519 ≥365-day benchmark; fallback sub-day windowing / parallel shards / longer SLA. Source: pipeline-mechanics M7 escalates.
+- **R54** (🟢 3 = Low × High): H-drive capacity insufficient for 7-year footprint + 2x buffer. Mitigation: B-343 measurement; D107 VendorFile fallback.
+- **R55** (🟢 2 = Low × Medium): Bronze grows beyond columnstore optimal range during soak. Mitigation: R3.5 partition + R3.7 partition-aligned CCI per B-518.
+- **R56** (🟢 3 = Low × High): Automic JOB collision with legacy schedule. Mitigation: R5.4 atomic cutover txn.
+- **R57** (🔴 9 pre-mitigation; 🟡 4 post-mitigation): RB-16 cutover Stage UPDATE multi-min table-lock at 100M-row scale. Mitigation: B-501 2-phase split. Source: design-reviewer Q7 BLOCK.
+- **R58** (🟡 6 = Medium × High): CCI + SCD2 single-row UPDATE anti-pattern. Mitigation: B-517 empirical reject-gate at R3.6. Source: pipeline-mechanics M6.
+- **R59** (🟡 6 = Medium × High): BCP row-lock escalation during replay days 2+. Mitigation: B-514 TABLOCK during replay + B-515 INSERT sub-batches. Source: pipeline-mechanics M4.
+- **R60** (🟢 2 = Low × Medium): Sub-day Parquet chunking absent at multi-GB scale. Mitigation: B-513 conditional on R3.8 measure. Source: pipeline-mechanics M3.
+- **R61** (🟡 6 = Medium × High): Source-side IX_AuditLog_DateTime unverified. Mitigation: B-510 R1 prereq with CCM DBA. Source: pipeline-mechanics M2.
+- **R62** (🟡 6 = Medium × High): SnowflakeReplicationLog crash window between COPY success and INSERT/UPDATE. Mitigation: B-524 INSERT-first + startup-recovery sweep. Source: Option B reviewer Q9 BLOCK.
+- **R63** (🟡 6 = Medium × High): CCPA temporal confusion — vault-deleted token re-appears in AS_OF replay OR pre-deletion replay returns NULL/sentinel — operator gets wrong vault state for requested point in time. Mitigation: B-522 + D122 explicit mode split; RB-17 operator runbook. Source: Option B reviewer Q5 BLOCK.
+- **R64** (🟡 6 = Medium × High): Snowflake-side persistence of CCPA-deleted tokens — Iceberg doesn't inherit vault soft-delete; deleted tokens may persist in Snowflake indefinitely without explicit purge. R-4 doesn't extend to Snowflake. Mitigation: B-526 RB-10 extension + B-534 data-sharing policy + B-535 SnowflakeCcpaPurgeLog audit table. Source: Option B reviewer Class B.

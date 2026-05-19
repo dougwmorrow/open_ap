@@ -348,3 +348,28 @@ Cross-refs: `UDM_PROGRESS_LOGGER_REVIEW_AND_OPTIMIZATION_PLAN_2026-05-17.md` §3
 3. Capture: description (one sentence), current status (✅/🟡/🔴), mitigation (what handles it or what needs to be built)
 4. Add `Phase X` reference if the mitigation lands in a specific phase
 5. If status is 🔴 (open), add a note to the next planning round
+
+
+## LT-AT-Series: Large-Table Autonomous (added 2026-05-18 per Phase 2 large-tables plan v5 + B-504)
+
+- **LT-AT-1**: Bronze partition function drift if UdmSourceBeginDate distribution shifts. Mitigation: per-month partition + quarterly re-evaluation.
+- **LT-AT-2**: Columnstore index rebuild blocks SCD2 promotion. Mitigation: REBUILD WITH (ONLINE=ON, MAXDOP=2) in 03:30-05:30 AM gap.
+- **LT-AT-3**: MaxRowsPerDay miscalibration. Mitigation: R3.9 calibration via lateness_profile.py.
+- **LT-AT-4**: Polars OOM at 100M-row daily delta. Mitigation: R3.10 3-peak-RSS profile + sub-day windowing failover.
+- **LT-AT-5**: BCP first-run vs incremental decision-tree mis-routed. Mitigation: BCP-HANG-FIX-v3 adaptive context.
+- **LT-AT-6**: RB-16 cutover holds sp_getapplock too long. Mitigation: B-501 2-phase split; cutover txn < 60s.
+- **LT-AT-7**: Automic activation fires before R5.2 backfill completes. Mitigation: gated on R5.2 verification.
+- **LT-AT-8**: Replay range straddles Phase A pre/post cutover (Parquet schema). Mitigation: forward-only additive migration (column NULL); replay handles gracefully.
+- **LT-AT-9**: AuditLog source schema evolution mid-soak. Mitigation: schema/evolution.py ADD column handling.
+- **LT-AT-10**: Hash collision risk re-evaluated at 100M+ row scale. Mitigation: B-1 full SHA-256 VARCHAR(64) already addresses.
+- **LT-AT-11** (per design-reviewer Class F-1): Source schema evolution mid-replay range; Parquet files before/after have different column counts. Mitigation: validate_schema_before_concat per W-7 + halt-on-mismatch outside SE-1 zone.
+- **LT-AT-12** (per design-reviewer Class F-2): Leader election / single-server failover mid-pipeline-run; stale ledger IN_PROGRESS rows. Mitigation: startup_recovery_sweep per D85 + B-521 Tier 4 test.
+- **LT-AT-13** (per pipeline-mechanics M3): Single-day AuditLog peak overflows D45.2 100-250 MB Parquet target. Mitigation: R3.8 measures; if > 500 MB triggers B-513 sub-day chunking.
+- **LT-AT-14** (per pipeline-mechanics M4): BCP row-lock escalation during multi-day replay days 2+. Mitigation: B-514 TABLOCK during replay + B-515 INSERT sub-batches.
+- **LT-AT-15** (per v3 plan + RB-17): RB-17 Snowflake audit-replay runbook missing → operator can't reproduce "what Snowflake saw on date X". Mitigation: RB-17 authored at Phase 2 R2.26.
+
+## SE-Series additions (SE11, SE12, SE13 — added 2026-05-18 per Phase 2 large-tables plan v5)
+
+- **SE11** (per Option B reviewer Q9 + B-524 + B-525 + D123 + D124): Snowflake upload failure mid-COPY → retry must NOT double-load. Mitigation: deterministic stage path per D124 (attempt_N segment partitions COPY_HISTORY); INSERT-first per D123 records both attempts; first successful Status='replicated' wins; startup-recovery sweep reconciles via COPY_HISTORY with graceful-degrade if API unreachable.
+- **SE12** (per Option B reviewer Q3 + B-527): Vault row added retroactively (PII column discovered post-extraction). Mitigation: VaultTokenSnapshotMarker set via SQL Server SYSUTCDATETIME() pre-tokenize round-trip; replay predicate `CreatedAt <= marker + 1s grace`; PiiTokenProvenance has no @CreatedAt override (column default only).
+- **SE13** (per Option B reviewer Q5 + B-522 + D122 + RB-10 extension via B-526 + B-535): CCPA deletion between original upload and audit replay. Per D122 ReplayMode split: AS_OF reproduces token (`PiiVault.StatusChangedAt > as_of_date`); CURRENT returns NULL/sentinel for deleted tokens. Two distinct code paths; --mode flag REQUIRED.

@@ -617,14 +617,21 @@ class TestInternalHelpers:
 class TestStartupRecoverySweep:
 
     def test_zero_stale_returns_zero_no_update(self):
+        # Post-B-337/D119: 2 SELECTs in the first cursor block
+        # (forensic legacy-count + gating non-legacy count); UPDATE still
+        # skipped on zero-stale.
         from utils import idempotency_ledger as mod
 
         cur = _make_cursor(fetchone_returns=(0,))
         with patch.object(mod, "cursor_for", _make_cursor_for(cur)):
             assert mod.startup_recovery_sweep() == 0
-        assert cur.execute.call_count == 1, (
-            "Zero-stale path MUST NOT issue an UPDATE"
+        assert cur.execute.call_count == 2, (
+            "Per D119: 2 SELECTs (forensic + gating); UPDATE skipped on zero-stale"
         )
+        for c in cur.execute.call_args_list:
+            assert "UPDATE" not in c.args[0].upper(), (
+                "Zero-stale path MUST NOT issue an UPDATE"
+            )
 
     def test_some_stale_within_max_updates_and_returns_rowcount(self):
         from utils import idempotency_ledger as mod

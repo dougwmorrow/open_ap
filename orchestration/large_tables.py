@@ -35,7 +35,7 @@ from schema.column_sync import sync_columns
 from observability.event_tracker import PipelineEventTracker
 from orchestration.guards import run_daily_extraction_guard
 from orchestration.pipeline_state import get_dates_to_process, save_checkpoint
-from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion
+from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion, dispatch_check_cdc_mode, run_parquet_write_step, run_parquet_replay_step, run_parquet_delete_detection_step, CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH
 from schema.evolution import SchemaEvolutionError, SchemaEvolutionResult, evolve_schema, validate_source_schema
 from schema.table_creator import ensure_bronze_table, ensure_bronze_point_in_time_index, ensure_bronze_unique_active_index, ensure_stage_table
 from orchestration.table_lock import acquire_table_lock, keep_lock_alive, release_table_lock
@@ -476,7 +476,73 @@ def _process_single_day(
                 f"establish PKs from source metadata."
             )
 
-        # --- WINDOWED CDC (P1-3/P1-4) ---
+        # --- B-544 + B-552: 3-MODE CDC DISPATCH per D63 + D125 ---
+        cdc_mode = dispatch_check_cdc_mode(table_config)
+
+        # 'both' or 'parquet_snapshot': write Parquet BEFORE legacy CDC.
+        # Per CLAUDE.md Do-NOT rule: Parquet write MUST succeed first
+        # (audit-substrate-before-Bronze-change invariant for 'both' mode).
+        parquet_write_result = None
+        if cdc_mode in (CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH):
+            parquet_write_result = run_parquet_write_step(
+                table_config, df, event_tracker,
+                business_date=target_date,
+            )
+
+        # B-552 v1: 'parquet_snapshot' end-to-end Parquet→replay→SCD2 path.
+        # Per D125 plan §5.2 + D2 + D115 source-exactness invariants, the
+        # Parquet IS the canonical source of truth; replay from the just-
+        # written Parquet ENFORCES round-trip source-exactness before SCD2.
+        # Large-table delete-detection via day-N vs day-N-1 Parquet diff
+        # IMPLEMENTED per B-563 closure 2026-05-19: run_parquet_delete_detection_step()
+        # composes query_latest_snapshot_for_date + replay_parquet_snapshot +
+        # Polars anti-join on PK columns. First-load case -> deleted_pks=None
+        # -> falls back to run_scd2_promotion(targeted=False) per B-552 v1 semantics.
+        if cdc_mode == CDC_MODE_PARQUET_SNAPSHOT:
+            # Release extraction df BEFORE replay loads its own from disk
+            # (avoids 2x memory peak; replay.df becomes the canonical state).
+            extracted_row_count = len(df)
+            del df
+            gc.collect()
+            _check_memory_pressure(source_name, table_name, target_date)
+
+            cdc_result = run_parquet_replay_step(
+                table_config, parquet_write_result, event_tracker,
+                business_date=target_date,
+            )
+            # B-563 closure 2026-05-19: augment cdc_result with deleted_pks
+            # via day-N vs day-N-1 Parquet diff. If prior-day replay-eligible
+            # snapshot exists, deleted_pks populated -- route through
+            # run_scd2_promotion(targeted=True) for memory-bounded PK-targeted
+            # Bronze read (per P1-3). If no prior-day snapshot (first-load OR
+            # Status='created'), deleted_pks remains None -- fall back to
+            # run_scd2_promotion(targeted=False) for full Bronze anti-join
+            # (B-552 v1 semantics; memory-heavy but correct).
+            cdc_result = run_parquet_delete_detection_step(
+                table_config, cdc_result, event_tracker,
+                business_date=target_date,
+            )
+            use_targeted = cdc_result.deleted_pks is not None
+            run_scd2_promotion(
+                table_config, cdc_result, event_tracker, output_dir,
+                targeted=use_targeted,
+                target_date=target_date,
+                index_rebuild_threshold=INDEX_REBUILD_THRESHOLD,
+            )
+            # Fix 5 per reviewer a234fda11b870c78d Finding 1.3 — CSV cleanup
+            # required even on parquet_snapshot path (extract_windowed produces
+            # intermediate CSV at L354 regardless of dispatch mode; legacy CDC
+            # path reaches cleanup_csvs at L566 via control flow; parquet_snapshot
+            # early-returns BEFORE that block, so explicit cleanup needed here).
+            with event_tracker.track("CSV_CLEANUP", table_config) as cleanup_event:
+                cleaned = cleanup_csvs(output_dir, table_config)
+                cleanup_event.rows_processed = cleaned
+            # Fix 2 per reviewer a234fda11b870c78d Finding 1.2 — function is
+            # declared `-> int`; bare `return` returns None and caller does
+            # total_rows += day_rows → TypeError. Return extracted_row_count.
+            return extracted_row_count  # Skip legacy CDC path for 'parquet_snapshot' mode
+
+        # --- WINDOWED CDC (P1-3/P1-4) — runs for 'change_detect' + 'both' ---
         cdc_result = run_cdc_promotion(
             table_config, df, event_tracker, schema_result, output_dir,
             windowed=True,

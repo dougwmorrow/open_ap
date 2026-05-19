@@ -423,3 +423,74 @@ def restore_simple_recovery() -> None:
                 "manual intervention may be needed",
                 database,
             )
+
+
+# ---------------------------------------------------------------------------
+# B-557 closure 2026-05-19 -- shared CLI audit-row helper
+#
+# Per D76 audit-row contract. Extracted from ~40 LOC of identical
+# CLI-audit-row boilerplate replicated across 27+ CLI_* family tools
+# (cumulative ~1080 LOC pre-extraction). Single source of truth for
+# audit-row schema.
+#
+# Existing tools are NOT migrated by B-557 closure (would be a huge
+# blast radius across 27 tools); migration is opportunistic at next
+# tool-edit OR when a tool's audit schema needs to evolve. New CLI_*
+# tools authored after B-557 closure SHOULD compose this helper.
+# ---------------------------------------------------------------------------
+
+
+def write_cli_event_log_row(
+    cursor,
+    *,
+    event_type: str,
+    event_detail: str,
+    metadata: dict,
+    status: str = "SUCCESS",
+    error_message: str | None = None,
+    table_name: str | None = None,
+    source_name: str | None = None,
+) -> None:
+    """Write a single ``General.ops.PipelineEventLog`` audit row for a CLI invocation.
+
+    Per D76 audit-row contract. Canonical implementation extracted from
+    27+ duplicated ``_write_audit_row()`` helpers in ``tools/*.py``
+    (B-557 closure 2026-05-19; shared-helper single-source-of-truth).
+
+    :param cursor: pyodbc cursor (caller must commit/rollback).
+    :param event_type: ``CLI_*`` family value per CLAUDE.md L209+ registry.
+    :param event_detail: human-readable summary (one-line; appears in
+        operational dashboards alongside the row).
+    :param metadata: opaque dict serialized as JSON to ``Metadata`` column;
+        per-tool schema for ``args`` / ``actor`` / ``justification`` /
+        ``exit_code`` / tool-specific counts.
+    :param status: ``'SUCCESS'`` / ``'FAILED'`` / ``'WARNING'`` per D74
+        exit-code semantics.
+    :param error_message: optional human-readable error string when
+        ``status != 'SUCCESS'``.
+    :param table_name: optional Bronze/Stage table name when invocation
+        is single-table-scoped; ``NULL`` for multi-table or registry-wide
+        invocations.
+    :param source_name: optional source-system name (``'DNA'`` / ``'CCM'``
+        / ``'EPICOR'``) when invocation is source-scoped; ``NULL`` for
+        registry-wide invocations.
+
+    Side effect: executes one INSERT against
+    ``General.ops.PipelineEventLog`` via the provided cursor. Caller
+    MUST commit/rollback per their transaction semantics.
+
+    Schema reference: ``docs/migration/phase1/01_database_schema.md``
+    PipelineEventLog DDL. ``BatchId`` is auto-derived via
+    ``PipelineBatchSequence`` per-INSERT for CLI tools (single-row event;
+    NOT batched with a pipeline run).
+    """
+    import json  # noqa: PLC0415
+    cursor.execute(
+        f"INSERT INTO [{config.GENERAL_DB}].ops.PipelineEventLog "
+        f"(BatchId, TableName, SourceName, EventType, EventDetail, "
+        f" StartedAt, CompletedAt, Status, ErrorMessage, Metadata) "
+        f"VALUES (NEXT VALUE FOR [{config.GENERAL_DB}].ops.PipelineBatchSequence, "
+        f"        ?, ?, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME(), ?, ?, ?)",
+        table_name, source_name, event_type, event_detail,
+        status, error_message, json.dumps(metadata),
+    )

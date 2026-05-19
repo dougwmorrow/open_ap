@@ -119,6 +119,38 @@ def test_9o_suppresses_in_b_item_descriptive_block():
     assert matches == []
 
 
+def test_9o_suppresses_in_session_snapshot_directory():
+    """B-493 closure 2026-05-18: udm-session-compactor snapshot artifacts at
+    docs/migration/_session_snapshots/ canonically cite Pitfall #9.o sub-class
+    name in §4 Deeper insights evidence tables — the citation contains the
+    regex trigger substring `recursive[ -]exemption`. Substrate-file allowlist
+    suppresses self-firing analogous to session_resume.md narrative-doc treatment.
+    """
+    from tools.query_blindspots import check_9o_recursive_exemption
+    content = (
+        "| 9.o (recursive exemption rationalization) | 9 events | Mechanism A "
+        "through C-1 evolved; only harness-automated invocation empirically "
+        "broke the recursion |\n"
+    )
+    matches = check_9o_recursive_exemption(
+        content, "docs/migration/_session_snapshots/2026-05-18-1233bc8.md"
+    )
+    assert matches == []
+
+
+def test_9o_fires_outside_session_snapshot_directory():
+    """B-493 closure 2026-05-18: regression-pin that the suppression is
+    directory-scoped — same trigger phrase in a non-snapshot path still fires.
+    Prevents over-broad allowlist drift.
+    """
+    from tools.query_blindspots import check_9o_recursive_exemption
+    content = (
+        "Cascade exempt per recursive exemption claim of triple-counted review.\n"
+    )
+    matches = check_9o_recursive_exemption(content, "COMMIT_MSG")
+    assert len(matches) >= 1
+
+
 def test_9o_fires_in_commit_message_outside_doc():
     """9.o phrases in commit messages (non-descriptive-context paths) still fire."""
     from tools.query_blindspots import check_9o_recursive_exemption

@@ -1116,6 +1116,144 @@ def query_snapshot(
 
 
 # ---------------------------------------------------------------------------
+# Public: :func:`query_latest_snapshot_for_date`
+#
+# Per B-563 closure 2026-05-19 (large-table 'parquet_snapshot' mode
+# delete-detection via day-N vs day-N-1 Parquet diff).
+#
+# `query_snapshot` requires `batch_id` because it identifies a unique
+# registry row by the full (source, table, batch_id, business_date) tuple.
+# B-563's delete-detection workflow needs to find the PRIOR-DAY snapshot
+# WITHOUT knowing its batch_id. `query_latest_snapshot_for_date` is the
+# date-keyed lookup variant: given (source, table, business_date), return
+# the most recent replay-eligible snapshot (by CreatedAt + BatchId DESC).
+#
+# Replay-eligible status filter mirrors REPLAY_ELIGIBLE_STATUSES from
+# data_load/parquet_replay.py -- only `verified`, `replicated`, `archived`
+# rows are valid replay targets. Day-N-1 snapshot that hasn't been
+# verified yet (Status='created') is treated as if absent (caller falls
+# back to non-targeted SCD2 promotion + full Bronze anti-join delete
+# detection per B-552 v1 behavior).
+# ---------------------------------------------------------------------------
+
+
+_REPLAY_ELIGIBLE_STATUSES = ("verified", "replicated", "archived")
+
+
+def query_latest_snapshot_for_date(
+    *,
+    source_name: str,
+    table_name: str,
+    business_date: date,
+) -> dict | None:
+    """Lookup latest replay-eligible snapshot for ``(source, table, date)``.
+
+    Per B-563 closure 2026-05-19 (large-table delete-detection
+    prerequisite). Variant of :func:`query_snapshot` that does NOT require
+    ``batch_id`` -- given only ``(source_name, table_name, business_date)``,
+    returns the most recent replay-eligible registry row (ORDER BY
+    CreatedAt DESC, BatchId DESC LIMIT 1).
+
+    Replay-eligibility: ``Status IN ('verified', 'replicated', 'archived')``
+    -- mirrors :data:`data_load.parquet_replay.REPLAY_ELIGIBLE_STATUSES`.
+    Snapshots still in ``'created'`` state (not yet SHA-verified) OR in
+    failure states (``'missing'``, ``'replication_failed'``, ``'purged'``)
+    are EXCLUDED.
+
+    Returns ``None`` if no replay-eligible row matches the
+    (source, table, business_date) tuple. Caller should treat this as
+    "first-load OR snapshot not ready yet" and fall back to a
+    delete-detection mechanism that doesn't require a prior-day Parquet
+    (e.g., full Bronze anti-join via ``run_scd2_promotion(targeted=False)``
+    per B-552 v1 behavior).
+
+    Args:
+        source_name: e.g. ``'DNA'`` / ``'CCM'`` / ``'EPICOR'``.
+        table_name: e.g. ``'ACCT'`` / ``'AuditLog'``.
+        business_date: the Hive-partition date to look up. MUST NOT be None
+            (unlike :func:`query_snapshot` which permits NULL for small-table
+            snapshots -- B-563 delete-detection is large-table-only by design
+            since small tables don't need day-N vs day-N-1 diff).
+
+    Returns:
+        Canonical projection dict (same columns as :func:`query_snapshot`)
+        for the latest replay-eligible snapshot, OR ``None`` if no
+        matching row exists.
+
+    Side effect: fire-and-forget UPDATE on ``LastAccessedAt`` for the
+    selected row (best-effort; failure logged but does NOT fail the
+    lookup -- same pattern as :func:`query_snapshot`).
+    """
+    cursor_for = _get_cursor_for()
+
+    where_clause = (
+        "SourceName = ? AND TableName = ? AND BusinessDate = ? "
+        "AND Status IN (?, ?, ?)"
+    )
+    params: tuple = (
+        source_name,
+        table_name,
+        business_date,
+        _REPLAY_ELIGIBLE_STATUSES[0],
+        _REPLAY_ELIGIBLE_STATUSES[1],
+        _REPLAY_ELIGIBLE_STATUSES[2],
+    )
+
+    select_sql = f"""
+        SELECT TOP 1
+            RegistryId,
+            SourceName,
+            TableName,
+            BatchId,
+            BusinessDate,
+            NetworkDrivePath,
+            SnowflakeStagePath,
+            SnowflakeUploadedAt,
+            RowCount,
+            UncompressedBytes,
+            CompressedBytes,
+            SchemaHash,
+            ContentChecksum,
+            StorageTier,
+            Status,
+            CreatedAt,
+            LastVerifiedAt,
+            LastAccessedAt,
+            PurgedAt,
+            PurgedReason
+        FROM General.ops.ParquetSnapshotRegistry
+        WHERE {where_clause}
+        ORDER BY CreatedAt DESC, BatchId DESC
+    """
+
+    with cursor_for("General") as cur:
+        cur.execute(select_sql, params)
+        row = cur.fetchone()
+        if row is None:
+            return None
+        columns = [c[0] for c in cur.description]
+        result = dict(zip(columns, row))
+
+    # Fire-and-forget LastAccessedAt update (mirrors query_snapshot pattern).
+    accessed_at = _utcnow_ms()
+    try:
+        with cursor_for("General") as cur:
+            cur.execute(
+                "UPDATE General.ops.ParquetSnapshotRegistry SET "
+                "LastAccessedAt = ? WHERE RegistryId = ?",
+                (accessed_at, int(result["RegistryId"])),
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "query_latest_snapshot_for_date: LastAccessedAt update failed "
+            "for RegistryId=%s: %s (lookup result unaffected)",
+            result.get("RegistryId"),
+            exc,
+        )
+
+    return result
+
+# ---------------------------------------------------------------------------
 # Internal: canonical "now" helper
 #
 # Per CLAUDE.md SCD2-P1-f + CDC-NOW-MS gotchas: pyodbc DATETIME2(3)

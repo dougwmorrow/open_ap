@@ -24,6 +24,9 @@ from utils.connections import cursor_for, quote_table
 from cdc.engine import run_cdc, run_cdc_windowed
 from data_load import bcp_loader
 from data_load.index_management import disable_indexes, rebuild_indexes
+from data_load.parquet_writer import write_parquet_snapshot
+from data_load.parquet_replay import replay_parquet_snapshot
+from cdc.engine import CDCResult
 from extract.udm_connectorx_extractor import get_table_row_count, table_exists
 from scd2.engine import run_scd2, run_scd2_targeted
 from orchestration.pk_validation import require_pk_columns, NoPrimaryKeyError
@@ -471,3 +474,364 @@ def _scd2_targeted(
             )
 
     return scd2_result
+
+
+# ---------------------------------------------------------------------------
+# B-544 — 3-mode CDC dispatch helpers per D63 + D125
+# ---------------------------------------------------------------------------
+
+# Canonical D63 + D125 CDCMode values. Mirrors
+# `migrations/cdc_mode_column.py::ALLOWED_CDC_MODE_VALUES`.
+CDC_MODE_CHANGE_DETECT = "change_detect"
+CDC_MODE_PARQUET_SNAPSHOT = "parquet_snapshot"
+CDC_MODE_BOTH = "both"
+VALID_CDC_MODES = (CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH)
+
+
+def dispatch_check_cdc_mode(table_config: TableConfig) -> str:
+    """Validate `table_config.cdc_mode` is in the canonical D125 3-value enum.
+
+    Defensive: defaults to 'change_detect' if the field is missing or empty,
+    matching the `TableConfig` dataclass default. Raises `ValueError` if the
+    value is in the field but NOT one of the 3 canonical values (catches
+    upstream UdmTablesList drift class — D125 CHECK constraint should make
+    this impossible at the DB level, but the Python guard is defense-in-depth
+    against malformed pyodbc/ConnectorX row dicts).
+
+    :returns: One of {'change_detect', 'parquet_snapshot', 'both'}.
+    :raises ValueError: if `cdc_mode` is non-empty + not in canonical enum.
+    """
+
+    mode = getattr(table_config, "cdc_mode", None) or CDC_MODE_CHANGE_DETECT
+    if mode not in VALID_CDC_MODES:
+        raise ValueError(
+            f"B-544: invalid cdc_mode {mode!r} for "
+            f"{table_config.source_name}.{table_config.source_object_name}. "
+            f"Must be one of {VALID_CDC_MODES}. "
+            f"Check UdmTablesList.CDCMode for this table OR re-run "
+            f"`migrations/cdc_mode_column.py --apply` to enforce the CHECK "
+            f"constraint."
+        )
+    return mode
+
+
+def run_parquet_write_step(
+    table_config: TableConfig,
+    df: "pl.DataFrame",
+    event_tracker: PipelineEventTracker,
+    *,
+    business_date: date,
+    output_dir: Path | None = None,
+):
+    """Wrap `write_parquet_snapshot()` in a PARQUET_WRITE event-tracked step.
+
+    Called by orchestrators when `cdc_mode in ('both', 'parquet_snapshot')`.
+    Per CLAUDE.md Do-NOT rule (added at remediation commit a53c50a 2026-05-19):
+    in 'both' mode, this MUST succeed BEFORE `run_cdc_promotion()` starts —
+    the audit-substrate-before-Bronze-change invariant. Failure raises and
+    the orchestrator aborts the run before legacy CDC is invoked.
+
+    :param table_config: Table being processed.
+    :param df: Polars DataFrame returned from `extract_windowed()` (or
+        equivalent extractor); must be pre-sorted per parquet_writer
+        contract (PK ASC, _extracted_at DESC).
+    :param event_tracker: For PipelineEventLog PARQUET_WRITE row emission.
+    :param business_date: Hive-partition date (drives year=YYYY/month=MM/day=DD).
+    :param output_dir: Optional Parquet output dir override; None uses
+        env `$PARQUET_OUTPUT_DIR` per parquet_writer.py § 2.1.4.
+    :returns: `ParquetWriteResult` from `write_parquet_snapshot()`.
+    """
+
+    with event_tracker.track("PARQUET_WRITE", table_config) as parquet_event:
+        parquet_event.event_detail = str(business_date)
+        result = write_parquet_snapshot(
+            df=df,
+            source_name=table_config.source_name,
+            table_name=table_config.source_object_name,
+            business_date=business_date,
+            batch_id=event_tracker.batch_id,
+            output_dir=output_dir,
+        )
+        parquet_event.rows_processed = result.row_count
+    return result
+
+
+# ---------------------------------------------------------------------------
+# B-552 v1 — parquet_snapshot end-to-end orchestration helper
+# ---------------------------------------------------------------------------
+
+
+def run_parquet_replay_step(
+    table_config: TableConfig,
+    parquet_write_result,
+    event_tracker: PipelineEventTracker,
+    *,
+    business_date: date,
+) -> CDCResult:
+    """Replay the just-written Parquet snapshot + adapt to CDCResult for SCD2.
+
+    Called by orchestrators when `cdc_mode == 'parquet_snapshot'` per B-552.
+    Per D2 + D115 source-exactness invariants, the Parquet IS the canonical
+    source of truth — replay from the just-written Parquet ENFORCES the
+    source-exactness invariant rather than passing the in-memory extraction
+    DataFrame directly through to SCD2 (which would bypass the round-trip
+    check that Parquet write captured everything correctly).
+
+    The replay reads back the just-written Parquet via M2
+    `replay_parquet_snapshot()` (which composes M3 `verify_parquet_snapshot`
+    SHA-256 verification + idempotency ledger composition) + returns a
+    `ReplayResult` with the materialized Polars DataFrame.
+
+    This function adapts the `ReplayResult` to the `CDCResult` shape that
+    `run_scd2_promotion()` expects:
+
+      - `df_current` = `replay.df` (materialized from Parquet)
+      - `pk_columns` = `table_config.pk_columns` (resolved from UdmTablesList)
+      - `deleted_pks` = `None` (replay path does NOT compute deletes natively
+        — `run_scd2_promotion(targeted=False)` detects deletes via anti-join
+        against the full Bronze active-row set; large-table day-N vs day-N-1
+        Parquet diff for memory-bounded delete detection deferred to a
+        follow-up B-N)
+      - counts (`inserts`/`updates`/`deletes`/`unchanged`/`null_pk_rows`) = 0
+        (SCD2 promotion computes these itself; the adapter doesn't pre-compute)
+      - `verify_before_close` = `None` (verifier runs at SCD2 layer per D18 +
+        R1.3 B-498+B-334 closures; not at replay layer)
+
+    :param table_config: Table being processed.
+    :param parquet_write_result: ParquetWriteResult from prior
+        `run_parquet_write_step()` invocation; provides `registry_id` for
+        the replay target.
+    :param event_tracker: For PipelineEventLog REPLAY row emission.
+    :param business_date: Hive-partition date (for event-row tagging only;
+        replay reads by registry_id not by business_date).
+    :returns: `CDCResult` adapter populated from replay output; ready for
+        `run_scd2_promotion(table_config, cdc_result, ...)` consumption.
+    """
+
+    with event_tracker.track("REPLAY", table_config) as replay_event:
+        replay_event.event_detail = (
+            f"{business_date} registry_id={parquet_write_result.registry_id}"
+        )
+
+        # CORRECTED 2026-05-19 per cross-cohort reviewer a234fda11b870c78d
+        # Finding 1.1: replay_parquet_snapshot() signature requires 5 kwargs
+        # (source_name, table_name, business_date, original_batch_id,
+        # replay_batch_id). The function looks up the registry row by
+        # (source_name, table_name, business_date, original_batch_id) tuple
+        # per its docstring. The `registry_id` kwarg does NOT exist on the
+        # public surface (it's an internal value extracted from the looked-up
+        # row). In the immediate-write-then-replay pattern (B-552 v1), the
+        # write happened in the same orchestrator run, so original_batch_id
+        # = replay_batch_id = event_tracker.batch_id. Ledger rows are
+        # disambiguated by EventType (PARQUET_WRITE vs REPLAY).
+        replay_result = replay_parquet_snapshot(
+            source_name=table_config.source_name,
+            table_name=table_config.source_object_name,
+            business_date=business_date,
+            original_batch_id=event_tracker.batch_id,
+            replay_batch_id=event_tracker.batch_id,
+        )
+        replay_event.rows_processed = replay_result.row_count
+
+    # Adapt ReplayResult → CDCResult for run_scd2_promotion() consumption.
+    # Counts (inserts/updates/deletes/unchanged) are computed by SCD2; the
+    # adapter just provides df_current + pk_columns shape.
+    cdc_result = CDCResult(
+        df_current=replay_result.df,
+        pk_columns=list(table_config.pk_columns) if table_config.pk_columns else None,
+        deleted_pks=None,  # SCD2 will compute via Bronze anti-join in run_scd2()
+        verify_before_close=None,
+        inserts=0,
+        updates=0,
+        deletes=0,
+        unchanged=0,
+        null_pk_rows=0,
+    )
+    return cdc_result
+
+
+
+# ---------------------------------------------------------------------------
+# B-563 — Large-table delete-detection via day-N vs day-N-1 Parquet diff
+#
+# Per B-563 closure 2026-05-19 (HARD-PREREQUISITE for FIRST large-table
+# cutover to 'parquet_snapshot' mode; CCM.AuditLog at 96M, DNA.CARDTXN at
+# 214M, etc.). B-552 v1 routed ALL parquet_snapshot mode through
+# run_scd2_promotion(targeted=False) which uses run_scd2() full-path
+# Bronze anti-join for delete detection — memory-heavy for 3B+ row tables
+# (all active Bronze rows held in memory simultaneously).
+#
+# The proper large-table delete-detection mechanism is the day-N vs
+# day-N-1 Parquet diff: query ParquetSnapshotRegistry for prior-day
+# snapshot, replay it, compute PK set-difference vs current-day's
+# replayed PKs, emit deleted_pks DataFrame. This populates
+# CDCResult.deleted_pks so run_scd2_promotion(targeted=True) can use
+# the PK-targeted Bronze read (memory-bounded per P1-3) + close only
+# the rows whose PKs are absent from current source state.
+#
+# First-load case: when no prior-day replay-eligible snapshot exists
+# (e.g., first run for this table; OR prior-day Parquet still in
+# Status='created' awaiting verification), the helper returns the
+# cdc_result UNCHANGED (deleted_pks=None) + the caller falls back to
+# run_scd2_promotion(targeted=False) for full Bronze anti-join.
+# This preserves B-552 v1 semantics for first-load + matches the
+# canonical "absence is None" contract.
+#
+# Memory strategy (per BACKLOG B-563 estimate "two simultaneous replay
+# invocations (memory consideration — could be sequential with disk-
+# cache)"): SEQUENTIAL replay. The prior-day Parquet is replayed,
+# its PK columns extracted into a small DataFrame, the full
+# ReplayResult released + gc.collect() called BEFORE the anti-join.
+# Peak memory = max(current_replay.df, prior_pks) NOT
+# current_replay.df + prior_replay.df simultaneously.
+# ---------------------------------------------------------------------------
+
+
+def run_parquet_delete_detection_step(
+    table_config: "TableConfig",
+    cdc_result: "CDCResult",
+    event_tracker: "PipelineEventTracker",
+    *,
+    business_date: date,
+) -> "CDCResult":
+    """Augment ``cdc_result`` with ``deleted_pks`` via day-N vs day-N-1
+    Parquet diff.
+
+    Composes:
+
+    * :func:`data_load.parquet_registry_client.query_latest_snapshot_for_date`
+      — looks up the prior-day snapshot's registry row by
+      ``(source_name, table_name, business_date - 1 day)``.
+    * :func:`data_load.parquet_replay.replay_parquet_snapshot` — replays
+      the prior-day Parquet (SHA-verified + ledger-gated per D15).
+    * Polars anti-join on PK columns — computes the
+      ``prior_pks - current_pks`` set-difference.
+
+    First-load case (no prior-day snapshot exists OR no replay-eligible
+    snapshot exists for prior date): returns ``cdc_result`` UNCHANGED
+    (``deleted_pks=None``). Caller (large_tables.py parquet_snapshot
+    branch) detects this + falls back to
+    ``run_scd2_promotion(targeted=False)`` for full Bronze anti-join
+    delete detection — preserves B-552 v1 semantics.
+
+    Empty-pk_columns case: if the table has no PK columns (defensive
+    against UdmTablesColumnsList misconfig), returns ``cdc_result``
+    unchanged (cannot compute set-diff without a key).
+
+    Empty-current-state case: if ``cdc_result.df_current`` is empty
+    (current-day extraction returned 0 rows -- which would normally be
+    blocked by the empty-extraction guard P1-1, but defensive against
+    that guard being explicitly disabled with ``--force``), all
+    prior-day PKs become deletes.
+
+    :param table_config: Table being processed.
+    :param cdc_result: Output of :func:`run_parquet_replay_step` — provides
+        ``df_current`` (current-day replayed DataFrame) + ``pk_columns``.
+        Returned with ``deleted_pks`` populated (or unchanged on
+        first-load / empty-pk fallback).
+    :param event_tracker: For PipelineEventLog REPLAY row emission on the
+        prior-day replay invocation.
+    :param business_date: Current-day business date. Prior-day computed
+        as ``business_date - timedelta(days=1)``.
+    :returns: ``CDCResult`` with ``deleted_pks`` populated when prior-day
+        diff was computable; otherwise ``cdc_result`` unchanged.
+
+    Side effects:
+        * Queries ``General.ops.ParquetSnapshotRegistry`` once for
+          prior-day lookup.
+        * If prior-day snapshot found: invokes
+          ``replay_parquet_snapshot()`` once + emits one ``REPLAY``
+          PipelineEventLog row + INSERTs one ``General.ops.IdempotencyLedger``
+          row.
+        * Releases prior-day ``ReplayResult.df`` immediately after PK
+          extraction + calls ``gc.collect()`` to bound peak memory.
+
+    Memory: peak = ``max(cdc_result.df_current, prior_pks)`` (NOT
+    ``cdc_result.df_current + prior_replay.df`` simultaneously). For a
+    3B-row table with 5 PK columns, ``prior_pks`` is approximately
+    5 columns × 3B rows × ~50 bytes ≈ 750 GB raw, but Polars columnar
+    storage with dictionary encoding typically compresses 10-50x.
+    Operators should monitor memory pressure for tables exceeding
+    ~1B rows; consider deferring delete-detection per environment
+    config in future B-N work.
+    """
+    from datetime import timedelta  # noqa: PLC0415
+    import gc  # noqa: PLC0415
+    from data_load.parquet_registry_client import query_latest_snapshot_for_date  # noqa: PLC0415
+    from data_load.parquet_replay import replay_parquet_snapshot  # noqa: PLC0415
+
+    if not cdc_result.pk_columns:
+        logger.info(
+            "run_parquet_delete_detection_step: %s.%s has no pk_columns; "
+            "skipping diff (deleted_pks=None preserved). Caller should "
+            "fall back to run_scd2_promotion(targeted=False).",
+            table_config.source_name,
+            table_config.source_object_name,
+        )
+        return cdc_result
+
+    prior_business_date = business_date - timedelta(days=1)
+
+    prior_row = query_latest_snapshot_for_date(
+        source_name=table_config.source_name,
+        table_name=table_config.source_object_name,
+        business_date=prior_business_date,
+    )
+
+    if prior_row is None:
+        logger.info(
+            "run_parquet_delete_detection_step: %s.%s no replay-eligible "
+            "snapshot for prior-day %s (first-load OR not-verified); "
+            "deleted_pks=None preserved -- caller should fall back to "
+            "run_scd2_promotion(targeted=False) per B-552 v1 semantics.",
+            table_config.source_name,
+            table_config.source_object_name,
+            prior_business_date,
+        )
+        return cdc_result
+
+    prior_original_batch_id = int(prior_row["BatchId"])
+
+    with event_tracker.track("REPLAY", table_config) as prior_replay_event:
+        prior_replay_event.event_detail = (
+            f"prior-day {prior_business_date} registry_id="
+            f"{prior_row['RegistryId']} (B-563 delete-detection)"
+        )
+
+        prior_replay = replay_parquet_snapshot(
+            source_name=table_config.source_name,
+            table_name=table_config.source_object_name,
+            business_date=prior_business_date,
+            original_batch_id=prior_original_batch_id,
+            replay_batch_id=event_tracker.batch_id,
+        )
+        prior_replay_event.rows_processed = prior_replay.row_count
+
+    # Memory bounding: extract PK columns FIRST, release full DataFrame
+    # immediately, then gc.collect. Peak memory is bounded to
+    # max(cdc_result.df_current, prior_pks).
+    prior_pks = prior_replay.df.select(cdc_result.pk_columns)
+    del prior_replay
+    gc.collect()
+
+    # Anti-join: PKs in prior but not in current = deletes.
+    current_pks = cdc_result.df_current.select(cdc_result.pk_columns)
+    deleted_pks = prior_pks.join(
+        current_pks,
+        on=cdc_result.pk_columns,
+        how="anti",
+    )
+
+    logger.info(
+        "run_parquet_delete_detection_step: %s.%s prior=%d current=%d "
+        "deletes=%d",
+        table_config.source_name,
+        table_config.source_object_name,
+        len(prior_pks),
+        len(current_pks),
+        len(deleted_pks),
+    )
+
+    # Augment cdc_result with deleted_pks. Other fields preserved.
+    cdc_result.deleted_pks = deleted_pks
+    return cdc_result

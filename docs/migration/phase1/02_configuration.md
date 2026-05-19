@@ -187,10 +187,10 @@ These columns are NET-NEW for the UDM pipeline build. Each cites its driver deci
 | Type | `NVARCHAR(20)` |
 | Nullable | NO |
 | Default | `'change_detect'` |
-| Allowed values | `'change_detect'` / `'parquet_snapshot'` |
-| Driver | D2 (Stage layer dropped — Parquet snapshots replace it) + Phase 4 cutover plan (`02_PHASES.md` § Per-table cutover sequence) |
+| Allowed values | `'change_detect'` / `'parquet_snapshot'` / `'both'` (per D125 2026-05-19 — extends D63 with `'both'` dual-execute shadow-write value) |
+| Driver | D2 (Stage layer dropped — Parquet snapshots replace it) + Phase 4 cutover plan (`02_PHASES.md` § Per-table cutover sequence) + D125 (3-mode dispatch for migration safety; `docs/migration/UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md`) |
 | Edge cases | F-series (per-table cutover doesn't break in-flight processing); D-series (cadence cutover must be atomic) |
-| Purpose | Per-table flag for which CDC mode applies. The Phase 4 cutover changes this column atomically inside a transaction (`UPDATE UdmTablesList SET CDCMode = 'parquet_snapshot'` after Stage `_cdc_is_current = 0` close), so the first post-cutover pipeline run uses the new flow without coordination |
+| Purpose | Per-table flag for which CDC mode dispatch applies. **Post-D125 (2026-05-19) 3-mode dispatch**: `'change_detect'` runs legacy Stage→CDC→SCD2 only; `'parquet_snapshot'` runs Parquet→replay→SCD2 only; `'both'` runs BOTH paths (Parquet write as audit substrate + legacy CDC drives Bronze; BOTH_LEGACY_FEEDS sub-variant). The Phase 4 cutover via RB-16 procedure (B-547 pending) flips per-table atomically through 2-step transition: `'change_detect'` → `'both'` for ≥30 days validation → `'parquet_snapshot'`. Direct flip skipping `'both'` is permitted but RISKY |
 | Implementation note | Default `'change_detect'` preserves current pipeline behavior bit-for-bit on first deployment. Phase 4 flips per-table as cohorts soak |
 
 #### § 1.2.2 `PiiColumnList`
@@ -281,7 +281,9 @@ IF NOT EXISTS (
 BEGIN
     ALTER TABLE General.dbo.UdmTablesList
     ADD CONSTRAINT CK_UdmTablesList_CDCMode
-        CHECK (CDCMode IN ('change_detect', 'parquet_snapshot'));
+        -- D125 (2026-05-19): extended from 2-value to 3-value per
+        -- UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md
+        CHECK (CDCMode IN ('change_detect', 'parquet_snapshot', 'both'));
 END;
 GO
 

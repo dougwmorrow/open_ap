@@ -18,6 +18,8 @@ Procedures for the operations the team will run during migration and steady-stat
 | RB-10 | CCPA / CPRA right-to-deletion request | Customer requests data deletion under California privacy law |
 | RB-11 | 7-year retention enforcement | Monthly automated job; vault Status flips for expired tokens |
 | RB-12 | Pipeline Deployment (per D84-D87) | Scheduled per D86 cadence (dev nightly / test daily / prod weekly Monday window) OR emergency hotfix (with operator + pipeline-lead sign-off). Covers full deploy + rollback + recovery + TPM2 re-seal procedures |
+| RB-16 | AuditLog production cutover (2-step shadow-write + cutover; supersedes B-501 2-phase historical design) | Operator-initiated D2 cutover for AuditLog (or any large/audit-critical table) via B-546 flip tool 2-step sequence: change_detect → both for ≥30 days (B-545 nightly parity validation) → parquet_snapshot canonical cutover. 3-step rollback (R1 defensive 'parquet_snapshot' → 'both'; R2 full 'change_detect'; R3 BCP IN restore from pre-cutover backup). Closes B-547. **B-552 v2 of B-544 (parquet_snapshot end-to-end) PREREQUISITE** before Step 2 is operationally meaningful (orchestrator currently NotImplementedError) |
+| RB-18 | D2 cutover rollback for ACCT pilot | Operator-triggered (BEFORE ACCT pilot D2 cutover validation); rolls back to pre-D2 Bronze snapshot via BCP OUT/IN + reverts deploy + opens divergence B-N. Closes B-343. **Number drift remediation**: B-343 + D2_GAP_RESOLUTION_PLAN §4.2 both cite "RB-12" but RB-12 is occupied (Pipeline Deployment); authored as RB-18 per next-available-runbook-number discipline (same Pitfall #9.k drift class as B-344 RB-13/RB-15) |
 | RB-13 | Permanent-retire Table | Source table permanently decommissioned; consumer + compliance sign-off obtained; ≥ 90-day cool-down (or `ExpectedRetentionDays`) elapsed |
 | RB-14 | `.env` Location Migration (`/debi/.env` → `/etc/pipeline/.env`) | One-time per-server migration per D103; closes B182; run BEFORE next pipeline deploy after 2026-05-11 |
 
@@ -1543,3 +1545,175 @@ Pipeline lead authorizes; sysadmin (or pipeline operator with sudo) executes; pi
 2. Write following the structure: When-to-use → Pre-flight → Procedure → Validation → Rollback (if applicable)
 3. Test the runbook in dev before adding it here
 4. Reference from the relevant phase in `02_PHASES.md` or edge case in `04_EDGE_CASES.md`
+
+
+### RB-15 — SCD2 corruption replay (FULL BODY authored at Phase 2 R2.12 deliverable)
+
+**Status**: 🟡 Placeholder 2026-05-18; full body at Phase 2 R2 build (closes B-344)
+**When**: SCD2 invariant violation detected (V-4 duplicate actives / SCD2-P1-c sentinel drift / B-4 orphans / row-count cliff)
+**Pre-flight**: `tools/validate_scd2.py` confirms violation; `tools/diagnose_parquet_bronze_gap.py` characterizes gap; no in-flight pipeline; ledger has no stale IN_PROGRESS; archive path readable
+**Procedure**: backup current Bronze via BCP OUT; acquire sp_getapplock on (source, table); invoke `tools/scd2_replay_range_smoke.py --apply --ccpa-snapshot-as-of <ts> --start-date <s> --end-date <e>`; monitor PipelineEventLog; validate via `validate_scd2.py`
+**Validation**: Bronze row count = source (tolerance); sample-N PK cross-check; V-4 + SCD2-P1-* 🟢
+**Rollback**: BCP IN defensive backup; file P0 incident
+**Source**: B-344 + Phase 2 large-tables plan v5
+
+### RB-16 — AuditLog production cutover (FULL BODY authored 2026-05-19 per B-547; 2-step shadow-write + cutover per D125 plan §2.3 transition matrix)
+
+**Status**: 🟢 Authored 2026-05-19 via B-547 closure (supersedes prior 2-phase Stage-cleanup-then-atomic-flip design from B-501 historical). Closes B-547; tracks B-501 forward-reference.
+
+**When**: Operator-initiated production cutover for AuditLog (or any large/audit-critical table) from legacy `CDCMode='change_detect'` to D2 `CDCMode='parquet_snapshot'`. Run AFTER (a) Phase 2 R3 acceptance gates 🟢 on test environment; (b) `.env` migration confirmed; (c) historical backfill complete (per R5.2); (d) pipeline-lead + DBA + compliance ack present; (e) **B-555 v2 per-PK hash comparison ⚫ CLOSED** (interpretation-gap closure for parity verdicts — production cutover should NOT rely solely on row-count parity from B-545 v1 because Parquet > Bronze drift may be NULL-PK noise; B-555 distinguishes signal from noise definitively).
+
+**Pre-flight** (BEFORE Step 1 flip):
+
+1. `python3 tools/flip_cdc_mode.py --dry-run --source CCM --table AuditLog --mode both --actor pipeline-lead --justification "RB-16 Step 1 pre-flight verification"` — confirms current `CDCMode='change_detect'` + transition is ALLOWED per D125 plan §2.3 + dry-run reports no SQL errors
+2. Verify B-542 migration deployed on target server: `SELECT CDCMode FROM General.dbo.UdmTablesList WHERE SourceName='CCM' AND SourceObjectName='AuditLog'` returns `'change_detect'` (NOT `NULL` or `'legacy'`)
+3. Verify orchestrator dispatch (B-544 v1) deployed: `git log -1 --format=%H` on production matches deploy baseline that includes commit `60f1283` or later
+4. Verify parity-check tool (B-545 v1) + flip tool (B-546) available: `which python3 tools/flip_cdc_mode.py tools/validate_parquet_vs_stage.py` returns non-error paths
+5. Backup current Bronze: `bcp UDM_Bronze.CCM.AuditLog out /backup/AuditLog_pre_cutover_<YYYYMMDD>.bcp -n -S <udm_host> -d UDM_Bronze -T -E` — preserves `_scd2_key` IDENTITY per CLAUDE.md Do-NOT rule
+6. Sample-N PK + LegalHold=1 baseline: query 1000 random PKs + 100% of LegalHold=1 rows; capture `_row_hash` + `UdmEffectiveDateTime` + `UdmActiveFlag` per PK for post-cutover DIFF
+7. IdempotencyLedger empty check: `SELECT COUNT(*) FROM General.ops.IdempotencyLedger WHERE SourceName='CCM' AND TableName='AuditLog' AND Status='IN_PROGRESS'` returns 0 (per B-337 D119 startup_recovery_sweep discipline)
+
+**Procedure** (2-step cutover per D125 plan §2.3):
+
+**Step 1: `change_detect` → `both` (shadow-write entry)** — operator-driven; ≥30-day shadow validation period begins.
+
+```bash
+# Atomic UPDATE + audit row via B-546 flip tool (validates ALLOWED transition per plan §2.3)
+python3 tools/flip_cdc_mode.py --apply \
+    --source CCM --table AuditLog --mode both \
+    --actor pipeline-lead --justification "RB-16 Step 1: AuditLog 30-day shadow-write start"
+# Expected: exit code 0 (SUCCESS); audit row CLI_FLIP_CDC_MODE emitted
+```
+
+After Step 1:
+- Per-run behavior changes: orchestrator (B-544 v1 dispatch) writes Parquet AND runs legacy CDC + SCD2. Bronze continues to be driven by legacy CDC (BOTH_LEGACY_FEEDS sub-variant per D125); Parquet is shadow/audit substrate (CLAUDE.md Do-NOT rule: Parquet write must succeed BEFORE legacy CDC starts).
+- Storage cost increases by ~30% (Parquet write I/O); H drive capacity per B-333 must accommodate. Verify available capacity before Step 1.
+
+**Step 1.5: ≥30-day shadow validation period** — nightly parity check.
+
+```bash
+# Schedule nightly (Automic OR cron):
+python3 tools/validate_parquet_vs_stage.py --apply \
+    --source CCM --table AuditLog \
+    --actor automated --justification "RB-16 nightly parity sanity during shadow period"
+# Expected: exit code 0 (CLEAN) per night
+# 1 (DRIFT) acceptable if attributable to NULL-PK delta (see B-555 v2 caveat)
+# 2 (MAJOR_DRIFT) BLOCKS Step 2; investigate before proceeding
+# 3 (FATAL) BLOCKS Step 2; investigate tool error before proceeding
+```
+
+Decision gates during shadow period:
+- **DAY 7 / 14 / 21 / 30**: pipeline-lead reviews parity-check exit-code log + PipelineEventLog `CLI_VALIDATE_PARQUET_VS_STAGE` rows; tracks any DRIFT patterns
+- **EXIT 2 MAJOR_DRIFT during shadow**: ROLLBACK to `'change_detect'` via Step R below; investigate root cause; do NOT proceed to Step 2
+- **EXIT 1 DRIFT consistently**: assess whether attributable to known NULL-PK source rows; if YES + B-555 v2 not yet closed, OPERATOR INVESTIGATION required before Step 2; if B-555 closed, defer to per-PK hash verdict
+- **EXIT 0 CLEAN for ≥30 consecutive days**: cutover viable → proceed to Step 2
+
+**Step 2: `both` → `parquet_snapshot` (canonical cutover)** — operator-driven; final D2 cutover. Run AFTER ≥30-day clean parity confirmation.
+
+```bash
+# Atomic UPDATE + audit row via B-546 flip tool
+python3 tools/flip_cdc_mode.py --apply \
+    --source CCM --table AuditLog --mode parquet_snapshot \
+    --actor pipeline-lead --justification "RB-16 Step 2: AuditLog canonical D2 cutover after 30-day shadow-write validation"
+# Expected: exit code 0 (SUCCESS); audit row CLI_FLIP_CDC_MODE emitted
+```
+
+**PREREQUISITE for Step 2 to be operationally meaningful**: B-552 (v2 of B-544) MUST be CLOSED; orchestrator currently raises NotImplementedError for `cdc_mode == 'parquet_snapshot'` mode. Without B-552, Step 2 flips the config flag but the pipeline cannot actually drive Bronze from Parquet. Verify `python3 main_large_tables.py --table AuditLog --source CCM --dry-run` succeeds (no NotImplementedError) BEFORE Step 2.
+
+After Step 2: orchestrator writes Parquet + replays + SCD2 (D2 canonical path); legacy Stage→CDC→SCD2 path is BYPASSED for this table.
+
+**Validation** (after Step 2; first 24-72h):
+
+1. First post-cutover incremental run completes: `python3 main_large_tables.py --table AuditLog --source CCM` exits 0; PipelineEventLog rows present (EXTRACT + PARQUET_WRITE + REPLAY + SCD2_PROMOTION_D2 per D119)
+2. CDCMode flip recorded: `SELECT CDCMode FROM General.dbo.UdmTablesList WHERE SourceName='CCM' AND SourceObjectName='AuditLog'` returns `'parquet_snapshot'`
+3. Bronze row count consistent: `SELECT COUNT(*) FROM UDM_Bronze.CCM.AuditLog WHERE UdmActiveFlag=1` matches pre-cutover baseline within tolerance (post-cutover drift expected if new rows arrived between pre-flight backup + Step 2 — pipeline-lead acks this)
+4. Sample-N PK DIFF: load pre-cutover sample (1000 random + 100% LegalHold) into temp table; LEFT JOIN against current Bronze; verify `_row_hash` matches per PK + `UdmActiveFlag=1` preserved (allow for legitimate updates after pre-flight)
+5. `tools/validate_scd2.py --source CCM --table AuditLog --strict` returns 🟢 (SCD2 invariants intact post-cutover)
+6. PipelineEventLog inspection: `SELECT * FROM General.ops.PipelineEventLog WHERE SourceName='CCM' AND TableName='AuditLog' AND StartedAt > '<cutover_ts>' ORDER BY StartedAt` shows EXTRACT + PARQUET_WRITE + REPLAY + SCD2_PROMOTION_D2 sequence (D119 cutover EventType naming); duration within historical range (extract <2× baseline; SCD2 <2× baseline)
+7. Continue parity check via B-545 for 30 days post-cutover (defensive — even in `parquet_snapshot` mode, parity should hold; alert if MAJOR_DRIFT)
+
+**Rollback** (executed if validation fails OR operational issue arises within first 30 days):
+
+**Step R1: Defensive rollback (`parquet_snapshot` → `both`)** — recommended first response if D2 path shows instability but Bronze is intact:
+
+```bash
+python3 tools/flip_cdc_mode.py --apply \
+    --source CCM --table AuditLog --mode both \
+    --actor pipeline-lead --justification "RB-16 Step R1: defensive rollback to shadow mode during cutover-instability investigation"
+```
+
+After Step R1: legacy CDC resumes driving Bronze; Parquet write continues (audit substrate preserved). Operator investigates D2-path issue without losing the Parquet audit trail.
+
+**Step R2: Full rollback (`both` → `change_detect` OR `parquet_snapshot` → `change_detect`)** — used only when shadow-write itself is causing operational issues (e.g., disk capacity exhausted; Parquet write failures cascading):
+
+```bash
+python3 tools/flip_cdc_mode.py --apply \
+    --source CCM --table AuditLog --mode change_detect \
+    --actor pipeline-lead --justification "RB-16 Step R2: full rollback to pre-cutover legacy mode"
+```
+
+After Step R2: pure legacy Stage→CDC→SCD2 resumes; Parquet write disabled. **NO Bronze data loss** because legacy CDC has been the canonical Bronze driver throughout (Steps 1 + 1.5; D125 BOTH_LEGACY_FEEDS sub-variant).
+
+**Step R3: Restore Bronze from pre-flight backup** — used only if post-cutover validation surfaces Bronze corruption that did NOT exist pre-cutover. RB-18 procedure applies (D2 cutover rollback for ACCT pilot; same BCP IN -E -h TABLOCK pattern).
+
+```bash
+# Acquire sp_getapplock (TABLE_LOCK_RESOURCE_FORMAT per B-345)
+EXEC General.dbo.sp_getapplock @Resource='UDM_Pipeline_CCM_AuditLog', @LockMode='Exclusive', @LockOwner='Session', @LockTimeout=0
+# BCP IN with -E flag (preserves _scd2_key IDENTITY)
+bcp UDM_Bronze.CCM.AuditLog in /backup/AuditLog_pre_cutover_<YYYYMMDD>.bcp \
+    -n -S <udm_host> -d UDM_Bronze -T -E -h "TABLOCK"
+# Verify rowcount matches pre-cutover snapshot before releasing lock
+SELECT COUNT(*) FROM UDM_Bronze.CCM.AuditLog WHERE UdmActiveFlag=1
+EXEC General.dbo.sp_releaseapplock @Resource='UDM_Pipeline_CCM_AuditLog', @LockOwner='Session'
+```
+
+Per RB-18 step 19: document divergence in `_validation_log.md`; open HIGH-severity B-N for investigation; halt further D2 cutovers until root-cause understood + reviewed.
+
+**Source**: B-547 closure 2026-05-19 (this commit); D125 plan §2.3 transition matrix; B-545 v1 parity-check CLI (`e94d136`); B-546 flip CLI (`0ad5bcc`); B-553+B-554 v1 closures (`00039a1`); CLAUDE.md Do-NOT rule BOTH mode Parquet-before-CDC sequencing. **Supersedes** the prior B-501 historical 2-phase Stage-cleanup-then-atomic-flip design (preserved at git history `09_VISUALS.md` + earlier RB-16 placeholder; recovery operationally via this 2-step + R1/R2/R3 rollback chain). **B-501** remains 🟡 Open as forward-reference; closure-target update to "covered via RB-16 2-step procedure rewrite at B-547" deferred per CRITICAL severity (the original B-501 spec called for 2-phase atomic-cutover design; B-547 2-step shadow-write design is the operationally-safer evolution but does not literally implement B-501's 2-phase design — leave for explicit B-501 review).
+
+### RB-17 — Snowflake audit replay (FULL BODY authored at Phase 2 R2.26 deliverable)
+
+**Status**: 🟡 Placeholder 2026-05-18; full body at Phase 2 R2 (closes B-522 + B-530)
+**When**: Regulator / compliance asks "what did Snowflake receive on date X for source.table" OR "what would Snowflake receive NOW"
+**Pre-flight**: Identify RegistryId via ParquetSnapshotRegistry; confirm raw parquet exists at registry.NetworkDrivePath; identify audit purpose (AS_OF vs CURRENT)
+**Procedure**:
+- Fast path: if 30-day sidecar still active (per UdmTablesList.SidecarRetentionDays) → inspect /VendorFiles/_audit_retention/<source>/<table>/year=Y/month=M/day=D/<batch>.masked.parquet directly
+- AS_OF mode: `python3 -m tools.replay_snowflake_upload --registry-id N --mode AS_OF --as-of-date YYYY-MM-DD --output-path /tmp/replay.parquet`
+- CURRENT mode: `python3 -m tools.replay_snowflake_upload --registry-id N --mode CURRENT --output-path /tmp/replay.parquet`
+- Verify: `sha256sum /tmp/replay.parquet` should match SnowflakeReplicationLog.MaskedContentChecksum (AS_OF + upload-date replay)
+**Validation**: AS_OF + replay date == upload date → SHA matches; AS_OF + replay date > deletion date → token returns original; CURRENT + token deleted → NULL/sentinel
+**Rollback**: read-only; no rollback
+**Source**: B-522 + B-530 + D122 + LT-AT-15 + RB-10 extension via B-526
+
+### RB-18 — D2 cutover rollback for ACCT pilot (FULL BODY authored at Phase 2 R1 prep deliverable; closes B-343)
+
+**Status**: 🟢 Authored 2026-05-19 (Phase 2 R1 prep; BEFORE ACCT pilot D2 cutover); closes B-343
+**When**: ACCT pilot D2 cutover validation fails — Bronze diverges between pre-D2 (Stage→CDC→SCD2 path) and post-D2 (Parquet→SCD2 path); deploy must be rolled back to a known-good state before further D2 rollout. This is the FIRST production exercise of D2; corruption-class outcomes are higher-probability than later large-table cutovers.
+**Pre-flight** (BEFORE deploying D2 code; OUTSIDE the production maintenance window):
+1. `bcp UDM_Bronze.dna.ACCT_scd2_python out /backup/ACCT_scd2_pre_d2_<YYYYMMDD>.bcp -n -S <udm_host> -d UDM_Bronze -T -E` — full Bronze snapshot to filesystem (binary format; preserves IDENTITY column `_scd2_key` per CLAUDE.md Do-NOT rule)
+2. Acquire Bronze.ACCT lock: `EXEC General.dbo.sp_getapplock @Resource='UDM_Pipeline_DNA_ACCT', @LockMode='Exclusive', @LockOwner='Session', @LockTimeout=0` — verify return code 0 (acquired); abort if non-zero (concurrent run; investigate via PipelineEventLog before proceeding)
+3. Verify IdempotencyLedger has NO `IN_PROGRESS` rows for ACCT: `SELECT COUNT(*) FROM General.ops.IdempotencyLedger WHERE SourceName='DNA' AND TableName='ACCT' AND Status='IN_PROGRESS'` should return 0 — if >0, run `python3 -m utils.idempotency_ledger.startup_recovery_sweep` first OR escalate per B-337 D119 forensic-preservation discipline (legacy pre-D2 EventTypes preserved as forensic evidence)
+4. Record current `git log -1 --format=%H` HEAD commit hash (pre-D2 deploy baseline) + capture `tools/verify_server_parity.py --apply` result (D65 severity-tiered parity baseline)
+5. Confirm `/backup/ACCT_scd2_pre_d2_<YYYYMMDD>.bcp` size > 0 + sha256 captured (e.g., `sha256sum /backup/ACCT_scd2_pre_d2_<YYYYMMDD>.bcp > /backup/ACCT_pre_d2.sha256`)
+
+**Procedure** (D2 deploy + first ACCT run):
+6. Deploy D2 code: pull HEAD on production server; restart pipeline service; verify `git log -1` shows the deploy commit
+7. Trigger ACCT pilot: `python3 main_small_tables.py --table ACCT --source DNA --force` — emits `PipelineEventLog.EventType='EXTRACT'` + `PARQUET_WRITE` + `REPLAY` + `SCD2_PROMOTION_D2` rows per D119 cutover naming
+8. Verify §12.2 of `phase1/01c_data_flow_walkthrough.md` acceptance criteria: post-D2 ACCT Bronze must be byte-identical to pre-D2 (same `_row_hash` per PK; same `UdmEffectiveDateTime` semantics; same active-flag distribution)
+9. Stop further pipeline runs (revoke Automic job activation OR disable `UdmTablesList.IsEnabled` for ACCT if needed during validation window)
+
+**Validation** (post-D2 deployment; pre-rollout-decision):
+10. `bcp UDM_Bronze.dna.ACCT_scd2_python out /backup/ACCT_scd2_post_d2_<YYYYMMDD>.bcp -n -S <udm_host> -d UDM_Bronze -T -E` — full Bronze snapshot AFTER first D2 ACCT run
+11. DIFF pre vs post: for each PK (sample N=1000 random PKs + 100% of PKs marked LegalHold=1 if any), compare `_row_hash` + `UdmEffectiveDateTime` + `UdmEndDateTime` + `UdmActiveFlag` + `UdmSourceBeginDate` + `UdmSourceEndDate` between the two BCP snapshots. Use `tools/diagnose_stage_bronze_gap.py --source DNA --table ACCT --apply` (with caveat that diagnose tool runs against current Bronze state; for post-deploy diff use the BCP files directly via python-bcp comparison script or SQL Server LINKED SERVER if available)
+12. ROW-COUNT reconciliation: `SELECT COUNT(*) FROM UDM_Bronze.dna.ACCT_scd2_python WHERE UdmActiveFlag=1` post-D2 should match pre-D2 within tolerance (expect EXACTLY equal; any divergence = STOP)
+13. SCD2 invariants check: `tools/validate_scd2.py --source DNA --table ACCT --strict` returns 🟢; if 🟡 or 🔴, do NOT proceed with D2 rollout
+14. PipelineEventLog inspection: verify `EXTRACT` + `PARQUET_WRITE` + `REPLAY` + `SCD2_PROMOTION_D2` rows present; durations within historical range (extract <2× baseline; SCD2 <2× baseline); no `Status='FAILED'` rows
+15. IF diff exists or any validation step fails → ROLLBACK (steps 16-19); IF all validation 🟢 → proceed with cautious D2 expansion to next table (e.g., low-volume small table NEXT, not large table)
+
+**Rollback** (executed ONLY if validation fails):
+16. Acquire Bronze.ACCT lock if not already held (per Pre-flight step 2; same `@Resource='UDM_Pipeline_DNA_ACCT'`)
+17. `bcp UDM_Bronze.dna.ACCT_scd2_python in /backup/ACCT_scd2_pre_d2_<YYYYMMDD>.bcp -n -S <udm_host> -d UDM_Bronze -T -E -h "TABLOCK"` — restore pre-D2 Bronze EXACTLY (TABLOCK hint for atomicity; -E preserves IDENTITY values per CLAUDE.md Do-NOT rule on `_scd2_key`); verify rowcount matches pre-D2 snapshot rowcount before releasing lock
+18. Revert deploy: `git checkout <pre_d2_baseline_commit_hash>` on production server; restart pipeline service; verify `git log -1` matches pre-D2 baseline; re-enable legacy Stage→CDC→SCD2 path for ACCT (the legacy `main_small_tables.py` Stage write path was never removed at R1.3 — only the engine-side `source_verifier_fn` parameter was added; legacy CDC remains functional)
+19. Document divergence in `docs/migration/_validation_log.md` event-row (Pitfall #9.k forward-prevention discipline) + open new B-N for investigation (severity HIGH; closure target: BEFORE next D2 cutover attempt) + halt D2 rollout until divergence root-cause understood + reviewed by pipeline-lead
+
+**Source**: B-343 + `docs/migration/D2_GAP_RESOLUTION_PLAN_2026-05-17.md` §4.2 + Phase 2 R1 prep gap-check 2026-05-17. Number drift remediation (Pitfall #9.k): B-343 BACKLOG entry + D2_GAP_RESOLUTION_PLAN §4.2 both cite "RB-12" as the target runbook number, but RB-12 is occupied by Pipeline Deployment per D84-D87 at L1020 — same drift class as B-344's "RB-13" (occupied by Permanent-Retire Table at L1188; corrected to RB-15 at d6fab30 2026-05-19). Authored as RB-18 at this commit per next-available-runbook-number discipline. CLAUDE.md Do-NOT rule preservation: BCP IN with `-E` flag preserves `_scd2_key` IDENTITY values per "Do NOT include _scd2_key (IDENTITY) in INSERT DataFrames or BCP column lists" — applies symmetrically to the OUT/IN restore cycle. lock-resource format follows B-345 `TABLE_LOCK_RESOURCE_FORMAT = 'UDM_Pipeline_{source}_{table}'` canonical.

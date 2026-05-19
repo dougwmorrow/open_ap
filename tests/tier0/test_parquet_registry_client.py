@@ -422,6 +422,82 @@ def test_query_snapshot_returns_dict_for_present_key(fresh_module):
 
 
 # ---------------------------------------------------------------------------
+# (d.2) query_latest_snapshot_for_date semantics (B-563 closure 2026-05-19)
+# ---------------------------------------------------------------------------
+
+
+def test_query_latest_snapshot_for_date_returns_none_for_absent(fresh_module):
+    """B-563: query_latest_snapshot_for_date returns None when no replay-
+    eligible row matches the (source, table, business_date) tuple. This
+    is the first-load case the caller must handle (fall back to non-
+    targeted SCD2 promotion + full Bronze anti-join delete detection)."""
+    from datetime import date
+    cm_factory, _ = _make_mock_cursor_for_with_row(None)
+    with patch.object(fresh_module, "_get_cursor_for", return_value=cm_factory):
+        result = fresh_module.query_latest_snapshot_for_date(
+            source_name="DNA",
+            table_name="ACCT",
+            business_date=date(2026, 5, 19),
+        )
+    assert result is None
+
+
+def test_query_latest_snapshot_for_date_returns_dict_for_present(fresh_module):
+    """B-563: query_latest_snapshot_for_date returns canonical projection
+    dict when a replay-eligible row exists. Caller extracts BatchId for
+    use as original_batch_id in the prior-day replay."""
+    from datetime import date
+    row = _canonical_row(
+        BatchId=999,
+        Status="verified",
+        BusinessDate=date(2026, 5, 18),
+    )
+    cm_factory, _ = _make_mock_cursor_for_with_row(row)
+    with patch.object(fresh_module, "_get_cursor_for", return_value=cm_factory):
+        result = fresh_module.query_latest_snapshot_for_date(
+            source_name="DNA",
+            table_name="ACCT",
+            business_date=date(2026, 5, 18),
+        )
+    assert isinstance(result, dict)
+    assert result["BatchId"] == 999
+    assert result["Status"] == "verified"
+
+
+def test_query_latest_snapshot_for_date_signature_is_keyword_only(fresh_module):
+    """B-563: signature pin -- positional args must raise TypeError."""
+    from datetime import date
+    with pytest.raises(TypeError):
+        fresh_module.query_latest_snapshot_for_date(
+            "DNA", "ACCT", date(2026, 5, 19),  # positional; not allowed
+        )
+
+
+def test_query_latest_snapshot_for_date_replay_eligible_constant_pin(fresh_module):
+    """B-563: pin the replay-eligible status filter against canonical
+    REPLAY_ELIGIBLE_STATUSES from data_load.parquet_replay. If the
+    set drifts, this test breaks predictably + the registry filter
+    must update in lockstep."""
+    canonical = set(getattr(fresh_module, "_REPLAY_ELIGIBLE_STATUSES", ()))
+    expected = {"verified", "replicated", "archived"}
+    assert canonical == expected, (
+        f"_REPLAY_ELIGIBLE_STATUSES drifted from canonical: "
+        f"got {canonical}, expected {expected}. If this changed, also "
+        f"update data_load/parquet_replay.py REPLAY_ELIGIBLE_STATUSES "
+        f"in lockstep."
+    )
+
+
+def test_query_latest_snapshot_for_date_exported_from_module(fresh_module):
+    """B-563: function exists in module public surface."""
+    assert hasattr(fresh_module, "query_latest_snapshot_for_date"), (
+        "B-563: query_latest_snapshot_for_date must be exported from "
+        "data_load.parquet_registry_client"
+    )
+    assert callable(fresh_module.query_latest_snapshot_for_date)
+
+
+# ---------------------------------------------------------------------------
 # (e) State-machine helper consistency
 # ---------------------------------------------------------------------------
 

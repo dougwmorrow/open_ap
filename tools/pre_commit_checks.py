@@ -64,6 +64,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
+# Per B-491 + B-496 bundled closure 2026-05-18: shared empirical-anchor context
+# detection helper extracted from tools/check_commit_msg.py (B-488 original
+# closure) for reuse across Phase 1 quality checks that have the same
+# self-firing-on-historical-citation class. sys.path manipulation required
+# because this module is invoked as a script by .githooks/pre-commit; Python
+# adds tools/ to sys.path (script dir) not the repo root, so `from tools.X`
+# fails without explicit REPO_ROOT insertion (mirrors check_commit_msg.py L88).
+_REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT_FOR_IMPORT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORT))
+from tools.anchor_context import is_empirical_anchor_context  # noqa: E402
+from tools.check_commit_msg import _PYTEST_COUNT_RE, _SCOPE_INDICATORS  # noqa: E402
+
 EVENT_TYPE = "CLI_PRE_COMMIT_CHECKS"
 EXIT_SUCCESS = 0
 EXIT_BLOCKED = 1
@@ -1073,6 +1086,665 @@ def check_cli_registry_sync(staged_files: list[str]) -> CheckResult:
     )
 
 
+# ---------------------------------------------------------------------------
+# Check 9: wc -l line-count claim forward-prevention (B-481 closure 2026-05-18)
+# ---------------------------------------------------------------------------
+# Empirical anchor (Pitfall #9.h class; FP-1 in _false_positive_log.md):
+# CLAUDE.md L98 cited "127 lines per actual wc -l after B-307 refactor" for
+# .githooks/pre-commit + "117 lines per actual wc -l per B-307 split" for
+# .githooks/commit-msg. Claims were TRUE at original B-307 authoring (~2026-05-16)
+# but BECAME FALSE post-multiple-refactors. Actual `wc -l` at 2026-05-18 reports
+# 68 + 41 lines respectively. Drift detected by cross-cohort reviewer
+# `aa320fb75f55a5471` §6 + remediated inline at commit `9e8291a`.
+#
+# This check provides MECHANICAL forward-prevention: regex-matches the canonical
+# "N lines per actual wc -l" pattern in staged markdown + verifies count against
+# current `wc -l` output. WARN on mismatch.
+
+# Canonical wc -l claim pattern (case-insensitive). Captures the file path
+# (from backtick-wrapped reference within 200 chars BEFORE the claim) + the
+# cited line count. Handles canonical CLAUDE.md L98 phrasing:
+#   "`pre-commit` (Python; 68 lines per actual `wc -l` 2026-05-18 ...)"
+#   "`commit-msg` (Python; 41 lines per actual wc -l ...)"
+_WC_LINE_COUNT_CLAIM_RE = re.compile(
+    r"`(?P<filename>[^`\s]+)`[^(]*\([^)]*?(?P<count>\d+)\s+lines?\s+per\s+actual\s+`?wc\s+-l`?",
+    re.IGNORECASE,
+)
+
+# Canonical filename → repo path mapping for B-481 wc -l verification.
+# Bare filenames in CLAUDE.md prose map to canonical repo paths.
+_WC_CANONICAL_FILE_PATHS: tuple[tuple[str, str], ...] = (
+    ("pre-commit", ".githooks/pre-commit"),
+    ("commit-msg", ".githooks/commit-msg"),
+    # Add more as discovered. Tools/scripts use bare filename in CLAUDE.md;
+    # this map resolves them to full repo-relative paths for wc -l invocation.
+)
+
+
+def _resolve_wc_target_path(filename: str) -> str | None:
+    """Per B-481 closure 2026-05-18: map a backtick-wrapped filename token
+    from a wc -l claim to a canonical repo path. Returns None if no match."""
+    # Direct path match (e.g., "tools/check_commit_msg.py")
+    if "/" in filename or "." in filename:
+        candidate = REPO_ROOT / filename
+        if candidate.is_file():
+            return filename
+    # Bare-filename map
+    for name, path in _WC_CANONICAL_FILE_PATHS:
+        if filename == name:
+            return path
+    return None
+
+
+def check_wc_line_count_claims(staged_files: list[str]) -> CheckResult:
+    """For staged markdown files, scan for "N lines per actual wc -l" claims
+    and verify each count against the actual `wc -l` of the referenced file.
+
+    Per B-481 closure 2026-05-18 (Pitfall #9.h forward-prevention; FP-1 in
+    _false_positive_log.md). 1-event empirical anchor: CLAUDE.md L98 cited
+    "127 lines per actual wc -l after B-307 refactor" — TRUE at authoring time,
+    BECAME false post-refactor. This check detects the class mechanically.
+
+    Detection logic:
+    1. Filter staged_files to `*.md` matches.
+    2. For each, read content; regex-extract `<filename> (...N lines per
+       actual wc -l...)` patterns.
+    3. For each (filename, claimed_count) pair, resolve canonical path +
+       run `wc -l <path>` + compare with claimed count.
+    4. WARN on mismatch (not BLOCK; per WSJF LOW + Mechanism C-1 WARN-only
+       contract for stale-narrative-class checks).
+    5. Silent skip if filename can't be resolved to a real file (defensive
+       against future claim formats not yet in canonical map).
+
+    Composes with existing markdown cross-ref + planning-provenance check
+    patterns. Test coverage at `tests/tier0/test_pre_commit_checks_b481.py`.
+
+    Returns:
+        INFO if no markdown files staged OR no wc -l claims found.
+        PASS if all wc -l claims match actual wc -l.
+        WARN with diagnostic enumerating mismatches.
+    """
+    md_files = [
+        f.replace("\\", "/") for f in staged_files
+        if f.replace("\\", "/").endswith(".md")
+    ]
+    if not md_files:
+        return CheckResult(
+            "wc_line_count_claims", True, "info",
+            "no staged markdown files; wc -l claim check skipped"
+        )
+
+    mismatches: list[tuple[str, str, int, int]] = []  # (md_file, target, claimed, actual)
+    total_claims = 0
+
+    for md_file in md_files:
+        md_path = REPO_ROOT / md_file
+        try:
+            content = md_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        # Per B-491 closure 2026-05-18: empirical-anchor context suppression via
+        # shared `is_empirical_anchor_context` helper (extracted to
+        # tools/anchor_context.py at B-491+B-496 bundled closure 2-event threshold).
+        # Compute line index from match position to enable 5-line lookback for
+        # historical-citation markers ("per B-XXX closure" / "as of YYYY-MM-DD" /
+        # "empirical anchor" / etc.).
+        lines = content.splitlines()
+        for m in _WC_LINE_COUNT_CLAIM_RE.finditer(content):
+            total_claims += 1
+            line_idx = content[:m.start()].count("\n")
+            if is_empirical_anchor_context(lines, line_idx):
+                continue  # historical-anchor citation; suppress per B-491
+            filename = m.group("filename")
+            claimed = int(m.group("count"))
+            target_rel = _resolve_wc_target_path(filename)
+            if target_rel is None:
+                # Filename not in canonical map; silently skip per defensive design
+                continue
+            target_path = REPO_ROOT / target_rel
+            if not target_path.is_file():
+                continue
+            try:
+                with target_path.open("r", encoding="utf-8") as fh:
+                    actual = sum(1 for _ in fh)
+            except (OSError, UnicodeDecodeError):
+                continue
+            if actual != claimed:
+                mismatches.append((md_file, target_rel, claimed, actual))
+
+    if mismatches:
+        return CheckResult(
+            "wc_line_count_claims", False, "warn",
+            f"{len(mismatches)} stale `wc -l` line-count claim(s) detected in "
+            f"staged markdown (per B-481 closure 2026-05-18; Pitfall #9.h "
+            f"forward-prevention class):\n"
+            + "\n".join(
+                f"  - {md}: claim `{target}` = {claimed} lines, actual `wc -l` = {actual}"
+                for md, target, claimed, actual in mismatches[:10]
+            )
+            + "\n\nUpdate the cited count to the actual `wc -l` value OR rephrase "
+              "the claim to omit the specific count. This is a WARN (not BLOCK); "
+              "commit will still proceed."
+        )
+
+    return CheckResult(
+        "wc_line_count_claims", True, "info",
+        f"all {total_claims} `wc -l` claim(s) in {len(md_files)} staged "
+        f"markdown file(s) match actual line counts"
+    )
+
+
+# =========================================================================
+# B-495 closure 2026-05-18: file-path-existence validation (10th check)
+# =========================================================================
+# Per udm-researcher artifact `_research/llm-handoffs-traceability-
+# hallucination-2026-05-18.md` Recommendation 3 + Finding 3.1 (code
+# hallucination systematic review; arXiv 2511.00776; 60-paper meta-analysis
+# 2025): file-path confabulation is the LEAST-MITIGATED sub-type in code-
+# generation systems. LLM agents can confabulate file paths that look
+# authoritative but reference non-existent targets; downstream agents reading
+# D-N records / SKILL.md cross-refs treat the reference as canonical.
+#
+# FP-policy resolution (inline at B-495 closure 2026-05-18):
+# 1. WARN-only severity (NOT BLOCK; per D74 exit code 1 + research Rec 3
+#    mitigation) — allows D-N proposals to cite future-planned paths
+# 2. No allowlist initially — rely on regex precision + WARN severity to
+#    avoid false-positive flood; promote to allowlist if drift observed
+# 3. Scope: staged markdown files only (consistent with other Phase 1 checks)
+# =========================================================================
+# Regex matches backtick-wrapped path candidates.
+# Path candidates MUST:
+#   - Start with known repo directory prefix
+#   - Contain ≥1 forward slash (rule out single-name code identifiers)
+#   - End with known extension OR trailing slash (directory)
+#   - Contain no wildcards `*` `?` OR template placeholders `<` `>` `{` `}`
+_BACKTICK_PATH_RE = re.compile(r"`([^`\s\*\?<>\{\}]+/[^`\s\*\?<>\{\}]+)`")
+
+# Known repo-directory prefixes (extensible). Tightens regex precision —
+# avoids matching backtick-wrapped strings like `polars/series` or `git/log`.
+_PATH_PREFIX_WHITELIST: tuple[str, ...] = (
+    ".claude/",
+    ".github/",
+    ".githooks/",
+    "cdc/",
+    "config.py",
+    "data_load/",
+    "docs/",
+    "extract/",
+    "main_large_tables.py",
+    "main_small_tables.py",
+    "migrations/",
+    "observability/",
+    "orchestration/",
+    "schema/",
+    "scd2/",
+    "sources.py",
+    "tests/",
+    "tools/",
+    "utils/",
+)
+
+# Known file extensions matching the regex tail filter. Directories end with `/`.
+_PATH_EXTENSION_WHITELIST: tuple[str, ...] = (
+    ".py",
+    ".md",
+    ".sql",
+    ".yml",
+    ".yaml",
+    ".json",
+    ".toml",
+    ".sh",
+    ".ini",
+    ".cfg",
+    ".txt",
+)
+
+
+def _is_credible_path_candidate(token: str) -> bool:
+    """Return True if token looks like a repo-relative file path.
+
+    Filters out backtick-wrapped strings that contain a slash but aren't paths
+    (e.g., `polars/series`, `iso/8601`, `np.array(x/y)`).
+    """
+    has_known_prefix = any(token.startswith(prefix) for prefix in _PATH_PREFIX_WHITELIST)
+    if not has_known_prefix:
+        return False
+    has_known_extension = any(token.endswith(ext) for ext in _PATH_EXTENSION_WHITELIST)
+    is_directory = token.endswith("/")
+    return has_known_extension or is_directory
+
+
+def check_file_path_existence(staged_files: list[str]) -> CheckResult:
+    """B-495 closure 2026-05-18: file-path-existence forward-prevention.
+
+    Scans staged markdown files for backtick-wrapped path-like tokens (e.g.,
+    `tools/pre_commit_checks.py`, `.claude/skills/udm-*/SKILL.md`,
+    `tests/tier1/test_query_blindspots_checks.py`) and verifies each path
+    exists in the repository. Closes the LLM file-path-confabulation
+    hallucination class per code-hallucination systematic review (arXiv
+    2511.00776).
+
+    WARN severity (per FP-policy resolution at B-495 closure): D-N proposals
+    may legitimately cite future-planned paths before build; WARN-only
+    semantics allow these to be flagged without blocking commits.
+
+    Composes with existing markdown cross-ref + wc -l line-count check
+    patterns. Test coverage at `tests/tier0/test_pre_commit_checks_b495.py`.
+
+    Returns:
+        INFO if no markdown files staged OR no credible path candidates found.
+        PASS if all candidate paths resolve.
+        WARN with diagnostic enumerating missing paths.
+    """
+    md_files = [
+        f.replace("\\", "/") for f in staged_files
+        if f.replace("\\", "/").endswith(".md")
+    ]
+    if not md_files:
+        return CheckResult(
+            "file_path_existence", True, "info",
+            "no staged markdown files; file-path existence check skipped"
+        )
+
+    missing: list[tuple[str, str, int]] = []  # (md_file, missing_path, line_no)
+    total_candidates = 0
+
+    for md_file in md_files:
+        md_path = REPO_ROOT / md_file
+        try:
+            content = md_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        lines = content.splitlines()
+        for line_no, line in enumerate(lines, start=1):
+            for m in _BACKTICK_PATH_RE.finditer(line):
+                token = m.group(1)
+                if not _is_credible_path_candidate(token):
+                    continue
+                # Per B-496 closure 2026-05-18: empirical-anchor context
+                # suppression via shared `is_empirical_anchor_context` helper.
+                # 5-line lookback for historical-citation markers; suppresses
+                # WARN on paths cited in historical context (e.g., paths existed
+                # at original authoring but renamed/moved/never-built since).
+                if is_empirical_anchor_context(lines, line_no - 1):
+                    continue
+                total_candidates += 1
+                target = REPO_ROOT / token
+                if not target.exists():
+                    missing.append((md_file, token, line_no))
+
+    if missing:
+        return CheckResult(
+            "file_path_existence", False, "warn",
+            f"{len(missing)} backtick-wrapped path candidate(s) in staged "
+            f"markdown reference non-existent target(s) (per B-495 closure "
+            f"2026-05-18; LLM file-path-confabulation forward-prevention; "
+            f"WARN-only per FP-policy):\n"
+            + "\n".join(
+                f"  - {md}:{line}: `{path}` (does not exist)"
+                for md, path, line in missing[:10]
+            )
+            + "\n\nEither create the cited path OR rephrase the citation. "
+              "This is a WARN (not BLOCK); commit will still proceed. "
+              "D-N proposals citing future-planned paths are expected to fire "
+              "this warning per FP-policy."
+        )
+
+    return CheckResult(
+        "file_path_existence", True, "info",
+        f"all {total_candidates} backtick-path candidate(s) in {len(md_files)} "
+        f"staged markdown file(s) resolve to existing targets"
+    )
+
+
+# =========================================================================
+# B-558 Phase 2.1 Component A 2026-05-19: snapshot-claim validation
+# =========================================================================
+# Per `docs/migration/UDM_SESSION_COMPACTOR_PHASE_2_1_PLAN_2026-05-19.md` §3.1.
+# Validates `docs/migration/_session_snapshots/*.md` files against actual repo
+# state at commit time. Closes the snapshot-hallucination class (snapshots
+# author claims like "commit_hash: abc1234" + "B-Ns CLOSED (29): ..." that
+# may drift from actual git/BACKLOG state during multi-cohort session arcs).
+#
+# Scope (v1):
+#   1. Frontmatter `commit_hash:` field — verify the cited hash exists in
+#      `git log --format=%H`. Detects typos / hallucinations / not-yet-
+#      committed references.
+#   2. NOTE: pytest-claim verification + B-N closure-count verification are
+#      out of scope for v1; tracked as B-558 Component C deferred work +
+#      future enhancement respectively.
+#
+# Severity: WARN (consistent with B-481 + B-495 precedent).
+# =========================================================================
+_SNAPSHOT_COMMIT_HASH_RE = re.compile(
+    r"^commit_hash:\s*([a-f0-9]{7,40})\s*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+_SNAPSHOT_DIR_PREFIX = "docs/migration/_session_snapshots/"
+
+
+def _git_log_contains_hash(candidate: str) -> bool:
+    """Return True if candidate hash is present in `git log --format=%H` output.
+
+    Defensive: returns False on subprocess failure (treated as unresolvable).
+    """
+    try:
+        result = subprocess.run(
+            ["git", "log", "--format=%H"],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    if result.returncode != 0:
+        return False
+    candidate_lower = candidate.lower()
+    for line in result.stdout.splitlines():
+        if line.startswith(candidate_lower):
+            return True
+    return False
+
+
+def check_snapshot_claims(staged_files: list[str]) -> CheckResult:
+    """B-558 Phase 2.1 Component A closure 2026-05-19: snapshot frontmatter
+    commit-hash verification against actual `git log` output.
+
+    Scans staged `docs/migration/_session_snapshots/*.md` files for YAML
+    frontmatter `commit_hash:` claims and verifies each cited hash exists
+    in the git history. Closes the snapshot-frontmatter-hallucination class.
+
+    WARN severity (per FP-policy precedent of B-481 + B-495). Findings cap 10.
+
+    Returns:
+        INFO if no snapshot files staged.
+        PASS if all commit_hash claims resolve to real commits.
+        WARN with diagnostic enumerating unresolvable hashes.
+    """
+    snapshot_files = [
+        f.replace("\\", "/") for f in staged_files
+        if f.replace("\\", "/").startswith(_SNAPSHOT_DIR_PREFIX)
+        and f.replace("\\", "/").endswith(".md")
+    ]
+    if not snapshot_files:
+        return CheckResult(
+            "snapshot_claims", True, "info",
+            "no staged snapshot files; snapshot-claim verification skipped"
+        )
+
+    unresolved: list[tuple[str, str]] = []  # (snapshot_file, claimed_hash)
+    total_claims = 0
+
+    for snapshot_file in snapshot_files:
+        snapshot_path = REPO_ROOT / snapshot_file
+        try:
+            content = snapshot_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for m in _SNAPSHOT_COMMIT_HASH_RE.finditer(content):
+            total_claims += 1
+            claimed_hash = m.group(1)
+            if not _git_log_contains_hash(claimed_hash):
+                unresolved.append((snapshot_file, claimed_hash))
+
+    if unresolved:
+        return CheckResult(
+            "snapshot_claims", False, "warn",
+            f"{len(unresolved)} unresolvable commit_hash claim(s) in staged "
+            f"snapshot(s) (per B-558 Phase 2.1 Component A closure 2026-05-19; "
+            f"snapshot-frontmatter-hallucination forward-prevention; WARN-only "
+            f"per FP-policy):\n"
+            + "\n".join(
+                f"  - {snapshot}: commit_hash `{hash_}` not in git log"
+                for snapshot, hash_ in unresolved[:10]
+            )
+            + "\n\nVerify the commit hash exists (e.g., `git log --oneline | "
+              "grep <hash>`) OR fix the typo. This is a WARN (not BLOCK); "
+              "commit will still proceed."
+        )
+
+    return CheckResult(
+        "snapshot_claims", True, "info",
+        f"all {total_claims} commit_hash claim(s) in {len(snapshot_files)} "
+        f"staged snapshot file(s) resolve to git log"
+    )
+
+
+# =========================================================================
+# B-558 Phase 2.1 Component C 2026-05-19: snapshot pytest-claim verification
+# =========================================================================
+# Per `docs/migration/UDM_SESSION_COMPACTOR_PHASE_2_1_PLAN_2026-05-19.md` §3.3.
+# Option B (CHOSEN per gate-2 reviewer abbbbd0ae702860da G3-1): NEW Phase 1
+# quality check using existing `_PYTEST_COUNT_RE` from `tools/check_commit_msg.py`
+# (canonical regex; B-449 closure). Native fit to `check_*(staged_files)`
+# signature; avoids stretching the `CommitMsgCheck.scan(commit_msg, ctx)` ABC
+# contract that the B-449 check uses.
+#
+# Detection logic: pytest count claims in staged snapshot files MUST be
+# co-located (same line or ±2 lines) with a scope indicator like
+# "tier0+tier1" / "full-suite" / "baseline preserved" — same forward-prevention
+# class as B-449 commit-msg check, applied to snapshot scope.
+# =========================================================================
+def check_snapshot_pytest_claims(staged_files: list[str]) -> CheckResult:
+    """B-558 Phase 2.1 Component C closure 2026-05-19: snapshot pytest-claim
+    scope-indicator verification.
+
+    Scans staged `docs/migration/_session_snapshots/*.md` files for pytest
+    count claims (via canonical `_PYTEST_COUNT_RE` from `check_commit_msg.py`)
+    and verifies each claim has a co-located scope indicator (tier0+tier1 /
+    full-suite / etc. per `_SCOPE_INDICATORS`). Closes the pytest-count-
+    scope-ambiguity class at snapshot scope (same forward-prevention pattern
+    as B-449 commit-msg check, applied to snapshot substrate).
+
+    Layer 2 suppression: applies `is_empirical_anchor_context()` (from
+    `tools/anchor_context.py`) — historical-citation pytest counts in
+    "Earlier YYYY-MM-DD" sections / quoted reviewer outputs do not need
+    scope indicators since they cite a prior state.
+
+    WARN severity per FP-policy precedent of B-481 + B-495 + B-558 Component A.
+
+    Returns:
+        INFO if no snapshot files staged.
+        PASS if all pytest claims have co-located scope indicators OR are
+            inside historical-anchor context.
+        WARN with diagnostic enumerating unscoped pytest claims.
+    """
+    snapshot_files = [
+        f.replace("\\", "/") for f in staged_files
+        if f.replace("\\", "/").startswith(_SNAPSHOT_DIR_PREFIX)
+        and f.replace("\\", "/").endswith(".md")
+    ]
+    if not snapshot_files:
+        return CheckResult(
+            "snapshot_pytest_claims", True, "info",
+            "no staged snapshot files; snapshot-pytest-claim verification skipped"
+        )
+
+    unscoped: list[tuple[str, int, str]] = []  # (snapshot_file, line_no, line_text)
+    total_claims = 0
+
+    for snapshot_file in snapshot_files:
+        snapshot_path = REPO_ROOT / snapshot_file
+        try:
+            content = snapshot_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        lines = content.splitlines()
+        for line_no, line in enumerate(lines, start=1):
+            matches = list(_PYTEST_COUNT_RE.finditer(line))
+            if not matches:
+                continue
+            # ±2 line context window for scope-indicator lookup
+            lo = max(0, line_no - 3)
+            hi = min(len(lines), line_no + 2)
+            context_window = "\n".join(lines[lo:hi]).lower()
+            has_scope = any(
+                indicator.lower() in context_window for indicator in _SCOPE_INDICATORS
+            )
+            if has_scope:
+                continue
+            # Suppress historical-anchor citations per B-491 + B-496 pattern
+            if is_empirical_anchor_context(lines, line_no - 1):
+                continue
+            total_claims += 1
+            unscoped.append((snapshot_file, line_no, line.strip()[:120]))
+
+    if unscoped:
+        return CheckResult(
+            "snapshot_pytest_claims", False, "warn",
+            f"{len(unscoped)} pytest count claim(s) in staged snapshot(s) "
+            f"without co-located scope indicator (per B-558 Phase 2.1 "
+            f"Component C closure 2026-05-19; snapshot-pytest-scope-ambiguity "
+            f"forward-prevention; analog of B-449 at snapshot scope; "
+            f"WARN-only per FP-policy):\n"
+            + "\n".join(
+                f"  - {snapshot}:{line_no}: {text}"
+                for snapshot, line_no, text in unscoped[:10]
+            )
+            + "\n\nAdd a scope indicator (e.g., 'tier0+tier1', 'full-suite', "
+              "'baseline preserved') within ±2 lines OR rephrase to historical "
+              "anchor context. This is a WARN (not BLOCK); commit will proceed."
+        )
+
+    return CheckResult(
+        "snapshot_pytest_claims", True, "info",
+        f"all pytest count claim(s) in {len(snapshot_files)} staged snapshot "
+        f"file(s) have co-located scope indicators OR historical-anchor context"
+    )
+
+
+# =========================================================================
+# B-565 closure 2026-05-19: per-chat-pointer-staleness forward-prevention
+# =========================================================================
+# Per HANDOFF §8 Pitfall #9.m recursive-self-violation 2-event empirical
+# evidence base 2026-05-19 (cross-cohort reviewer `ae0e5ea9c1b3851c0` caught
+# instance N at `c8bb55b..372e982`; remediation at `977514e` explicitly
+# called out the meta-irony + recursion-termination claim; very next
+# substantive commit `739eab1` REPEATED the violation; gap-check reviewer
+# `a7f466490e1f64dc5` caught instance N+1).
+#
+# Mechanical layer: scan staged BACKLOG.md diff for B-N closure-annotation
+# additions; if ≥1 closure landed, verify staged diff also touches
+# `SESSION_RESUME/active/*.md` per-chat pointer (any chat's file). WARN
+# severity per FP-policy precedent. Edge case: cohort-scope annotation
+# in commit message suppresses (operator may legitimately defer refresh
+# to trailing commit in multi-commit cohort).
+# =========================================================================
+# Matches addition lines in `git diff --cached` output. Production formats
+# per B-490 canonical variants: `**B-NNN**` (open) + `~~**B-NNN**~~`
+# (strikethrough/closed). Closure-flip detection: any ADD line containing
+# `⚫ CLOSED` token associated with a B-NNN reference.
+_BACKLOG_CLOSURE_FLIP_RE = re.compile(
+    r"^\+.*B-(\d+).*⚫\s*CLOSED",
+    re.MULTILINE,
+)
+
+_SESSION_RESUME_ACTIVE_PATTERN = "SESSION_RESUME/active/"
+
+
+def _get_staged_diff(target_path: str) -> str:
+    """Return `git diff --cached -- <target_path>` output as text.
+
+    Defensive: returns empty string on subprocess failure.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--", target_path],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if result.returncode != 0:
+        return ""
+    return result.stdout
+
+
+def check_session_resume_active_refresh(staged_files: list[str]) -> CheckResult:
+    """B-565 closure 2026-05-19: SESSION_RESUME/active/ per-chat pointer refresh
+    enforcement when BACKLOG.md closure annotations land.
+
+    Forward-prevention for Pitfall #9.m recursive self-violation class
+    (per HANDOFF §8 2-event empirical evidence base 2026-05-19). When a
+    commit stages a B-N closure annotation in BACKLOG.md, mechanically
+    verify it ALSO touches at least one SESSION_RESUME/active/<chat-name>.md
+    per-chat pointer (any chat's file).
+
+    Logic:
+    1. If BACKLOG.md NOT in staged files: silent skip (INFO).
+    2. Scan staged BACKLOG.md diff via `_BACKLOG_CLOSURE_FLIP_RE` for
+       addition lines containing `+...B-NNN...⚫ CLOSED` pattern.
+    3. If 0 closures detected: silent PASS (INFO).
+    4. If ≥1 closure detected AND no `SESSION_RESUME/active/*.md` file
+       in staged files: WARN with diagnostic.
+    5. If ≥1 closure detected AND ≥1 active/ file in staged files: PASS.
+
+    Severity: WARN (per FP-policy precedent of B-481 + B-495 + B-558 A+C).
+
+    Returns:
+        INFO if no BACKLOG.md staged OR no closure annotations detected.
+        PASS if closure(s) detected + per-chat pointer refreshed.
+        WARN with diagnostic if closure(s) detected without active/ refresh.
+    """
+    backlog_path = "docs/migration/BACKLOG.md"
+    staged_normalized = [f.replace("\\", "/") for f in staged_files]
+    if backlog_path not in staged_normalized:
+        return CheckResult(
+            "session_resume_active_refresh", True, "info",
+            "BACKLOG.md not in staged files; per-chat refresh check skipped"
+        )
+
+    diff_text = _get_staged_diff(backlog_path)
+    if not diff_text:
+        return CheckResult(
+            "session_resume_active_refresh", True, "info",
+            "BACKLOG.md staged but no diff retrievable; check skipped"
+        )
+
+    closure_matches = _BACKLOG_CLOSURE_FLIP_RE.findall(diff_text)
+    if not closure_matches:
+        return CheckResult(
+            "session_resume_active_refresh", True, "info",
+            "BACKLOG.md staged but no B-N closure annotations detected"
+        )
+
+    active_pointer_staged = any(
+        _SESSION_RESUME_ACTIVE_PATTERN in f for f in staged_normalized
+    )
+
+    if active_pointer_staged:
+        return CheckResult(
+            "session_resume_active_refresh", True, "info",
+            f"BACKLOG.md staged with {len(closure_matches)} B-N closure(s) "
+            f"AND SESSION_RESUME/active/*.md refresh present — per-chat "
+            f"pointer discipline satisfied"
+        )
+
+    cited_bns = sorted(set(closure_matches), key=int)[:10]
+    return CheckResult(
+        "session_resume_active_refresh", False, "warn",
+        f"{len(closure_matches)} B-N closure annotation(s) staged in "
+        f"BACKLOG.md WITHOUT corresponding SESSION_RESUME/active/<chat>.md "
+        f"refresh (per B-565 closure 2026-05-19; Pitfall #9.m recursive "
+        f"self-violation forward-prevention; WARN-only per FP-policy):\n"
+        + "\n".join(f"  - B-{bn}" for bn in cited_bns)
+        + "\n\nRefresh the per-chat state pointer at "
+          "`SESSION_RESUME/active/<chat-name>.md` per `udm-session-compactor` "
+          "SKILL.md Step 3 mandate (state-as-of-session-end + cumulative "
+          "count + commit chain + Open Runway). If multi-commit cohort + "
+          "refresh deferred to trailing commit, this WARN is expected. "
+          "Empirical anchor: 2-event Pitfall #9.m recurrence 2026-05-19 "
+          "(reviewers `ae0e5ea9c1b3851c0` + `a7f466490e1f64dc5`). "
+          "This is a WARN (not BLOCK); commit will proceed."
+    )
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
@@ -1082,6 +1754,11 @@ CHECKS = [
     check_gap_accountability,
     check_planning_provenance,
     check_cli_registry_sync,
+    check_wc_line_count_claims,         # B-481 closure 2026-05-18
+    check_file_path_existence,          # B-495 closure 2026-05-18
+    check_snapshot_claims,              # B-558 Phase 2.1 Component A closure 2026-05-19
+    check_snapshot_pytest_claims,       # B-558 Phase 2.1 Component C closure 2026-05-19
+    check_session_resume_active_refresh,  # B-565 closure 2026-05-19
 ]
 
 

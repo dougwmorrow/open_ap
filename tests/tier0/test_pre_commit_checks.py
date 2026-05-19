@@ -19,6 +19,15 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+# Single source of truth for canonical CHECKS-registry count per tech-debt
+# Item C closure 2026-05-18. Pre-closure was 3 sites with literal count
+# duplicated (test_checks_registry_complete + test_empty_staged_returns_passes
+# + check-position assertions). Now 1 constant + N reference sites. When
+# CHECKS grows: update THIS constant only. (Closes Pitfall #9.k arithmetic-
+# propagation risk on count update — same drift class B-481/B-495 closure
+# cohorts already exhibited at len(CHECKS) sites.)
+EXPECTED_CHECKS_COUNT = 13  # bumped 12 -> 13 per B-565 closure 2026-05-19 (added check_session_resume_active_refresh; Pitfall #9.m forward-prevention)
+
 
 def test_module_imports():
     """Assertion 1: orchestrator module imports cleanly."""
@@ -54,11 +63,13 @@ def test_exit_codes_per_d74():
 
 
 def test_checks_registry_complete():
-    """Assertion 5 (per B-309 Cycle 1 + B-315 + B-275-class + B189 closure cohort):
-    CHECKS registry has 8 Phase 1 checks (B189 closure 2026-05-17 adds
-    check_cli_registry_sync as 8th check; CLI_* registry sync mechanical
-    enforcement; empirical anchor B189 closure cohort + B-317 cascade-tools
-    drift class)."""
+    """Assertion 5 (per B-309 Cycle 1 + B-315 + B-275-class + B189 + B-481 + B-495
+    closure cohort): CHECKS registry has 10 Phase 1 checks. B-495 closure
+    2026-05-18 adds check_file_path_existence as 10th check; LLM file-path-
+    confabulation hallucination forward-prevention (per udm-researcher artifact
+    Rec 3 + Finding 3.1 code-hallucination systematic review arXiv 2511.00776).
+    Updated 2026-05-18 at tech-debt Item C closure to add check_file_path_existence
+    assertion (was missed at B-495 closure cohort)."""
     from tools.pre_commit_checks import (
         CHECKS,
         check_query_blindspots,
@@ -69,6 +80,8 @@ def test_checks_registry_complete():
         check_gap_accountability,
         check_planning_provenance,
         check_cli_registry_sync,
+        check_wc_line_count_claims,
+        check_file_path_existence,
     )
     assert check_query_blindspots in CHECKS
     assert check_pytest_changed_python_files in CHECKS
@@ -78,7 +91,9 @@ def test_checks_registry_complete():
     assert check_gap_accountability in CHECKS
     assert check_planning_provenance in CHECKS
     assert check_cli_registry_sync in CHECKS
-    assert len(CHECKS) == 8
+    assert check_wc_line_count_claims in CHECKS
+    assert check_file_path_existence in CHECKS
+    assert len(CHECKS) == EXPECTED_CHECKS_COUNT
 
 
 def test_check_result_shape():
@@ -95,11 +110,12 @@ def test_check_result_shape():
 
 
 def test_empty_staged_returns_passes():
-    """Assertion 7 (per B189 closure cohort): with no staged files, all 8 checks
-    return passed (info severity)."""
+    """Assertion 7 (per B-495 closure cohort + tech-debt Item C 2026-05-18):
+    with no staged files, all checks return passed (info severity). Uses
+    EXPECTED_CHECKS_COUNT for single-source-of-truth count parameterization."""
     from tools.pre_commit_checks import run_all_checks
     results = run_all_checks(staged=[])
-    assert len(results) == 8
+    assert len(results) == EXPECTED_CHECKS_COUNT
     for r in results:
         assert r.passed, f"{r.name} failed on empty input: {r.diagnostic}"
 
@@ -428,11 +444,12 @@ def test_check_planning_provenance_glob_case_insensitive(tmp_path, monkeypatch):
 
 
 def test_check_planning_provenance_in_checks_registry():
-    """Assertion 34 (per B-275-class): CHECKS registry contains check_planning_provenance."""
+    """Assertion 34 (per B-275-class; updated B-481 closure cohort 2026-05-18):
+    CHECKS registry contains check_planning_provenance."""
     from tools.pre_commit_checks import CHECKS, check_planning_provenance
     assert check_planning_provenance in CHECKS
-    # 8th entry per B189 closure cohort (added check_cli_registry_sync as 8th)
-    assert len(CHECKS) == 8
+    # 9th entry per B-481 closure cohort (added check_wc_line_count_claims as 9th)
+    assert len(CHECKS) == EXPECTED_CHECKS_COUNT
 
 
 # ---------------------------------------------------------------------------
@@ -560,14 +577,14 @@ def test_check_cli_registry_sync_non_cli_event_type_skipped(tmp_path, monkeypatc
 
 
 def test_check_cli_registry_sync_in_checks_registry():
-    """Assertion 39 (per B189 closure cohort): CHECKS registry contains
-    check_cli_registry_sync as 8th entry; verify helper functions + module-level
-    regex constants public-surface present."""
+    """Assertion 39 (per B189 closure cohort; updated B-481 cohort 2026-05-18):
+    CHECKS registry contains check_cli_registry_sync; verify helper functions +
+    module-level regex constants public-surface present."""
     import tools.pre_commit_checks as pcc
     from tools.pre_commit_checks import CHECKS, check_cli_registry_sync
     assert check_cli_registry_sync in CHECKS
-    # 8th entry per B189 closure cohort 2026-05-17
-    assert len(CHECKS) == 8
+    # 9th entry per B-481 closure cohort 2026-05-18 (was 8th pre-B-481)
+    assert len(CHECKS) == EXPECTED_CHECKS_COUNT
     # Module-level regex constants + helper functions present in public surface
     assert hasattr(pcc, "_EVENT_TYPE_DECLARATION_RE")
     assert hasattr(pcc, "_CLI_REGISTRY_REGION_START_RE")

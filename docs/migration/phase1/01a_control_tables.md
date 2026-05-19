@@ -155,7 +155,7 @@ Per Round 2 § 1.2:
 
 | Column | Type | NULL | Default | Purpose |
 |---|---|---|---|---|
-| `CDCMode` | `NVARCHAR(20)` | NO | `'change_detect'` | Per-table CDC mode flag; `'change_detect'` (legacy) or `'parquet_snapshot'` (new build). Phase 4 cutover flips per-table atomically. |
+| `CDCMode` | `NVARCHAR(20)` | NO | `'change_detect'` | Per-table CDC mode dispatch flag (post-D125 2026-05-19; extends D63 2-value enum): `'change_detect'` (legacy Stage→CDC→SCD2 only), `'parquet_snapshot'` (Parquet→replay→SCD2 only), or `'both'` (dual-execute; BOTH_LEGACY_FEEDS sub-variant — Parquet write as audit substrate + legacy CDC drives Bronze). Phase 4 cutover via RB-16 (B-547 pending) flips per-table atomically through 2-step transition `'change_detect'` → `'both'` for ≥30 days → `'parquet_snapshot'`. |
 | `PiiColumnList` | `NVARCHAR(MAX)` | YES | `NULL` | CSV of column names to tokenize via SP-1 before row-hash (e.g., `'SSN,EMAIL,PHONE'`). NULL = no PII columns. |
 | `DataClassification` | `NVARCHAR(20)` | YES | `NULL` | `'PII'` / `'PCI'` / `'none'` / `NULL` (not yet classified). Drives retention SLAs. |
 | `CohortAssignment` | `NVARCHAR(50)` | YES | `NULL` | Free-text Phase 4 rollout cohort tag (e.g., `'cohort-1-pilot'`). |

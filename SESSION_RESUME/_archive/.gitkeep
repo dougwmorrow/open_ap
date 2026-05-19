@@ -1,0 +1,3 @@
+# Archive directory for completed chat sessions' final SESSION_RESUME state pointers.
+# Files land here as `<YYYY-MM-DD>-<chat-name>.md` per the lifecycle in `../README.md`.
+# Empty at first commit (B-562 Component B Phase 1 landing 2026-05-19).

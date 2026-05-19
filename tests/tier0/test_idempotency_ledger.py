@@ -222,8 +222,12 @@ def test_unique_violation_completed_short_circuits():
 def test_startup_sweep_returns_int_zero_stale():
     """(e) startup_recovery_sweep returns 0 when no stale rows exist.
 
-    Smoke for the I19 startup recovery path. Mocks the COUNT query to
+    Smoke for the I19 startup recovery path. Mocks the COUNT queries to
     return 0 and verifies no UPDATE is issued.
+
+    Post-B-337/D119: TWO SELECTs run in the first cursor block (forensic
+    legacy-count + gating non-legacy count). The UPDATE block is still
+    skipped on zero-stale.
     """
     from utils import idempotency_ledger as mod
 
@@ -233,8 +237,13 @@ def test_startup_sweep_returns_int_zero_stale():
 
     assert isinstance(result, int)
     assert result == 0
-    # Only the COUNT query should have run; no UPDATE on zero-stale.
-    assert cur.execute.call_count == 1
+    # Per D119: 2 SELECTs (forensic + gating); NO UPDATE on zero-stale.
+    assert cur.execute.call_count == 2
+    for c in cur.execute.call_args_list:
+        sql = c.args[0]
+        assert 'UPDATE' not in sql.upper(), (
+            'Zero-stale path MUST NOT issue an UPDATE'
+        )
 
 
 # ---------------------------------------------------------------------------

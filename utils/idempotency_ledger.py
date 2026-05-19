@@ -249,7 +249,7 @@ def ledger_step(
     :param table_name: e.g. ``'ACCT'``. Source table name; not the UDM
         derived names.
     :param event_type: Canonical values: ``'EXTRACT'``, ``'BCP_LOAD'``,
-        ``'CDC_PROMOTION'``, ``'SCD2_PROMOTION'``, ``'PARQUET_WRITE'``,
+        ``'CDC_PROMOTION'``, ``'SCD2_PROMOTION'`` (legacy pre-D2; preserved for forensics per D119), ``'SCD2_PROMOTION_D2'`` (post-D2 canonical per D119), ``'PARQUET_WRITE'``,
         ``'REPLAY'``. Non-AM/PM jobs use their canonical JOB_NAME (see
         ``02_configuration.md`` § 5.3.6).
     :param metadata: Reserved for B-223. Accepted but NOT persisted to the
@@ -517,6 +517,35 @@ def startup_recovery_sweep(
         )
 
     with cursor_for("General") as cur:
+        # B-337 + D119 cutover discipline: count legacy pre-D2 IN_PROGRESS rows
+        # separately. These rows pre-date the D2 cutover EventType naming
+        # ('SCD2_PROMOTION' + 'CDC_PROMOTION'); they MUST NOT be auto-swept to
+        # FAILED because doing so destroys forensic evidence of the pre-cutover
+        # crash that left them IN_PROGRESS. Operator-investigation per D119
+        # body + design-reviewer Class A-2 finding (Phase 2 large-tables plan v5).
+        cur.execute(
+            """
+            SELECT COUNT(*)
+            FROM General.ops.IdempotencyLedger
+            WHERE Status = 'IN_PROGRESS'
+              AND StartedAt < DATEADD(MINUTE, -?, SYSUTCDATETIME())
+              AND EventType IN ('SCD2_PROMOTION', 'CDC_PROMOTION')
+            """,
+            stale_threshold_minutes,
+        )
+        row = cur.fetchone()
+        legacy_count = int(row[0]) if row else 0
+        if legacy_count > 0:
+            logger.warning(
+                "B-337/D119: startup_recovery_sweep found %d legacy pre-D2 "
+                "IN_PROGRESS rows (EventType IN ('SCD2_PROMOTION','CDC_PROMOTION')) "
+                "older than %d minutes. NOT auto-sweeping (forensic-preservation "
+                "per D119); operator must investigate.",
+                legacy_count, stale_threshold_minutes,
+            )
+
+        # Per B-337/D119: EXCLUDE legacy pre-D2 EventTypes from the stale-count
+        # that drives the sweep decision (forensic evidence; not in-flight work).
         # Use the filtered IX_IdempotencyLedger_Stuck index per § 7 DDL.
         cur.execute(
             """
@@ -524,6 +553,7 @@ def startup_recovery_sweep(
             FROM General.ops.IdempotencyLedger
             WHERE Status = 'IN_PROGRESS'
               AND StartedAt < DATEADD(MINUTE, -?, SYSUTCDATETIME())
+              AND EventType NOT IN ('SCD2_PROMOTION', 'CDC_PROMOTION')
             """,
             stale_threshold_minutes,
         )
@@ -562,6 +592,7 @@ def startup_recovery_sweep(
                 RecoveryAction = 'STARTUP_SWEEP_FAILED'
             WHERE Status = 'IN_PROGRESS'
               AND StartedAt < DATEADD(MINUTE, -?, SYSUTCDATETIME())
+              AND EventType NOT IN ('SCD2_PROMOTION', 'CDC_PROMOTION')
             """,
             stale_threshold_minutes,
         )
