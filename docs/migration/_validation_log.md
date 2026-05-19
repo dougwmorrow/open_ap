@@ -12,6 +12,38 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-568 + B-569 opened: B-562 multi-chat coordination architecture gap-closures (topic-drift warning + archive lifecycle automation)
+
+**Trigger**: pipeline-lead user-direction 2026-05-19: "If a chat drifts to a new topic, we should have a warning pop-up for solution with regard to a SESSION_RESUME.md file. Also we should have an update for when a SESSION_RESUME.md file should be archived and updated as completed."
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Context**: session-completeness audit response identified that I recommended PAUSE rather than pivoting this chat to UDM Pipeline (out-of-scope). User accepted + surfaced 2 NEW architectural gaps: no mechanical drift-detection + no mechanical archive workflow.
+
+**B-568 (MEDIUM WSJF 3.0)**: `check_chat_scope_drift()` 14th Phase 1 quality check. Topic-drift warning via optional YAML frontmatter (`excluded_paths:` / `included_paths:`) on each `SESSION_RESUME/active/<chat>.md` file. 4-option remediation (pause+archive / authorized expansion / parallel coordination / defer). Silent skip when no frontmatter declared (backward-compat). ~1.5 hours.
+
+**B-569 (LOW WSJF 2.0)**: NEW `tools/archive_chat_session.py` CLI. Mechanical lifecycle automation: move active/<chat>.md → _archive/<YYYY-MM-DD>-<chat>.md + closure metadata + root SESSION_RESUME.md router update. D74/D75/D76 contract; EVENT_TYPE=CLI_ARCHIVE_CHAT_SESSION 28th family. ~1 hour.
+
+**Architectural composition**: B-562 substrate + B-565 in-session refresh enforcement + B-568 in-session scope discipline + B-569 session-close transition = 4-layer mechanical architecture for multi-chat coordination.
+
+**TEST**: N/A — B-N opens only.
+
+**GAP ANALYSIS (G1-G6)**:
+- G1 ✅ both new B-Ns 🟡 Open badges correct
+- G2 ✅ 108 → 110 NEW propagated to CURRENT_STATE + HANDOFF + meta-discipline
+- G3 ✅ user-direction quoted verbatim in B-568+B-569 BACKLOG bodies
+- G4 ✅ B-565 mechanical check satisfied (meta-discipline.md refreshed in same commit)
+- G5 N/A
+- G6 N/A (B-568+B-569 ARE the surfaced opportunities)
+
+**Tracker updates**: BACKLOG L1120-1121 (NEW B-568 + B-569) + CURRENT_STATE L7 + HANDOFF §14 + this entry + meta-discipline.md L37-38 cumulative count.
+
+**Net delta**: this-chat **108 → 110 NEW B-Ns** / 34 CLOSED unchanged.
+
+**Recommended next**: build B-569 first (smaller scope; ~1 hour; can demo-archive THIS chat at session-close). Then opportunistic B-568 in future meta-discipline session.
+
+---
+
 ## 2026-05-19 — B-565 ⚫ CLOSED: `check_session_resume_active_refresh()` 13th Phase 1 quality check (mechanical-enforcement closure of Pitfall #9.m recursive self-violation class)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-19 — cascade trigger for LOW-priority B-565 closure (only actionable item; ~1 hour effort to terminate recursive class structurally).
@@ -13864,3 +13896,61 @@ python3 tools/flip_cdc_mode.py --apply --source CCM --table AuditLog --mode parq
 All 5 steps PRODUCTION-READY at HEAD post-B-563 closure. Large-table delete-detection now memory-bounded via day-N vs day-N-1 Parquet diff per B-563 design. First-load case auto-falls-back to B-552 v1 full Bronze anti-join.
 
 **Next-step recommendation**: real operational testing on a NON-PRODUCTION environment (test/dev) with CCM.AuditLog (96M) per RB-16 Step 1 (shadow mode). Closes D125 arc operationally.
+
+## 2026-05-19 -- B-563 closure cohort post-hoc gap-check + 10-event B-541 milestone + 5 inline-fixes
+
+**Event**: 10th consecutive cross-cohort/gap-check reviewer ``ac5c9ea53cc34bce3`` 2026-05-19 audited the 3-commit B-563 closure cohort (Phase 1 cleanup ``7635678`` + Phase 2.1 ``e86761f`` + Phase 2.2 ``53dab18``) per ``udm-cohort-review`` 6-scope audit + ``udm-gap-check`` G1-G6 audit. Verdict: ATTENTION with 5 minor inline-fix findings + 2 LOW-WSJF deferred candidates. No 🔴 BLOCK findings; substantive work structurally correct.
+
+**B-541 10-event empirical milestone**: 10 consecutive reviewers honored read-only audit contract without violation (200% of HANDOFF 5-event formalization threshold):
+
+- ``a843ad09d24f2a607`` (post-B-541 closure)
+- ``ac2dd8d0ec814dc7e`` (post-D125 plan)
+- ``ad50cb5cceda3f90c`` (post-D125 implementation cohort)
+- ``adc861405ff006766`` (post-D125 toolkit completion)
+- ``a8130cf417bb5692a`` (post-B-553/B-554 closure)
+- ``a95d8cc8b0ce3b7b6`` (post-B-547 + arc review)
+- ``a234fda11b870c78d`` (post-B-552 v1 closure -- verdict BLOCK with 6 findings; drove BLOCK remediation at ``0c06961``)
+- ``aea6c9174151af2f5`` (D56 second-pass on ``0c06961`` BLOCK remediation -- verdict ATTENTION with 6 minor scd2.md findings)
+- ``a121478077f0b7713`` (gap-check on B-552 v1 + B-564 cohort -- drove Phase 1 cleanup at ``7635678``)
+- ``ac5c9ea53cc34bce3`` (cross-cohort gap-check on B-563 3-commit closure -- drove THIS COMMIT inline-fix cohort)
+
+**Empirical pattern observation**: B-541 structural fix continues to hold past 200% of formalization threshold. Cross-cohort reviewers + D56 second-pass + per-completion gap-check all honor the contract -- the read-only-by-default + verdict-via-final-message pattern is empirically robust across at-least 10 spawn events.
+
+**5 inline-fixes applied THIS COMMIT** (per reviewer ``ac5c9ea53cc34bce3`` Scope 4-6 + G6):
+
+| # | Finding | File | Fix |
+|---|---|---|---|
+| G6.A | scd2.md L1 lost ``#`` H1 marker (PowerShell BOM-strip culture-comparison bug recurrence) | ``SESSION_RESUME/active/scd2.md`` | Restored ``# `` prefix |
+| S4.1 | scd2.md title cites stale "B-564 + 8-event" instead of "B-563 + 10-event" | ``SESSION_RESUME/active/scd2.md`` | Title bumped + ``StartsWith([System.StringComparison]::Ordinal)`` defense applied |
+| S5.1 | ``orchestration/large_tables.py`` L492-497 comment STILL claims "NOT YET implemented" but B-563 closure 10 lines below now invokes ``run_parquet_delete_detection_step()`` | ``orchestration/large_tables.py`` | Narrative rewritten to cite B-563 closure + composition |
+| S5.2 | B-555 BACKLOG entry doesn't acknowledge B-563 closure as related work | ``docs/migration/BACKLOG.md`` | Cross-reference appended |
+| S5.3 | B-556 BACKLOG entry doesn't note B-566 friction-reduction | ``docs/migration/BACKLOG.md`` | Friction-reduction note appended |
+
+**2 LOW-WSJF deferred candidates** (per reviewer Scope 6; both absorbable into B-556 or opportunistic future apply-path work):
+
+| Candidate | Scope | WSJF |
+|---|---|---|
+| B-NEW-A | Empty df_current test coverage for run_parquet_delete_detection_step | LOW 1.0 |
+| B-NEW-B | Signature-validating stub for query_latest_snapshot_for_date (new CANONICAL_QUERY_LATEST_SNAPSHOT_KWARGS constant + Layer 2 test extension) | LOW 1.5 |
+
+Neither warranting new-B-N opening immediately per reviewer recommendation.
+
+**PowerShell BOM-strip bug RCA** (Finding G6.A root cause):
+
+The PowerShell ``$content.StartsWith([char]0xFEFF)`` check returns True for EVERY string due to .NET's default culture-aware string comparison treating ``﻿`` (zero-width no-break space) as zero-width and matching the empty string at position 0 trivially. The fix is ordinal comparison:
+
+```powershell
+# BUGGY (false positive):
+if ($content.StartsWith([char]0xFEFF)) { ... }
+
+# CORRECT (ordinal):
+if ($content[0] -eq [char]0xFEFF) { ... }
+# OR:
+if ($content.StartsWith([char]0xFEFF, [System.StringComparison]::Ordinal)) { ... }
+```
+
+Earlier session iterations consumed 3 quote-truncation-and-restore cycles before RCA. Going forward all PowerShell file-rewrite invocations use ordinal comparison. Pattern documented in this session-arc for future agents.
+
+**D125 arc status post-inline-fix cohort**: PRODUCTION-READY for both SMALL + LARGE tables (unchanged from B-563 closure). Inline-fixes cleared scd2.md state-pointer drift + stale narrative in production source. No blocker; opportunistic LOW-WSJF items remain (B-555 / B-556 / B-557 / B-560 / B-561 / P-24 + 2 deferred B-NEW candidates).
+
+**Next-step recommendation**: B-555 (per-PK hash parity v2 of B-545) is the next-highest-impact production-cutover-decision deliverable per reviewer recommendation. Alternative: pause for real operational testing on non-production environment (test/dev) with CCM.AuditLog (96M) per RB-16 Step 1 (shadow mode); test/dev validation cycle could surface additional B-Ns from real-data interaction patterns before further code investment.
