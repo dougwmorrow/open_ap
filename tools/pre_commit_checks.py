@@ -1211,6 +1211,162 @@ def check_wc_line_count_claims(staged_files: list[str]) -> CheckResult:
     )
 
 
+# =========================================================================
+# B-495 closure 2026-05-18: file-path-existence validation (10th check)
+# =========================================================================
+# Per udm-researcher artifact `_research/llm-handoffs-traceability-
+# hallucination-2026-05-18.md` Recommendation 3 + Finding 3.1 (code
+# hallucination systematic review; arXiv 2511.00776; 60-paper meta-analysis
+# 2025): file-path confabulation is the LEAST-MITIGATED sub-type in code-
+# generation systems. LLM agents can confabulate file paths that look
+# authoritative but reference non-existent targets; downstream agents reading
+# D-N records / SKILL.md cross-refs treat the reference as canonical.
+#
+# FP-policy resolution (inline at B-495 closure 2026-05-18):
+# 1. WARN-only severity (NOT BLOCK; per D74 exit code 1 + research Rec 3
+#    mitigation) — allows D-N proposals to cite future-planned paths
+# 2. No allowlist initially — rely on regex precision + WARN severity to
+#    avoid false-positive flood; promote to allowlist if drift observed
+# 3. Scope: staged markdown files only (consistent with other Phase 1 checks)
+# =========================================================================
+# Regex matches backtick-wrapped path candidates.
+# Path candidates MUST:
+#   - Start with known repo directory prefix
+#   - Contain ≥1 forward slash (rule out single-name code identifiers)
+#   - End with known extension OR trailing slash (directory)
+#   - Contain no wildcards `*` `?` OR template placeholders `<` `>` `{` `}`
+_BACKTICK_PATH_RE = re.compile(r"`([^`\s\*\?<>\{\}]+/[^`\s\*\?<>\{\}]+)`")
+
+# Known repo-directory prefixes (extensible). Tightens regex precision —
+# avoids matching backtick-wrapped strings like `polars/series` or `git/log`.
+_PATH_PREFIX_WHITELIST: tuple[str, ...] = (
+    ".claude/",
+    ".github/",
+    ".githooks/",
+    "cdc/",
+    "config.py",
+    "data_load/",
+    "docs/",
+    "extract/",
+    "main_large_tables.py",
+    "main_small_tables.py",
+    "migrations/",
+    "observability/",
+    "orchestration/",
+    "schema/",
+    "scd2/",
+    "sources.py",
+    "tests/",
+    "tools/",
+    "utils/",
+)
+
+# Known file extensions matching the regex tail filter. Directories end with `/`.
+_PATH_EXTENSION_WHITELIST: tuple[str, ...] = (
+    ".py",
+    ".md",
+    ".sql",
+    ".yml",
+    ".yaml",
+    ".json",
+    ".toml",
+    ".sh",
+    ".ini",
+    ".cfg",
+    ".txt",
+)
+
+
+def _is_credible_path_candidate(token: str) -> bool:
+    """Return True if token looks like a repo-relative file path.
+
+    Filters out backtick-wrapped strings that contain a slash but aren't paths
+    (e.g., `polars/series`, `iso/8601`, `np.array(x/y)`).
+    """
+    has_known_prefix = any(token.startswith(prefix) for prefix in _PATH_PREFIX_WHITELIST)
+    if not has_known_prefix:
+        return False
+    has_known_extension = any(token.endswith(ext) for ext in _PATH_EXTENSION_WHITELIST)
+    is_directory = token.endswith("/")
+    return has_known_extension or is_directory
+
+
+def check_file_path_existence(staged_files: list[str]) -> CheckResult:
+    """B-495 closure 2026-05-18: file-path-existence forward-prevention.
+
+    Scans staged markdown files for backtick-wrapped path-like tokens (e.g.,
+    `tools/pre_commit_checks.py`, `.claude/skills/udm-*/SKILL.md`,
+    `tests/tier1/test_query_blindspots_checks.py`) and verifies each path
+    exists in the repository. Closes the LLM file-path-confabulation
+    hallucination class per code-hallucination systematic review (arXiv
+    2511.00776).
+
+    WARN severity (per FP-policy resolution at B-495 closure): D-N proposals
+    may legitimately cite future-planned paths before build; WARN-only
+    semantics allow these to be flagged without blocking commits.
+
+    Composes with existing markdown cross-ref + wc -l line-count check
+    patterns. Test coverage at `tests/tier0/test_pre_commit_checks_b495.py`.
+
+    Returns:
+        INFO if no markdown files staged OR no credible path candidates found.
+        PASS if all candidate paths resolve.
+        WARN with diagnostic enumerating missing paths.
+    """
+    md_files = [
+        f.replace("\\", "/") for f in staged_files
+        if f.replace("\\", "/").endswith(".md")
+    ]
+    if not md_files:
+        return CheckResult(
+            "file_path_existence", True, "info",
+            "no staged markdown files; file-path existence check skipped"
+        )
+
+    missing: list[tuple[str, str, int]] = []  # (md_file, missing_path, line_no)
+    total_candidates = 0
+
+    for md_file in md_files:
+        md_path = REPO_ROOT / md_file
+        try:
+            content = md_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        lines = content.splitlines()
+        for line_no, line in enumerate(lines, start=1):
+            for m in _BACKTICK_PATH_RE.finditer(line):
+                token = m.group(1)
+                if not _is_credible_path_candidate(token):
+                    continue
+                total_candidates += 1
+                target = REPO_ROOT / token
+                if not target.exists():
+                    missing.append((md_file, token, line_no))
+
+    if missing:
+        return CheckResult(
+            "file_path_existence", False, "warn",
+            f"{len(missing)} backtick-wrapped path candidate(s) in staged "
+            f"markdown reference non-existent target(s) (per B-495 closure "
+            f"2026-05-18; LLM file-path-confabulation forward-prevention; "
+            f"WARN-only per FP-policy):\n"
+            + "\n".join(
+                f"  - {md}:{line}: `{path}` (does not exist)"
+                for md, path, line in missing[:10]
+            )
+            + "\n\nEither create the cited path OR rephrase the citation. "
+              "This is a WARN (not BLOCK); commit will still proceed. "
+              "D-N proposals citing future-planned paths are expected to fire "
+              "this warning per FP-policy."
+        )
+
+    return CheckResult(
+        "file_path_existence", True, "info",
+        f"all {total_candidates} backtick-path candidate(s) in {len(md_files)} "
+        f"staged markdown file(s) resolve to existing targets"
+    )
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
@@ -1221,6 +1377,7 @@ CHECKS = [
     check_planning_provenance,
     check_cli_registry_sync,
     check_wc_line_count_claims,  # B-481 closure 2026-05-18
+    check_file_path_existence,   # B-495 closure 2026-05-18
 ]
 
 

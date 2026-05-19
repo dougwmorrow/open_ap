@@ -80,7 +80,7 @@ def test_checks_registry_complete():
     assert check_planning_provenance in CHECKS
     assert check_cli_registry_sync in CHECKS
     assert check_wc_line_count_claims in CHECKS
-    assert len(CHECKS) == 9
+    assert len(CHECKS) == 10
 
 
 def test_check_result_shape():
@@ -97,11 +97,11 @@ def test_check_result_shape():
 
 
 def test_empty_staged_returns_passes():
-    """Assertion 7 (per B-481 closure cohort): with no staged files, all 9 checks
+    """Assertion 7 (per B-495 closure cohort): with no staged files, all 10 checks
     return passed (info severity)."""
     from tools.pre_commit_checks import run_all_checks
     results = run_all_checks(staged=[])
-    assert len(results) == 9
+    assert len(results) == 10
     for r in results:
         assert r.passed, f"{r.name} failed on empty input: {r.diagnostic}"
 
@@ -435,7 +435,7 @@ def test_check_planning_provenance_in_checks_registry():
     from tools.pre_commit_checks import CHECKS, check_planning_provenance
     assert check_planning_provenance in CHECKS
     # 9th entry per B-481 closure cohort (added check_wc_line_count_claims as 9th)
-    assert len(CHECKS) == 9
+    assert len(CHECKS) == 10
 
 
 # ---------------------------------------------------------------------------
@@ -570,7 +570,7 @@ def test_check_cli_registry_sync_in_checks_registry():
     from tools.pre_commit_checks import CHECKS, check_cli_registry_sync
     assert check_cli_registry_sync in CHECKS
     # 9th entry per B-481 closure cohort 2026-05-18 (was 8th pre-B-481)
-    assert len(CHECKS) == 9
+    assert len(CHECKS) == 10
     # Module-level regex constants + helper functions present in public surface
     assert hasattr(pcc, "_EVENT_TYPE_DECLARATION_RE")
     assert hasattr(pcc, "_CLI_REGISTRY_REGION_START_RE")

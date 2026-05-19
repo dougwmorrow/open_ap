@@ -12,6 +12,36 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-18 — B-495 closure: check_file_path_existence 10th Phase 1 quality check (LLM file-path-confabulation forward-prevention)
+
+**Trigger**: pipeline-lead "Proceed with your recommendations" 2026-05-18 — cascade fire on prior-turn recommendation to build B-495 with FP-policy resolved inline.
+
+**Model**: claude-opus-4-7. **Context pressure**: medium-high. **CCL completed**: yes.
+
+**Scope**: 1 B-N closure (B-495). NEW `check_file_path_existence` function at `tools/pre_commit_checks.py` (~110 LOC including FP-policy citation comment + 2 whitelist tuples + helper + check function). 8 NEW Tier 0 assertions at `tests/tier0/test_pre_commit_checks_b495.py`. 3 existing tests at `tests/tier0/test_pre_commit_checks.py` updated for `len(CHECKS) == 10`. CLAUDE.md L99 row + GLOSSARY (3 NEW entries) updated per Step 10.
+
+**Producer**: parent agent — claude-opus-4-7.
+
+**Empirical anchor**: udm-researcher artifact `_research/llm-handoffs-traceability-hallucination-2026-05-18.md` Finding 3.1 (code hallucination systematic review; arXiv 2511.00776; 60-paper meta-analysis 2025) identifies file-path confabulation as LEAST-MITIGATED sub-type in code-generation systems. Failure mode: LLM agent confabulates file path that compiles correctly but references non-existent target; downstream agents treat reference as canonical.
+
+**FP-policy resolution (inline at B-495 closure)**:
+1. **WARN-only severity** (NOT BLOCK; per D74 exit code 1 + research Rec 3 mitigation): D-N proposals may legitimately cite future-planned paths before build; WARN allows flagging without blocking commits.
+2. **No allowlist initially**: rely on regex precision (`_BACKTICK_PATH_RE` rejects wildcards `*`/`?` + template placeholders `<>`/`{}`) + post-filter (`_is_credible_path_candidate` requires whitelisted prefix AND whitelisted extension OR trailing `/`). Promote to allowlist if drift observed empirically.
+3. **Scope = staged markdown only**: consistent with other Phase 1 checks (check_wc_line_count_claims + check_planning_provenance + check_cli_registry_sync).
+
+**B-495 implementation**:
+- NEW `_BACKTICK_PATH_RE = re.compile(r"`([^`\s\*\?<>\{\}]+/[^`\s\*\?<>\{\}]+)`")` — matches backtick-wrapped paths with ≥1 slash, no wildcards, no template placeholders.
+- NEW `_PATH_PREFIX_WHITELIST` 19-entry tuple covers known repo directories (`.claude/` / `.github/` / `.githooks/` / `cdc/` / `data_load/` / `docs/` / `extract/` / `migrations/` / `observability/` / `orchestration/` / `schema/` / `scd2/` / `tests/` / `tools/` / `utils/` / `config.py` / `main_*.py` etc.).
+- NEW `_PATH_EXTENSION_WHITELIST` 11-entry tuple covers known file extensions (`.py` / `.md` / `.sql` / `.yml` / `.yaml` / `.json` / `.toml` / `.sh` / `.ini` / `.cfg` / `.txt`).
+- NEW `_is_credible_path_candidate(token: str) -> bool` post-filter — rejects slash-containing tokens that aren't paths (e.g., `polars/series`, `iso/8601`).
+- NEW `check_file_path_existence(staged_files: list[str]) -> CheckResult` (10th Phase 1 check): filters staged files to `*.md`; for each match in `_BACKTICK_PATH_RE`, post-filters via `_is_credible_path_candidate`, then verifies `(REPO_ROOT / path).exists()`. WARN on missing paths with diagnostic enumeration; cap 10.
+
+**Tests**: 8/8 NEW Tier 0 PASS in 0.37s (cohort scope; +8 from prior 2829 = 2837 expected). Full-suite re-verify expected 2837 pass / 10 skip / 0 fail.
+
+**Cumulative session delta UPDATED at B-495 closure**: 103 NEW B-Ns unchanged (B-393-B-495) / **25 → 26 B-Ns CLOSED multi-session arc** / pytest 2829 → **2837 pass / 10 skip / 0 fail** (+8).
+
+**Status**: substrate-edit per hard rule 14 — `tools/pre_commit_checks.py` IS substrate per cascade_classifier::SUBSTRATE_FILES; PRE-COMMIT reviewer to be spawned before commit lands.
+
 ## 2026-05-18 — Research-driven discipline extensions cohort (Rec 1 trim-policy taxonomy + Rec 2 model-attribution convention + B-495 Rec 3 file-path-existence opened)
 
 **Trigger**: pipeline-lead "Proceed with your recommendation" 2026-05-18 — explicit cascade fire after my recommendation to execute Rec 1 + Rec 2 + open Rec 3 from udm-researcher artifact `_research/llm-handoffs-traceability-hallucination-2026-05-18.md`.

@@ -26,12 +26,15 @@ def test_b481_module_imports():
 
 def test_b481_check_registered_in_checks_registry():
     """B-481 Assertion 2: check_wc_line_count_claims in CHECKS registry
-    (9th check; appended after check_cli_registry_sync per B-481 closure)."""
+    (9th check; appended after check_cli_registry_sync per B-481 closure;
+    position updated to 2nd-to-last after B-495 closure appended
+    check_file_path_existence as 10th)."""
     from tools.pre_commit_checks import CHECKS, check_wc_line_count_claims
     assert check_wc_line_count_claims in CHECKS
-    assert CHECKS[-1] is check_wc_line_count_claims, (
-        "check_wc_line_count_claims should be last in CHECKS registry "
-        "(appended per B-481 closure 2026-05-18)"
+    # Position is 9th (index -2 after B-495 closure appended 10th check)
+    assert CHECKS[-2] is check_wc_line_count_claims, (
+        "check_wc_line_count_claims should be 9th (2nd-to-last) in CHECKS "
+        "registry per B-481 closure 2026-05-18 + B-495 closure 2026-05-18"
     )
 
 
