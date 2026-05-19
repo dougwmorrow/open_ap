@@ -68,17 +68,35 @@ Read in this order:
 4. **`docs/migration/BACKLOG.md`** L1107-1115 (B-558 + B-559 + B-562 all ⚫ CLOSED)
 5. **`.claude/skills/udm-session-compactor/SKILL.md`** v1.2.0 — Output contract Steps 1-5 + Do NOT include section + Changelog table
 
-## Open runway (priority-ordered; awaiting user direction)
+## Open runway (priority-ordered; awaiting next-session pickup)
+
+**Session-close note** (per user-direction 2026-05-19 "Let's save this effort for later. Take this down as a note. I'll start a new Claude session after."): meta-discipline chat naturally pausing. Next Claude session can pick up below items in any priority order. Recommended starting point: **B-572 Phase 2** (build `udm-build-effort-reporter` skill; ~1h) — closes the most recent user-direction-surfaced gap + is squarely meta-discipline scope.
+
+### MEDIUM priority (HIGHEST recommended pickup)
+
+- **B-572 Phase 2** (~1h) — NEW skill `udm-build-effort-reporter`. **Producer recommendation captured at B-572 BACKLOG body**: build as skill (not CLI / not Phase 1 check / not doc-only) per session-pattern precedent. Composes with 5 existing skills (udm-session-compactor + udm-cohort-review + udm-gap-check + udm-progress-logger + udm-round-closeout). Triggers (proposed): explicit user-direction phrasing OR auto-fire on ≥3 B-N closures / session-pause / round-close. See B-572 BACKLOG entry L1124 for full rationale + composition table.
+
+- **B-568** (~1.5h) — `check_chat_scope_drift()` 14th Phase 1 quality check. Topic-drift warning for B-562 chat-scope architecture via YAML frontmatter. Closes the 4th layer of B-562 multi-chat coordination (in-session scope drift discipline; 3/4 layers ⚫ CLOSED currently).
 
 ### LOW priority
 
-- **B-N-OPEN-CANDIDATE (NEW; surfaced by reviewer `a7f466490e1f64dc5` G6-1)**: Mechanical-enforcement Phase 1 quality check `check_session_resume_active_refresh()` at `tools/pre_commit_checks.py` (13th CHECKS entry). Scans staged BACKLOG.md closure-flips (🟡 → ⚫) against `SESSION_RESUME/active/*.md` modification status — WARN if substantive closure landed without active/ refresh in same commit. Forward-prevention for the Pitfall #9.m recursive self-violation pattern (2 events 2026-05-19 within 6 commits). To open via `python tools/claim_next_bn.py --scope "..."`. Estimate ~1 hour effort (Phase 1 check + Tier 0 test + Step 10).
-- **B-N-OPEN-CANDIDATE (NEW; reviewer G6-2)**: `_CC_RE` regex extension for dashed/spaced credit-card formats (`4111-1111-1111-1111` / `4111 1111 1111 1111`). Conservative-default acceptable for v1; opportunistic.
-- **B-N-OPEN-CANDIDATE (NEW; reviewer G6-3)**: Externalize `_EMAIL_ALLOWLIST_SUBSTRINGS` to env-var OR `tests/fixtures/email_allowlist.yml`. Opportunistic.
+- **B-570** (~30 min) — Windows cp1252 stdout encoding helper / CLAUDE_GOTCHAS.md entry. Empirical anchor `5cdad13` first CLI smoke UnicodeEncodeError on `→` arrow.
+- **B-571** (~45 min) — Closure-metadata YAML-frontmatter standardization for forward-compat across `_archive/<chat>.md` files + B-568 frontmatter convention.
 
 ### Optional cross-cohort follow-ups
 
-- Pause session at natural checkpoint — all 3 user-initiated cohorts (B-562 + B-558 + B-559) fully closed this session.
+- B-565 mechanical-check extension: scan active/*.md for internal-arithmetic-consistency (e.g., CLI_* registry count matches CLAUDE.md L211 count). 1-event empirical 2026-05-19 (gap-check reviewer `adaca11fe47c1bca9`); awaiting 2nd-event per HANDOFF §8 convention before opening as B-N.
+- B-N candidates from B-559 PII scrub gap-check reviewer: dashed-CC regex extension (`4111-1111-1111-1111`) + email allowlist externalization. Both LOW; opportunistic.
+
+### Session-archive option
+
+Self-application of B-569 `tools/archive_chat_session.py` is available if this chat is truly closing (not just paused):
+```bash
+python tools/archive_chat_session.py --chat meta-discipline \
+  --closure-reason "5-B-N closure milestone + build-effort report authored + B-572 Phase 2 note saved" \
+  --apply
+```
+If next session continues meta-discipline scope, leave active/meta-discipline.md in place. If next session is a different scope, archive this chat first.
 
 ## This session's commit chain (10 commits this chat + 5 parallel-chat interleaved)
 
