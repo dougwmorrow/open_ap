@@ -12,6 +12,56 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-562 Component B Phase 1 closure: SESSION_RESUME/ directory foundation (active/ + _archive/ + README.md router + active/meta-discipline.md first per-chat state pointer)
+
+**Trigger**: pipeline-lead "Proceed with your next recommended steps" 2026-05-19 — 2nd cascade firing in same session; accepting prior turn's HIGH-priority recommendation of Component B foundation work.
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Producer**: parent agent (Component B Phase 1 directory creation + per-chat pointer authoring; no sub-agent invocation needed for markdown + directory creation; Phase 2 router refactor + Phase 3 SKILL.md extensions will need reviewer when triggered).
+
+**Scope**: B-562 sub-deliverable B Phase 1 — directory structure foundation. NEW files:
+- `SESSION_RESUME/README.md` (~80 lines) — directory router documentation; covers purpose / empirical-anchor / directory-layout / lifecycle (chat-start / mid-session / clean-end / abandoned) / chat-naming-convention examples / relationship to root SESSION_RESUME.md (Phase 1 preserve / Phase 2 router refactor) / composition with udm-session-compactor skill / cross-references / owner.
+- `SESSION_RESUME/active/meta-discipline.md` (~95 lines) — first per-chat state pointer; covers chat scope (udm-* skills + Phase 1 quality checks + meta-discipline; NOT SCD2 / CDC / Bronze) / fresh-Claude read order / state-as-of-session-end / NEXT SESSION RESUME PROCEDURE / Open runway with priority labels / commit chain (last 5) / composition with B-562 Component A / empirical anchor / owner.
+- `SESSION_RESUME/_archive/.gitkeep` — placeholder so directory exists in git; explanatory comment on lifecycle.
+
+**Files NOT touched this commit**:
+- Root `SESSION_RESUME.md` — PRESERVED for parallel-chat coordination during their in-flight milestone. Parallel session has uncommitted ~125-line RB-16 rewrite at `05_RUNBOOKS.md` + B-547 closure annotation at `BACKLOG.md`. Phase 2 router refactor of root SESSION_RESUME.md deferred until AFTER parallel chat completes + archives their final state to `_archive/<YYYY-MM-DD>-scd2.md`.
+- `.claude/skills/udm-session-compactor/SKILL.md` — Phase 3 Step 3 extension ("Refresh `SESSION_RESUME/active/<chat-name>.md` state pointer") deferred. Currently the skill only mentions root SESSION_RESUME.md.
+- `CLAUDE.md` CCL Stage 0 routing — Phase 3 update deferred. CCL Stage 0 currently mentions `SESSION_RESUME.md` not `SESSION_RESUME/`.
+
+**TEST**: N/A — markdown + directory authoring only. No code paths changed; no Tier 0 / Tier 1 / Tier 2 / Tier 3 tests applicable.
+
+**GAP ANALYSIS (G1-G6)**:
+- G1 (Pitfall #9.j leading-badge): ✅ B-562 inline annotation extended to clarify Component B Phase 1 ⚫ CLOSED + Phase 2+3 🟡 Open this commit; leading badge remains 🟠 PARTIAL (correct per multi-phase sub-deliverable convention).
+- G2 (Pitfall #9.k arithmetic-propagation): ✅ this-chat 107 NEW B-Ns unchanged / 30 → 30 CLOSED-partial accurate (B-562 phases don't increment cumulative closure count until ALL phases land).
+- G3 (Pitfall #9.l canonical re-read): ✅ verified user-direction quote-cite verbatim in README.md empirical anchor + active/meta-discipline.md empirical anchor.
+- G4 (Pitfall #9.m discipline-applied-to-tracker): ✅ this commit creates the directory + populates it for THIS chat; discipline applied to its own enabling commit. Phase 2 root file refactor would be the "tracker-update-of-discipline" follow-up.
+- G5 (Pitfall #9.n convention-registration): N/A — no new public Python surface; markdown + directory structure only. CLAUDE.md Structure section NOT touched (Phase 3 deferred); GLOSSARY NOT touched (Phase 3 deferred). When Phase 2+3 land, CLAUDE.md L100-150 Structure section gains `SESSION_RESUME/` row + GLOSSARY gains directory-substrate row.
+- G6 (new B-N opportunities): None surfaced in scope. (Phase 2 + Phase 3 are tracked under B-562 not as new B-Ns.)
+
+**Tracker updates (canonical-5)**:
+- BACKLOG.md L1114 — B-562 inline annotation extended (Component B Phase 1 ⚫ CLOSED + Phase 2+3 🟡 Open).
+- CURRENT_STATE.md L7 — new dated entry prepended; prior B-562 Component A entry demoted.
+- HANDOFF.md §14 L427 — mirror of CURRENT_STATE L7 prepended; prior entry demoted.
+- _validation_log.md — this entry appended at top of 2026-05-19 cohort.
+- CODE_BUILD_STATUS.md — no per-unit row needed (substrate-level directory + markdown only; not a Round 3/4 tool module).
+
+**Tracker updates (conditional-per-build-type)**:
+- NEW canonical structural pattern: `SESSION_RESUME/active/<chat-name>.md` per-chat resume pointer convention. Future enhancement to CLAUDE.md "Structure" subsection at Phase 3 close.
+
+**Empirical anchor**: user-direction 2026-05-19 "Maybe we should have a SESSION_RESUME directory that tracks different chats so that there is no overlap and we can send SESSION_RESUME.md files to archive after it is completed. What are your thoughts on this?" → accepted → "Sounds good. Update our markdown files tracking this effort so that we can track what is being worked on. Then proceed with your recommended next steps." Cascade fired 2x in same session per `udm-next-step-cascade` trigger phrase semantics (Component A landing at `dd9fbdb` + `0a23af1` → Component B Phase 1 this commit).
+
+**Parallel-chat coordination decision**: deliberately NOT touching root `SESSION_RESUME.md` this commit. Phase 2 router refactor (root → thin pointer to `active/`) requires parallel chat to first complete their RB-16/B-547 milestone + archive their final SESSION_RESUME.md state to `_archive/<YYYY-MM-DD>-scd2.md`. This avoids merge-conflict + write-overlap during parallel chat's in-flight work. Forward-prevention of the same write-overlap class the user observed.
+
+**Net delta**: this-chat 107 NEW B-Ns unchanged / 30 → 30 CLOSED-partial (B-562 remains 🟠 PARTIAL until Component B Phase 2+3 land; Phase 1 alone doesn't increment the full-closure counter).
+
+**Component B Phase 2 status**: deferred; trigger = parallel chat completes their RB-16/B-547 milestone + archives final state. ~1 hour effort: refactor root `SESSION_RESUME.md` to thin router file pointing to `SESSION_RESUME/active/` directory listing.
+
+**Component B Phase 3 status**: deferred; trigger = Phase 2 lands. ~30 min effort: add Step 3 to `udm-session-compactor` SKILL.md ("Refresh `SESSION_RESUME/active/<chat-name>.md` state pointer") between current Step 2 (snapshot authoring) and Step 4 (suppression marker); update CLAUDE.md CCL Stage 0 routing.
+
+---
+
 ## 2026-05-19 — B-562 Component A closure: atomic B-N claim CLI at commit `dd9fbdb` (`tools/claim_next_bn.py` + 8 Tier 0 assertions + CLAUDE.md Structure row + L210 CLI_* registry)
 
 **Trigger**: pipeline-lead "Proceed with your next recommended steps" 2026-05-19 — accepting prior turn's recommended build of B-562 Component A.
