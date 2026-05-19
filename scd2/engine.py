@@ -294,8 +294,11 @@ def _apply_source_verifier_or_block(
     if candidate_delete_pks_df is None or len(candidate_delete_pks_df) == 0:
         return candidate_delete_pks_df
 
-    strict_env = os.environ.get("CDC_VERIFY_STRICT_ON_FAILURE", "1")
-    strict = strict_env not in ("0", "false", "False", "FALSE", "")
+    # B-538 closure 2026-05-19: aligned to canonical `cdc/source_verifier.py:194`
+    # semantic — `== "1"` literal match. Prior set-exclusion semantic diverged
+    # on "true"/"True"/"TRUE" (treated those as STRICT; canonical treated as
+    # non-strict). Unified to canonical for single-source-of-truth parser.
+    strict = os.environ.get("CDC_VERIFY_STRICT_ON_FAILURE", "1") == "1"
 
     try:
         # Verifier contract: takes candidate-deletes (as Polars DF OR list of PK

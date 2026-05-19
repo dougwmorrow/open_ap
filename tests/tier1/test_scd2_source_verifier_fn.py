@@ -199,15 +199,20 @@ def test_helper_verifier_raises_strict_off_proceeds(mock_pks_nonempty, mock_tabl
 @pytest.mark.parametrize(
     "strict_value,expect_block",
     [
+        # B-538 closure 2026-05-19: parser unified to canonical
+        # `cdc/source_verifier.py:194 == "1"` literal-match semantic.
+        # Prior set-exclusion semantic treated "true"/"True"/"TRUE" as STRICT;
+        # now treated as non-strict (only literal "1" triggers STRICT block-all).
+        # This aligns the 2 parsers to single-source-of-truth per B-538.
         ("1", True),     # canonical STRICT=1 → block
-        ("true", True),  # alternate truthy
-        ("TRUE", True),
-        ("True", True),
+        ("true", False), # B-538: non-strict (no longer matches canonical)
+        ("TRUE", False), # B-538: non-strict
+        ("True", False), # B-538: non-strict
         ("0", False),    # explicit opt-out → proceed
         ("false", False),
         ("False", False),
         ("FALSE", False),
-        ("", False),     # empty string → opt-out per helper semantic
+        ("", False),     # empty string → opt-out
     ],
 )
 def test_helper_strict_env_var_parsing(

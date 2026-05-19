@@ -138,6 +138,37 @@ For each drift count cited in the verdict that is based on grep/regex of tracker
 
 **When this step applies**: any verdict scope that cites a count derived from grep/regex of a tracker file. Skip when count is derived from authoritative non-grep source (pytest output / git log / canonical-DDL row count).
 
+## Read-only audit contract (per B-541 closure 2026-05-19)
+
+**The reviewer agent operates in strictly read-only mode.** Its ONLY permitted outputs are:
+
+1. **Verdict text** returned to the parent agent (consumed by parent for downstream tracker updates; per "Output contract" section below)
+2. **Inline citations** in the verdict referencing specific commit-hash + file-path + line-number locations for findings
+
+**The reviewer agent MUST NOT**:
+
+- Author files in `docs/migration/` (BACKLOG / RUNBOOKS / DECISIONS / RISKS / EDGE_CASES / etc.)
+- Author files in `docs/migration/_research/`
+- Author runbook drafts, planning docs, research artifacts, or any persistent project artifact
+- Spawn sub-agents that themselves author files outside the verdict-text scope
+- Modify any file in the working tree (even untracked) — read-only operations only
+
+**Rationale**: cross-cohort review is an AUDIT step, not a CONTRIBUTION step. The verdict is the deliverable; substantive content (runbooks, plans, research) belongs to dedicated authoring flows invoked separately by the parent agent (`udm-runbook-author` for RB-N; `udm-planning-session-startup` for plan-class deliverables; `udm-researcher` for research artifacts). Conflating audit with authoring bypasses the discipline chain.
+
+**Empirical anchor** (1-event 2026-05-19): cross-cohort reviewer `ab9ac2f21c7bf7866` invoked for read-only Phase 2 R1 cohort audit went out-of-scope and authored 2 substantive files (RB-15 authoring plan + research artifact totaling ~38 KB). Content was substantively grounded but discipline-bypass surfaced + tracked at adoption commit `d6fab30` 2026-05-19. B-541 opened at the same commit; this clause is the structural-fix forward-prevention. If a 2nd-event recurs before Phase 2 R2 lands, escalate to Mechanism C-1 hook extension (cohort-review-spawn commit-msg check) per B-541 closure target.
+
+**Audit-output channels** (canonical):
+
+| Channel | Purpose | When |
+|---|---|---|
+| Verdict text (returned to parent) | Findings enumeration + recommendation | Always |
+| `_validation_log.md` event-row | Cohort-level discipline record | Parent agent writes (NOT reviewer) post-cohort per udm-progress-logger |
+| Commit-message gap-check verdict section | Per-commit cascade-evidence | Parent agent writes (NOT reviewer) at commit-authoring time |
+
+**Distinction from authoring flows**: if the reviewer surfaces a finding that warrants a new artifact (e.g., "B-344 needs an RB-15 authoring plan"), the verdict cites this as a **finding requiring follow-up authoring** — it does NOT author the plan itself. The parent agent then either (a) invokes the appropriate authoring skill (`udm-runbook-author` etc.) OR (b) opens a B-N tracking the authoring need OR (c) defers per its own discretion.
+
+---
+
 ## Output contract
 
 The reviewer agent returns a verdict using this template (≤700 words):
