@@ -613,13 +613,22 @@ def run_parquet_replay_step(
             f"{business_date} registry_id={parquet_write_result.registry_id}"
         )
 
-        # Allocate a new batch_id for the replay step itself per M2 contract
-        # (parquet_replay.replay_parquet_snapshot uses original_batch_id from
-        # registry + replay_batch_id for the replay's ledger step). We use
-        # the event_tracker.batch_id as the replay_batch_id so PipelineEventLog
-        # rows correlate.
+        # CORRECTED 2026-05-19 per cross-cohort reviewer a234fda11b870c78d
+        # Finding 1.1: replay_parquet_snapshot() signature requires 5 kwargs
+        # (source_name, table_name, business_date, original_batch_id,
+        # replay_batch_id). The function looks up the registry row by
+        # (source_name, table_name, business_date, original_batch_id) tuple
+        # per its docstring. The `registry_id` kwarg does NOT exist on the
+        # public surface (it's an internal value extracted from the looked-up
+        # row). In the immediate-write-then-replay pattern (B-552 v1), the
+        # write happened in the same orchestrator run, so original_batch_id
+        # = replay_batch_id = event_tracker.batch_id. Ledger rows are
+        # disambiguated by EventType (PARQUET_WRITE vs REPLAY).
         replay_result = replay_parquet_snapshot(
-            registry_id=parquet_write_result.registry_id,
+            source_name=table_config.source_name,
+            table_name=table_config.source_object_name,
+            business_date=business_date,
+            original_batch_id=event_tracker.batch_id,
             replay_batch_id=event_tracker.batch_id,
         )
         replay_event.rows_processed = replay_result.row_count

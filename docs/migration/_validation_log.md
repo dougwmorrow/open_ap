@@ -13326,3 +13326,37 @@ Plus reviewer-affirmed design choices:
 - Outstanding D125 work: B-552 (v2 of B-544; HARD-PREREQUISITE for RB-16 Step 2) + B-555 (v2 of B-545; interpretation-gap closure) + B-556/B-557/B-560/B-561/B-559 candidate-tracking remediations
 
 **Next-step recommendation**: B-552 (v2 of B-544 — parquet_snapshot end-to-end Parquet→replay→SCD2) — closes the LAST production-cutover blocker. Substantive scope (~150-200 LOC orchestrator + cdc_result adapter + delete-detection + Tier 1 tests).
+
+## 2026-05-19 -- B-552 v1 closure + BLOCK remediation per 7-event B-541 cross-cohort milestone
+
+**Event**: udm-progress-logger discipline per CLAUDE.md hard rule 9 for B-552 v1 closure at commit `719b76b` + immediate BLOCK remediation at THIS commit per cross-cohort reviewer Agent `a234fda11b870c78d` 2026-05-19 verdict RED BLOCK. Same Pitfall 9.m discipline-not-applied pattern as B-547 (2nd-event of class within current arc).
+
+**B-552 v1 closure summary** (per commit `719b76b`): cdc_mode='parquet_snapshot' end-to-end Parquet->replay->SCD2 orchestrator path; replaces B-544 v1 NotImplementedError stub; new `run_parquet_replay_step()` helper + CDCResult adapter; routes through `run_scd2_promotion(targeted=False)` regardless of table size; large-table delete-detection deferred to B-563.
+
+**RED BLOCK findings + remediation**:
+
+| # | Finding | Fix applied this commit |
+|---|---|---|
+| 1 | `replay_parquet_snapshot()` signature mismatch (registry_id passed; actual needs source_name+table_name+business_date+original_batch_id+replay_batch_id) -- production crash | Fix 1 in pipeline_steps.py |
+| 2 | large_tables.py parquet_snapshot bare `return` -> None; function `-> int`; caller TypeError | Fix 2 returns extracted_row_count |
+| 3 | REPLAY EventType claimed registered in CLAUDE.md L214 but actually NOT (Pitfall 9.n) | Fix 3 PARQUET_* family entry extended |
+| 4 | _validation_log.md missing B-552 v1 closure row (Pitfall 9.m; 2nd-event vs B-547) | Fix 4 THIS event row |
+
+**Minor findings**:
+
+| # | Finding | Fix applied |
+|---|---|---|
+| 5 | CSV cleanup asymmetry -- large_tables parquet_snapshot early-returns BEFORE CSV_CLEANUP block | Fix 5 cleanup_csvs call added |
+| 6 | SESSION_RESUME/active/scd2.md stale (B-552 cited as Open) | Fix 6 refreshed |
+
+**Test correction**: `tests/tier1/test_orchestrator_cdc_mode_dispatch.py::test_run_parquet_replay_step_returns_cdc_result_compatible_shape` PINNED the WRONG signature via MagicMock kwargs giving FALSE coverage. Updated to assert correct kwargs + explicitly forbid `registry_id` reappearance.
+
+**New B-N**: B-564 (apply-path Tier 1 tests for run_parquet_replay_step using REAL signature; MEDIUM WSJF 3.5; would have caught Findings 1.1 + 1.2; closure target BEFORE B-563 implementation).
+
+**B-541 7-event empirical milestone**: 7 consecutive reviewers honored read-only audit contract (a843ad09d24f2a607 / ac2dd8d0ec814dc7e / ad50cb5cceda3f90c / adc861405ff006766 / a8130cf417bb5692a / a95d8cc8b0ce3b7b6 / a234fda11b870c78d). Beyond HANDOFF 5-event formalization; structural fix continues to hold.
+
+**Cross-cohort pattern observation (NEW)**: MagicMock tests can PIN wrong signatures giving FALSE coverage. Bug class = "tests pass but production crashes". Apply-path tests with REAL signatures (mocking only deepest external boundaries) would catch. B-564 addresses for run_parquet_replay_step.
+
+**D125 arc status post-remediation**: B-552 v1 NOW production-ready (was BROKEN at 719b76b). Operator workflow end-to-end complete for SMALL tables. Outstanding: B-555 + B-563 + B-556 + B-557 + B-560 + B-561 + B-564 + P-24.
+
+**Next-step**: D56 mandatory second-pass independent re-verification OR proceed to B-564 closure to harden test layer.

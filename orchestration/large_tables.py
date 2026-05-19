@@ -520,7 +520,18 @@ def _process_single_day(
                 target_date=target_date,
                 index_rebuild_threshold=INDEX_REBUILD_THRESHOLD,
             )
-            return  # Skip legacy CDC path for 'parquet_snapshot' mode
+            # Fix 5 per reviewer a234fda11b870c78d Finding 1.3 — CSV cleanup
+            # required even on parquet_snapshot path (extract_windowed produces
+            # intermediate CSV at L354 regardless of dispatch mode; legacy CDC
+            # path reaches cleanup_csvs at L566 via control flow; parquet_snapshot
+            # early-returns BEFORE that block, so explicit cleanup needed here).
+            with event_tracker.track("CSV_CLEANUP", table_config) as cleanup_event:
+                cleaned = cleanup_csvs(output_dir, table_config)
+                cleanup_event.rows_processed = cleaned
+            # Fix 2 per reviewer a234fda11b870c78d Finding 1.2 — function is
+            # declared `-> int`; bare `return` returns None and caller does
+            # total_rows += day_rows → TypeError. Return extracted_row_count.
+            return extracted_row_count  # Skip legacy CDC path for 'parquet_snapshot' mode
 
         # --- WINDOWED CDC (P1-3/P1-4) — runs for 'change_detect' + 'both' ---
         cdc_result = run_cdc_promotion(

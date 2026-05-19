@@ -1,4 +1,4 @@
-# SESSION_RESUME — scd2 chat (D125 3-mode CDC dispatch implementation arc complete)
+# SESSION_RESUME — scd2 chat (D125 implementation arc complete + B-552 v1 closure + 7-event B-541 milestone)
 
 **Chat scope**: D125 3-mode CDC dispatch (CDCMode `'change_detect'` / `'parquet_snapshot'` / `'both'`) + SCD2 + CDC + Bronze + replay-from-Parquet pipeline core + RB-16 production cutover procedure + B-541 read-only audit contract empirical validation. Does NOT touch udm-* skills + Phase 1 quality checks + producer-discipline meta-work (separate `meta-discipline.md` chat per parallel session).
 
@@ -9,12 +9,12 @@
 ## State as of session end
 
 - **Branch**: `round-6-post-merge-tracking`
-- **Latest commits (this chat; most recent 5)**:
-  - `6868564` — gap-check remediation post-B-547 (Pitfall #9.k + #9.m inline-fixes; 6-event B-541 milestone strengthening; SESSION_RESUME.md update deferred to B-562 Component B)
+- **Latest commits (this chat; most recent 5; refreshed 2026-05-19 post-B-552 v1)**:
+  - **THIS COMMIT** — B-552 v1 RED BLOCK remediation (per cross-cohort reviewer `a234fda11b870c78d` 7-event B-541 milestone; 6 inline-fixes including replay_parquet_snapshot signature correction + bare return fix + REPLAY EventType registration + _validation_log row + CSV cleanup + scd2.md refresh; new B-564 for apply-path tests)
+  - `719b76b` — B-552 v1 closure — cdc_mode='parquet_snapshot' end-to-end (initial commit had 2 production-breaking bugs; remediated this commit)
+  - `f42e200` — SESSION_RESUME/active/scd2.md authored — D125 / parquet-SCD2 chat state pointer per B-562 Component B Phase 1
+  - `6868564` — gap-check remediation post-B-547 (Pitfall #9.k + #9.m inline-fixes; 6-event B-541 milestone strengthening)
   - `d192cee` — B-547 closure — RB-16 procedure rewrite for 2-step D125 cutover (supersedes B-501 historical 2-phase design)
-  - `fc79ec7` — session snapshot @ 7a810b9 — D125 implementation arc complete + B-541 5-event milestone
-  - `7a810b9` — B-N collision renumber — my B-558+B-559 → B-560+B-561 (other-agent published first)
-  - `9b1d7fb` — cross-cohort review post-B-553/B-554 remediation — 4 inline-fixes + B-558/B-559 + P-24 + B-541 5-event milestone
 - **Push status**: HELD — `git rev-list --count origin/round-6-post-merge-tracking..HEAD` ahead by N commits (verify at next session start; default-hold convention)
 - **pytest baseline (this chat's D125 module scope)**: ~119 Tier 0/1 tests pass across D125 implementation modules at HEAD `6868564`:
   - `tests/tier0/test_cdc_mode_column.py` — 11 tests (B-542 migration)
@@ -37,7 +37,7 @@
   - **NEW CLAUDE.md Do-NOT rule** (B-544 v1; preserved): BOTH mode Parquet-before-CDC sequencing invariant
   - **LIFTED CLAUDE.md Do-NOT rule** (first instance precedent; B-545 v1 production-safety pin LIFTED via B-553+B-554 closures): strikethrough body + LIFTED 2026-05-19 annotation + B-N closure citations + empirical anchor preservation
   - **NEW operational runbooks** (this arc): RB-18 D2 cutover rollback for ACCT pilot (B-343 closure at `b7c1c5a`); RB-16 D2 production cutover for AuditLog/large tables (B-547 closure at `d192cee`)
-- **B-541 read-only audit contract empirical validation milestone**: **6 consecutive cross-cohort reviewers** honored the contract without violation (zero side-effect files / zero sub-agents / zero file modifications). Per HANDOFF §8 5-event empirical formalization threshold, the structural fix is now BEYOND multi-event-validation threshold:
+- **B-541 read-only audit contract empirical validation milestone**: **7 consecutive cross-cohort reviewers** honored the contract without violation (zero side-effect files / zero sub-agents / zero file modifications). Per HANDOFF §8 5-event empirical formalization threshold, the structural fix is now BEYOND multi-event-validation threshold:
   - `a843ad09d24f2a607` (post-B-541 closure)
   - `ac2dd8d0ec814dc7e` (post-D125 plan)
   - `ad50cb5cceda3f90c` (post-D125 implementation cohort)

@@ -418,11 +418,21 @@ def test_run_parquet_replay_step_returns_cdc_result_compatible_shape():
 
     # REPLAY event tracked
     tracker.track.assert_called_once_with("REPLAY", tc)
-    # replay_parquet_snapshot called with registry_id + replay_batch_id
+    # CORRECTED 2026-05-19 per reviewer a234fda11b870c78d Finding 1.1 -- actual
+    # replay_parquet_snapshot signature is (source_name + table_name + business_date
+    # + original_batch_id + replay_batch_id); NOT registry_id. Previous test pinned
+    # the WRONG signature giving false coverage.
     ps.replay_parquet_snapshot.assert_called_once()
     call_kwargs = ps.replay_parquet_snapshot.call_args.kwargs
-    assert call_kwargs["registry_id"] == 42
+    assert call_kwargs["source_name"] == "DNA"
+    assert call_kwargs["table_name"] == "ACCT"
+    assert call_kwargs["business_date"] == target
+    assert call_kwargs["original_batch_id"] == 999
     assert call_kwargs["replay_batch_id"] == 999
+    assert "registry_id" not in call_kwargs, (
+        "Reviewer Finding 1.1 forward-prevention: registry_id is NOT a valid kwarg "
+        "for replay_parquet_snapshot (was the original bug)"
+    )
     # CDCResult adapter shape verified via constructor call args (CDCResult
     # class is mocked at module-import time via cdc.engine sys.modules stub;
     # asserting on the returned cdc_result.<attr> tests the MagicMock not the
