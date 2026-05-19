@@ -30,8 +30,9 @@
 |---|---|---|
 | `General.ops.IdempotencyLedger` | D15 idempotency contract; `parquet_writer.py` + `parquet_replay.py` gate all writes through `ledger_step()` context manager. Pipeline will crash on Parquet write if absent. | **CRITICAL** |
 | `General.ops.ParquetSnapshotRegistry` | Per-snapshot row tracking; `parquet_writer.py` INSERTs status='created' here; `parquet_replay.py` reads `NetworkDrivePath` + `ContentChecksum` here. Pipeline will crash on Parquet write if absent. | **CRITICAL** |
+| `General.ops.SchemaContract` | Round 7 schema-evolution governance audit table. `migrations/cdc_mode_column.py` (B-542) INSERTs 2 rows per migration invocation to record column-level + constraint-level expected values. **Migration script will fail with `Invalid object name General.ops.SchemaContract` if absent**. | **CRITICAL** (per user-reported error 2026-05-19 during §2.2 deploy) |
 
-Both must be created BEFORE you run `main_large_tables.py` in `CDCMode='both'` or `'parquet_snapshot'`.
+All 3 must be created BEFORE you run `main_large_tables.py` in `CDCMode='both'` or `'parquet_snapshot'`. SchemaContract must exist BEFORE running `migrations/cdc_mode_column.py --apply` in §2.2.
 
 ---
 
@@ -187,7 +188,67 @@ SELECT
 -- Expected: table_id NOT NULL; index_count = 6 (1 PK + 5 indexes); check_count = 2
 ```
 
-### 1.3 Verify all required tables now exist
+### 1.3 `General.ops.SchemaContract`
+
+Per `docs/migration/phase1/01_database_schema.md` §23 canonical Round 1 DDL (NEW v2 per Round 7 D40 schema evolution governance):
+
+```sql
+USE General;
+GO
+
+CREATE TABLE General.ops.SchemaContract (
+    ContractId          BIGINT IDENTITY(1,1) NOT NULL,
+    SourceName          NVARCHAR(50)    NOT NULL,
+    ObjectName          NVARCHAR(255)   NOT NULL,    -- table or view name
+    ColumnName          NVARCHAR(255)   NULL,        -- NULL = table-level contract
+
+    ContractKey         NVARCHAR(100)   NOT NULL,    -- 'expected_type', 'nullability',
+                                                     -- 'precision', 'scale',
+                                                     -- 'change_notification_sla_days',
+                                                     -- 'is_pii', 'pii_type',
+                                                     -- 'expected_default', 'expected_check'
+    ContractValue       NVARCHAR(MAX)   NOT NULL,
+
+    EffectiveFrom       DATETIME2(3)    NOT NULL DEFAULT SYSUTCDATETIME(),
+    EffectiveTo         DATETIME2(3)    NULL,        -- NULL = current; non-NULL = superseded
+    SupersededBy        BIGINT          NULL,        -- self-reference to next ContractId
+
+    Notes               NVARCHAR(MAX)   NULL,
+    CreatedAt           DATETIME2(3)    NOT NULL DEFAULT SYSUTCDATETIME(),
+    CreatedBy           NVARCHAR(255)   NOT NULL,
+
+    CONSTRAINT PK_SchemaContract PRIMARY KEY CLUSTERED (ContractId)
+);
+GO
+
+-- Active contracts lookup (most common query; B-542 migration uses this to detect duplicate runs)
+CREATE INDEX IX_SchemaContract_Active
+    ON General.ops.SchemaContract
+    (SourceName, ObjectName, ColumnName, ContractKey, EffectiveFrom DESC)
+    INCLUDE (ContractValue)
+    WHERE EffectiveTo IS NULL;
+GO
+
+-- History audit (supersession chain)
+CREATE INDEX IX_SchemaContract_History
+    ON General.ops.SchemaContract
+    (SourceName, ObjectName, ColumnName, ContractKey, EffectiveFrom);
+GO
+```
+
+**Verify**:
+
+```sql
+SELECT
+    OBJECT_ID('General.ops.SchemaContract')              AS table_id,
+    (SELECT COUNT(*) FROM sys.indexes
+     WHERE object_id = OBJECT_ID('General.ops.SchemaContract'))  AS index_count;
+-- Expected: table_id NOT NULL; index_count = 3 (1 PK + 2 indexes)
+```
+
+**Why needed**: `migrations/cdc_mode_column.py` (B-542) writes 2 SchemaContract rows per invocation to record the canonical CDCMode column shape (D40 governance trail). Without SchemaContract, the migration script aborts with `Invalid object name General.ops.SchemaContract`. After creating SchemaContract, re-run §2.2 deploy.
+
+### 1.4 Verify all required tables now exist
 
 ```sql
 SELECT
@@ -200,10 +261,11 @@ FROM (VALUES
     ('General.ops.PipelineExtractionState'),
     ('General.ops.IdempotencyLedger'),
     ('General.ops.ParquetSnapshotRegistry'),
+    ('General.ops.SchemaContract'),
     ('General.dbo.UdmTablesList'),
     ('General.dbo.UdmTablesColumnsList')
 ) AS v(obj);
--- All 8 must show 'OK'
+-- All 9 must show 'OK'
 ```
 
 ---
@@ -600,9 +662,10 @@ FROM (VALUES
     ('General.ops.PipelineLog'),
     ('General.ops.PipelineExtractionState'),
     ('General.ops.IdempotencyLedger'),
-    ('General.ops.ParquetSnapshotRegistry')
+    ('General.ops.ParquetSnapshotRegistry'),
+    ('General.ops.SchemaContract')
 ) AS v(obj);
--- All 6 must show 'OK'
+-- All 7 must show 'OK'
 
 -- 2. CDCMode column + CHECK constraint present
 SELECT
@@ -650,6 +713,7 @@ WHERE SourceName='CCM' AND SourceObjectName='AuditLog';
 | Symptom | Probable cause | Fix |
 |---|---|---|
 | `CREATE TABLE` fails with permission error | Login lacks DDL rights on `General.ops` schema | Grant DDL: `GRANT CREATE TABLE ON SCHEMA::ops TO [your_login];` |
+| `migrations/cdc_mode_column.py --apply` fails with `Invalid object name 'General.ops.SchemaContract'` | SchemaContract table not yet created (Round 7 governance table; needed by B-542 migration for audit-trail rows) | Create SchemaContract per §1.3 of this runbook; then re-run §2.2 deploy |
 | ALTER TABLE fails with "object already exists" | Column / constraint already added (idempotent path) | Skip the ALTER; re-run §2.3 verification |
 | `migrations/audit_log_cardtxn_config.py` errors with "linked server not found" | Linked server `PDCAAGDNA02` not configured | Use `--first-load-date` path instead (§4.1 second example) |
 | `schema/column_sync.py` fails with "source table not found" | CCMREPORT.dbo.AuditLog not visible from migration host | Use manual INSERT path (§5.3) |
