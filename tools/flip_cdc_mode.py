@@ -326,7 +326,12 @@ def apply(connection, *, source: str, table: str, target_mode: str,
         except Exception:
             pass
         cursor.close()
-        raise
+        # B-N remediation per cross-cohort review Agent adc861405ff006766
+        # 2026-05-19 Scope 1: replaced bare `raise` with explicit FATAL-return
+        # so main() honors D74 EXIT_FATAL contract via result dict rather
+        # than Python default exit-on-uncaught-exception code 1. Audit-row
+        # error_message captures exception details for operator forensics.
+        return result
 
     cursor.close()
     return result

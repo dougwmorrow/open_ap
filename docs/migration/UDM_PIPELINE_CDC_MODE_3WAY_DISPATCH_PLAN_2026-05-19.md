@@ -331,9 +331,9 @@ def process_large_table(table_config: TableConfig, ...) -> bool:
 
 ### §8.2. R1 prep — BEFORE ACCT pilot
 
-- [ ] B-NEW-1: `migrations/cdc_mode_column.py` authored + deployed to dev DB + verified
-- [ ] B-NEW-2: `TableConfig.cdc_mode` field wired + Tier 1 test passes
-- [ ] B-NEW-3: Orchestrator 3-mode dispatch wired + Tier 1 mode-parametrize tests pass
+- [x] **B-542** (CLOSED 2026-05-19 via `2d65078`): `migrations/cdc_mode_column.py` authored; dev DB deployment pending operator action
+- [x] **B-543** (CLOSED 2026-05-19 via `ce360da`): `TableConfig.cdc_mode` field wired + 13 Tier 1 tests pass
+- [x] **B-544 v1** (CLOSED 2026-05-19 via `60f1283`; v2 → B-552): Orchestrator 3-mode dispatch wired; 18+1 Tier 1 tests pass; `'parquet_snapshot'` mode raises NotImplementedError pending B-552
 - [ ] First end-to-end smoke: ACCT in `'change_detect'` mode (verify dispatch picks legacy path; current behavior preserved)
 - [ ] Second end-to-end smoke: ACCT in `'both'` mode (verify dispatch writes Parquet + runs legacy CDC; Bronze byte-identical to step above)
 - [ ] Third end-to-end smoke: ACCT in `'parquet_snapshot'` mode (verify dispatch writes Parquet + replays + runs SCD2; Bronze byte-identical to step above per D2 acceptance criteria)
@@ -343,8 +343,8 @@ def process_large_table(table_config: TableConfig, ...) -> bool:
 - [ ] **B-552**: v2 of B-544 — `cdc_mode='parquet_snapshot'` end-to-end Parquet→replay→SCD2 path (HARD-BLOCKER for R3 cutover; opened at B-544 v1 partial closure commit `60f1283` 2026-05-19; added to checklist per cohort-review Agent ad50cb5cceda3f90c 2026-05-19 Scope 6 finding)
 - [ ] B-540: production `tools/scd2_replay_range_smoke.py` (depends on B-NEW-3 dispatch wiring being production-stable)
 - [ ] B-332: `data_load/parquet_replay.py::replay_parquet_range()`
-- [ ] B-NEW-4: Parity-check tool authored + tested
-- [ ] B-NEW-5: Mode-transition flip tool authored + tested
+- [x] **B-545 v1** (CLOSED 2026-05-19 via `e94d136`; v2 → B-555): Parity-check tool authored + 29 Tier 0 tests pass; row-count parity v1; per-PK hash deferred. NOTE: B-553 + B-554 BLOCK production use against StripSuffix=1 OR NULL-PK tables
+- [x] **B-546** (CLOSED 2026-05-19 via `0ad5bcc`): Mode-transition flip tool authored + 21 Tier 0 tests pass; 6-allowed + 1-RISKY transition matrix per §2.3
 - [ ] First production table in `'both'` mode for 30-day validation period (operator-selected; low-risk small table FIRST)
 - [ ] Parity-check tool runs nightly; alerts on Parquet/Stage divergence
 

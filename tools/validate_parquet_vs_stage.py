@@ -367,7 +367,21 @@ def apply(connection, *, actor: str, justification: str,
     except Exception as exc:
         connection.rollback()
         cursor.close()
-        raise
+        # B-N remediation per cross-cohort review Agent adc861405ff006766
+        # 2026-05-19 Scope 1: replaced bare `raise` with FATAL-return so
+        # main() honors D74 contract via result dict. Parity verdicts
+        # already computed survive; audit-row write-failure overrides exit
+        # to FATAL so operator is signaled to investigate via logs.
+        result = {
+            "event_kind": "error",
+            "exit_code": EXIT_FATAL,
+            "error": f"Audit row write failed: {str(exc)[:500]}",
+            "tables_checked": len(tables),
+            "clean": clean, "drift": drift, "major_drift": major_drift,
+            "per_table_verdicts": per_table_verdicts,
+            "dry_run": False,
+        }
+        return result
 
     cursor.close()
     return {

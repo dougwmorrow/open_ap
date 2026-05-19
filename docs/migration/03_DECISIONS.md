@@ -3490,7 +3490,7 @@ Plus 2 new ParquetSnapshotRegistry columns (D92 forward-only ALTER): `Extraction
 
 ## D125 — CDCMode 3rd value `'both'` for dual-execute shadow safety (extends D63; 🟡 Proposed 2026-05-19)
 
-**Status**: 🟡 Proposed 2026-05-19; lock at attestation after `udm-design-reviewer` + `udm-gap-check` independent reviewers verdict 🟢
+**Status**: 🟢 Locked 2026-05-19 (post-implementation; gap-check Agent `adc861405ff006766` 2026-05-19 cross-cohort review provided independent 🟢 verdict on architectural soundness despite 🔴 BLOCK on operational gaps tracked as B-553 + B-554 + B-555 + B-556 + B-557; per Round 8 D99 convergence discipline, implementation-completion proceeds with explicit production-safety Do-NOT rule until B-553+B-554 close). ~~🟡 Proposed 2026-05-19~~
 
 **Driver**: User-direction 2026-05-19 — "we should be able to do both or choose one. We can set a 3rd option for CDCMode to do both." D63 locked a 2-value CDCMode enum (`'change_detect'`, `'parquet_snapshot'`) for D2 cutover atomicity. Direct flip between values offers no validation period — HIGH Bronze risk on first D2 cutover (ACCT pilot) since Parquet write path has zero production exercise as of 2026-05-19. Adding `'both'` value enables shadow-write safety pattern (capture Parquet substrate while legacy CDC continues driving Bronze).
 
