@@ -14160,3 +14160,47 @@ Earlier session iterations consumed 3 quote-truncation-and-restore cycles before
 **Next-step recommendation**: real operational testing on non-production environment (test/dev) with CCM.AuditLog (96M) per RB-16 Step 1 (shadow mode) -- exercise the full B-552 v1 + B-563 + B-555 v2 stack against real-data interaction patterns. Closes D125 arc operationally. Alternative: opportunistic closure of remaining LOW-WSJF opens; or pause for user-direction at this milestone.
 
 **Cumulative session arc closure status**: D125 arc CODE-COMPLETE for production cutover. 21 B-Ns CLOSED across full arc (B-345 / B-334 / B-498 / B-337 / B-538 / B-541 / B-343 / B-542 / B-543 / B-544 v1 / B-545 v1 / B-546 / B-553 / B-554 / B-547 / B-552 v1 / B-564 / B-566 / B-567 / B-563 / B-555). 5 LOW-WSJF + 1 cosmetic remain open (all opportunistic).
+
+## 2026-05-19 -- Post-B-555 inline-fix cohort + B-561 closure + 11-event B-541 milestone
+
+**Event**: 11th consecutive cross-cohort gap-check reviewer ``aa1638567ae7cb414`` 2026-05-19 audited B-555 closure cohort (``fca6b01`` + ``6349457``). Verdict: ATTENTION with 4 minor inline-fix findings (META-IRONY pattern: prior inline-fix commit ``6349457`` SAID it fixed Pitfall #9.k drift but introduced fresh #9.k drift one layer deeper at scd2.md body, AND re-introduced same stale-forward-reference class at CLAUDE.md L350 LIFTED rule body within 12 minutes).
+
+**B-541 11-event empirical milestone** (220% of HANDOFF 5-event formalization threshold): 11 consecutive reviewers honored read-only audit contract without violation:
+
+- ``a843ad09d24f2a607`` (post-B-541 closure)
+- ``ac2dd8d0ec814dc7e`` (post-D125 plan)
+- ``ad50cb5cceda3f90c`` (post-D125 implementation cohort)
+- ``adc861405ff006766`` (post-D125 toolkit completion)
+- ``a8130cf417bb5692a`` (post-B-553/B-554 closure)
+- ``a95d8cc8b0ce3b7b6`` (post-B-547 + arc review)
+- ``a234fda11b870c78d`` (post-B-552 v1 closure -- verdict BLOCK with 6 findings; drove BLOCK remediation at ``0c06961``)
+- ``aea6c9174151af2f5`` (D56 second-pass on ``0c06961`` BLOCK remediation -- verdict ATTENTION)
+- ``a121478077f0b7713`` (gap-check on B-552 v1 + B-564 cohort -- drove Phase 1 cleanup at ``7635678``)
+- ``ac5c9ea53cc34bce3`` (cross-cohort gap-check on B-563 3-commit closure -- drove 5 inline-fixes at ``6349457``)
+- ``aa1638567ae7cb414`` (gap-check on B-555 closure cohort -- drove THIS COMMIT inline-fixes incl. closing META-IRONY F4.1 scd2.md body drift + F5.1 CLAUDE.md L350 stale-forward-reference + F6.1 test data ordering + F2.1 happy-path test addition + B-561 inline closure)
+
+**Inline-fixes applied THIS COMMIT** (per reviewer ``aa1638567ae7cb414``):
+
+| # | Finding | File | Fix |
+|---|---|---|---|
+| F4.1 | scd2.md body L44 "8 consecutive" while title says "10-event" -- prior 6349457 fix only updated title | ``SESSION_RESUME/active/scd2.md`` | Body bumped 8 -> 11 reviewers + enumeration extended with a121478077f0b7713 + ac5c9ea53cc34bce3 + aa1638567ae7cb414 |
+| F5.1 | CLAUDE.md L350 LIFTED rule stale forward-ref "B-555 v2 closes this interpretation gap definitively" while B-555 is now CLOSED | ``CLAUDE.md`` | Replaced with closure-citing narrative "B-555 closure at fca6b01" + cite ``--hash-check`` operationally; **closes B-561 inline** |
+| F6.1 | 3 B-555 hash_check tests use `("", 0)` cursor mock with comment claiming `BronzeTableName="", StripSuffix=0` but actual SQL is `SELECT StripSuffix, BronzeTableName` (reversed; works by accident; Pitfall #9.l) | ``tests/tier0/test_validate_parquet_vs_stage.py`` | All 3 fixed: `(0, None)` + corrected comments |
+| F2.1 | No happy-path test for `check_table_parity(hash_check=True)` CLEAN end-to-end (all 3 hash_check integration tests are FATAL paths) | ``tests/tier0/test_validate_parquet_vs_stage.py`` | 2 new integration tests: CLEAN happy-path + DRIFT-overrides-row-count-CLEAN verdict combination |
+
+**B-561 inline-closure** (per F5.1 + reviewer recommendation): B-561 closure-target was "at B-555 closure"; B-555 closed at ``fca6b01`` without applying B-561 update (Pitfall #9.m: B-555 closure didn't apply B-561 to LIFTED Do-NOT rule body despite explicit closure-target dependency). Fixed inline THIS COMMIT.
+
+**Test count delta**: +2 (F2.1 happy-path integration tests) + 3 fixes-in-place (F6.1 test data ordering); 56/56 cohort regression (was 54/54 pre-F2.1 + F6.1 fix-in-place preserves prior count).
+
+**META-IRONY pattern observation** (per reviewer ``aa1638567ae7cb414``): "the inline-fix commit that SAID it fixed Pitfall #9.k drift introduced fresh #9.k drift one layer deeper. Same class previously flagged by reviewer ``ac5c9ea53cc34bce3`` at S4.1. Re-introduced same class within 12 minutes (6349457 -> fca6b01 timestamps)." This is the 2nd-event empirical anchor for "inline-fix commits can themselves harbor same-class drift" sub-pattern of Pitfall #9.m (discipline-not-applied-to-own-fix). Forward-prevention: future inline-fix cohorts should explicitly self-audit for the same Pitfall class they're fixing BEFORE commit (e.g., F4.1 fix to bump 8 -> 11 should have also greped scd2.md for `\b8\b` matches in milestone-related lines).
+
+**D125 arc status post-this commit**: 22 B-Ns CLOSED total. PRODUCTION-READY for both SMALL + LARGE tables with FULL parity-interpretation substrate. Cutover-decision substrate gaps all closed. Operator workflow end-to-end PRODUCTION-READY.
+
+**Remaining D125-arc opens** (4 LOW WSJF + 1 cosmetic; all opportunistic):
+- B-556 (apply-path tests for CLI tools; absorbed B-NEW-C + B-NEW-D candidates per reviewer F2.1 deferral)
+- B-557 (extract _write_event_log_row shared helper)
+- B-560 (WARNING log on empty pk_columns)
+- P-24 (cosmetic LIFTED-rule format docs)
+- Sampling-based hash comparison candidate (opportunistic if 3B+ table operator hits OOM)
+
+**Next-step recommendation**: pause for real operational testing per RB-16 Step 1 (shadow mode against CCM.AuditLog 96M) -- exercises the full B-552 v1 + B-563 + B-555 v2 stack against real-data interaction patterns. Closes D125 arc operationally.

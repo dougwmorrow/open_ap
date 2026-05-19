@@ -605,7 +605,7 @@ def test_b555_check_table_parity_default_hash_check_disabled():
     cursor = MagicMock()
     # UdmTablesList row exists with no strip + no custom
     cursor.fetchone.side_effect = [
-        ("", 0),  # UdmTablesList: BronzeTableName="", StripSuffix=0
+        (0, None),  # UdmTablesList: StripSuffix=0, BronzeTableName=None
         (1000,),  # ParquetSnapshotRegistry RowCount
         (1000,),  # Bronze active count
     ]
@@ -627,7 +627,7 @@ def test_b555_check_table_parity_hash_check_pk_columns_missing_fatal():
     tool = _import_tool()
     cursor = MagicMock()
     cursor.fetchone.side_effect = [
-        ("", 0),  # UdmTablesList
+        (0, None),  # UdmTablesList: StripSuffix=0, BronzeTableName=None
         (1000,),  # ParquetSnapshotRegistry
         (1000,),  # Bronze count
     ]
@@ -646,7 +646,7 @@ def test_b555_check_table_parity_hash_check_no_parquet_path_fatal():
     tool = _import_tool()
     cursor = MagicMock()
     cursor.fetchone.side_effect = [
-        ("", 0),  # UdmTablesList
+        (0, None),  # UdmTablesList: StripSuffix=0, BronzeTableName=None
         (1000,),  # ParquetSnapshotRegistry RowCount
         (1000,),  # Bronze count
         None,     # _query_latest_parquet_network_drive_path returns None
@@ -737,3 +737,90 @@ def test_b555_audit_metadata_hash_check_disabled_default():
     import json  # noqa: PLC0415
     metadata = json.loads(metadata_json)
     assert metadata["hash_check_enabled"] is False
+
+
+def test_b555_check_table_parity_hash_check_clean_happy_path():
+    """B-555 F2.1 forward-prevention: happy-path test for hash_check=True
+    returning CLEAN end-to-end. Pre-F2.1 all 3 hash_check integration tests
+    were FATAL paths -- same MagicMock-stub-without-realism class B-564 was
+    authored to forward-prevent. This test exercises the full compose chain:
+    cursor lookups -> _read_parquet_pk_hashes -> _query_bronze_pk_hashes ->
+    compare_pk_hashes -> classify_hash_check -> _combine_verdicts -> CLEAN.
+
+    Per gap-check reviewer ``aa1638567ae7cb414`` 2026-05-19 F2.1 finding."""
+    tool = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.side_effect = [
+        (0, None),  # UdmTablesList: StripSuffix=0, BronzeTableName=None
+        (1000,),    # ParquetSnapshotRegistry RowCount
+        (1000,),    # Bronze active count
+        ("\\\\drive\\path\\file.parquet",),  # _query_latest_parquet_network_drive_path
+    ]
+    cursor.fetchall.return_value = [
+        ("AcctNo",), ("EffDate",),  # _resolve_pk_columns
+    ]
+    # Stub the heavyweight read helpers + comparison; polars itself is
+    # MagicMock'd at sys.modules level so we cannot run real anti-join
+    # logic, but we CAN verify the orchestration chain composes correctly
+    # + the CLEAN verdict propagates through _combine_verdicts.
+    tool._read_parquet_pk_hashes = MagicMock(return_value=MagicMock())
+    tool._query_bronze_pk_hashes = MagicMock(return_value=MagicMock())
+    tool.compare_pk_hashes = MagicMock(return_value={
+        "in_parquet_missing_from_bronze": 0,
+        "in_bronze_missing_from_parquet": 0,
+        "pk_match_hash_diff": 0,
+        "pk_match_hash_same": 1000,
+    })
+
+    result = tool.check_table_parity(cursor, "DNA", "ACCT", hash_check=True)
+
+    # Verdict: CLEAN end-to-end (row-count CLEAN + hash-check CLEAN -> CLEAN)
+    assert result["verdict"] == tool.VERDICT_CLEAN, (
+        f"Happy path CLEAN expected; got {result['verdict']!r}"
+    )
+    assert result["hash_check_verdict"] == tool.VERDICT_CLEAN
+    # Compose chain verified -- all 3 helpers invoked
+    tool._read_parquet_pk_hashes.assert_called_once_with(
+        "\\\\drive\\path\\file.parquet", ["AcctNo", "EffDate"],
+    )
+    tool._query_bronze_pk_hashes.assert_called_once()
+    tool.compare_pk_hashes.assert_called_once()
+    # hash_comparison dict propagated into result
+    assert result["hash_comparison"]["pk_match_hash_same"] == 1000
+    assert result["hash_comparison"]["in_bronze_missing_from_parquet"] == 0
+
+
+def test_b555_check_table_parity_hash_check_drift_overrides_clean_row_count():
+    """B-555 F2.1 extension: when row-count is CLEAN but hash-check is DRIFT
+    (3% mismatch between thresholds), final verdict = DRIFT via
+    _combine_verdicts most-severe-wins precedence. Pins the verdict
+    combination integration."""
+    tool = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.side_effect = [
+        (0, None),  # UdmTablesList
+        (1000,),    # ParquetSnapshotRegistry RowCount (matches Bronze)
+        (1000,),    # Bronze count (row-count CLEAN)
+        ("\\\\drive\\path\\file.parquet",),  # NetworkDrivePath
+    ]
+    cursor.fetchall.return_value = [
+        ("AcctNo",), ("EffDate",),
+    ]
+    tool._read_parquet_pk_hashes = MagicMock(return_value=MagicMock())
+    tool._query_bronze_pk_hashes = MagicMock(return_value=MagicMock())
+    # 3% hash mismatch -- DRIFT (above 1% tolerance, below 5% threshold)
+    tool.compare_pk_hashes = MagicMock(return_value={
+        "in_parquet_missing_from_bronze": 0,
+        "in_bronze_missing_from_parquet": 0,
+        "pk_match_hash_diff": 30,
+        "pk_match_hash_same": 970,
+    })
+
+    result = tool.check_table_parity(cursor, "DNA", "ACCT", hash_check=True)
+
+    # Row-count is CLEAN; hash-check is DRIFT; combined = DRIFT (more severe)
+    assert result["verdict"] == tool.VERDICT_DRIFT, (
+        f"hash-check DRIFT must override row-count CLEAN; "
+        f"got {result['verdict']!r}"
+    )
+    assert result["hash_check_verdict"] == tool.VERDICT_DRIFT

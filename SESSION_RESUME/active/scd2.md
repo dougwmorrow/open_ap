@@ -31,9 +31,9 @@
   - Full-suite: 9 pre-existing failures unrelated to D125 arc (test_crash_test_harness_hooks + test_measure_lateness; confirmed pre-existing via stash isolation)
 - **Cumulative session delta (D125 / parquet->SCD2 scope only; meta-discipline chat's work is separate)**:
   - **D125 Locked 2026-05-19** at `03_DECISIONS.md` tail -- 3-value CDCMode enum extension (`'change_detect'` + `'parquet_snapshot'` + `'both'`) per `docs/migration/UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md`
-  - **21 B-Ns CLOSED** this arc (refreshed 2026-05-19 post-B-564 closure per D56 second-pass minor-finding G6.3): B-345 + B-334 + B-498 + B-337 + B-538 + B-541 + B-343 + B-542 + B-543 + B-544 v1 + B-545 v1 + B-546 + B-553 + B-554 + B-547 + B-552 v1 + B-564 + B-566 + B-567 + B-563 + B-555
+  - **22 B-Ns CLOSED** this arc (refreshed 2026-05-19 post-B-564 closure per D56 second-pass minor-finding G6.3): B-345 + B-334 + B-498 + B-337 + B-538 + B-541 + B-343 + B-542 + B-543 + B-544 v1 + B-545 v1 + B-546 + B-553 + B-554 + B-547 + B-552 v1 + B-564 + B-566 + B-567 + B-563 + B-555 + B-561
   - **2 B-Ns inline-closed** this arc: B-548 + B-549
-  - **B-Ns OPEN from this arc** (next-step queue; refreshed 2026-05-19 post-B-564 closure per D56 second-pass minor-finding G6.1): B-556 + B-557 + B-560 + B-561 + P-24
+  - **B-Ns OPEN from this arc** (next-step queue; refreshed 2026-05-19 post-B-564 closure per D56 second-pass minor-finding G6.1): B-556 + B-557 + B-560 + P-24
   - **NEW production modules** (this arc): `migrations/cdc_mode_column.py` (B-542) + `tools/flip_cdc_mode.py` (B-546) + `tools/validate_parquet_vs_stage.py` (B-545 v1)
   - **NEW production code** (extensions): `orchestration/table_config.py` (B-543; +18 LOC TableConfig.cdc_mode field + loader); `orchestration/pipeline_steps.py` (B-544 v1; +82 LOC dispatch helpers; B-552 v1 +~80 LOC run_parquet_replay_step helper); `orchestration/large_tables.py` + `orchestration/small_tables.py` (B-544 v1; ~30 LOC dispatch wiring each; B-552 v1 +~25 LOC parquet_snapshot branch each); `scd2/engine.py` (R1.3; B-498 + B-334; +106 LOC source_verifier_fn parameter + helper); `utils/idempotency_ledger.py` (R1.8; B-337; +30 LOC D119 forensic-preservation 3-site defense); `orchestration/table_lock.py` (R1.7; B-345; constant promotion)
   - **NEW test modules** (this arc): `tests/tier1/test_parquet_replay_step_apply_path.py` (B-564 THIS COMMIT; 14 tests; AST-extracted canonical-signature pin + signature-validating stub apply-path + bare-return audit + CSV cleanup sequencing audit + cross-orchestrator symmetry pin)
@@ -41,7 +41,7 @@
   - **NEW CLAUDE.md Do-NOT rule** (B-544 v1; preserved): BOTH mode Parquet-before-CDC sequencing invariant
   - **LIFTED CLAUDE.md Do-NOT rule** (first instance precedent; B-545 v1 production-safety pin LIFTED via B-553+B-554 closures): strikethrough body + LIFTED 2026-05-19 annotation + B-N closure citations + empirical anchor preservation
   - **NEW operational runbooks** (this arc): RB-18 D2 cutover rollback for ACCT pilot (B-343 closure at `b7c1c5a`); RB-16 D2 production cutover for AuditLog/large tables (B-547 closure at `d192cee`)
-- **B-541 read-only audit contract empirical validation milestone**: **8 consecutive cross-cohort reviewers** honored the contract without violation (zero side-effect files / zero sub-agents / zero file modifications). Per HANDOFF Section 8 5-event empirical formalization threshold, the structural fix is now SIGNIFICANTLY BEYOND multi-event-validation threshold (8-event = 160% of formalization minimum):
+- **B-541 read-only audit contract empirical validation milestone**: **11 consecutive cross-cohort reviewers** honored the contract without violation (zero side-effect files / zero sub-agents / zero file modifications). Per HANDOFF Section 8 5-event empirical formalization threshold, the structural fix is now 220% of formalization minimum (11-event):
   - `a843ad09d24f2a607` (post-B-541 closure)
   - `ac2dd8d0ec814dc7e` (post-D125 plan)
   - `ad50cb5cceda3f90c` (post-D125 implementation cohort)
@@ -49,7 +49,10 @@
   - `a8130cf417bb5692a` (post-B-553/B-554 closure)
   - `a95d8cc8b0ce3b7b6` (post-B-547 + arc review)
   - `a234fda11b870c78d` (post-B-552 v1 closure -- verdict BLOCK with 6 findings; drove BLOCK remediation at `0c06961`)
-  - `aea6c9174151af2f5` (D56 mandatory second-pass on `0c06961` BLOCK remediation -- verdict ATTENTION with 6 minor scd2.md findings; drove inline remediation at THIS COMMIT)
+  - `aea6c9174151af2f5` (D56 second-pass on `0c06961` BLOCK remediation -- verdict ATTENTION)
+  - `a121478077f0b7713` (gap-check on B-552 v1 + B-564 cohort -- drove Phase 1 cleanup at `7635678`)
+  - `ac5c9ea53cc34bce3` (cross-cohort gap-check on B-563 3-commit closure -- drove 5 inline-fixes at `6349457`)
+  - `aa1638567ae7cb414` (gap-check on B-555 closure cohort -- drove THIS COMMIT inline-fixes incl. closing META-IRONY F4.1 self-referential drift class)
 - **Parallel session state**: meta-discipline chat (parallel session) is working on B-558 Phase 2.1 hardening cohort (udm-session-compactor) + B-562 multi-chat coordination cohort. B-562 Component A (`tools/claim_next_bn.py`) CLOSED at `dd9fbdb`; Component B Phase 1 (`SESSION_RESUME/active/` + `_archive/` directory structure) CLOSED at `64175d9`; Phase 2 router refactor CLOSED at `c8bb55b`. B-562 Phase 3 + B-558 Components A/B/C remain. **Do NOT touch their working files** (B-558 Phase 2.1 substrates + `SESSION_RESUME/active/meta-discipline.md`).
 
 ## NEXT SESSION RESUME PROCEDURE
