@@ -75,6 +75,7 @@ _REPO_ROOT_FOR_IMPORT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT_FOR_IMPORT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORT))
 from tools.anchor_context import is_empirical_anchor_context  # noqa: E402
+from tools.check_commit_msg import _PYTEST_COUNT_RE, _SCOPE_INDICATORS  # noqa: E402
 
 EVENT_TYPE = "CLI_PRE_COMMIT_CHECKS"
 EXIT_SUCCESS = 0
@@ -1512,6 +1513,109 @@ def check_snapshot_claims(staged_files: list[str]) -> CheckResult:
     )
 
 
+# =========================================================================
+# B-558 Phase 2.1 Component C 2026-05-19: snapshot pytest-claim verification
+# =========================================================================
+# Per `docs/migration/UDM_SESSION_COMPACTOR_PHASE_2_1_PLAN_2026-05-19.md` §3.3.
+# Option B (CHOSEN per gate-2 reviewer abbbbd0ae702860da G3-1): NEW Phase 1
+# quality check using existing `_PYTEST_COUNT_RE` from `tools/check_commit_msg.py`
+# (canonical regex; B-449 closure). Native fit to `check_*(staged_files)`
+# signature; avoids stretching the `CommitMsgCheck.scan(commit_msg, ctx)` ABC
+# contract that the B-449 check uses.
+#
+# Detection logic: pytest count claims in staged snapshot files MUST be
+# co-located (same line or ±2 lines) with a scope indicator like
+# "tier0+tier1" / "full-suite" / "baseline preserved" — same forward-prevention
+# class as B-449 commit-msg check, applied to snapshot scope.
+# =========================================================================
+def check_snapshot_pytest_claims(staged_files: list[str]) -> CheckResult:
+    """B-558 Phase 2.1 Component C closure 2026-05-19: snapshot pytest-claim
+    scope-indicator verification.
+
+    Scans staged `docs/migration/_session_snapshots/*.md` files for pytest
+    count claims (via canonical `_PYTEST_COUNT_RE` from `check_commit_msg.py`)
+    and verifies each claim has a co-located scope indicator (tier0+tier1 /
+    full-suite / etc. per `_SCOPE_INDICATORS`). Closes the pytest-count-
+    scope-ambiguity class at snapshot scope (same forward-prevention pattern
+    as B-449 commit-msg check, applied to snapshot substrate).
+
+    Layer 2 suppression: applies `is_empirical_anchor_context()` (from
+    `tools/anchor_context.py`) — historical-citation pytest counts in
+    "Earlier YYYY-MM-DD" sections / quoted reviewer outputs do not need
+    scope indicators since they cite a prior state.
+
+    WARN severity per FP-policy precedent of B-481 + B-495 + B-558 Component A.
+
+    Returns:
+        INFO if no snapshot files staged.
+        PASS if all pytest claims have co-located scope indicators OR are
+            inside historical-anchor context.
+        WARN with diagnostic enumerating unscoped pytest claims.
+    """
+    snapshot_files = [
+        f.replace("\\", "/") for f in staged_files
+        if f.replace("\\", "/").startswith(_SNAPSHOT_DIR_PREFIX)
+        and f.replace("\\", "/").endswith(".md")
+    ]
+    if not snapshot_files:
+        return CheckResult(
+            "snapshot_pytest_claims", True, "info",
+            "no staged snapshot files; snapshot-pytest-claim verification skipped"
+        )
+
+    unscoped: list[tuple[str, int, str]] = []  # (snapshot_file, line_no, line_text)
+    total_claims = 0
+
+    for snapshot_file in snapshot_files:
+        snapshot_path = REPO_ROOT / snapshot_file
+        try:
+            content = snapshot_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        lines = content.splitlines()
+        for line_no, line in enumerate(lines, start=1):
+            matches = list(_PYTEST_COUNT_RE.finditer(line))
+            if not matches:
+                continue
+            # ±2 line context window for scope-indicator lookup
+            lo = max(0, line_no - 3)
+            hi = min(len(lines), line_no + 2)
+            context_window = "\n".join(lines[lo:hi]).lower()
+            has_scope = any(
+                indicator.lower() in context_window for indicator in _SCOPE_INDICATORS
+            )
+            if has_scope:
+                continue
+            # Suppress historical-anchor citations per B-491 + B-496 pattern
+            if is_empirical_anchor_context(lines, line_no - 1):
+                continue
+            total_claims += 1
+            unscoped.append((snapshot_file, line_no, line.strip()[:120]))
+
+    if unscoped:
+        return CheckResult(
+            "snapshot_pytest_claims", False, "warn",
+            f"{len(unscoped)} pytest count claim(s) in staged snapshot(s) "
+            f"without co-located scope indicator (per B-558 Phase 2.1 "
+            f"Component C closure 2026-05-19; snapshot-pytest-scope-ambiguity "
+            f"forward-prevention; analog of B-449 at snapshot scope; "
+            f"WARN-only per FP-policy):\n"
+            + "\n".join(
+                f"  - {snapshot}:{line_no}: {text}"
+                for snapshot, line_no, text in unscoped[:10]
+            )
+            + "\n\nAdd a scope indicator (e.g., 'tier0+tier1', 'full-suite', "
+              "'baseline preserved') within ±2 lines OR rephrase to historical "
+              "anchor context. This is a WARN (not BLOCK); commit will proceed."
+        )
+
+    return CheckResult(
+        "snapshot_pytest_claims", True, "info",
+        f"all pytest count claim(s) in {len(snapshot_files)} staged snapshot "
+        f"file(s) have co-located scope indicators OR historical-anchor context"
+    )
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
@@ -1521,9 +1625,10 @@ CHECKS = [
     check_gap_accountability,
     check_planning_provenance,
     check_cli_registry_sync,
-    check_wc_line_count_claims,  # B-481 closure 2026-05-18
-    check_file_path_existence,   # B-495 closure 2026-05-18
-    check_snapshot_claims,       # B-558 Phase 2.1 Component A closure 2026-05-19
+    check_wc_line_count_claims,        # B-481 closure 2026-05-18
+    check_file_path_existence,         # B-495 closure 2026-05-18
+    check_snapshot_claims,             # B-558 Phase 2.1 Component A closure 2026-05-19
+    check_snapshot_pytest_claims,      # B-558 Phase 2.1 Component C closure 2026-05-19
 ]
 
 

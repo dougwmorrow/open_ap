@@ -12,6 +12,55 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-558 Phase 2.1 Component C closure: `check_snapshot_pytest_claims` 12th Phase 1 quality check (snapshot-pytest-scope-ambiguity forward-prevention; analog of B-449 at snapshot scope)
+
+**Trigger**: pipeline-lead "proceed with your recommended next steps" 2026-05-19 — cascade trigger for MEDIUM-priority Component C build per prior turn's recommended runway.
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Scope**: NEW `check_snapshot_pytest_claims(staged_files)` at `tools/pre_commit_checks.py` (12th CHECKS registry entry). Per Phase 2.1 plan §3.3 Option B (chosen at plan gate-2 attestation per reviewer `abbbbd0ae702860da` G3-1).
+
+**Implementation**:
+- NEW imports at L78: `from tools.check_commit_msg import _PYTEST_COUNT_RE, _SCOPE_INDICATORS` (reuses canonical regex + indicator tuple to avoid duplication)
+- Filter staged files to `docs/migration/_session_snapshots/*.md`
+- For each line in each snapshot: match `_PYTEST_COUNT_RE`; if match, build ±2 line context window; verify scope indicator co-located; suppress via `is_empirical_anchor_context()` for historical citations
+- WARN with findings cap 10 on unscoped claims; INFO when no snapshot files staged
+- Severity: WARN per FP-policy precedent
+
+**Architectural decision**: Option B (NEW Phase 1 check function) over Option A (extend `PytestCountDisambiguationCheck` ABC). Per gate-2 reviewer `abbbbd0ae702860da` G3-1: Option A stretches `CommitMsgCheck.scan(commit_msg, ctx)` ABC signature (commit-msg-scoped) into snapshot-file-scoped territory. Option B matches existing B-481+B-495+Component-A `check_*(staged_files)` pattern natively.
+
+**TEST**: 4/4 PASS at `tests/tier0/test_pre_commit_checks_b558_pytest_claims.py` (0.32s). Covers (1) module-imports + CHECKS-tail-pin / (2) empty-staged INFO / (3) pytest claim WITH co-located scope indicator → PASS / (4) unscoped pytest claim → WARN.
+
+EXPECTED_CHECKS_COUNT bumped 11 → 12 at `tests/tier0/test_pre_commit_checks.py` L29 (same drift pattern as B-481/B-495/B-558 Component A prior closures).
+
+**Step 10 applied**: CLAUDE.md L99 row updated (CHECKS 11 → 12 + body extended for 12th check + surface +1 `check_snapshot_pytest_claims` + Tier 0 62 → 66). GLOSSARY: CHECKS body row extended (11 → 12); NEW `check_snapshot_pytest_claims` row added.
+
+**GAP ANALYSIS (G1-G6)**:
+- G1 (Pitfall #9.j leading-badge): N/A — B-558 still 🟡 Open partial (A + C + D closed; B remains). Leading-badge flip at full closure.
+- G2 (Pitfall #9.k arithmetic): ✅ CHECKS 11 → 12 + Tier 0 62 → 66 propagated to CLAUDE.md L99 + GLOSSARY + EXPECTED_CHECKS_COUNT + this entry; test assertion 1 pins `CHECKS[-1] is check_snapshot_pytest_claims`.
+- G3 (Pitfall #9.l canonical re-read): ✅ plan §3.3 Option B spec verified verbatim before implementation; mirrored B-481+B-495+Component-A structural template; reused canonical regex from `check_commit_msg.py` per "Option B native fit" guidance.
+- G4 (Pitfall #9.m discipline-applied): ✅ check IS forward-prevention for snapshot-pytest-claim class; composes with B-449 commit-msg analog (same forward-prevention class at different substrate scope).
+- G5 (Pitfall #9.n convention-registration): ✅ Step 10 applied across CLAUDE.md L99 + GLOSSARY.
+- G6 (new B-N opportunities): None surfaced.
+
+**Tracker updates**: CURRENT_STATE L7 + HANDOFF §14 + GLOSSARY + this _validation_log entry + EXPECTED_CHECKS_COUNT.
+
+**B-558 PHASE 2.1 PROGRESS**:
+| Component | Status | Anchor |
+|---|---|---|
+| A: check_snapshot_claims commit-hash verification | ⚫ CLOSED | `e1738df` (B-558 Component A commit) |
+| B: SKILL.md mandate + hook _has_recent_snapshot() extension | 🟡 Open | ~45 min effort — final remaining sub-deliverable |
+| C: check_snapshot_pytest_claims via Option B native fit | ⚫ CLOSED | THIS COMMIT |
+| D: hook refactor for payload['transcript_path'] | ⚫ CLOSED | `e3d8700` |
+
+3 of 4 components closed. Component B (SKILL.md post-authoring verification mandate + hook structural validation) is the final piece before B-558 ⚫ FULL CLOSURE.
+
+**Net delta**: this-chat 107 NEW B-Ns unchanged / 31 CLOSED unchanged (B-558 still 🟡 Open partial pending Component B + closure) / pytest +4 Tier 0 PASS for Component C.
+
+**Forward-prevention class addressed**: snapshot-pytest-scope-ambiguity. Same class as B-449 at commit-msg scope; this check extends mechanical coverage to snapshot substrate where pytest counts also accumulate during session arcs. Composes with B-558 Component A (commit_hash verification) — together they cover the 2 highest-value snapshot-claim-vs-actual forward-prevention surfaces per 29-gap audit Gap 1.2 + 3.1.
+
+---
+
 ## 2026-05-19 — B-558 Phase 2.1 Component A closure: `check_snapshot_claims` 11th Phase 1 quality check (snapshot-frontmatter-hallucination forward-prevention)
 
 **Trigger**: pipeline-lead "1. Push the updates to Github. 2. Proceed with your recommended next steps" 2026-05-19 — push fired first (`074e20a..553b345` to origin); then proceeded to MEDIUM-priority B-558 Phase 2.1 Component A per prior turn's recommended runway.

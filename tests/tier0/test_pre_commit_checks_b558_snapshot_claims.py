@@ -26,9 +26,10 @@ def test_module_imports_and_check_registered() -> None:
     """Assertion 1: check_snapshot_claims importable + registered in CHECKS list."""
     assert callable(check_snapshot_claims)
     assert check_snapshot_claims in CHECKS
-    # MUST be the last entry per Phase 2.1 plan §3.1 ("append to CHECKS registry
-    # at next available slot"); pins against accidental reorder
-    assert CHECKS[-1] is check_snapshot_claims
+    # Was CHECKS[-1] at Component A landing; now at CHECKS[-2] after Component C
+    # appended at B-558 Phase 2.1 Component C closure 2026-05-19 — pins by membership
+    # not position-tail since future checks will continue to append
+    assert CHECKS.index(check_snapshot_claims) >= 0
     # Constants exported
     assert _SNAPSHOT_DIR_PREFIX == "docs/migration/_session_snapshots/"
     assert _SNAPSHOT_COMMIT_HASH_RE is not None
