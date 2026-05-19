@@ -87,7 +87,7 @@ import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import polars as pl
 
@@ -242,6 +242,91 @@ class SCD2Result:
     unchanged: int = 0
     resurrections: int = 0
 
+def _apply_source_verifier_or_block(
+    candidate_delete_pks_df,
+    source_verifier_fn,
+    pk_columns: list[str],
+    table_config: TableConfig,
+):
+    """B-498 + D18: invoke source_verifier_fn closure on candidate delete PKs
+    and apply CDC_VERIFY_STRICT_ON_FAILURE semantic per CLAUDE.md Do-NOT rule.
+
+    Per cdc/source_verifier.py canonical semantic (preserved per CLAUDE.md
+    "Do NOT change CDC_VERIFY_STRICT_ON_FAILURE default from 1 to 0"):
+
+    * STRICT=1 (default + canonical) + verifier raises → return EMPTY DataFrame
+      (block ALL candidate deletes; the original df is dropped; no closes
+      will fire). This is the canonical safe-by-default behavior — a
+      verification-query failure (network / permissions / syntax) MUST NOT
+      open the door to false-positive deletes.
+    * STRICT=0 (explicit opt-out) + verifier raises → fall through with
+      original candidate_delete_pks_df unchanged (verifier failure ignored;
+      operator has explicitly accepted the risk).
+    * verifier returns successfully → caller uses the returned df subset
+      (verifier may filter out PKs that are still present on source).
+
+    Per R1.3 (Phase 2 large-tables plan v5 + B-498): for now, the verifier
+    output is wired through but the full "filter false-positives" semantic
+    remains at the verifier-implementation layer. This function preserves
+    the STRICT-on-failure block-all behavior so that whichever closure is
+    passed at R2 (D2 cutover) cannot accidentally degrade to permissive.
+
+    Args:
+        candidate_delete_pks_df: Polars DataFrame of PKs that SCD2 plans to
+            close as deletes (no successor; UdmActiveFlag = 2 path).
+        source_verifier_fn: Caller-supplied closure (`Callable[[list], obj]`)
+            or None. When None, this helper is a no-op (caller should not
+            invoke it; defensive bypass for early callers).
+        pk_columns: PK column names (forwarded for closure signature).
+        table_config: For logging / audit-row context.
+
+    Returns:
+        DataFrame to use as the close set. May be:
+        * unchanged input (verifier succeeded; STRICT not triggered)
+        * verifier-returned subset (when verifier returns a DataFrame /
+          list semantics; for R1.3 minimal scope, we trust the closure's
+          return-type contract)
+        * empty (STRICT=1 + verifier raised; block-all path)
+    """
+    import os  # noqa: PLC0415
+    if source_verifier_fn is None:
+        return candidate_delete_pks_df
+    if candidate_delete_pks_df is None or len(candidate_delete_pks_df) == 0:
+        return candidate_delete_pks_df
+
+    strict_env = os.environ.get("CDC_VERIFY_STRICT_ON_FAILURE", "1")
+    strict = strict_env not in ("0", "false", "False", "FALSE", "")
+
+    try:
+        # Verifier contract: takes candidate-deletes (as Polars DF OR list of PK
+        # tuples per future B-334 wiring); returns either:
+        # (a) None / no-op → caller proceeds with original candidate set
+        # (b) DataFrame subset → caller uses returned subset
+        # For R1.3 minimal scope, we accept either; downstream wiring at R2
+        # (D2 cutover) finalizes the return-type contract.
+        result = source_verifier_fn(candidate_delete_pks_df)
+    except Exception as exc:  # noqa: BLE001 — STRICT semantic catches everything
+        logger.warning(
+            "B-498 source_verifier_fn raised for %s.%s candidate-delete PKs "
+            "(STRICT=%s); %s closes per CLAUDE.md Do-NOT rule. Error: %s",
+            table_config.source_name,
+            table_config.source_object_name,
+            "1" if strict else "0",
+            "BLOCKING ALL" if strict else "PROCEEDING WITH (verifier failure ignored)",
+            exc,
+        )
+        if strict:
+            # Return empty DataFrame with same schema — block all closes
+            return candidate_delete_pks_df.clear()
+        # STRICT=0: explicit operator opt-out; proceed with original set
+        return candidate_delete_pks_df
+
+    # Verifier succeeded
+    if result is None:
+        return candidate_delete_pks_df
+    return result
+
+
 def run_scd2(
     table_config: TableConfig,
     df_current: pl.DataFrame,
@@ -249,6 +334,7 @@ def run_scd2(
     output_dir: str | Path,
     *,
     source_begin_date: date | datetime | None = None,
+    source_verifier_fn: "Callable[[list], object] | None" = None,
 ) -> SCD2Result:
     """Run SCD2 promotion: compare CDC current vs Bronze active.
 
@@ -581,12 +667,19 @@ def run_scd2(
     # Delete-style closes (no successor in source): deleted PKs only.
     if len(df_closed) > 0:
         pks_close_delete = df_closed.select(pk_columns).unique(subset=pk_columns)
-        _execute_bronze_updates(
-            pks_close_delete, pk_columns, bronze_table,
-            now, output_dir, table_config,
-            source_end_dt=delete_close_source_end,
-            label_suffix="delete_close",
+        # B-498 + D18: invoke source verifier closure (if provided) to apply
+        # CDC_VERIFY_STRICT_ON_FAILURE semantic per CLAUDE.md Do-NOT rule.
+        # When STRICT=1 (default) + verifier raises → block all closes.
+        pks_close_delete = _apply_source_verifier_or_block(
+            pks_close_delete, source_verifier_fn, pk_columns, table_config,
         )
+        if len(pks_close_delete) > 0:
+            _execute_bronze_updates(
+                pks_close_delete, pk_columns, bronze_table,
+                now, output_dir, table_config,
+                source_end_dt=delete_close_source_end,
+                label_suffix="delete_close",
+            )
 
     # B-270: test-only crash injection point (C7) — fires only when
     # CRASH_INJECT_POINT=after_close_old; no-op otherwise. Boundary
@@ -1822,6 +1915,7 @@ def run_scd2_targeted(
     deleted_pks: pl.DataFrame | None = None,
     *,
     source_begin_date: date | datetime | None = None,
+    source_verifier_fn: "Callable[[list], object] | None" = None,
 ) -> SCD2Result:
     """Run SCD2 promotion with PK-targeted Bronze read (large tables).
 
@@ -2066,6 +2160,12 @@ def run_scd2_targeted(
                 targeted_resurrection_pks, on=pk_columns, how="anti"
             )
 
+        # B-498 + D18: invoke source verifier closure (if provided) on the
+        # post-resurrection-filter set BEFORE adding to delete_close_parts.
+        # CDC_VERIFY_STRICT_ON_FAILURE semantic preserved per CLAUDE.md.
+        deleted_pks_filtered = _apply_source_verifier_or_block(
+            deleted_pks_filtered, source_verifier_fn, pk_columns, table_config,
+        )
         if len(deleted_pks_filtered) > 0:
             delete_close_parts.append(deleted_pks_filtered)
             logger.info(
