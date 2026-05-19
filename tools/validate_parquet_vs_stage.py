@@ -137,11 +137,29 @@ def classify_parity(parquet_count: int, bronze_count: int) -> str:
       Parquet doesn't capture)
     - parquet_count > 0 AND bronze_count == 0 → MAJOR_DRIFT (Parquet has data
       Bronze doesn't have; likely cutover-in-progress edge case)
+
+    B-553 closure 2026-05-19: added defensive CRITICAL-class guard —
+    if parquet_count < bronze_count, return MAJOR_DRIFT regardless of
+    drift percentage. Bronze should never contain rows that Parquet
+    doesn't capture (Parquet is source-exact per D115; Bronze is a
+    subset after CDC NULL-PK filter per P0-4). Parquet < Bronze indicates
+    data loss between extraction + Parquet write — CRITICAL operational
+    signal. Per cross-cohort gap-check Agent `adc861405ff006766` 2026-05-19.
+
+    NOTE: Parquet > Bronze drift may legitimately be due to NULL-PK rows
+    in Parquet (D115 source-exactness captures source-exact rows; legacy
+    CDC filters NULL-PK per P0-4). Operators should subtract known
+    NULL-PK count when interpreting Parquet > Bronze drift; B-555 v2
+    per-PK hash comparison will close this interpretation gap definitively.
     """
 
     if parquet_count == 0 and bronze_count == 0:
         return VERDICT_CLEAN
     if parquet_count == 0 or bronze_count == 0:
+        return VERDICT_MAJOR_DRIFT
+
+    # B-553 defensive guard: Parquet missed data → CRITICAL regardless of %
+    if parquet_count < bronze_count:
         return VERDICT_MAJOR_DRIFT
 
     drift = abs(parquet_count - bronze_count) / parquet_count
@@ -150,6 +168,57 @@ def classify_parity(parquet_count: int, bronze_count: int) -> str:
     if drift <= MAJOR_DRIFT_THRESHOLD_PCT:
         return VERDICT_DRIFT
     return VERDICT_MAJOR_DRIFT
+
+
+def _resolve_bronze_table_name(cursor, source: str, table: str) -> str | None:
+    """B-554 closure 2026-05-19 — resolve bronze full table name honoring
+    SS-1 / StripSuffix=1 + per-table BronzeTableName custom override.
+
+    Reads UdmTablesList for the per-table flags + composes the canonical
+    Bronze fully-qualified name following the same logic as
+    `orchestration.table_config.TableConfig.bronze_full_table_name`:
+
+      - Effective name = BronzeTableName (custom override) OR SourceObjectName
+      - Suffix = "" if StripSuffix=1 else "_scd2_python" (SS-1 semantic)
+      - Result = `[{BRONZE_DB}].[{source}].[{effective}{suffix}]`
+
+    Returns None if the UdmTablesList row is missing (caller handles as
+    FATAL verdict).
+    """
+
+    cursor.execute(
+        f"SELECT StripSuffix, BronzeTableName "
+        f"FROM [{config.GENERAL_DB}].dbo.UdmTablesList "
+        f"WHERE SourceName = ? AND SourceObjectName = ?",
+        source, table,
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    strip_suffix = bool(row[0]) if row[0] is not None else False
+    custom_name = row[1]
+    effective = custom_name if custom_name else table
+    suffix = "" if strip_suffix else "_scd2_python"
+    return f"[{config.BRONZE_DB}].[{source}].[{effective}{suffix}]"
+
+
+def _resolve_pk_columns(cursor, source: str, table: str) -> list[str]:
+    """B-553 closure 2026-05-19 — resolve PK columns for the table.
+
+    Reads UdmTablesColumnsList ordered by OrdinalPosition. Returns the
+    list of column names that have IsPrimaryKey=1. Returns empty list
+    if no PK columns are recorded (caller falls back to no NULL-PK
+    filter; verdict may be less precise but not incorrect).
+    """
+
+    cursor.execute(
+        f"SELECT ColumnName "
+        f"FROM [{config.GENERAL_DB}].dbo.UdmTablesColumnsList "
+        f"WHERE SourceName = ? AND TableName = ? AND IsPrimaryKey = 1 "
+        f"ORDER BY OrdinalPosition",
+        source, table,
+    )
+    return [row[0] for row in cursor.fetchall()]
 
 
 def _query_both_mode_tables(cursor) -> list[tuple[str, str]]:
@@ -180,14 +249,28 @@ def _query_latest_parquet_row_count(cursor, source: str, table: str) -> int | No
     return int(row[0]) if row is not None else None
 
 
-def _query_bronze_active_row_count(cursor, source: str, table: str) -> int:
-    """Return Bronze active-row count for (source, table). Bronze table name
-    follows the canonical `UDM_Bronze.{source}.{table}_scd2_python` convention."""
+def _query_bronze_active_row_count(cursor, bronze_table: str,
+                                  pk_columns: list[str] | None = None) -> int:
+    """Return Bronze active-row count for the resolved bronze table.
 
-    bronze_table = (
-        f"[{config.BRONZE_DB}].[{source}].[{table}_scd2_python]"
-    )
-    cursor.execute(f"SELECT COUNT(*) FROM {bronze_table} WHERE UdmActiveFlag = 1")
+    B-553 closure 2026-05-19: extends WHERE clause with `AND {pk} IS NOT NULL`
+    per PK column when `pk_columns` is non-empty. Defensive per B-550 NULL-PK
+    exclusion semantics — Bronze NEVER stores NULL-PK rows in practice (legacy
+    CDC's `_filter_null_pks()` (P0-4) removes them before write), so the
+    additional filter is functionally a no-op. The explicit filter makes the
+    semantic legible + future-proofs against any Bronze schema change that
+    might allow NULL-PK rows.
+
+    B-554 closure 2026-05-19: `bronze_table` is now caller-provided (resolved
+    via `_resolve_bronze_table_name()` honoring SS-1 + BronzeTableName custom
+    override) rather than hardcoded `[BRONZE_DB].[source].[table_scd2_python]`.
+    """
+
+    sql = f"SELECT COUNT(*) FROM {bronze_table} WHERE UdmActiveFlag = 1"
+    if pk_columns:
+        null_pk_clause = " AND ".join(f"[{col}] IS NOT NULL" for col in pk_columns)
+        sql += f" AND {null_pk_clause}"
+    cursor.execute(sql)
     row = cursor.fetchone()
     return int(row[0]) if row is not None else 0
 
@@ -196,12 +279,39 @@ def check_table_parity(cursor, source: str, table: str) -> dict:
     """Run parity check for a single (source, table). Returns dict with
     verdict + per-table metrics.
 
+    Resolution sequence (per B-553 + B-554 closure 2026-05-19):
+
+      1. Resolve bronze full-table-name via `_resolve_bronze_table_name()` —
+         honors SS-1 / StripSuffix=1 + per-table BronzeTableName custom
+         override (B-554).
+      2. Resolve PK columns via `_resolve_pk_columns()` — for the Bronze
+         NULL-PK defensive filter (B-553).
+      3. Query latest ParquetSnapshotRegistry row count.
+      4. Query Bronze active-row count with NULL-PK exclusion filter.
+      5. Classify parity via `classify_parity()` — includes the B-553
+         Parquet-missed-data guard (parquet < bronze → MAJOR_DRIFT).
+
     Catches per-table SQL exceptions + emits VERDICT_FATAL with error
     captured rather than propagating (so a single table failure doesn't
     block parity checks for other tables in a multi-table run).
     """
 
     try:
+        # B-554: resolve bronze table name BEFORE parquet probe — if
+        # UdmTablesList row missing, fail fast with explicit error
+        bronze_table = _resolve_bronze_table_name(cursor, source, table)
+        if bronze_table is None:
+            return {
+                "source": source, "table": table,
+                "verdict": VERDICT_FATAL,
+                "error": f"UdmTablesList row missing for {source}.{table} — "
+                         f"cannot resolve bronze_full_table_name per B-554",
+                "parquet_count": None, "bronze_count": None, "drift_pct": None,
+            }
+
+        # B-553: resolve PK columns for NULL-PK defensive filter
+        pk_columns = _resolve_pk_columns(cursor, source, table)
+
         parquet_count = _query_latest_parquet_row_count(cursor, source, table)
         if parquet_count is None:
             return {
@@ -210,8 +320,9 @@ def check_table_parity(cursor, source: str, table: str) -> dict:
                 "error": "No ParquetSnapshotRegistry row found — table may not "
                          "have been processed in 'both' mode yet",
                 "parquet_count": None, "bronze_count": None, "drift_pct": None,
+                "bronze_table": bronze_table, "pk_columns": pk_columns,
             }
-        bronze_count = _query_bronze_active_row_count(cursor, source, table)
+        bronze_count = _query_bronze_active_row_count(cursor, bronze_table, pk_columns)
         verdict = classify_parity(parquet_count, bronze_count)
         drift_pct = (
             abs(parquet_count - bronze_count) / parquet_count
@@ -223,6 +334,8 @@ def check_table_parity(cursor, source: str, table: str) -> dict:
             "parquet_count": parquet_count,
             "bronze_count": bronze_count,
             "drift_pct": drift_pct,
+            "bronze_table": bronze_table,
+            "pk_columns": pk_columns,
         }
     except Exception as exc:  # noqa: BLE001 — defensive per-table guard
         return {

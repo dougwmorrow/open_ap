@@ -97,16 +97,20 @@ def test_drift_thresholds_documented():
         # One zero, other non-zero → MAJOR_DRIFT
         (0, 100, "MAJOR_DRIFT"),
         (100, 0, "MAJOR_DRIFT"),
-        # Within 1% tolerance → CLEAN
+        # Parquet == Bronze → CLEAN
         (1000, 1000, "CLEAN"),
-        (1000, 1010, "CLEAN"),
+        # B-553 closure 2026-05-19: Parquet < Bronze is ALWAYS MAJOR_DRIFT
+        # regardless of percentage (Bronze should never have rows Parquet
+        # missed; Parquet is source-exact per D115)
+        (1000, 1010, "MAJOR_DRIFT"),  # B-553 guard (was CLEAN pre-B-553)
+        (1000, 1020, "MAJOR_DRIFT"),  # B-553 guard (was DRIFT pre-B-553)
+        (1000, 1050, "MAJOR_DRIFT"),  # B-553 guard (was DRIFT pre-B-553)
+        (1000, 1100, "MAJOR_DRIFT"),  # B-553 guard (already MAJOR pre-B-553)
+        # Parquet > Bronze within 1% → CLEAN (expected NULL-PK exclusion)
         (1000, 990, "CLEAN"),
         # 1% < drift ≤ 5% → DRIFT
-        (1000, 1020, "DRIFT"),
-        (1000, 1050, "DRIFT"),
         (1000, 950, "DRIFT"),
         # Drift > 5% → MAJOR_DRIFT
-        (1000, 1100, "MAJOR_DRIFT"),
         (1000, 500, "MAJOR_DRIFT"),
     ],
 )
@@ -166,26 +170,47 @@ def test_derive_exit_code_one_fatal_returns_fatal():
 # ---------------------------------------------------------------------------
 
 
-def test_check_table_parity_missing_registry_returns_fatal():
-    """No ParquetSnapshotRegistry row for (source, table) → VERDICT_FATAL."""
+def test_check_table_parity_missing_udmtableslist_returns_fatal():
+    """Missing UdmTablesList row → VERDICT_FATAL (B-554: cannot resolve
+    bronze_full_table_name)."""
 
     mod = _import_tool()
     cursor = MagicMock()
-    # First fetchone (parquet count) → None (no registry row)
+    # First fetchone (bronze table resolver) → None
     cursor.fetchone.return_value = None
 
     result = mod.check_table_parity(cursor, "DNA", "ACCT")
     assert result["verdict"] == "FATAL"
-    assert "No ParquetSnapshotRegistry" in result["error"]
+    assert "UdmTablesList row missing" in result["error"]
 
 
-def test_check_table_parity_returns_clean_on_match():
-    """Registry says 1000 rows + Bronze active count 1000 → CLEAN."""
+def test_check_table_parity_missing_parquet_registry_returns_fatal():
+    """UdmTablesList row exists but no ParquetSnapshotRegistry row → FATAL."""
 
     mod = _import_tool()
     cursor = MagicMock()
-    # 1st fetchone (parquet count): (1000,); 2nd (bronze count): (1000,)
-    cursor.fetchone.side_effect = [(1000,), (1000,)]
+    # fetchone sequence: (StripSuffix, BronzeTableName) → parquet row count None
+    cursor.fetchone.side_effect = [(0, None), None]
+    cursor.fetchall.return_value = []  # no PK columns (defensive fallback)
+
+    result = mod.check_table_parity(cursor, "DNA", "ACCT")
+    assert result["verdict"] == "FATAL"
+    assert "ParquetSnapshotRegistry" in result["error"]
+
+
+def test_check_table_parity_returns_clean_on_match():
+    """Registry says 1000 rows + Bronze active count 1000 → CLEAN.
+
+    Post-B-553/B-554 fetchone sequence:
+    1. bronze resolver: (StripSuffix=0, BronzeTableName=None)
+    2. parquet count: (1000,)
+    3. bronze count: (1000,)
+    """
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.side_effect = [(0, None), (1000,), (1000,)]
+    cursor.fetchall.return_value = [("AcctNo",)]  # PK columns
 
     result = mod.check_table_parity(cursor, "DNA", "ACCT")
     assert result["verdict"] == "CLEAN"
@@ -194,11 +219,15 @@ def test_check_table_parity_returns_clean_on_match():
 
 
 def test_check_table_parity_returns_major_drift():
-    """Registry says 1000 rows + Bronze 500 → 50% drift = MAJOR_DRIFT."""
+    """Registry says 1000 rows + Bronze 500 → 50% drift = MAJOR_DRIFT.
+
+    Post-B-553/B-554 fetchone sequence: bronze resolver + parquet + bronze.
+    """
 
     mod = _import_tool()
     cursor = MagicMock()
-    cursor.fetchone.side_effect = [(1000,), (500,)]
+    cursor.fetchone.side_effect = [(0, None), (1000,), (500,)]
+    cursor.fetchall.return_value = []
     result = mod.check_table_parity(cursor, "DNA", "ACCT")
     assert result["verdict"] == "MAJOR_DRIFT"
 
@@ -223,8 +252,14 @@ def _make_mock_conn(both_tables: list[tuple[str, str]] | None = None,
                     parquet_count: int = 1000,
                     bronze_count: int = 1000) -> MagicMock:
     """Mock connection with cursor that:
-    1. Returns both_tables as the result of _query_both_mode_tables
-    2. Returns parquet_count + bronze_count for each table's parity probe
+    1. Returns both_tables as the result of _query_both_mode_tables (if all-tables)
+    2. For EACH table: returns (StripSuffix=0, BronzeTableName=None) for bronze
+       resolver, then [] for pk columns (fetchall), then parquet_count +
+       bronze_count fetchones for the parity probe
+
+    Post-B-553/B-554 fetchone ordering for each table:
+      bronze_resolver_fetchone → parquet_count_fetchone → bronze_count_fetchone
+    And fetchall for pk_columns is interleaved (mock returns [] each call).
     """
 
     conn = MagicMock()
@@ -237,12 +272,16 @@ def _make_mock_conn(both_tables: list[tuple[str, str]] | None = None,
     if both_tables is not None:
         # All-tables mode: first fetchall returns the table list
         fetchall_results.append([(s, t) for s, t in both_tables])
-        # Then 2 fetchone calls per table (parquet count + bronze count)
+        # Then for each table: bronze resolver fetchone + pk fetchall + parquet + bronze
         for _ in both_tables:
+            fetchone_results.append((0, None))  # bronze resolver
+            fetchall_results.append([])  # pk columns (none)
             fetchone_results.append((parquet_count,))
             fetchone_results.append((bronze_count,))
     else:
-        # Single-table mode: 2 fetchone calls
+        # Single-table mode
+        fetchone_results.append((0, None))  # bronze resolver
+        fetchall_results.append([])  # pk columns (none)
         fetchone_results.append((parquet_count,))
         fetchone_results.append((bronze_count,))
 
@@ -314,3 +353,146 @@ def test_apply_dry_run_no_audit_row_written():
     for sql in sqls:
         assert "INSERT INTO" not in sql.upper(), \
             f"D75 violation: INSERT on dry-run: {sql[:100]}"
+
+
+# ---------------------------------------------------------------------------
+# Class F — B-553 + B-554 closure fixes (2026-05-19)
+# ---------------------------------------------------------------------------
+
+
+def test_classify_parity_parquet_lt_bronze_returns_major_drift():
+    """B-553 defensive guard: parquet_count < bronze_count → MAJOR_DRIFT
+    regardless of drift percentage. Bronze should never have rows Parquet
+    missed (Parquet is source-exact per D115; Bronze is a subset after
+    CDC NULL-PK filter per P0-4). Per cross-cohort gap-check Agent
+    `adc861405ff006766` 2026-05-19."""
+
+    mod = _import_tool()
+    # Tiny absolute delta but Parquet < Bronze → MAJOR (not CLEAN/DRIFT)
+    assert mod.classify_parity(999, 1000) == "MAJOR_DRIFT"
+    # Larger delta where parquet < bronze
+    assert mod.classify_parity(500, 1000) == "MAJOR_DRIFT"
+    # And the inverse symmetric (parquet > bronze, same magnitude) still
+    # follows the standard drift logic, NOT the defensive guard
+    assert mod.classify_parity(1500, 1000) == "MAJOR_DRIFT"  # 50% drift
+    assert mod.classify_parity(1010, 1000) == "CLEAN"  # 1% drift
+
+
+def test_resolve_bronze_table_name_no_strip_no_custom():
+    """Default case: StripSuffix=0 + no BronzeTableName override → standard
+    `_scd2_python` suffix."""
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.return_value = (0, None)  # StripSuffix=0, BronzeTableName=NULL
+    result = mod._resolve_bronze_table_name(cursor, "DNA", "ACCT")
+    assert result is not None
+    assert "ACCT_scd2_python" in result
+    assert "[DNA]" in result
+
+
+def test_resolve_bronze_table_name_strip_suffix_1():
+    """SS-1 opt-in: StripSuffix=1 → bare name without suffix."""
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.return_value = (1, None)  # StripSuffix=1
+    result = mod._resolve_bronze_table_name(cursor, "CCM", "AuditLog")
+    assert result is not None
+    assert "_scd2_python" not in result
+    assert "[AuditLog]" in result
+    assert "[CCM]" in result
+
+
+def test_resolve_bronze_table_name_custom_bronze_table_name():
+    """Custom BronzeTableName override takes precedence over default name."""
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.return_value = (0, "CustomBronzeName")
+    result = mod._resolve_bronze_table_name(cursor, "DNA", "ACCT")
+    assert result is not None
+    assert "CustomBronzeName_scd2_python" in result
+    # Original table name should NOT appear
+    assert "ACCT_scd2_python" not in result
+
+
+def test_resolve_bronze_table_name_strip_and_custom():
+    """Both StripSuffix=1 + custom BronzeTableName → bare custom name."""
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.return_value = (1, "ProdAuditLog")
+    result = mod._resolve_bronze_table_name(cursor, "CCM", "AuditLog")
+    assert result is not None
+    assert "[ProdAuditLog]" in result
+    assert "_scd2_python" not in result
+
+
+def test_resolve_bronze_table_name_missing_row():
+    """Missing UdmTablesList row → None (caller treats as FATAL)."""
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.return_value = None
+    result = mod._resolve_bronze_table_name(cursor, "DNA", "NONEXISTENT")
+    assert result is None
+
+
+def test_resolve_pk_columns_returns_ordered_list():
+    """Multi-column PK in OrdinalPosition order."""
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchall.return_value = [("AcctNo",), ("EffDate",)]
+    result = mod._resolve_pk_columns(cursor, "DNA", "ACCT")
+    assert result == ["AcctNo", "EffDate"]
+
+
+def test_resolve_pk_columns_empty():
+    """No PK columns recorded → empty list (caller falls back to no filter)."""
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchall.return_value = []
+    result = mod._resolve_pk_columns(cursor, "DNA", "NEWTABLE")
+    assert result == []
+
+
+def test_query_bronze_active_row_count_includes_null_pk_filter():
+    """B-553: when pk_columns is non-empty, SQL MUST contain
+    `AND [<col>] IS NOT NULL` for each PK column."""
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.return_value = (1000,)
+    mod._query_bronze_active_row_count(
+        cursor,
+        bronze_table="[UDM_Bronze].[DNA].[ACCT_scd2_python]",
+        pk_columns=["AcctNo", "EffDate"],
+    )
+    # Inspect the SQL that was actually executed
+    sql = cursor.execute.call_args.args[0]
+    assert "WHERE UdmActiveFlag = 1" in sql
+    assert "[AcctNo] IS NOT NULL" in sql
+    assert "[EffDate] IS NOT NULL" in sql
+    assert "AND" in sql
+
+
+def test_query_bronze_active_row_count_no_pk_filter_when_empty():
+    """When pk_columns is None or empty, NO NULL-PK filter added (defensive
+    fallback; results still valid because Bronze excludes NULL-PK via CDC)."""
+
+    mod = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.return_value = (1000,)
+    mod._query_bronze_active_row_count(
+        cursor,
+        bronze_table="[UDM_Bronze].[DNA].[ACCT_scd2_python]",
+        pk_columns=None,
+    )
+    sql = cursor.execute.call_args.args[0]
+    assert "WHERE UdmActiveFlag = 1" in sql
+    # No null-pk clause
+    assert "IS NOT NULL" not in sql
+
