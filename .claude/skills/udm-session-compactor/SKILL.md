@@ -172,7 +172,8 @@ After authoring, parent agent:
 
 1. Writes a `_validation_log.md` event row referencing the snapshot file
 2. Adds a row to BACKLOG.md (or POLISH_QUEUE.md if cosmetic) IF the snapshot surfaced new tracking-worthy items not already tracked
-3. Reports to user: snapshot path + 1-line summary of what's preserved beyond what SESSION_RESUME.md captures
+3. **Refreshes `SESSION_RESUME/active/<chat-name>.md` state pointer** for THIS chat per B-562 Component B multi-chat coordination cohort (closed 2026-05-19). Update sections: state-as-of-session-end (branch / latest commit / push status / pytest baseline / cumulative session delta) + this-session commit chain + NEXT SESSION RESUME PROCEDURE + Open runway (priority-ordered). Do NOT touch other chats' active files. See `SESSION_RESUME/README.md` for chat-naming convention + lifecycle (active → _archive on clean session end). If `SESSION_RESUME/active/<chat-name>.md` does not yet exist for THIS chat: author it now (with chat-scope description + initial state); see `SESSION_RESUME/active/meta-discipline.md` as the canonical template
+4. Reports to user: snapshot path + 1-line summary of what's preserved beyond what `SESSION_RESUME/active/<chat-name>.md` captures
 
 ## Edge cases
 
@@ -191,7 +192,7 @@ After authoring, parent agent:
 | `udm-cohort-review` | Cross-cohort review surfaces drift; the snapshot captures the surfacing event |
 | `udm-round-closeout` | Round close-out is the natural retirement point for snapshots; snapshots archive in `_session_snapshots/` as audit trail |
 | `udm-gap-check` | Gap-check verifies snapshot completeness against the 5-section contract |
-| `SESSION_RESUME.md` | Snapshot AUGMENTS resume doc; resume doc remains the pointer; snapshot is the substrate |
+| `SESSION_RESUME/active/<chat-name>.md` | Snapshot AUGMENTS resume doc; per-chat resume pointer remains the lightweight pointer; snapshot is the immutable substrate (per B-562 Component B multi-chat coordination cohort 2026-05-19; root `SESSION_RESUME.md` is now a thin router pointing to `active/`) |
 | `udm-post-edit-verification` | Authoring the snapshot is itself a substrate-edit; cascade TEST + GAP ANALYSIS + REVIEW applies (TEST = Tier 0 pin; GAP = gap-check on the snapshot artifact; REVIEW = optional design-reviewer for high-stakes session arcs) |
 
 ## Auto-trigger awareness (Phase 2 — landed 2026-05-19 per B-494 closure)
