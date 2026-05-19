@@ -343,7 +343,7 @@ def process_large_table(table_config: TableConfig, ...) -> bool:
 - [ ] **B-552**: v2 of B-544 — `cdc_mode='parquet_snapshot'` end-to-end Parquet→replay→SCD2 path (HARD-BLOCKER for R3 cutover; opened at B-544 v1 partial closure commit `60f1283` 2026-05-19; added to checklist per cohort-review Agent ad50cb5cceda3f90c 2026-05-19 Scope 6 finding)
 - [ ] B-540: production `tools/scd2_replay_range_smoke.py` (depends on B-NEW-3 dispatch wiring being production-stable)
 - [ ] B-332: `data_load/parquet_replay.py::replay_parquet_range()`
-- [x] **B-545 v1** (CLOSED 2026-05-19 via `e94d136`; v2 → B-555): Parity-check tool authored + 29 Tier 0 tests pass; row-count parity v1; per-PK hash deferred. NOTE: B-553 + B-554 BLOCK production use against StripSuffix=1 OR NULL-PK tables
+- [x] **B-545 v1** (CLOSED 2026-05-19 via `e94d136`; v2 → B-555): Parity-check tool authored + 29 Tier 0 tests pass; row-count parity v1; per-PK hash deferred. ~~NOTE: B-553 + B-554 BLOCK production use against StripSuffix=1 OR NULL-PK tables~~ **RESOLVED 2026-05-19 via `00039a1`**: B-553 + B-554 closed; CLAUDE.md Do-NOT rule LIFTED; B-555 v2 per-PK hash remains pending for NULL-PK interpretation-gap closure (see B-559 for LIFTED-rule sharpening if needed)
 - [x] **B-546** (CLOSED 2026-05-19 via `0ad5bcc`): Mode-transition flip tool authored + 21 Tier 0 tests pass; 6-allowed + 1-RISKY transition matrix per §2.3
 - [ ] First production table in `'both'` mode for 30-day validation period (operator-selected; low-risk small table FIRST)
 - [ ] Parity-check tool runs nightly; alerts on Parquet/Stage divergence
