@@ -260,3 +260,119 @@ def test_module_source_excludes_legacy_literal():
     # Check that no enum-style string literal 'legacy' appears:
     assert "'legacy'" not in src, "Pitfall #9.k drift: 'legacy' string literal found"
     assert '"legacy"' not in src, "Pitfall #9.k drift: \"legacy\" string literal found"
+
+
+
+# ---------------------------------------------------------------------------
+# B-556 closure 2026-05-19 -- apply-path tests for non-dry-run paths
+#
+# Pre-B-556 only dry-run paths were tested; non-dry-run UPDATE / INSERT /
+# commit / rollback paths mechanically uncovered. Closes the apply-path
+# test-coverage gap for flip_cdc_mode CLI tool.
+# ---------------------------------------------------------------------------
+
+
+def test_b556_apply_non_dryrun_executes_update_and_audit_and_commits():
+    """B-556: non-dry-run flip executes UPDATE on UdmTablesList + writes
+    audit row + connection.commit() called once. Pins the canonical
+    apply-path orchestration."""
+    tool = _import_tool()
+
+    connection = MagicMock()
+    cursor = MagicMock()
+    connection.cursor.return_value = cursor
+
+    # _get_current_mode returns 'change_detect' (so transition 'both' is ALLOWED)
+    cursor.fetchone.return_value = ("change_detect",)
+
+    result = tool.apply(
+        connection,
+        source="DNA", table="ACCT", target_mode="both",
+        actor="test", justification="B-556 apply-path test",
+        dry_run=False,
+    )
+
+    assert result["event_kind"] == "apply"
+    assert result["exit_code"] == tool.EXIT_SUCCESS
+    assert result["flipped"] is True
+
+    # UPDATE was executed (at least once; also audit-row INSERT happens)
+    update_calls = [
+        c for c in cursor.execute.call_args_list
+        if "UPDATE" in c[0][0] and "UdmTablesList" in c[0][0]
+    ]
+    assert len(update_calls) == 1, (
+        f"Expected exactly 1 UPDATE call; got {len(update_calls)}"
+    )
+
+    # commit() called exactly once (atomic UPDATE + audit)
+    assert connection.commit.call_count == 1
+
+    # rollback NOT called (no exception)
+    assert connection.rollback.call_count == 0
+
+
+def test_b556_apply_non_dryrun_exception_rolls_back_and_returns_fatal():
+    """B-556: when UPDATE raises mid-transaction, connection.rollback()
+    is called + result returns EXIT_FATAL with error captured. Forward-
+    prevents bare-raise regression class (per existing inline comment
+    citing B-N remediation Agent adc861405ff006766)."""
+    tool = _import_tool()
+
+    connection = MagicMock()
+    cursor = MagicMock()
+    connection.cursor.return_value = cursor
+
+    cursor.fetchone.return_value = ("change_detect",)
+    # First execute (UPDATE) raises; second execute (audit row write) we let succeed
+    cursor.execute.side_effect = [
+        None,  # _get_current_mode SELECT succeeds
+        RuntimeError("simulated transaction failure"),  # UPDATE fails
+        None,  # error-path audit row write succeeds
+    ]
+
+    result = tool.apply(
+        connection,
+        source="DNA", table="ACCT", target_mode="both",
+        actor="test", justification="B-556 rollback test",
+        dry_run=False,
+    )
+
+    assert result["event_kind"] == "error"
+    assert result["exit_code"] == tool.EXIT_FATAL
+    assert "simulated transaction failure" in result["error"]
+    # rollback() called exactly once
+    assert connection.rollback.call_count == 1
+
+
+def test_b556_apply_dry_run_no_commit_no_update():
+    """B-556 / D75 contract: dry-run path does NOT commit + does NOT execute
+    UPDATE. Extends existing dry-run coverage with explicit no-commit /
+    no-update assertion."""
+    tool = _import_tool()
+
+    connection = MagicMock()
+    cursor = MagicMock()
+    connection.cursor.return_value = cursor
+
+    cursor.fetchone.return_value = ("change_detect",)
+
+    result = tool.apply(
+        connection,
+        source="DNA", table="ACCT", target_mode="both",
+        actor="test", justification="B-556 dry-run no-commit test",
+        dry_run=True,
+    )
+
+    assert result["event_kind"] == "dry_run"
+    assert result["dry_run"] is True
+    assert connection.commit.call_count == 0
+    assert connection.rollback.call_count == 0
+    # No UPDATE in execute calls
+    update_calls = [
+        c for c in cursor.execute.call_args_list
+        if "UPDATE" in c[0][0] and "UdmTablesList" in c[0][0]
+    ]
+    assert update_calls == [], (
+        f"Dry-run executed UPDATE; got: {update_calls}"
+    )

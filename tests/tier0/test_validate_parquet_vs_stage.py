@@ -866,3 +866,144 @@ def test_b560_resolve_pk_columns_non_empty_no_warning(caplog):
         f"Unexpected WARNING when pk_columns populated; got: "
         f"{[r.message for r in pk_warnings]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# B-556 closure 2026-05-19 -- apply-path tests for validate_parquet_vs_stage
+#
+# Pre-B-556 only dry-run paths were tested; non-dry-run audit-row /
+# commit / rollback paths mechanically uncovered. Closes the apply-path
+# test-coverage gap.
+# ---------------------------------------------------------------------------
+
+
+def test_b556_apply_non_dryrun_writes_audit_and_commits():
+    """B-556: non-dry-run apply path writes audit row + commits exactly
+    once. Pins the canonical orchestration: verdicts computed -> audit
+    written -> commit."""
+    tool = _import_tool()
+
+    connection = MagicMock()
+    cursor = MagicMock()
+    connection.cursor.return_value = cursor
+
+    # _query_both_mode_tables returns single (source, table)
+    # _resolve_bronze_table_name + _resolve_pk_columns + parquet count + bronze count
+    cursor.fetchone.side_effect = [
+        (0, None),    # UdmTablesList: StripSuffix=0, BronzeTableName=None
+        (1000,),      # ParquetSnapshotRegistry RowCount
+        (1000,),      # Bronze active count
+    ]
+    cursor.fetchall.side_effect = [
+        [("DNA", "ACCT")],         # _query_both_mode_tables
+        [("AcctNo",), ("EffDate",)],  # _resolve_pk_columns
+    ]
+
+    result = tool.apply(
+        connection,
+        actor="test", justification="B-556 apply-path test",
+        dry_run=False,
+    )
+
+    assert result["event_kind"] == "apply"
+    assert result["exit_code"] == tool.EXIT_SUCCESS
+    assert result["dry_run"] is False
+    assert result["clean"] == 1
+
+    # connection.commit() called exactly once
+    assert connection.commit.call_count == 1
+    assert connection.rollback.call_count == 0
+
+    # Audit-row INSERT executed
+    insert_calls = [
+        c for c in cursor.execute.call_args_list
+        if "INSERT" in c[0][0] and "PipelineEventLog" in c[0][0]
+    ]
+    assert len(insert_calls) == 1, (
+        f"Expected exactly 1 audit-row INSERT; got {len(insert_calls)}"
+    )
+
+
+def test_b556_apply_audit_failure_rolls_back_and_returns_fatal():
+    """B-556: when audit-row write raises (e.g., transient SQL failure),
+    connection.rollback() called + result returns EXIT_FATAL with error
+    captured. Forward-prevents bare-raise regression class (per existing
+    inline comment citing remediation Agent adc861405ff006766 Scope 1)."""
+    tool = _import_tool()
+
+    connection = MagicMock()
+    cursor = MagicMock()
+    connection.cursor.return_value = cursor
+
+    cursor.fetchone.side_effect = [
+        (0, None),
+        (1000,),
+        (1000,),
+    ]
+    cursor.fetchall.side_effect = [
+        [("DNA", "ACCT")],
+        [("AcctNo",), ("EffDate",)],
+    ]
+    # Make cursor.execute raise on INSERT (audit-row write)
+    original_execute = cursor.execute
+    def _execute_side_effect(sql, *args, **kwargs):
+        if "INSERT" in sql and "PipelineEventLog" in sql:
+            raise RuntimeError("simulated audit-row INSERT failure")
+        return None
+    cursor.execute.side_effect = _execute_side_effect
+
+    result = tool.apply(
+        connection,
+        actor="test", justification="B-556 audit failure test",
+        dry_run=False,
+    )
+
+    assert result["event_kind"] == "error"
+    assert result["exit_code"] == tool.EXIT_FATAL
+    assert "simulated audit-row INSERT failure" in result["error"]
+    # rollback() called exactly once
+    assert connection.rollback.call_count == 1
+    # commit() NOT called (rollback path)
+    assert connection.commit.call_count == 0
+
+
+def test_b556_apply_dry_run_no_commit_no_audit_insert():
+    """B-556 / D75 contract: dry-run path does NOT commit + does NOT write
+    audit row. Extends existing dry-run coverage with explicit no-side-
+    effect assertions."""
+    tool = _import_tool()
+
+    connection = MagicMock()
+    cursor = MagicMock()
+    connection.cursor.return_value = cursor
+
+    cursor.fetchone.side_effect = [
+        (0, None),
+        (1000,),
+        (1000,),
+    ]
+    cursor.fetchall.side_effect = [
+        [("DNA", "ACCT")],
+        [("AcctNo",), ("EffDate",)],
+    ]
+
+    result = tool.apply(
+        connection,
+        actor="test", justification="B-556 dry-run test",
+        dry_run=True,
+    )
+
+    assert result["event_kind"] == "dry_run"
+    assert result["dry_run"] is True
+
+    assert connection.commit.call_count == 0
+    assert connection.rollback.call_count == 0
+
+    # No INSERT to PipelineEventLog
+    insert_calls = [
+        c for c in cursor.execute.call_args_list
+        if "INSERT" in c[0][0] and "PipelineEventLog" in c[0][0]
+    ]
+    assert insert_calls == [], (
+        f"Dry-run wrote audit row; got: {insert_calls}"
+    )

@@ -14243,3 +14243,41 @@ Earlier session iterations consumed 3 quote-truncation-and-restore cycles before
 **D125 arc status post-this-commit**: 24 B-Ns CLOSED total. Remaining D125-arc open: B-556 (apply-path tests for CLI tools; LOW WSJF 2.0) + sampling-based hash candidate (opportunistic if 3B+ table operator hits OOM).
 
 **Next-step**: Cohort 2 of LOW WSJF cleanup -- B-556 apply-path tests for ``flip_cdc_mode.py`` + ``validate_parquet_vs_stage.py`` CLI tools via B-566 shared utility pattern (4-layer forward-prevention; friction-reduced ~50% per B-566).
+
+## 2026-05-19 -- LOW-WSJF cleanup Cohort 2: B-556 closure (D125 arc FULLY CODE-COMPLETE -- all opens closed)
+
+**Event**: per user-direction "Close remaining LOW WSJF items" 2026-05-19. Cohort 2 of 2 -- closes B-556 apply-path tests for `tools/flip_cdc_mode.py` + `tools/validate_parquet_vs_stage.py`. **D125 arc now FULLY CODE-COMPLETE** post-this-commit: 25 D125-arc B-Ns CLOSED + 1 P-N CLOSED + 0 opens remain (only opportunistic sampling-based hash candidate; not opened pre-emptively per "opportunistic if 3B+ table operator hits OOM" deferral).
+
+**B-556 closure summary**: 6 new Tier 0 apply-path tests across 2 CLI tools.
+
+| Tool | Tests Added | Coverage |
+|---|---|---|
+| flip_cdc_mode.py | 3 | non-dry-run UPDATE+audit+commit happy-path / UPDATE-raises-mid-transaction rollback+EXIT_FATAL / dry-run no-commit-no-update negative-control |
+| validate_parquet_vs_stage.py | 3 | non-dry-run audit+commit happy-path / audit-row-INSERT-raises rollback+EXIT_FATAL / dry-run no-commit-no-audit-insert negative-control |
+
+All 6 tests verify the bare-raise regression class (per existing inline comment at both `apply()` bodies citing remediation Agent `adc861405ff006766` Scope 1) is forward-prevented at the test layer.
+
+**Test count delta**: +6 (3 per tool). Cohort regression: `py -3 -m pytest tests/tier0/test_flip_cdc_mode.py tests/tier0/test_validate_parquet_vs_stage.py -q` -> 85 passed in 0.44s (was 79 pre-Cohort-2).
+
+**Design decision note**: this cohort used tier0-native MagicMock patterns rather than tier1 B-566 shared utilities (`make_signature_validating_stub` + `extract_kwonly_arg_names_from_source`). Rationale: apply-path scope is simpler than B-564 replay-path (no polars / no AST signature drift surface); side_effect-style mock orchestration is the canonical tier0 idiom for connection/cursor flow. B-566 utilities remain available for future tier1 apply-path tests where signature drift is a concern.
+
+**D125 arc FINAL status (CODE-COMPLETE 2026-05-19)**:
+
+| Layer | B-Ns CLOSED |
+|---|---|
+| Schema substrate | B-345 + B-334 + B-498 + B-337 + B-538 + B-541 + B-543 + B-542 |
+| Operator CLI toolkit | B-545 v1 + B-546 + B-553 + B-554 |
+| Orchestrator dispatch | B-544 v1 + B-547 + B-552 v1 + B-563 |
+| Test infrastructure | B-564 + B-566 + B-567 + B-555 |
+| Discipline closures (gap-check follow-ups) | B-561 + B-557 + B-560 + B-556 |
+| Operational runbooks | B-343 (RB-18) + B-547 (RB-16) -- already counted above under "Operator CLI toolkit" |
+| **TOTAL B-Ns** | **25 CLOSED in D125 arc** |
+| **Plus P-Ns** | **P-24 CLOSED** (LIFTED-rule format documentation) |
+
+**Operator workflow end-to-end PRODUCTION-READY** for both SMALL + LARGE tables. Cutover-decision substrate gaps ALL CLOSED. Test coverage CLEAN across all D125-arc surfaces (dry-run + apply paths; row-count + hash-check paths; delete-detection happy + first-load fallback paths; signature-validating-stub forward-prevention against MagicMock false-coverage class).
+
+**Remaining opens across entire D125 arc**: 1 candidate (sampling-based hash comparison; opportunistic if 3B+ table operator hits OOM). Not opened pre-emptively per "no operator-driver yet" rationale.
+
+**B-541 read-only audit contract empirical evidence base**: still at 11-event scale (220% of formalization threshold). Did NOT spawn new reviewer for this LOW-WSJF cohort per producer-discretion -- 2 simpler closures (Cohort 1 + Cohort 2) cleanly self-validating via test PASS evidence + tracker flips with no architectural surprises. Future cross-cohort review at next session pause will validate the LOW-WSJF cleanup cohort holistically.
+
+**Next-step recommendation**: operator-driven real testing per RB-16 Step 1 (shadow mode against CCM.AuditLog 96M) -- exercises full B-552 v1 + B-563 + B-555 v2 + flip + parity stack against real-data interaction patterns. Closes D125 arc operationally. Dev-side D125 arc work is FULLY CODE-COMPLETE; no remaining code-side deliverables.
