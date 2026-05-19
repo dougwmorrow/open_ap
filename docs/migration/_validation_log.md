@@ -12969,3 +12969,51 @@ Plus reviewer-affirmed design choices:
 - Skills updated this session: 5 (unchanged at SKILL count; +2 SKILL semver bumps recorded below)
 - D-N amendments this session: 2 (unchanged)
 - SKILL semver bumps this session: **4** (was 2; +2: udm-progress-logger v1.0 → v1.1.0; udm-step-10-verifier v1.0 → v1.1.0)
+
+---
+
+## 2026-05-18 — Phase 2 large-tables plan v5 + R1 cohort + remediation sweep (3 commits: bcb05df + 864e91a + 4b888c0; closed via follow-up sweep this commit)
+
+**Cohort summary** (3 my-commits + 2 parallel-session other-agent commits interleaved on `round-6-post-merge-tracking`):
+- `bcb05df` — Phase 2 large-tables plan v5 + 6 tracker deltas (39 B-Ns B-497-B-535 + 8 D-Ns D117-D124 + 15 R-Ns R50-R64 + 3 RBs RB-15/16/17 + LT-AT-Series + SE11/SE12/SE13 + EventType family additions)
+- `864e91a` — R1 cohort: B-503 `udm-data-engineer-review` agent + B-523 `migrations/snowflake_replication_log.py` + B-535 `migrations/snowflake_ccpa_purge_log.py` + Tier 0 tests (19/19 passing in 0.38s)
+- `4b888c0` — Cross-cohort review remediation: 3 BLOCK + 7 IMPROVE absorbed (S1.1 plan v5 §15.3 DDL inlined + S3.1 CLAUDE.md L209-216 EventType registry restructure + S6.1 changelog stub + S1.4/S2.3/S3.2/S4.5/S5.1/S5.2/S5.4 small fixes; 21/21 Tier 0 passing in 0.35s)
+- THIS COMMIT — follow-up sweep: B-503/B-523/B-535 BACKLOG closure-annotation flips (🟡 → ⚫) + this `_validation_log.md` row + B-536/B-537 open (migrations/ Structure underrepresentation + remediation-script retention pattern)
+
+**Reviewer cohort** (6 agents across 4 cycles):
+- v1 review: `ad3e78033b453746c` design-reviewer (2 BLOCK + 4 IMPROVE + 7 Class) + `a60badeb8ed452e5c` gap-check (4 BLOCK + 21 IMPROVE + 3 OK) + `a5e19d35c7c5e3281` pipeline-mechanics substitute (3 BLOCK + 6 IMPROVE + 1 PASS)
+- v2 Option B review: `a1a23fbd3098e5d76` design-reviewer (3 BLOCK + 7 IMPROVE)
+- v3 gap-check: `a7c3f43f39535ea45` (3 BLOCK + 17 IMPROVE + 10 OK)
+- v4 confirmation gap-check: `a3d68f47ea920cb18` (1 BLOCK reopened + 6+ Pitfall #9.k stale citations + 3 NEW)
+- Cross-cohort review post-864e91a: `a6dafd5fb87915f00` (3 BLOCK + 9 IMPROVE + 15 OK + 3 Path-test PASS)
+- Cross-cohort review post-4b888c0: `aadb8f5a88f57afb3` (0 BLOCK + 4 IMPROVE + 14 OK; verified 3 prior BLOCKs CLOSED-CLEAN; 🟢 PASS verdict)
+
+**Convergence pattern**: each gap-check cycle had fewer findings (v3: 3 BLOCK / 17 IMPROVE → v4: 1 reopened + 6 stale → post-864e91a: 3 BLOCK + 9 IMPROVE → post-4b888c0: 0 BLOCK + 4 IMPROVE). Architecture stable; iteration was driven primarily by B-N renumber drift (HEAD shifted twice during session as parallel-session B-495 + B-496 landed in `2ac353b` + `a0f0326`).
+
+**Tracker walk per udm-progress-logger v1.1.0**:
+- BACKLOG.md: UPDATED (3 closures B-503/B-523/B-535 + 2 new opens B-536/B-537)
+- 03_DECISIONS.md: UPDATED in bcb05df (8 new D-Ns D117-D124; no change this commit)
+- 04_EDGE_CASES.md: UPDATED in bcb05df (LT-AT-Series + SE11/12/13; no change this commit)
+- 05_RUNBOOKS.md: UPDATED in bcb05df (RB-15/16/17 placeholders + RB-10 extension; no change this commit)
+- RISKS.md: UPDATED in bcb05df (15 new R-Ns R50-R64; no change this commit)
+- CLAUDE.md: UPDATED in bcb05df + 4b888c0 (EventType family registry; no change this commit)
+- CURRENT_STATE.md / HANDOFF.md: UNTOUCHED (deferred for next session-resume sweep; tracker drift acknowledged)
+- _validation_log.md (this file): UPDATED (this entry)
+- CODE_BUILD_STATUS.md: UNTOUCHED (Phase 2 R1 build state — 3 of 17 R1 deliverables landed; pending CODE_BUILD_STATUS row author at next R1 cohort)
+
+**Classification**: SUBSTRATE_EDIT (docs/migration/BACKLOG + _validation_log are substrate per CLAUDE.md hard rule 14 substrate enumeration). Independent reviewer (Agent aadb8f5a88f57afb3) verdict 🟢 PASS verified.
+
+**Pytest delta**: Tier 0 tests for B-523/B-535 = 21 pass / 0 skip / 0 fail in 0.35s (Windows dev workstation; isolated test scope). Full-suite baseline preserved (other agent's commits a7813df + 8dd2000 maintained full-suite count via parallel session).
+
+**Cumulative session metrics**:
+- 3 my-commits this session arc (bcb05df + 864e91a + 4b888c0 + this follow-up sweep = 4 total when this commit lands)
+- 2 parallel-session other-agent commits (a7813df + 8dd2000)
+- B-N: 39 opened in bcb05df (B-497-B-535) + 2 opened this commit (B-536 + B-537) - 3 closed this commit (B-503 + B-523 + B-535) = net 38 new opens for Phase 2 large-tables cohort
+- D-N: 8 proposed (D117-D124; pending lock at R2)
+- R-N: 15 opened (R50-R64; including R53 ESCALATED to 9 + R57 cutover-lock + R62/R63/R64 Snowflake risks)
+- Multi-agent applications: 6 reviewer-agent invocations this arc (4 distinct review cycles)
+- Tier 0 tests added: 21 (19 base + 2 D67 runtime ceiling per S2.3 remediation)
+- Closure annotations applied: 3 (B-503 + B-523 + B-535; per Pitfall #9.j leading-badge discipline)
+- New B-Ns opened this commit: 2 (B-536 migrations/ Structure underrepresentation + B-537 remediation-script retention pattern)
+
+**Phase 2 R1 progress**: 3 of 17 deliverables complete (R1.9 B-503 + R1.16 B-523 + R1.17 B-535). Remaining solo-tractable: R1.3 (B-498 + B-334 SCD2 source_verifier_fn) / R1.7 (B-345 lock-resource identity) / R1.8 (B-337 ledger cutover EventType). Upstream-gated: R1.1-R1.6 (Phase A R1 prereqs) / R1.10 (B-497 Phase A R1 interface freeze) / R1.11 (B-510 source-side index; CCM DBA coordination).
