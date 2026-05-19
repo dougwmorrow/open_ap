@@ -13017,3 +13017,58 @@ Plus reviewer-affirmed design choices:
 - New B-Ns opened this commit: 2 (B-536 migrations/ Structure underrepresentation + B-537 remediation-script retention pattern)
 
 **Phase 2 R1 progress** (refreshed 2026-05-19 post-R1 cohort + cross-cohort gap-check remediation; per Agent ab9ac2f21c7bf7866 Scope 4 Pitfall #9.k arithmetic-propagation finding): **6 of 17 deliverables complete** (R1.9 B-503 + R1.16 B-523 + R1.17 B-535 + R1.3 B-498/B-334 + R1.7 B-345 + R1.8 B-337). Remaining solo-tractable: (none — all 6 prior solo-tractable items closed across 4b3e5c9 + 4872581 + 28c8d25 cohort). Upstream-gated: R1.1-R1.6 (Phase A R1 prereqs) / R1.10 (B-497 Phase A R1 interface freeze) / R1.11 (B-510 source-side index; CCM DBA coordination).
+
+
+## 2026-05-19 — Phase 2 R1 cohort + cross-cohort gap-check remediation + B-344 adoption arc (5 commits: 4b3e5c9 + 4872581 + 28c8d25 + 0dc4f24 + d6fab30; closed via this `_validation_log.md` event row landing)
+
+**Cohort summary** (5 my-commits on `round-6-post-merge-tracking`):
+- `4b3e5c9` — Phase 2 R1.7: promoted `_LOCK_RESOURCE` → public `TABLE_LOCK_RESOURCE_FORMAT` in `orchestration/table_lock.py` (4 occurrences via word-boundary regex avoiding substring substitution); 7 Tier 1 tests at `tests/tier1/test_table_lock_resource_identity.py`; B-345 closure
+- `4872581` — Phase 2 R1.3: `source_verifier_fn: Callable | None = None` keyword-only parameter added to `scd2/engine.py::run_scd2` + `run_scd2_targeted`; new helper `_apply_source_verifier_or_block` preserves CDC_VERIFY_STRICT_ON_FAILURE=1 canonical semantic per CLAUDE.md Do-NOT rule; 18 Tier 1 tests at `tests/tier1/test_scd2_source_verifier_fn.py`; B-498 + B-334 closures
+- `28c8d25` — Phase 2 R1.8: D119 IdempotencyLedger pre-D2 cutover discipline at `utils/idempotency_ledger.py::startup_recovery_sweep` (3-site defense: forensic-warning SELECT + gating-SELECT legacy-exclusion + UPDATE legacy-exclusion preserving `SCD2_PROMOTION` + `CDC_PROMOTION` rows as forensic evidence); 7 new Tier 1 tests at `tests/tier1/test_idempotency_ledger_d2_cutover.py` (5 source-text invariants + 2 behavioral) + 2 pre-existing zero-stale tests updated; B-337 closure + B-538 (STRICT parser unification) + B-539 (InlineSelfReviewCitationCheck) opens
+- `0dc4f24` — cross-cohort gap-check remediation: 3 inline fixes (Pitfall #9.k arithmetic update in this very `_validation_log.md` L13019 + B-332 closure target Phase 2 R1 → R2 alignment with B-345/B-337 closure narratives + CLAUDE.md L58 Step 10 backfill registering `TABLE_LOCK_RESOURCE_FORMAT` surface)
+- `d6fab30` — B-344 adoption arc (THIS commit triggers via _validation_log row): adopted 2 reviewer side-effect drafts as B-344 inception per user-direction "Adopt as B-344 inception" (AskUserQuestion 2026-05-19); RB-15 authoring plan + research artifact preserved with explicit provenance prologues + 🟡 PROVISIONAL status flags; B-344 BACKLOG inline-fix "G5 RB-13" → "G5 RB-15"; B-540 (production-grade `tools/scd2_replay_range_smoke.py`) + B-541 (udm-cohort-review skill prompt strengthening; reviewer-agent scope-creep forward-prevention) opens
+
+**Reviewer cohort** (2 agents invoked this session arc):
+- Pre-R1.3 design-reviewer (R1.3 commit author cycle; agentId not surfaced in current commit-message audit trail; inline review per established cohort pattern)
+- Cross-cohort review post-28c8d25: `ab9ac2f21c7bf7866` (3 inline-fix findings: Scope 4 Pitfall #9.k arithmetic drift + Scope 5 forward-ref inconsistency + Scope 5 Pitfall #9.n Step 10 backfill from R1.7; 🟡 ATTENTION verdict; no 🔴 BLOCKERS; no new B-N opens recommended). Acknowledged scope-leakage: reviewer agent ALSO authored 2 files (RB-15 plan + research) outside read-only audit scope; surfaced + remediated via B-344 adoption arc + B-541 forward-prevention opens at commit `d6fab30`
+
+**Tracker walk per udm-progress-logger v1.1.0**:
+- BACKLOG.md: UPDATED (4 closures B-345/B-334/B-498/B-337 at `28c8d25` + B-332 closure-target fix at `0dc4f24` + B-344 RB-13/RB-15 fix + B-540 + B-541 opens at `d6fab30` = 5 BACKLOG-touching events in cohort; net 4 closures + 4 opens — B-538, B-539, B-540, B-541)
+- 03_DECISIONS.md: UNTOUCHED (D119 cited in R1.8 commit body but D119 was locked at Phase 2 v5 plan; no decision-doc edits this cohort)
+- 04_EDGE_CASES.md: UNTOUCHED
+- 05_RUNBOOKS.md: UNTOUCHED (RB-15 placeholder unchanged; B-344 adoption draft lives at separate `RB15_SCD2_CORRUPTION_REPLAY_PLAN_2026-05-18.md` file pending B-344 closure cycle for full-body authoring at L1548-1554)
+- RISKS.md: UNTOUCHED
+- CLAUDE.md: UPDATED at `0dc4f24` (L58 table_lock.py row + TABLE_LOCK_RESOURCE_FORMAT surface registration per R1.7 Step 10 backfill)
+- CURRENT_STATE.md / HANDOFF.md: UNTOUCHED (deferred for next session-resume sweep; tracker drift acknowledged)
+- _validation_log.md (this file): UPDATED at `0dc4f24` (L13019 arithmetic refresh 3 of 17 → 6 of 17) + UPDATED at this commit (new event block for full R1+remediation+adoption arc)
+- CODE_BUILD_STATUS.md: UNTOUCHED (Phase 2 R1 build state — 6 of 17 R1 deliverables now landed; pending CODE_BUILD_STATUS row author at next consolidating commit OR R2 kickoff)
+
+**New artifacts authored / adopted this cohort**:
+- Production code: extensions to `orchestration/table_lock.py` (R1.7 constant promotion), `scd2/engine.py` (R1.3 parameter + helper), `utils/idempotency_ledger.py` (R1.8 3-site defense). No new modules.
+- Tests: 3 new Tier 1 files (`test_table_lock_resource_identity.py` 7 tests + `test_scd2_source_verifier_fn.py` 18 tests + `test_idempotency_ledger_d2_cutover.py` 7 tests) = 32 new Tier 1 assertions across cohort
+- Docs: 2 adopted-provisional files (`RB15_SCD2_CORRUPTION_REPLAY_PLAN_2026-05-18.md` + `_research/scd2-corruption-recovery-rb15-2026-05-18.md`); provenance-flagged 🟡 PROVISIONAL pending B-344 closure cycle re-validation
+
+**Classification**: SUBSTRATE_EDIT — multiple substrate touchpoints across cohort (utils/idempotency_ledger.py is pipeline core; CLAUDE.md + docs/migration/ are discipline canon substrate per L407+ enumeration). All 5 commits provided full TEST + GAP ANALYSIS + REVIEW cascade-evidence inline per hard rule 14 substrate-edit clause. Independent cross-cohort reviewer (Agent ab9ac2f21c7bf7866) verdict 🟡 ATTENTION → remediated to effectively-🟢 via 3 inline-fixes at `0dc4f24`.
+
+**Pytest delta**:
+- R1.7 (`4b3e5c9`): 7 new Tier 1 tests pass
+- R1.3 (`4872581`): 18 new Tier 1 tests pass (9 unparametrized + 9-way parametrize)
+- R1.8 (`28c8d25`): 7 new Tier 1 tests pass + 50/50 idempotency_ledger regression preserved + 9 pre-existing unrelated failures confirmed pre-existing via stash isolation (crash-harness 8 + measure_lateness 1)
+- `0dc4f24`: no source-code testing (3-LOC docs cross-tracker remediation)
+- `d6fab30`: no source-code testing (adoption with provenance prologues + BACKLOG edits)
+
+**Cumulative session metrics**:
+- 5 commits this session arc (4b3e5c9 + 4872581 + 28c8d25 + 0dc4f24 + d6fab30 + this event-row commit = 6 total when this lands)
+- B-N closures: 4 (B-345 + B-334 + B-498 + B-337)
+- B-N opens: 4 (B-538 + B-539 + B-540 + B-541)
+- Multi-agent applications: 1 reviewer-agent invocation (cross-cohort review post-28c8d25)
+- Tier 1 tests added: 32 (3 new files)
+- BACKLOG inline-fixes: 2 (B-332 closure target + B-344 RB-13/RB-15 number drift)
+- CLAUDE.md updates: 1 (L58 table_lock.py surface registration)
+- Closure annotations applied: 4 (B-345/B-334/B-498/B-337; per Pitfall #9.j leading-badge discipline; all inline at `28c8d25` commit)
+- Pitfall #9.k instances surfaced + remediated: 2 (`_validation_log.md` L13019 arithmetic at `0dc4f24` + `BACKLOG.md` B-344 RB-13/RB-15 number drift at `d6fab30`)
+- Pitfall #9.n instances surfaced + remediated: 1 (`CLAUDE.md` L58 Step 10 backfill from R1.7 at `0dc4f24`)
+
+**Reviewer-agent scope-creep finding (NEW class)**: cross-cohort reviewer `ab9ac2f21c7bf7866` 2026-05-19 authored 2 substantive files (RB-15 plan + research artifact) outside its declared read-only audit scope. Files contained genuinely useful content (2 verified discoveries + 12-source research) but discipline-bypass is significant. Forward-prevention tracked via B-541 (udm-cohort-review skill prompt strengthening); escalate to Mechanism C-1 hook extension if 2nd-event recurs before Phase 2 R2 lands. Distinct from Pitfall #9.o (producer-side self-exemption pattern from instances 1-9) — this is REVIEWER scope-creep, a separate failure-mode class.
+
+**Phase 2 R1 progress** (refreshed 2026-05-19 at THIS commit): **6 of 17 deliverables complete** (R1.9 B-503 + R1.16 B-523 + R1.17 B-535 + R1.3 B-498/B-334 + R1.7 B-345 + R1.8 B-337). Remaining solo-tractable: (none — all 6 prior solo-tractable items closed across the R1 cohort). Upstream-gated: R1.1-R1.6 (Phase A R1 prereqs) / R1.10 (B-497 Phase A R1 interface freeze) / R1.11 (B-510 source-side index; CCM DBA coordination). Newly-prerequisite for R2: B-540 (production `tools/scd2_replay_range_smoke.py`) MUST land BEFORE B-344 RB-15 full-body authoring at R2 (per discovery 2 in adopted draft).
