@@ -31,12 +31,156 @@
 | `General.ops.IdempotencyLedger` | D15 idempotency contract; `parquet_writer.py` + `parquet_replay.py` gate all writes through `ledger_step()` context manager. Pipeline will crash on Parquet write if absent. | **CRITICAL** |
 | `General.ops.ParquetSnapshotRegistry` | Per-snapshot row tracking; `parquet_writer.py` INSERTs status='created' here; `parquet_replay.py` reads `NetworkDrivePath` + `ContentChecksum` here. Pipeline will crash on Parquet write if absent. | **CRITICAL** |
 | `General.ops.SchemaContract` | Round 7 schema-evolution governance audit table. `migrations/cdc_mode_column.py` (B-542) INSERTs 2 rows per migration invocation to record column-level + constraint-level expected values. **Migration script will fail with `Invalid object name General.ops.SchemaContract` if absent**. | **CRITICAL** (per user-reported error 2026-05-19 during §2.2 deploy) |
+| `General.ops.PipelineBatchSequence` **(must be a SEQUENCE, NOT a TABLE)** | All pipeline audit-row INSERTs use `NEXT VALUE FOR General.ops.PipelineBatchSequence` syntax (SQL Server SEQUENCE-only syntax). If your existing `PipelineBatchSequence` is a TABLE (e.g. legacy schema with IDENTITY column), the migration script fails with `... is not a sequence object`. | **CRITICAL** (per user-reported error 2026-05-19 during §2.2 deploy second attempt) |
 
 All 3 must be created BEFORE you run `main_large_tables.py` in `CDCMode='both'` or `'parquet_snapshot'`. SchemaContract must exist BEFORE running `migrations/cdc_mode_column.py --apply` in §2.2.
 
 ---
 
 ## §1. Create missing `General.ops` tables
+
+### 1.0 `General.ops.PipelineBatchSequence` — must be a SEQUENCE (not a TABLE)
+
+**User-reported error 2026-05-19** during `migrations/cdc_mode_column.py --apply`:
+
+> `General.ops.PipelineBatchSequence is not a sequence object`
+
+**Root cause**: Round 1 spec defines `PipelineBatchSequence` as a SQL Server **SEQUENCE** object (per `docs/migration/phase1/01_database_schema.md` §0), not a TABLE. The migration script + all pipeline audit-row INSERTs use `NEXT VALUE FOR General.ops.PipelineBatchSequence` — SEQUENCE-only syntax. If your existing `PipelineBatchSequence` is a TABLE (e.g. legacy schema from prior pipeline iteration where BatchId was IDENTITY-allocated by a stored procedure), the SEQUENCE syntax fails.
+
+#### 1.0.1 Probe what you have
+
+```sql
+-- Object type check
+SELECT
+    name,
+    type_desc,
+    create_date,
+    modify_date
+FROM sys.objects
+WHERE [object_id] = OBJECT_ID('General.ops.PipelineBatchSequence');
+
+-- Also probe sys.sequences (will be empty if it's a TABLE, populated if it's already a SEQUENCE)
+SELECT name, start_value, increment, current_value, cache_size, is_cached
+FROM sys.sequences
+WHERE name = 'PipelineBatchSequence' AND schema_id = SCHEMA_ID('ops');
+```
+
+**Interpret**:
+- `type_desc = 'SEQUENCE_OBJECT'` + sys.sequences returns 1 row → already a SEQUENCE; this section N/A; skip to §1.1
+- `type_desc = 'USER_TABLE'` + sys.sequences returns 0 rows → it's a TABLE; remediation below required
+- Both queries return 0 rows → object doesn't exist at all; jump to §1.0.3 (just CREATE SEQUENCE)
+
+#### 1.0.2 Remediation (if currently a TABLE)
+
+**STEP A — Find the max BatchId currently in use** (so the new SEQUENCE starts above it; prevents collisions with existing audit rows):
+
+```sql
+DECLARE @maxBatchId BIGINT = 0;
+DECLARE @candidate BIGINT;
+
+-- Check every tracking table that may have stored a BatchId
+SELECT @candidate = MAX(BatchId) FROM General.ops.PipelineEventLog;
+IF @candidate IS NOT NULL AND @candidate > @maxBatchId SET @maxBatchId = @candidate;
+
+SELECT @candidate = MAX(BatchId) FROM General.ops.PipelineLog;
+IF @candidate IS NOT NULL AND @candidate > @maxBatchId SET @maxBatchId = @candidate;
+
+SELECT @candidate = MAX(BatchId) FROM General.ops.PipelineRun;
+IF @candidate IS NOT NULL AND @candidate > @maxBatchId SET @maxBatchId = @candidate;
+
+SELECT @candidate = MAX(BatchId) FROM General.ops.PipelineExtractionState;
+IF @candidate IS NOT NULL AND @candidate > @maxBatchId SET @maxBatchId = @candidate;
+
+-- If the legacy PipelineBatchSequence TABLE has its own BatchId column, check it too
+-- (column name varies — typical candidates: BatchId, BatchID, ID)
+-- Adapt this query to whatever your legacy table's column is:
+SELECT @candidate = MAX(BatchId) FROM General.ops.PipelineBatchSequence;
+IF @candidate IS NOT NULL AND @candidate > @maxBatchId SET @maxBatchId = @candidate;
+
+PRINT 'Max BatchId currently in use: ' + CAST(@maxBatchId AS NVARCHAR(50));
+PRINT 'Recommended SEQUENCE start value: ' + CAST((@maxBatchId + 1000) AS NVARCHAR(50));
+```
+
+**Record the recommended start value** — you'll plug it into the CREATE SEQUENCE in STEP C.
+
+**STEP B — Rename the legacy TABLE** (preserves audit trail; does NOT drop data):
+
+```sql
+USE General;
+GO
+
+-- Rename existing TABLE to keep historical rows queryable but out of the way of the new SEQUENCE
+EXEC sp_rename 'General.ops.PipelineBatchSequence', 'PipelineBatchSequenceLegacyTable';
+GO
+
+-- Verify rename succeeded
+SELECT name, type_desc
+FROM sys.objects
+WHERE name IN ('PipelineBatchSequence', 'PipelineBatchSequenceLegacyTable')
+  AND schema_id = SCHEMA_ID('ops');
+-- Expect: PipelineBatchSequenceLegacyTable (USER_TABLE); no row for PipelineBatchSequence
+```
+
+**STEP C — Create the canonical SEQUENCE** (with START WITH = `@maxBatchId + 1000` from STEP A; substitute the actual integer):
+
+```sql
+USE General;
+GO
+
+-- ADJUST start_with to be > current max BatchId (use the recommended value from STEP A)
+CREATE SEQUENCE General.ops.PipelineBatchSequence
+    AS BIGINT
+    START WITH 1000          -- REPLACE 1000 with (@maxBatchId + 1000) from STEP A
+    INCREMENT BY 1
+    MINVALUE 1
+    NO MAXVALUE
+    NO CYCLE
+    CACHE 100;               -- batched allocation reduces row locking
+GO
+```
+
+#### 1.0.3 If PipelineBatchSequence doesn't exist at all (fresh install)
+
+```sql
+USE General;
+GO
+
+CREATE SEQUENCE General.ops.PipelineBatchSequence
+    AS BIGINT
+    START WITH 1
+    INCREMENT BY 1
+    MINVALUE 1
+    NO MAXVALUE
+    NO CYCLE
+    CACHE 100;
+GO
+```
+
+#### 1.0.4 Verify
+
+```sql
+-- SEQUENCE exists
+SELECT name, start_value, increment, current_value, cache_size, is_cached
+FROM sys.sequences
+WHERE name = 'PipelineBatchSequence' AND schema_id = SCHEMA_ID('ops');
+-- Expect: 1 row; current_value = start_value - 1 (sequence not yet drawn from); cache_size = 100; is_cached = 1
+
+-- Smoke test: draw a value (idempotent; safe to run)
+SELECT NEXT VALUE FOR General.ops.PipelineBatchSequence AS smoke_test_batch_id;
+-- Expect: 1 row, BIGINT value matching start_value (first call) or current_value+1 (subsequent calls)
+```
+
+If verification passes → re-run §2.2 deploy. The `migrations/cdc_mode_column.py --apply` should now succeed (the `NEXT VALUE FOR` in the audit-row INSERT will resolve correctly).
+
+#### 1.0.5 Operational note about the legacy table
+
+If you renamed to `PipelineBatchSequenceLegacyTable` per STEP B:
+- The renamed table still exists with all its historical rows (audit trail preserved)
+- Any legacy stored procedure / job that did `INSERT INTO General.ops.PipelineBatchSequence` is now BROKEN (table doesn't exist under that name)
+- If you have legacy callers + need them to keep working, you'll need to either: (a) update them to use `NEXT VALUE FOR ... PipelineBatchSequence` syntax; (b) recreate a view named `PipelineBatchSequence` that aliases the renamed table (complex); or (c) keep the legacy table under a different name + use the SEQUENCE only for the new pipeline (current setup)
+- For the AuditLog test in test/dev environment, no legacy callers should be in play — (c) is the correct posture
+
+---
 
 ### 1.1 `General.ops.IdempotencyLedger`
 
@@ -652,10 +796,11 @@ GO
 Before running `main_large_tables.py`, verify all setup complete:
 
 ```sql
--- 1. All required General.ops tables exist
+-- 1. All required General.ops tables exist (and PipelineBatchSequence is a SEQUENCE not a TABLE)
 SELECT
-    [table] = obj,
-    [exists] = CASE WHEN OBJECT_ID(obj) IS NOT NULL THEN 'OK' ELSE 'MISSING' END
+    [object] = obj,
+    [exists] = CASE WHEN OBJECT_ID(obj) IS NOT NULL THEN 'OK' ELSE 'MISSING' END,
+    [type_desc] = (SELECT type_desc FROM sys.objects WHERE [object_id] = OBJECT_ID(obj))
 FROM (VALUES
     ('General.ops.PipelineBatchSequence'),
     ('General.ops.PipelineEventLog'),
@@ -665,7 +810,13 @@ FROM (VALUES
     ('General.ops.ParquetSnapshotRegistry'),
     ('General.ops.SchemaContract')
 ) AS v(obj);
--- All 7 must show 'OK'
+-- All 7 must show 'OK'.
+-- PipelineBatchSequence MUST show type_desc='SEQUENCE_OBJECT' (NOT 'USER_TABLE').
+-- All others must show type_desc='USER_TABLE'.
+
+-- Additionally smoke-test that NEXT VALUE FOR resolves (this is what the pipeline does)
+SELECT NEXT VALUE FOR General.ops.PipelineBatchSequence AS preflight_batch_id;
+-- Expect: 1 row returned with BIGINT value; NO error
 
 -- 2. CDCMode column + CHECK constraint present
 SELECT
@@ -714,6 +865,7 @@ WHERE SourceName='CCM' AND SourceObjectName='AuditLog';
 |---|---|---|
 | `CREATE TABLE` fails with permission error | Login lacks DDL rights on `General.ops` schema | Grant DDL: `GRANT CREATE TABLE ON SCHEMA::ops TO [your_login];` |
 | `migrations/cdc_mode_column.py --apply` fails with `Invalid object name 'General.ops.SchemaContract'` | SchemaContract table not yet created (Round 7 governance table; needed by B-542 migration for audit-trail rows) | Create SchemaContract per §1.3 of this runbook; then re-run §2.2 deploy |
+| `migrations/cdc_mode_column.py --apply` fails with `General.ops.PipelineBatchSequence is not a sequence object` | PipelineBatchSequence exists as a TABLE (legacy schema) but Round 1 spec defines it as a SEQUENCE. `NEXT VALUE FOR` syntax requires SEQUENCE. | Run §1.0 remediation: rename existing TABLE -> `PipelineBatchSequenceLegacyTable` + CREATE SEQUENCE with `START WITH (max(BatchId)+1000)` to avoid BatchId collisions; then re-run §2.2 deploy |
 | ALTER TABLE fails with "object already exists" | Column / constraint already added (idempotent path) | Skip the ALTER; re-run §2.3 verification |
 | `migrations/audit_log_cardtxn_config.py` errors with "linked server not found" | Linked server `PDCAAGDNA02` not configured | Use `--first-load-date` path instead (§4.1 second example) |
 | `schema/column_sync.py` fails with "source table not found" | CCMREPORT.dbo.AuditLog not visible from migration host | Use manual INSERT path (§5.3) |
