@@ -13109,3 +13109,29 @@ Plus reviewer-affirmed design choices:
 **Reviewer-agent scope-creep finding (NEW class)**: cross-cohort reviewer `ab9ac2f21c7bf7866` 2026-05-19 authored 2 substantive files (RB-15 plan + research artifact) outside its declared read-only audit scope. Files contained genuinely useful content (2 verified discoveries + 12-source research) but discipline-bypass is significant. Forward-prevention tracked via B-541 (udm-cohort-review skill prompt strengthening); escalate to Mechanism C-1 hook extension if 2nd-event recurs before Phase 2 R2 lands. Distinct from Pitfall #9.o (producer-side self-exemption pattern from instances 1-9) — this is REVIEWER scope-creep, a separate failure-mode class.
 
 **Phase 2 R1 progress** (refreshed 2026-05-19 at THIS commit): **6 of 17 deliverables complete** (R1.9 B-503 + R1.16 B-523 + R1.17 B-535 + R1.3 B-498/B-334 + R1.7 B-345 + R1.8 B-337). Remaining solo-tractable: (none — all 6 prior solo-tractable items closed across the R1 cohort). Upstream-gated: R1.1-R1.6 (Phase A R1 prereqs) / R1.10 (B-497 Phase A R1 interface freeze) / R1.11 (B-510 source-side index; CCM DBA coordination). Newly-prerequisite for R2: B-540 (production `tools/scd2_replay_range_smoke.py`) MUST land BEFORE B-344 RB-15 full-body authoring at R2 (per discovery 2 in adopted draft).
+
+## 2026-05-19 — Session snapshot @ HEAD 7a810b9 — D125 implementation arc complete + B-541 5-event empirical validation milestone
+
+**Event**: udm-session-compactor Phase 1 manual-trigger invocation at session-pause. Snapshot authored at `docs/migration/_session_snapshots/2026-05-19-7a810b9.md` (~600 LOC; 5 canonical sections).
+
+**Session arc scope**: 24 my-commits this branch covering Phase 2 R1 cohort (R1.3/R1.7/R1.8 SCD2 foundation) + B-344 RB-15 adoption + D125 3-mode CDC dispatch plan + propagation + full D125 implementation chain (B-542 schema → B-543 TableConfig → B-544 v1 orchestrator → B-545 v1 parity-check CLI → B-546 flip-CDC-mode CLI → B-553+B-554 NULL-PK+SS-1 closures) + 5 consecutive cross-cohort gap-check cycles + B-N collision renumber.
+
+**B-541 milestone**: 5 consecutive cross-cohort reviewers (`a843ad09d24f2a607` + `ac2dd8d0ec814dc7e` + `ad50cb5cceda3f90c` + `adc861405ff006766` + `a8130cf417bb5692a`) honored the read-only audit contract without violation. Per HANDOFF §8 5-event empirical formalization threshold, the structural fix is now formally validated at multi-event scale. Acknowledged inline at B-541 closure body.
+
+**B-Ns closed this arc** (12 mine + 2 inline): B-345 + B-334 + B-498 + B-337 + B-538 + B-541 + B-343 + B-542 + B-543 + B-544 v1 + B-545 v1 + B-546 + B-548 + B-549 + B-553 + B-554.
+
+**B-Ns opened this arc** (12 mine + tracking-only for 2 other-agent): B-538 + B-539 + B-540 + B-541 + B-548 + B-549 + B-550 + B-551 + B-552 + B-553 + B-554 + B-555 + B-556 + B-557 + B-560 (renumbered from my B-558) + B-561 (renumbered from my B-559); tracking-only B-558 + B-559 (other-agent udm-session-compactor work).
+
+**Test count delta**: +~119 Tier 0/1 tests across migration script (11) + TableConfig (13) + orchestrator dispatch (18+1) + flip_cdc_mode (21) + validate_parquet_vs_stage (40) + IdempotencyLedger D119 (7+50 baseline) + SCD2 source_verifier_fn (18) + table_lock_resource (7).
+
+**Convention registrations applied**: CLI_FLIP_CDC_MODE (25th) + CLI_VALIDATE_PARQUET_VS_STAGE (26th) + MIGRATION_CDC_MODE_COLUMN + PARQUET_WRITE. Plus 1 new CLAUDE.md Do-NOT rule (BOTH mode Parquet-before-CDC) + 1 LIFTED Do-NOT rule (first instance precedent set by B-545 production-safety pin lifted via B-553+B-554).
+
+**Pitfall #9.k extensions surfaced**:
+- 3-event canonical-value-drift sub-class (RB-13/15 + RB-12/18 + 'legacy'/'change_detect'); awaiting 2 more events for HANDOFF §8 5-event formalization
+- 1-event parallel-session B-N collision class (this session's `9b1d7fb` vs `665f14d`); resolved at `7a810b9` per first-published-wins; awaiting 4 more events for sub-class formalization
+
+**D125 status**: 🟢 Locked 2026-05-19 (post-implementation lock per Round 8 D99 convergence discipline).
+
+**Snapshot trim-policy compliance** (per skill spec §4 trim-policy taxonomy): irreplaceable architectural decisions (6) + rejected alternatives + reviewer rationale (6 reviewers) + cross-cohort patterns (6) + convergence-discipline events (3) + empirical-evidence accumulations + meta-discipline observations (6) preserved verbatim in §4 Deeper insights. Regenerable content (raw `git log`, file contents, tracker mechanics) referenced by pointer per §5 cross-refs.
+
+**Status**: session-pause clean; no B-Ns in-flight; ready for next-window resume on B-547 (RB-16 procedure rewrite) OR B-552 (parquet_snapshot end-to-end) OR B-555 (per-PK hash) per pipeline-lead direction.
