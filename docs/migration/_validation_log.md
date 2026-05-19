@@ -12,6 +12,40 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — Gap-check remediation per reviewer `adaca11fe47c1bca9` — meta-discipline.md L44/L46/L48 partial-refresh drift fix + B-570 + B-571 opens
+
+**Trigger**: pipeline-lead "Run a gap review to see if anything was missed regarding your recent enhancements" 2026-05-19 — 4th independent reviewer of this session arc.
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Reviewer**: gap-check `adaca11fe47c1bca9` (different agent per D55+D56). Verdict: 🟡 IN-FLIGHT-DRIFT — 1 G2 partial-refresh finding + 2 G6 NEW B-N candidates.
+
+**G2 finding**: `SESSION_RESUME/active/meta-discipline.md` cluster L44/L46/L48 stale post-B-569 closure. Producer staged meta-discipline.md at `5cdad13` per B-565 mechanical check (PASSED — file touched) but refresh scope was L37-38 + L42 only — L44/L46/L48 lagged. **Insight**: B-565 catches closure-flip-without-touch but NOT internal-arithmetic-consistency WITHIN active/*.md. Extension candidate awaiting 2nd-event.
+
+**G6 candidates opened**:
+- **B-570 (LOW WSJF 1.0)**: Windows cp1252 stdout encoding helper / CLAUDE_GOTCHAS.md entry. Empirical anchor: `5cdad13` first CLI smoke UnicodeEncodeError on `→`.
+- **B-571 (LOW WSJF 1.0)**: Closure-metadata YAML-frontmatter standardization across `_archive/<chat>.md` + B-568 frontmatter convention.
+
+**Fix**: meta-discipline.md L44/L46/L48 refreshed inline (CLI_* 26→27→28; +archive_chat_session.py in tools list; +test_archive_chat_session.py in test files + count 29→45).
+
+**TEST**: N/A — markdown + B-N opens only.
+
+**GAP ANALYSIS (G1-G6)**:
+- G1 ✅ B-570 + B-571 🟡 Open badges
+- G2 ✅ FIXES Pitfall #9.k drift at L44/L46/L48
+- G3 ✅ reviewer-output re-read verbatim
+- G4 ✅ remediation IS discipline-self-application
+- G5 N/A
+- G6 ✅ B-570 + B-571 opened; B-565-extension candidate (1-event; deferred)
+
+**Tracker updates**: BACKLOG L1122-1123 + CURRENT_STATE L7 + HANDOFF §14 + this entry + meta-discipline.md L37-38 + L44/L46/L48.
+
+**Net delta**: this-chat **110 → 112 NEW B-Ns** (+B-570 + B-571) / 35 CLOSED unchanged.
+
+**Reviewer-chain convergence**: 4 independent reviewers this session arc; each found smaller-scope drift; chain converged on internal-arithmetic-consistency class — the only remaining failure mode B-565 doesn't mechanically enforce.
+
+---
+
 ## 2026-05-19 — B-569 ⚫ CLOSED: `tools/archive_chat_session.py` mechanical lifecycle automation for B-562 multi-chat coordination architecture (session-close transition layer)
 
 **Trigger**: pipeline-lead user-direction 2026-05-19 ("we should have an update for when a SESSION_RESUME.md file should be archived and updated as completed"). Same-firing closure of B-569 opened at commit `b75ad81` (~1 hour effort).
