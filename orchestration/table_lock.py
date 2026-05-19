@@ -43,8 +43,12 @@ import configuration as configuration
 
 logger = logging.getLogger(__name__)
 
-# Lock resource name pattern
-_LOCK_RESOURCE = "UDM_Pipeline_{source}_{table}"
+# Canonical lock-resource-name format per B-345 (public; promoted from private
+# `_LOCK_RESOURCE` 2026-05-18 to allow future consumers like
+# `data_load/parquet_replay.py::replay_table_lock` (when B-332 lands at R2) to
+# import the same constant — forward-prevention against the double-write
+# window per Phase 2 v5 plan + Pitfall #9.l canonical-detail drift class).
+TABLE_LOCK_RESOURCE_FORMAT = "UDM_Pipeline_{source}_{table}"
 
 
 def _get_resilient_lock_connection() -> pyodbc.Connection:
@@ -90,7 +94,7 @@ def acquire_table_lock(
     Returns:
         pyodbc.Connection holding the lock, or None if lock not acquired.
     """
-    resource = _LOCK_RESOURCE.format(source=source_name, table=table_name)
+    resource = TABLE_LOCK_RESOURCE_FORMAT.format(source=source_name, table=table_name)
 
     # N-1: Use connection with resiliency settings to survive firewall idle timeouts.
     conn = _get_resilient_lock_connection()
@@ -152,7 +156,7 @@ def keep_lock_alive(conn: object, source_name: str, table_name: str) -> bool:
     Returns:
         True if the connection is alive, False if it's dead.
     """
-    resource = _LOCK_RESOURCE.format(source=source_name, table=table_name)
+    resource = TABLE_LOCK_RESOURCE_FORMAT.format(source=source_name, table=table_name)
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT 1")
@@ -181,7 +185,7 @@ def release_table_lock(
         source_name: e.g. 'DNA', 'CCM'.
         table_name: e.g. 'ACCT'.
     """
-    resource = _LOCK_RESOURCE.format(source=source_name, table=table_name)
+    resource = TABLE_LOCK_RESOURCE_FORMAT.format(source=source_name, table=table_name)
 
     try:
         cursor = conn.cursor()
