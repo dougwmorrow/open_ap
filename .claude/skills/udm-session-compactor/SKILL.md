@@ -187,6 +187,37 @@ After authoring, parent agent:
 - **Tracker file unavailable** (e.g., BACKLOG.md mid-edit): defer snapshot authoring until trackers are stable
 - **Branch already merged to main**: snapshot remains useful for archaeology; author on the branch-as-of-merge
 
+## Do NOT include in snapshots (CCPA/PII compliance per B-559 closure 2026-05-19)
+
+Snapshots are committed to the git repository + may be pushed to GitHub + may be cached by reviewers + downstream tooling. Treat them as **publicly-visible audit artifacts**. Per D102 + D103 + R36 (Phase A plaintext-PII compensating controls):
+
+### NEVER include in snapshots
+
+- **PII values from production tables** (SSN / email / phone / DOB / member-id / account-numbers / credit-card numbers / driver-license / passport / etc.). Even single-row examples are forbidden.
+- **Plaintext credentials**: API keys / OAuth tokens / database passwords / GPG private keys / RSA private keys / TPM2-sealed material / Snowflake RSA keys / Anthropic API keys / GitHub PATs / etc.
+- **Connection strings with embedded passwords** (e.g., `postgresql://user:password@host/db`). Always redact to `postgresql://user:****@host/db` or omit the URL entirely.
+- **Extraction-time row counts AT SUB-DAY granularity** that could de-anonymize a small cohort (e.g., "extracted 7 ACCT rows from 2026-05-15 14:30:00" — if cohort is <100, treat as PII-adjacent).
+- **Customer / supplier / merchant names** from production data, even as illustrative examples.
+- **GPS coordinates / IP addresses / device IDs** linkable to individuals.
+
+### Safe to include
+
+- B-N / D-N / R-N / RB-N / SP-N references (canonical project codes)
+- Commit hashes / branch names / file paths (architectural context)
+- Reviewer agent IDs (synthetic identifiers; not PII)
+- Test count deltas / Tier 0 PASS counts (aggregate numerics)
+- Decision rationale / architectural alternatives / rejected approaches (the §4 deeper-insights substance)
+- Pipeline-lead direction quoted verbatim WHEN it does not contain PII
+
+### Operator workflow when in doubt
+
+1. **Pause** before authoring the snapshot
+2. **Grep** the proposed content for: `\b\d{3}-\d{2}-\d{4}\b` (SSN-shaped) / `[\w.+-]+@[\w-]+\.[\w.-]+` (email-shaped) / `\b\d{13,19}\b` (credit-card-shaped) / `-----BEGIN (RSA |OPENSSH |EC |PGP )?PRIVATE KEY-----` (key headers) / `[A-Za-z0-9_]{32,}` (high-entropy tokens)
+3. **Redact** any matches OR omit the relevant content
+4. If unsure, **prefer omission** — the value of session-state preservation does not exceed compliance risk
+
+Mechanical layer: Tier 0 test `tests/tier0/test_session_snapshot_pii_scrub.py` (B-559 closure 2026-05-19) greps all `docs/migration/_session_snapshots/*.md` files for sensitive patterns at every test-suite run; flags any matches as test failures. This is a defense-in-depth layer; the primary discipline is operator-side at authoring time.
+
 ## Composition with other skills
 
 | Used with | Role |

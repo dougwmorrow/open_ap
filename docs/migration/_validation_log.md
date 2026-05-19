@@ -12,6 +12,66 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-559 ⚫ CLOSED: CCPA/PII compliance scrubbing for udm-session-compactor snapshots (Phase 2.2 deferred work; mechanical defense-in-depth layer)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-19 — cascade trigger for LOW-priority B-559 (only remaining work item; udm-session-compactor multi-cohort closure milestone).
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Producer**: parent agent (single substrate-edit cohort; ~30 min effort; mirrors B-558 Component A+C structural template for Tier 0 test + SKILL.md mandate authoring).
+
+**Scope**: B-559 (Phase 2.2 deferred work per UDM_SESSION_COMPACTOR_REVIEW_2026-05-19.md Gap 2.8) — CCPA/PII compliance scrubbing for snapshots. Snapshots are committed to git + may be pushed to GitHub + cached by reviewers + downstream tooling. Treat as publicly-visible audit artifacts per D102 + D103 + R36 (Phase A plaintext-PII compensating controls).
+
+**2 substrate edits**:
+
+1. `.claude/skills/udm-session-compactor/SKILL.md` NEW "Do NOT include in snapshots (CCPA/PII compliance per B-559 closure 2026-05-19)" section (~50 LOC) inserted between Edge cases + Composition with other skills. 3 sub-sections:
+   - **NEVER include**: PII values from production tables (SSN / email / phone / DOB / member-id / account-numbers / credit-card / driver-license / passport) + plaintext credentials (API keys / OAuth tokens / DB passwords / GPG private keys / RSA private keys / TPM2-sealed material / Snowflake RSA keys / Anthropic API keys / GitHub PATs) + connection strings with embedded passwords + sub-day extraction counts that could de-anonymize small cohorts + customer/supplier/merchant names + GPS coordinates / IP addresses / device IDs linkable to individuals
+   - **Safe to include**: B-N/D-N/R-N/RB-N/SP-N codes + commit hashes/branch names/file paths + reviewer agent IDs (synthetic) + aggregate numerics (test counts / Tier 0 PASS) + decision rationale + verbatim pipeline-lead direction WHEN PII-free
+   - **Operator workflow when in doubt**: 4 steps — Pause / Grep (5 canonical regexes) / Redact / Prefer omission
+
+2. NEW `tests/tier0/test_session_snapshot_pii_scrub.py` (7 assertions; 0.30s runtime; below D67 5s ceiling). Mechanical defense-in-depth layer; primary discipline is operator-side at authoring time. Test design:
+   - **5 sensitive-pattern regexes**:
+     - `_SSN_RE` = `\b\d{3}-\d{2}-\d{4}\b` (SSN-shaped)
+     - `_CC_RE` = `\b\d{13,19}\b` (credit-card-shape; 13-19 contiguous digits; conservative against B-N/D-N which are not 13+ digits)
+     - `_PRIVKEY_RE` = `-----BEGIN (RSA |OPENSSH |EC |PGP |DSA )?PRIVATE KEY-----`
+     - `_DBURL_RE` = `(postgresql|mysql|mssql|mongodb|redis)://[^:\s]+:[^@\s]{4,}@` (proto://user:password@host; min-4-char password to avoid SSH config false positives)
+     - `_EMAIL_RE` = `\b[a-zA-Z0-9._+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+\b`
+   - **5-entry email allowlist** `_EMAIL_ALLOWLIST_SUBSTRINGS`: noreply@anthropic.com / @protonmail.com / @example.com / @test.com / @localhost
+   - **7 test assertions**: (1) directory exists or empty / (2) no SSN / (3) no credit-card-shape / (4) no private-key headers / (5) no DB URL with password / (6) no unallowlisted email / (7) pattern constants compile + allowlist non-empty
+
+**TEST**: 7/7 PASS at `tests/tier0/test_session_snapshot_pii_scrub.py` (0.30s runtime).
+
+**GAP ANALYSIS (G1-G6)**:
+- G1 (Pitfall #9.j leading-badge): ✅ B-559 leading-badge flipped 🟡 Open → ⚫ CLOSED + strikethrough applied per canonical closure-render convention.
+- G2 (Pitfall #9.k arithmetic-propagation): ✅ this-chat 107 NEW B-Ns unchanged / 32 → 33 CLOSED (+B-559) propagated to CURRENT_STATE L7 + HANDOFF §14 + this entry.
+- G3 (Pitfall #9.l canonical re-read): ✅ BACKLOG B-559 body spec verbatim re-read before implementation (`(a) SKILL.md "Do NOT include..." (b) NEW Tier 0 test`); implementation matches both deliverables exactly.
+- G4 (Pitfall #9.m discipline-applied-to-tracker): ✅ B-559 closure IS discipline-self-application — Tier 0 test verifies snapshots in repo are PII-clean before authoring this entry; reviewers can re-run test to confirm.
+- G5 (Pitfall #9.n convention-registration): ✅ NEW Tier 0 test file at `tests/tier0/test_session_snapshot_pii_scrub.py` — tests are referenced from CLAUDE.md only at tier-level (`tests/property/` row at L92); per-test-file Structure entries NOT canonical per Step 10 verifier edge case "Test files (tests/tier0/, tests/tier1/, tests/integration/, etc.): NOT subject to Step 10". NEW SKILL.md section is content-discipline (no new public Python surface). udm-session-compactor SKILL.md changelog should reflect v1.1.0 → v1.2.0 (deferred to next SKILL.md edit batch per minor-version aggregation).
+- G6 (new B-N opportunities): None surfaced. udm-session-compactor multi-cohort arc fully complete: B-492 (Phase 1 manual-trigger) + B-494 (Phase 2 auto-trigger) + B-558 (Phase 2.1 hardening 4 components) + B-559 (Phase 2.2 CCPA/PII) all ⚫ CLOSED.
+
+**Tracker updates (canonical-5)**:
+- BACKLOG.md L1112: B-559 leading-badge 🟡 → ⚫ CLOSED + strikethrough; closure annotation cites 2 deliverables + Tier 0 PASS count.
+- CURRENT_STATE.md L7: new dated entry prepended; prior remediation entry demoted to "Earlier 2026-05-19".
+- HANDOFF.md §14 L427: mirror of CURRENT_STATE prepended.
+- _validation_log.md L15: this entry replaces prior remediation header position.
+- CODE_BUILD_STATUS.md: not applicable (content-discipline SKILL.md edit + Tier 0 test addition; not a Round 3/4 standalone tool).
+
+**Net delta**: this-chat 107 NEW B-Ns unchanged / **32 → 33 CLOSED** (+B-559) / pytest **+7 NEW Tier 0 PASS**.
+
+**Forward-prevention class addressed**: snapshot-PII-leakage. Snapshots committed to git → pushed to GitHub → potentially indexed by GitHub search / cached by downstream tooling. Operator-side SKILL.md guidance is primary; Tier 0 test is mechanical defense-in-depth backstop. Conservative regex choices (e.g., `_CC_RE` requires 13+ contiguous digits to avoid false-positives on B-N codes) keep false-positive surface manageable per FP-policy precedent of B-481 + B-495 + B-558 Components A+C.
+
+**udm-session-compactor multi-cohort arc closure milestone**:
+| Cohort | Status | Anchor |
+|---|---|---|
+| B-492 Phase 1 manual-trigger | ⚫ CLOSED | 2026-05-18 |
+| B-494 Phase 2 auto-trigger | ⚫ CLOSED | 2026-05-19 |
+| B-558 Phase 2.1 hardening (4 components) | ⚫ CLOSED | `e3d8700` + `e1738df` + `83c9e67` + `372e982` |
+| B-559 Phase 2.2 CCPA/PII | ⚫ CLOSED | THIS COMMIT |
+
+All originally-deferred udm-session-compactor work now closed. Skill version: v1.0.0 → v1.1.0 (B-558 Component B) → v1.2.0 (B-559 this commit). 22 cumulative Tier 0 assertions across the multi-cohort arc.
+
+---
+
 ## 2026-05-19 — Cross-cohort review remediation: SESSION_RESUME/active/meta-discipline.md staleness fix (Pitfall #9.m meta-irony — discipline-not-applied-to-own-authoring-cohort)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-19 — cascade trigger for MEDIUM-priority cross-cohort review. Independent reviewer `ae0e5ea9c1b3851c0` (per `udm-cohort-review` SKILL.md 6-scope audit) returned 🟡 IN-FLIGHT-DRIFT verdict on the 8-commit B-562 + B-558 session arc.
