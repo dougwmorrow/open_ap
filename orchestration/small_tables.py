@@ -27,7 +27,7 @@ from extract.router import extract_full
 from schema.column_sync import sync_columns
 from observability.event_tracker import PipelineEventTracker
 from orchestration.guards import run_extraction_guard
-from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion
+from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion, dispatch_check_cdc_mode, run_parquet_write_step, CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH
 from schema.evolution import SchemaEvolutionError, SchemaEvolutionResult, evolve_schema, validate_source_schema
 from schema.table_creator import ensure_bronze_table, ensure_bronze_point_in_time_index, ensure_bronze_unique_active_index, ensure_stage_table
 from orchestration.table_lock import acquire_table_lock, release_table_lock
@@ -277,7 +277,37 @@ def process_small_table(
             # space during the memory-intensive CDC anti-join + SCD2 phases.
             _safe_delete_csv(csv_path)
 
-            # --- CDC PROMOTION ---
+            # --- B-544: 3-MODE CDC DISPATCH per D63 + D125 ---
+            cdc_mode = dispatch_check_cdc_mode(table_config)
+
+            # Small tables lack a SourceAggregateColumnName (date column),
+            # so business_date for Parquet Hive partition uses today() —
+            # one Parquet snapshot per pipeline run (matches small-table
+            # full-refresh extraction semantic).
+            from datetime import date as _date
+            small_table_business_date = _date.today()
+
+            # 'both' or 'parquet_snapshot': write Parquet BEFORE legacy CDC.
+            # Per CLAUDE.md Do-NOT rule.
+            if cdc_mode in (CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH):
+                run_parquet_write_step(
+                    table_config, df, event_tracker,
+                    business_date=small_table_business_date,
+                )
+
+            # 'parquet_snapshot' v1 NOT YET IMPLEMENTED — same as large_tables.
+            if cdc_mode == CDC_MODE_PARQUET_SNAPSHOT:
+                raise NotImplementedError(
+                    f"B-544 v1: cdc_mode='parquet_snapshot' end-to-end "
+                    f"replay→SCD2 path NOT yet implemented for "
+                    f"{table_config.source_name}.{table_config.source_object_name}. "
+                    f"Parquet write SUCCEEDED (registry row created); operator "
+                    f"must either (a) flip table to 'both' mode for legacy CDC "
+                    f"to drive Bronze, OR (b) wait for B-552 closure. "
+                    f"Plan: docs/migration/UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md §5.2."
+                )
+
+            # --- CDC PROMOTION — runs for 'change_detect' + 'both' ---
             cdc_result = run_cdc_promotion(
                 table_config, df, event_tracker, schema_result, output_dir,
             )

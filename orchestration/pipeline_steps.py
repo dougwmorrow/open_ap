@@ -24,6 +24,7 @@ from utils.connections import cursor_for, quote_table
 from cdc.engine import run_cdc, run_cdc_windowed
 from data_load import bcp_loader
 from data_load.index_management import disable_indexes, rebuild_indexes
+from data_load.parquet_writer import write_parquet_snapshot
 from extract.udm_connectorx_extractor import get_table_row_count, table_exists
 from scd2.engine import run_scd2, run_scd2_targeted
 from orchestration.pk_validation import require_pk_columns, NoPrimaryKeyError
@@ -471,3 +472,84 @@ def _scd2_targeted(
             )
 
     return scd2_result
+
+
+# ---------------------------------------------------------------------------
+# B-544 — 3-mode CDC dispatch helpers per D63 + D125
+# ---------------------------------------------------------------------------
+
+# Canonical D63 + D125 CDCMode values. Mirrors
+# `migrations/cdc_mode_column.py::ALLOWED_CDC_MODE_VALUES`.
+CDC_MODE_CHANGE_DETECT = "change_detect"
+CDC_MODE_PARQUET_SNAPSHOT = "parquet_snapshot"
+CDC_MODE_BOTH = "both"
+VALID_CDC_MODES = (CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH)
+
+
+def dispatch_check_cdc_mode(table_config: TableConfig) -> str:
+    """Validate `table_config.cdc_mode` is in the canonical D125 3-value enum.
+
+    Defensive: defaults to 'change_detect' if the field is missing or empty,
+    matching the `TableConfig` dataclass default. Raises `ValueError` if the
+    value is in the field but NOT one of the 3 canonical values (catches
+    upstream UdmTablesList drift class — D125 CHECK constraint should make
+    this impossible at the DB level, but the Python guard is defense-in-depth
+    against malformed pyodbc/ConnectorX row dicts).
+
+    :returns: One of {'change_detect', 'parquet_snapshot', 'both'}.
+    :raises ValueError: if `cdc_mode` is non-empty + not in canonical enum.
+    """
+
+    mode = getattr(table_config, "cdc_mode", None) or CDC_MODE_CHANGE_DETECT
+    if mode not in VALID_CDC_MODES:
+        raise ValueError(
+            f"B-544: invalid cdc_mode {mode!r} for "
+            f"{table_config.source_name}.{table_config.source_object_name}. "
+            f"Must be one of {VALID_CDC_MODES}. "
+            f"Check UdmTablesList.CDCMode for this table OR re-run "
+            f"`migrations/cdc_mode_column.py --apply` to enforce the CHECK "
+            f"constraint."
+        )
+    return mode
+
+
+def run_parquet_write_step(
+    table_config: TableConfig,
+    df: "pl.DataFrame",
+    event_tracker: PipelineEventTracker,
+    *,
+    business_date: date,
+    output_dir: Path | None = None,
+):
+    """Wrap `write_parquet_snapshot()` in a PARQUET_WRITE event-tracked step.
+
+    Called by orchestrators when `cdc_mode in ('both', 'parquet_snapshot')`.
+    Per CLAUDE.md Do-NOT rule (added at remediation commit a53c50a 2026-05-19):
+    in 'both' mode, this MUST succeed BEFORE `run_cdc_promotion()` starts —
+    the audit-substrate-before-Bronze-change invariant. Failure raises and
+    the orchestrator aborts the run before legacy CDC is invoked.
+
+    :param table_config: Table being processed.
+    :param df: Polars DataFrame returned from `extract_windowed()` (or
+        equivalent extractor); must be pre-sorted per parquet_writer
+        contract (PK ASC, _extracted_at DESC).
+    :param event_tracker: For PipelineEventLog PARQUET_WRITE row emission.
+    :param business_date: Hive-partition date (drives year=YYYY/month=MM/day=DD).
+    :param output_dir: Optional Parquet output dir override; None uses
+        env `$PARQUET_OUTPUT_DIR` per parquet_writer.py § 2.1.4.
+    :returns: `ParquetWriteResult` from `write_parquet_snapshot()`.
+    """
+
+    with event_tracker.track("PARQUET_WRITE", table_config) as parquet_event:
+        parquet_event.event_detail = str(business_date)
+        result = write_parquet_snapshot(
+            df=df,
+            source_name=table_config.source_name,
+            table_name=table_config.source_object_name,
+            business_date=business_date,
+            batch_id=event_tracker.batch_id,
+            output_dir=output_dir,
+        )
+        parquet_event.rows_processed = result.row_count
+    return result
+

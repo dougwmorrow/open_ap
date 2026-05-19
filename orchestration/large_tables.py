@@ -35,7 +35,7 @@ from schema.column_sync import sync_columns
 from observability.event_tracker import PipelineEventTracker
 from orchestration.guards import run_daily_extraction_guard
 from orchestration.pipeline_state import get_dates_to_process, save_checkpoint
-from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion
+from orchestration.pipeline_steps import cleanup_csvs, run_cdc_promotion, run_scd2_promotion, dispatch_check_cdc_mode, run_parquet_write_step, CDC_MODE_CHANGE_DETECT, CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH
 from schema.evolution import SchemaEvolutionError, SchemaEvolutionResult, evolve_schema, validate_source_schema
 from schema.table_creator import ensure_bronze_table, ensure_bronze_point_in_time_index, ensure_bronze_unique_active_index, ensure_stage_table
 from orchestration.table_lock import acquire_table_lock, keep_lock_alive, release_table_lock
@@ -476,7 +476,35 @@ def _process_single_day(
                 f"establish PKs from source metadata."
             )
 
-        # --- WINDOWED CDC (P1-3/P1-4) ---
+        # --- B-544: 3-MODE CDC DISPATCH per D63 + D125 ---
+        cdc_mode = dispatch_check_cdc_mode(table_config)
+
+        # 'both' or 'parquet_snapshot': write Parquet BEFORE legacy CDC.
+        # Per CLAUDE.md Do-NOT rule: Parquet write MUST succeed first
+        # (audit-substrate-before-Bronze-change invariant for 'both' mode).
+        if cdc_mode in (CDC_MODE_PARQUET_SNAPSHOT, CDC_MODE_BOTH):
+            run_parquet_write_step(
+                table_config, df, event_tracker,
+                business_date=target_date,
+            )
+
+        # 'parquet_snapshot' v1 NOT YET IMPLEMENTED — Phase 2 of B-544
+        # (B-552 follow-up) lands the pure Parquet→replay→SCD2 path.
+        # v1 of B-544 covers only 'change_detect' (unchanged) + 'both'
+        # (Parquet write + legacy CDC drives Bronze).
+        if cdc_mode == CDC_MODE_PARQUET_SNAPSHOT:
+            raise NotImplementedError(
+                f"B-544 v1: cdc_mode='parquet_snapshot' end-to-end "
+                f"replay→SCD2 path NOT yet implemented for "
+                f"{table_config.source_name}.{table_config.source_object_name}. "
+                f"Parquet write SUCCEEDED (registry row created); operator "
+                f"must either (a) flip table to 'both' mode for legacy CDC "
+                f"to drive Bronze, OR (b) wait for B-552 closure (Phase 2 "
+                f"of B-544; full pure-Parquet→replay→SCD2 orchestration). "
+                f"Plan: docs/migration/UDM_PIPELINE_CDC_MODE_3WAY_DISPATCH_PLAN_2026-05-19.md §5.2."
+            )
+
+        # --- WINDOWED CDC (P1-3/P1-4) — runs for 'change_detect' + 'both' ---
         cdc_result = run_cdc_promotion(
             table_config, df, event_tracker, schema_result, output_dir,
             windowed=True,
