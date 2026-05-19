@@ -6,15 +6,28 @@ count recorded by `parquet_writer.write_parquet_snapshot()` against the
 current Bronze active-row count for the same (source, table). Surfaces
 drift before operators decide to flip to `parquet_snapshot` mode.
 
-**v1 scope (this implementation)**: row-count parity check using metadata
-already in `ParquetSnapshotRegistry.RowCount` + a Bronze `SELECT COUNT(*) WHERE
-UdmActiveFlag=1` query per table. NO Parquet file I/O; NO per-PK hash
-comparison. Operationally useful as a fast nightly sanity check during the
-30-day shadow-write validation period per RB-16 (B-547).
+**v1 scope (default; fast nightly sanity)**: row-count parity check using
+metadata already in `ParquetSnapshotRegistry.RowCount` + a Bronze
+`SELECT COUNT(*) WHERE UdmActiveFlag=1` query per table. NO Parquet file
+I/O; NO per-PK hash comparison. Operationally useful as a fast nightly
+sanity check during the 30-day shadow-write validation period per RB-16
+(B-547).
 
-**v2 scope (deferred; track as new B-N if needed)**: per-PK hash comparison
-(read Parquet via polars + extract `_row_hash` + join against Bronze
-`UdmHash` for active rows). Requires polars dep + heavyweight test mocks.
+**v2 scope (B-555 closure 2026-05-19; opt-in via `--hash-check`)**: per-PK
+hash comparison via polars Parquet read + Bronze `SELECT pk_columns, UdmHash`
+query + polars anti-join + hash-equality filter. Closes the row-count-only
+parity-check structural gap (rows match but contents differ silent failure)
++ the NULL-PK interpretation gap (Parquet > Bronze row-count drift
+attributable to NULL-PK noise vs. actual row content drift). Opt-in via CLI
+flag because: (a) requires polars dep at tool level; (b) full Parquet I/O
++ Bronze SELECT can be heavy for 3B+ row tables; (c) row-count check
+remains the canonical fast nightly sanity. Operators run `--hash-check` for
+deep investigation OR pre-cutover validation; not every nightly run.
+
+**Memory note (B-555)**: per-PK hash comparison is in-memory (both Parquet
++ Bronze active rows held in polars DataFrames simultaneously). For 3B+
+row tables this would OOM. Document as known limitation. Sampling-based
+comparison for very large tables deferred to follow-up B-N.
 
 What this tool does
 -------------------
@@ -275,7 +288,177 @@ def _query_bronze_active_row_count(cursor, bronze_table: str,
     return int(row[0]) if row is not None else 0
 
 
-def check_table_parity(cursor, source: str, table: str) -> dict:
+# ---------------------------------------------------------------------------
+# B-555 v2 per-PK hash comparison (opt-in via --hash-check)
+# ---------------------------------------------------------------------------
+
+# Hash-check verdict reuses VERDICT_* constants above.
+# Threshold semantics:
+# - in_bronze_missing_from_parquet > 0 -> MAJOR_DRIFT (orphan; CRITICAL)
+# - (in_parquet_missing_from_bronze + pk_match_hash_diff) / parquet_count > 5% -> MAJOR_DRIFT
+# - same metric > 1% -> DRIFT
+# - else CLEAN
+
+
+def _query_latest_parquet_network_drive_path(cursor, source: str, table: str) -> str | None:
+    """Query latest ParquetSnapshotRegistry.NetworkDrivePath for (source, table).
+
+    Returns path to the latest replay-eligible snapshot (Status IN verified
+    / replicated / archived), or None if no eligible row exists.
+    """
+    sql = """
+        SELECT TOP 1 NetworkDrivePath
+        FROM General.ops.ParquetSnapshotRegistry
+        WHERE SourceName = ? AND TableName = ?
+          AND Status IN ('verified', 'replicated', 'archived')
+        ORDER BY CreatedAt DESC, BatchId DESC
+    """
+    cursor.execute(sql, (source, table))
+    row = cursor.fetchone()
+    return str(row[0]) if row is not None else None
+
+
+def _read_parquet_pk_hashes(network_drive_path: str, pk_columns: list[str]):
+    """Read parquet file via polars + return DataFrame with pk_columns + _row_hash.
+
+    Requires polars dep. Lazy-imports so the tool can fall back gracefully
+    on platforms without polars (the hash-check path is opt-in via
+    --hash-check CLI flag).
+
+    Raises ImportError if polars is not installed.
+    """
+    import polars as pl  # noqa: PLC0415
+    df = pl.read_parquet(network_drive_path)
+    cols_to_select = [*pk_columns, "_row_hash"]
+    return df.select(cols_to_select)
+
+
+def _query_bronze_pk_hashes(cursor, bronze_table: str, pk_columns: list[str]):
+    """Query Bronze active rows + return polars DataFrame with pk_columns + UdmHash.
+
+    Lazy-imports polars; raises ImportError if not installed.
+    """
+    import polars as pl  # noqa: PLC0415
+
+    pk_cols_sql = ", ".join(f"[{c}]" for c in pk_columns)
+    not_null_filter = " AND ".join(f"[{c}] IS NOT NULL" for c in pk_columns)
+    where_clause = "WHERE UdmActiveFlag = 1"
+    if not_null_filter:
+        where_clause += f" AND {not_null_filter}"
+    sql = f"SELECT {pk_cols_sql}, [UdmHash] FROM {bronze_table} {where_clause}"
+
+    cursor.execute(sql)
+    rows = cursor.fetchall()
+    cols = [c[0] for c in cursor.description]
+    # Convert rows (list of tuples) to list of dicts for polars DataFrame
+    data = [dict(zip(cols, r)) for r in rows]
+    return pl.DataFrame(data) if data else pl.DataFrame(schema={c: pl.Utf8 for c in cols})
+
+
+def compare_pk_hashes(parquet_df, bronze_df, pk_columns: list[str]) -> dict:
+    """Compare per-PK hashes between Parquet + Bronze via polars joins.
+
+    :param parquet_df: polars DataFrame with pk_columns + ``_row_hash`` column
+        (from :func:`_read_parquet_pk_hashes`).
+    :param bronze_df: polars DataFrame with pk_columns + ``UdmHash`` column
+        (from :func:`_query_bronze_pk_hashes`).
+    :param pk_columns: list of PK column names for the join keys.
+    :returns: dict with keys:
+
+        - ``in_parquet_missing_from_bronze``: rows in Parquet but not Bronze
+          (inserts not yet promoted; expected during shadow mode)
+        - ``in_bronze_missing_from_parquet``: rows in Bronze but not Parquet
+          (ORPHAN -- Bronze has rows Parquet missed; CRITICAL per D115
+          source-exactness invariant)
+        - ``pk_match_hash_diff``: same PK in both but different hash
+          (content drift -- the silent failure class B-555 closes)
+        - ``pk_match_hash_same``: same PK + matching hash (clean rows)
+
+    Lazy-imports polars; raises ImportError if not installed.
+    """
+    import polars as pl  # noqa: PLC0415
+
+    # Anti-join: PKs in Parquet but not Bronze
+    parquet_only = parquet_df.join(
+        bronze_df.select(pk_columns), on=pk_columns, how="anti"
+    )
+    # Anti-join reverse: PKs in Bronze but not Parquet (orphan; CRITICAL)
+    bronze_only = bronze_df.join(
+        parquet_df.select(pk_columns), on=pk_columns, how="anti"
+    )
+    # Inner join: matching PKs -- compare hashes
+    joined = parquet_df.join(bronze_df, on=pk_columns, how="inner", suffix="_bronze")
+    hash_diff_df = joined.filter(pl.col("_row_hash") != pl.col("UdmHash"))
+    hash_same_df = joined.filter(pl.col("_row_hash") == pl.col("UdmHash"))
+
+    return {
+        "in_parquet_missing_from_bronze": len(parquet_only),
+        "in_bronze_missing_from_parquet": len(bronze_only),
+        "pk_match_hash_diff": len(hash_diff_df),
+        "pk_match_hash_same": len(hash_same_df),
+    }
+
+
+def classify_hash_check(comparison: dict, parquet_count: int) -> str:
+    """Verdict from hash-comparison results.
+
+    Independent of row-count verdict (both verdicts computed when --hash-check
+    enabled; final verdict = most-severe).
+
+    Returns VERDICT_CLEAN / VERDICT_DRIFT / VERDICT_MAJOR_DRIFT.
+
+    Rules:
+
+    - in_bronze_missing_from_parquet > 0 -> MAJOR_DRIFT (CRITICAL orphan;
+      Parquet is source-exact per D115 so Bronze should never have rows
+      Parquet missed)
+    - parquet_count == 0:
+        * if all comparison counts == 0 -> CLEAN (both empty)
+        * else -> MAJOR_DRIFT (inconsistent state)
+    - drift_pct = (in_parquet_missing_from_bronze + pk_match_hash_diff) / parquet_count:
+        * > MAJOR_DRIFT_THRESHOLD_PCT (5%) -> MAJOR_DRIFT
+        * > DRIFT_TOLERANCE_PCT (1%) -> DRIFT
+        * else -> CLEAN
+    """
+    if comparison["in_bronze_missing_from_parquet"] > 0:
+        return VERDICT_MAJOR_DRIFT
+    if parquet_count == 0:
+        all_zero = all(comparison[k] == 0 for k in (
+            "in_parquet_missing_from_bronze",
+            "pk_match_hash_diff",
+            "pk_match_hash_same",
+        ))
+        return VERDICT_CLEAN if all_zero else VERDICT_MAJOR_DRIFT
+    drift_pct = (
+        comparison["in_parquet_missing_from_bronze"]
+        + comparison["pk_match_hash_diff"]
+    ) / parquet_count
+    if drift_pct > MAJOR_DRIFT_THRESHOLD_PCT:
+        return VERDICT_MAJOR_DRIFT
+    if drift_pct > DRIFT_TOLERANCE_PCT:
+        return VERDICT_DRIFT
+    return VERDICT_CLEAN
+
+
+def _combine_verdicts(row_count_verdict: str, hash_check_verdict: str) -> str:
+    """Most-severe-wins precedence: FATAL > MAJOR_DRIFT > DRIFT > CLEAN.
+
+    When --hash-check enabled, the per-table verdict is the most-severe of:
+    - row-count check (always computed)
+    - hash-check (computed when opt-in)
+    """
+    severity_order = {
+        VERDICT_FATAL: 4,
+        VERDICT_MAJOR_DRIFT: 3,
+        VERDICT_DRIFT: 2,
+        VERDICT_CLEAN: 1,
+    }
+    rc_sev = severity_order.get(row_count_verdict, 0)
+    hc_sev = severity_order.get(hash_check_verdict, 0)
+    return row_count_verdict if rc_sev >= hc_sev else hash_check_verdict
+
+
+def check_table_parity(cursor, source: str, table: str, *, hash_check: bool = False) -> dict:
     """Run parity check for a single (source, table). Returns dict with
     verdict + per-table metrics.
 
@@ -328,7 +511,7 @@ def check_table_parity(cursor, source: str, table: str) -> dict:
             abs(parquet_count - bronze_count) / parquet_count
             if parquet_count > 0 else None
         )
-        return {
+        result = {
             "source": source, "table": table,
             "verdict": verdict,
             "parquet_count": parquet_count,
@@ -337,6 +520,56 @@ def check_table_parity(cursor, source: str, table: str) -> dict:
             "bronze_table": bronze_table,
             "pk_columns": pk_columns,
         }
+
+        # B-555 v2: optional per-PK hash comparison (opt-in via hash_check=True)
+        if hash_check and pk_columns:
+            try:
+                network_drive_path = _query_latest_parquet_network_drive_path(
+                    cursor, source, table,
+                )
+                if network_drive_path is None:
+                    result["hash_check_verdict"] = VERDICT_FATAL
+                    result["hash_check_error"] = (
+                        "No replay-eligible ParquetSnapshotRegistry row for "
+                        f"{source}.{table} -- cannot read parquet for hash check"
+                    )
+                    result["verdict"] = _combine_verdicts(
+                        result["verdict"], VERDICT_FATAL,
+                    )
+                else:
+                    parquet_df = _read_parquet_pk_hashes(network_drive_path, pk_columns)
+                    bronze_df = _query_bronze_pk_hashes(cursor, bronze_table, pk_columns)
+                    comparison = compare_pk_hashes(parquet_df, bronze_df, pk_columns)
+                    hash_verdict = classify_hash_check(comparison, parquet_count)
+                    result["hash_check_verdict"] = hash_verdict
+                    result["hash_comparison"] = comparison
+                    result["verdict"] = _combine_verdicts(
+                        result["verdict"], hash_verdict,
+                    )
+            except ImportError as exc:
+                # polars not installed; warn but don't fail row-count verdict
+                result["hash_check_verdict"] = VERDICT_FATAL
+                result["hash_check_error"] = (
+                    f"polars not installed; --hash-check skipped: {str(exc)[:200]}"
+                )
+                # Do NOT override row-count verdict (polars-missing is operator
+                # config issue, not parity drift)
+            except Exception as exc:  # noqa: BLE001
+                result["hash_check_verdict"] = VERDICT_FATAL
+                result["hash_check_error"] = str(exc)[:500]
+                result["verdict"] = _combine_verdicts(
+                    result["verdict"], VERDICT_FATAL,
+                )
+        elif hash_check and not pk_columns:
+            result["hash_check_verdict"] = VERDICT_FATAL
+            result["hash_check_error"] = (
+                "Cannot perform hash check without pk_columns -- "
+                "UdmTablesColumnsList may be unpopulated for this table"
+            )
+            # Do NOT override row-count verdict (pk_columns absence is
+            # operator config issue, not parity drift)
+
+        return result
     except Exception as exc:  # noqa: BLE001 — defensive per-table guard
         return {
             "source": source, "table": table,
@@ -351,11 +584,15 @@ def _write_audit_row(cursor, *, actor: str, justification: str,
                      major_drift: int, per_table_verdicts: list[dict],
                      status: str = "SUCCESS",
                      error_message: str | None = None) -> None:
+    hash_check_enabled = any(
+        ("hash_check_verdict" in v) for v in per_table_verdicts
+    )
     metadata = {
         "tables_checked": tables_checked,
         "clean": clean,
         "drift": drift,
         "major_drift": major_drift,
+        "hash_check_enabled": hash_check_enabled,
         "actor": actor,
         "justification": justification,
         "dry_run": False,
@@ -398,7 +635,7 @@ def derive_exit_code(per_table_verdicts: list[dict]) -> int:
 
 def apply(connection, *, actor: str, justification: str,
           source: str | None = None, table: str | None = None,
-          dry_run: bool = True) -> dict:
+          dry_run: bool = True, hash_check: bool = False) -> dict:
     """Run the parity check.
 
     When source + table provided: check that single table.
@@ -434,9 +671,9 @@ def apply(connection, *, actor: str, justification: str,
                 "per_table_verdicts": [], "dry_run": dry_run,
             }
 
-    # Run per-table parity checks
+    # Run per-table parity checks (hash_check=True opts in to B-555 v2 per-PK hash)
     per_table_verdicts = [
-        check_table_parity(cursor, src, tbl) for src, tbl in tables
+        check_table_parity(cursor, src, tbl, hash_check=hash_check) for src, tbl in tables
     ]
 
     # Aggregate counts
@@ -519,6 +756,14 @@ def main() -> int:
                         help="Single-table mode: source object name (must pair with --source)")
     parser.add_argument("--actor", required=True, help="Auth principal (D75)")
     parser.add_argument("--justification", required=True, help="Why running (D75)")
+    parser.add_argument(
+        "--hash-check", action="store_true",
+        help=(
+            "B-555 v2: enable per-PK hash comparison (polars Parquet read + Bronze "
+            "UdmHash join). Closes silent-content-drift gap that row-count check "
+            "misses. Heavier I/O; not for every nightly run. Requires polars dep."
+        ),
+    )
     args = parser.parse_args()
 
     dry_run = not args.apply
@@ -529,7 +774,7 @@ def main() -> int:
             conn,
             actor=args.actor, justification=args.justification,
             source=args.source, table=args.table,
-            dry_run=dry_run,
+            dry_run=dry_run, hash_check=args.hash_check,
         )
         logger.info("validate_parquet_vs_stage result: %s",
                     json.dumps(result, indent=2, default=str))

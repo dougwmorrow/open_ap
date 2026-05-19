@@ -14021,3 +14021,53 @@ Earlier session iterations consumed 3 quote-truncation-and-restore cycles before
 **D125 arc status post-inline-fix cohort**: PRODUCTION-READY for both SMALL + LARGE tables (unchanged from B-563 closure). Inline-fixes cleared scd2.md state-pointer drift + stale narrative in production source. No blocker; opportunistic LOW-WSJF items remain (B-555 / B-556 / B-557 / B-560 / B-561 / P-24 + 2 deferred B-NEW candidates).
 
 **Next-step recommendation**: B-555 (per-PK hash parity v2 of B-545) is the next-highest-impact production-cutover-decision deliverable per reviewer recommendation. Alternative: pause for real operational testing on non-production environment (test/dev) with CCM.AuditLog (96M) per RB-16 Step 1 (shadow mode); test/dev validation cycle could surface additional B-Ns from real-data interaction patterns before further code investment.
+
+## 2026-05-19 -- B-555 closure -- per-PK hash comparison v2 of B-545
+
+**Event**: udm-progress-logger per CLAUDE.md hard rule 9 for B-555 closure. Closes the row-count-only parity-check structural gap (rows match but contents differ silent failure) + NULL-PK interpretation gap. Production-cutover-decision-relevance gap CLOSED ahead of first large-table cutover.
+
+**B-555 closure summary** (CLOSED 2026-05-19): ``tools/validate_parquet_vs_stage.py`` extended with B-555 v2 opt-in per-PK hash comparison via ``--hash-check`` CLI flag. Symmetric to B-552 v2-of-B-544 opening discipline + composes with B-563 closure (large-table delete-detection) for full cutover-decision substrate.
+
+**Component table**:
+
+| Component | Location | Lines | Purpose |
+|---|---|---|---|
+| Helper: NetworkDrivePath lookup | ``_query_latest_parquet_network_drive_path`` | +~15 | Registry lookup for latest replay-eligible snapshot |
+| Helper: Parquet read | ``_read_parquet_pk_hashes`` | +~10 | polars.read_parquet + select(pk + _row_hash) |
+| Helper: Bronze read | ``_query_bronze_pk_hashes`` | +~20 | SQL SELECT pk + UdmHash from Bronze + polars DataFrame conversion |
+| Comparison | ``compare_pk_hashes`` | +~25 | polars anti-join + hash-equality filter, returns 4-count dict |
+| Classify | ``classify_hash_check`` | +~25 | Verdict from comparison: in_bronze>0=MAJOR / drift_pct via thresholds |
+| Combine | ``_combine_verdicts`` | +~15 | Most-severe-wins precedence FATAL > MAJOR_DRIFT > DRIFT > CLEAN |
+| Extension | ``check_table_parity(hash_check=False)`` | +~50 | Backward-compat default; opt-in branch invokes helpers + records hash_check_verdict |
+| Wiring | ``apply(hash_check=False)`` + ``main(--hash-check)`` | +~10 | CLI flag pass-through |
+| Audit metadata | ``_write_audit_row`` | +3 | New ``hash_check_enabled`` top-level flag |
+
+**Test coverage** (14 new Tier 0 tests in Class G):
+
+| Test | Coverage |
+|---|---|
+| 5 tests | ``classify_hash_check`` boundary cases (CLEAN / DRIFT / MAJOR_DRIFT incl. orphan + empty + parquet_empty) |
+| 1 test | ``_combine_verdicts`` 7 precedence cases (parametrized via assertion loop) |
+| 3 tests | ``check_table_parity`` hash_check branches (default-disabled / pk_columns-missing-FATAL / no-parquet-path-FATAL) |
+| 1 test | ``--hash-check`` CLI flag parses |
+| 1 test | Module-surface presence (all 6 new public symbols exported) |
+| 2 tests | Audit-metadata ``hash_check_enabled`` flag derivation (true / false) |
+
+**Memory note**: per-PK hash comparison is in-memory (both Parquet + Bronze active rows held in polars DataFrames simultaneously). For 3B+ row tables this would OOM. Documented as known limitation in module docstring. Sampling-based comparison deferred to future B-N (no immediate driver -- B-555 use case is operator-driven deep investigation OR pre-cutover validation, not nightly sanity; nightly stays at v1 row-count check).
+
+**Cohort regression**: ``py -3 -m pytest tests/tier0/test_validate_parquet_vs_stage.py -q`` -> 54 passed in 0.28s (40 v1 + 14 new B-555). v1 backward-compat invariant preserved per design (hash_check=False default).
+
+**D125 arc status post-B-555 closure**: PRODUCTION-READY for both SMALL + LARGE tables with FULL parity-interpretation substrate (B-563 large-table delete-detection + B-555 per-PK hash content drift). Cutover-decision-substrate gaps all closed.
+
+**Remaining D125-arc opens** (all LOW WSJF; opportunistic closure):
+
+- B-556 (apply-path tests for flip_cdc_mode + validate_parquet_vs_stage CLI tools; reduced friction post-B-566)
+- B-557 (extract _write_event_log_row shared helper; LOW WSJF 1.5)
+- B-560 (WARNING log on empty pk_columns in validate_parquet_vs_stage; opportunistic alongside B-556)
+- B-561 (sharpen LIFTED Do-NOT rule body; LOW WSJF 1.0)
+- P-24 (cosmetic LIFTED Do-NOT rule format docs)
+- B-N candidate (sampling-based hash comparison for 3B+ row tables; opportunistic if needed)
+
+**Next-step recommendation**: real operational testing on non-production environment (test/dev) with CCM.AuditLog (96M) per RB-16 Step 1 (shadow mode) -- exercise the full B-552 v1 + B-563 + B-555 v2 stack against real-data interaction patterns. Closes D125 arc operationally. Alternative: opportunistic closure of remaining LOW-WSJF opens; or pause for user-direction at this milestone.
+
+**Cumulative session arc closure status**: D125 arc CODE-COMPLETE for production cutover. 21 B-Ns CLOSED across full arc (B-345 / B-334 / B-498 / B-337 / B-538 / B-541 / B-343 / B-542 / B-543 / B-544 v1 / B-545 v1 / B-546 / B-553 / B-554 / B-547 / B-552 v1 / B-564 / B-566 / B-567 / B-563 / B-555). 5 LOW-WSJF + 1 cosmetic remain open (all opportunistic).

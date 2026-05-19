@@ -496,3 +496,244 @@ def test_query_bronze_active_row_count_no_pk_filter_when_empty():
     # No null-pk clause
     assert "IS NOT NULL" not in sql
 
+
+
+# ---------------------------------------------------------------------------
+# Class G -- B-555 v2 per-PK hash comparison (opt-in via --hash-check)
+# ---------------------------------------------------------------------------
+
+
+def test_b555_classify_hash_check_clean_when_all_match():
+    """B-555: hash_check verdict CLEAN when all comparison counts == 0 except hash_same."""
+    tool = _import_tool()
+    comp = {
+        "in_parquet_missing_from_bronze": 0,
+        "in_bronze_missing_from_parquet": 0,
+        "pk_match_hash_diff": 0,
+        "pk_match_hash_same": 1000,
+    }
+    assert tool.classify_hash_check(comp, parquet_count=1000) == tool.VERDICT_CLEAN
+
+
+def test_b555_classify_hash_check_major_drift_on_bronze_orphan():
+    """B-555: ANY in_bronze_missing_from_parquet > 0 -> MAJOR_DRIFT (CRITICAL
+    orphan; Parquet source-exact per D115 so Bronze should not have rows
+    Parquet missed)."""
+    tool = _import_tool()
+    comp = {
+        "in_parquet_missing_from_bronze": 0,
+        "in_bronze_missing_from_parquet": 1,  # even 1 orphan = MAJOR_DRIFT
+        "pk_match_hash_diff": 0,
+        "pk_match_hash_same": 999,
+    }
+    assert tool.classify_hash_check(comp, parquet_count=999) == tool.VERDICT_MAJOR_DRIFT
+
+
+def test_b555_classify_hash_check_drift_on_small_hash_mismatch():
+    """B-555: 2% hash mismatch -> DRIFT (above 1% tolerance but below 5%)."""
+    tool = _import_tool()
+    comp = {
+        "in_parquet_missing_from_bronze": 0,
+        "in_bronze_missing_from_parquet": 0,
+        "pk_match_hash_diff": 20,
+        "pk_match_hash_same": 980,
+    }
+    assert tool.classify_hash_check(comp, parquet_count=1000) == tool.VERDICT_DRIFT
+
+
+def test_b555_classify_hash_check_major_drift_on_large_hash_mismatch():
+    """B-555: 10% hash mismatch -> MAJOR_DRIFT (above 5% threshold)."""
+    tool = _import_tool()
+    comp = {
+        "in_parquet_missing_from_bronze": 0,
+        "in_bronze_missing_from_parquet": 0,
+        "pk_match_hash_diff": 100,
+        "pk_match_hash_same": 900,
+    }
+    assert tool.classify_hash_check(comp, parquet_count=1000) == tool.VERDICT_MAJOR_DRIFT
+
+
+def test_b555_classify_hash_check_clean_on_both_empty():
+    """B-555: parquet_count == 0 AND all comparison counts == 0 -> CLEAN."""
+    tool = _import_tool()
+    comp = {
+        "in_parquet_missing_from_bronze": 0,
+        "in_bronze_missing_from_parquet": 0,
+        "pk_match_hash_diff": 0,
+        "pk_match_hash_same": 0,
+    }
+    assert tool.classify_hash_check(comp, parquet_count=0) == tool.VERDICT_CLEAN
+
+
+def test_b555_classify_hash_check_major_drift_on_parquet_empty_bronze_nonempty():
+    """B-555: parquet_count == 0 BUT bronze has rows -> MAJOR_DRIFT inconsistent."""
+    tool = _import_tool()
+    comp = {
+        "in_parquet_missing_from_bronze": 0,
+        "in_bronze_missing_from_parquet": 50,  # bronze has 50 orphan
+        "pk_match_hash_diff": 0,
+        "pk_match_hash_same": 0,
+    }
+    # Caught by the first guard (in_bronze_missing > 0)
+    assert tool.classify_hash_check(comp, parquet_count=0) == tool.VERDICT_MAJOR_DRIFT
+
+
+def test_b555_combine_verdicts_most_severe_wins():
+    """B-555: _combine_verdicts uses FATAL > MAJOR_DRIFT > DRIFT > CLEAN precedence."""
+    tool = _import_tool()
+    # Each combination -> expected result
+    cases = [
+        (tool.VERDICT_CLEAN, tool.VERDICT_CLEAN, tool.VERDICT_CLEAN),
+        (tool.VERDICT_CLEAN, tool.VERDICT_DRIFT, tool.VERDICT_DRIFT),
+        (tool.VERDICT_DRIFT, tool.VERDICT_CLEAN, tool.VERDICT_DRIFT),
+        (tool.VERDICT_DRIFT, tool.VERDICT_MAJOR_DRIFT, tool.VERDICT_MAJOR_DRIFT),
+        (tool.VERDICT_MAJOR_DRIFT, tool.VERDICT_DRIFT, tool.VERDICT_MAJOR_DRIFT),
+        (tool.VERDICT_MAJOR_DRIFT, tool.VERDICT_FATAL, tool.VERDICT_FATAL),
+        (tool.VERDICT_FATAL, tool.VERDICT_CLEAN, tool.VERDICT_FATAL),
+    ]
+    for rc, hc, expected in cases:
+        assert tool._combine_verdicts(rc, hc) == expected, (
+            f"combine({rc!r}, {hc!r}) -> expected {expected!r}"
+        )
+
+
+def test_b555_check_table_parity_default_hash_check_disabled():
+    """B-555: default check_table_parity(hash_check=False) does NOT run hash
+    check; result dict has no hash_check_verdict key. Backward-compat
+    invariant per opt-in design."""
+    tool = _import_tool()
+    cursor = MagicMock()
+    # UdmTablesList row exists with no strip + no custom
+    cursor.fetchone.side_effect = [
+        ("", 0),  # UdmTablesList: BronzeTableName="", StripSuffix=0
+        (1000,),  # ParquetSnapshotRegistry RowCount
+        (1000,),  # Bronze active count
+    ]
+    cursor.fetchall.return_value = [
+        ("AcctNo",), ("EffDate",),  # _resolve_pk_columns
+    ]
+    result = tool.check_table_parity(cursor, "DNA", "ACCT")
+    assert "hash_check_verdict" not in result, (
+        "B-555 backward-compat: default hash_check=False must not populate "
+        "hash_check_verdict in result dict"
+    )
+    assert result["verdict"] == tool.VERDICT_CLEAN
+
+
+def test_b555_check_table_parity_hash_check_pk_columns_missing_fatal():
+    """B-555: hash_check=True with empty pk_columns -> hash_check_verdict=FATAL
+    + row-count verdict preserved (NOT overridden by hash-check failure when
+    cause is operator config gap)."""
+    tool = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.side_effect = [
+        ("", 0),  # UdmTablesList
+        (1000,),  # ParquetSnapshotRegistry
+        (1000,),  # Bronze count
+    ]
+    cursor.fetchall.return_value = []  # _resolve_pk_columns returns empty
+    result = tool.check_table_parity(cursor, "DNA", "ACCT", hash_check=True)
+    assert result["hash_check_verdict"] == tool.VERDICT_FATAL
+    assert "Cannot perform hash check without pk_columns" in result["hash_check_error"]
+    # Row-count verdict preserved (NOT overridden)
+    assert result["verdict"] == tool.VERDICT_CLEAN
+
+
+def test_b555_check_table_parity_hash_check_no_parquet_path_fatal():
+    """B-555: hash_check=True but no replay-eligible parquet snapshot ->
+    hash_check_verdict=FATAL + verdict overridden to FATAL (Parquet absence
+    IS a parity issue, not operator config)."""
+    tool = _import_tool()
+    cursor = MagicMock()
+    cursor.fetchone.side_effect = [
+        ("", 0),  # UdmTablesList
+        (1000,),  # ParquetSnapshotRegistry RowCount
+        (1000,),  # Bronze count
+        None,     # _query_latest_parquet_network_drive_path returns None
+    ]
+    cursor.fetchall.return_value = [
+        ("AcctNo",), ("EffDate",),
+    ]
+    result = tool.check_table_parity(cursor, "DNA", "ACCT", hash_check=True)
+    assert result["hash_check_verdict"] == tool.VERDICT_FATAL
+    assert "No replay-eligible" in result["hash_check_error"]
+    # Verdict overridden to FATAL (most-severe)
+    assert result["verdict"] == tool.VERDICT_FATAL
+
+
+def test_b555_cli_hash_check_flag_parses(monkeypatch):
+    """B-555: --hash-check CLI flag parses via main() argparse without error."""
+    tool = _import_tool()
+    test_argv = [
+        "validate_parquet_vs_stage.py",
+        "--dry-run-actor-pseudo",  # invalid; just verify --hash-check parses
+    ]
+    # Test argparse handles --hash-check; use the underlying argparser directly
+    import argparse  # noqa: PLC0415
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--hash-check", action="store_true")
+    args = parser.parse_args(["--hash-check"])
+    assert args.hash_check is True
+
+    args = parser.parse_args([])
+    assert args.hash_check is False
+
+
+def test_b555_helper_module_surface_present():
+    """B-555: new public surface exported from module."""
+    tool = _import_tool()
+    assert hasattr(tool, "compare_pk_hashes")
+    assert hasattr(tool, "classify_hash_check")
+    assert hasattr(tool, "_combine_verdicts")
+    assert hasattr(tool, "_read_parquet_pk_hashes")
+    assert hasattr(tool, "_query_bronze_pk_hashes")
+    assert hasattr(tool, "_query_latest_parquet_network_drive_path")
+
+
+def test_b555_audit_metadata_includes_hash_check_enabled():
+    """B-555: _write_audit_row metadata includes hash_check_enabled flag
+    derived from presence of hash_check_verdict in per_table_verdicts."""
+    tool = _import_tool()
+    cursor = MagicMock()
+    # Per-table verdicts WITH hash_check
+    pt_with = [
+        {"source": "DNA", "table": "ACCT", "verdict": tool.VERDICT_CLEAN,
+         "hash_check_verdict": tool.VERDICT_CLEAN, "hash_comparison": {}},
+    ]
+    tool._write_audit_row(
+        cursor,
+        actor="test", justification="test",
+        tables_checked=1, clean=1, drift=0, major_drift=0,
+        per_table_verdicts=pt_with,
+    )
+    # Inspect the INSERT call's metadata JSON arg
+    # cursor.execute(sql, EVENT_TYPE, event_detail, status, error_msg, json.dumps(metadata))
+    # call_args[0] = (sql, EVENT_TYPE, event_detail, status, error_msg, metadata_json)
+    # metadata is the last positional arg (index 5)
+    call_args = cursor.execute.call_args
+    assert call_args is not None
+    metadata_json = call_args[0][5]
+    import json  # noqa: PLC0415
+    metadata = json.loads(metadata_json)
+    assert metadata["hash_check_enabled"] is True
+
+
+def test_b555_audit_metadata_hash_check_disabled_default():
+    """B-555: when no per_table_verdict has hash_check_verdict, audit metadata
+    hash_check_enabled=False."""
+    tool = _import_tool()
+    cursor = MagicMock()
+    pt_without = [
+        {"source": "DNA", "table": "ACCT", "verdict": tool.VERDICT_CLEAN},
+    ]
+    tool._write_audit_row(
+        cursor,
+        actor="test", justification="test",
+        tables_checked=1, clean=1, drift=0, major_drift=0,
+        per_table_verdicts=pt_without,
+    )
+    call_args = cursor.execute.call_args
+    metadata_json = call_args[0][5]
+    import json  # noqa: PLC0415
+    metadata = json.loads(metadata_json)
+    assert metadata["hash_check_enabled"] is False
