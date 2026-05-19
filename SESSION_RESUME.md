@@ -7,22 +7,26 @@
 ## State as of session end
 
 - **Branch**: `round-6-post-merge-tracking`
-- **Latest commit**: `c781c9b` (B-481 wc -l line-count claim forward-prevention check — 9th Phase 1 check at `tools/pre_commit_checks.py`)
+- **Latest commit (this chat)**: `a7813df` (B-491 + B-496 bundled closure COMPLETION — shared `is_empirical_anchor_context` helper supporting files after state-divergence event)
 - **Push status**: PUSHED — 0 commits ahead of `origin/round-6-post-merge-tracking`
-- **pytest baseline** (authoritative per cascade Step 3.1): **2817 pass / 10 skip / 0 fail** on `tier0+tier1+unit+property+regression` scope
-- **Cumulative session delta vs `c8145de`** (Phase A Plan convergence anchor):
-  - **99 NEW B-Ns** (B-393-B-491; +1 from B-491 PRE-COMMIT reviewer-surfaced self-firing-class open at c781c9b)
-  - **23 B-Ns CLOSED multi-session arc** (prior 17 + B-478 shared-CLOSED chain detection + B-476 + B-479 + B-486 cleanup cohort + B-481 wc -l forward-prevention + B-480 + B-487 absorbed via B-488 shared-helper)
-  - **11 NEW R-Ns** (R39-R49)
-  - **14 canonical edge case series** (added PL + SE)
-  - **udm-progress-logger**: v1.2.0 → v1.3.0 → v1.3.1 → v1.3.2 (4 PATCH iterations; unchanged this session)
-  - **CommitMsgCheck ABC**: extracted + 7 subclasses migrated (ExemptionPhraseCheck + CascadeEvidenceCheck + PytestCountDisambiguationCheck + UnresolvedForwardPreventionCandidatesCheck + InlineFixClaimVerificationCheck + ClosureAnnotationConsistencyCheck + NarrativePytestClaimVerificationCheck) → **7 CommitMsgCheck subclasses; 152 Tier 0 assertions at `test_check_commit_msg.py`**
-  - **Phase 1 quality-checks orchestrator**: CHECKS registry expanded **4 → 8 → 9** at `tools/pre_commit_checks.py` (added `check_planning_provenance` + `check_cli_registry_sync` + `check_wc_line_count_claims`)
-  - **NEW skill**: `udm-cohort-review` at `.claude/skills/udm-cohort-review/SKILL.md` (198 LOC; B-483 closure) — cross-cohort review discipline layer between per-commit (udm-gap-check + udm-design-reviewer) and per-round (udm-cascade-auditor Pattern F); extended with Mechanism A Step 6 (B-490) regex-completeness verification
-  - **NEW canonical tracker**: `docs/migration/_false_positive_log.md` (~180 LOC append-only audit; B-489 closure) — 4-layer false-positive prevention architecture COMPLETE (Layer 1 WARN-severity + Layer 2 shared `_is_empirical_anchor_context()` helper B-488 + Layer 3 Mechanism A Step 6 B-490 + Layer 4 accumulation tracker B-489)
-  - **NEW Tier 0 test scaffolding modules** (cumulative): `tests/tier0/_skill_test_base.py` (B-461) + `tests/tier0/_tier0_test_base.py` (B-469 CLI tool factory) + `tests/tier0/test_skill_cohort_review.py` (B-483; 12 assertions incl. B-490) + `tests/tier0/test_pre_commit_checks_b481.py` (B-481; 7 assertions) + extended `test_check_commit_msg.py` (152 assertions; was 48 at multi-session start)
-  - **GLOSSARY**: 30+ B-459/461/467/470/477/478/481/483/486/488/489/490 entries
-- **Multi-agent applications this session**: ~87 cumulative agent spawns (~85 prior + 2 this session — claude-code-guide research + gap-check reviewer `ab45539c33d1cebd1`)
+- **pytest baseline** (authoritative per cascade Step 3.1): **2868 pass / 10 skip / 0 fail** on `tier0+tier1+unit+property+regression` scope (HEAD baseline includes parallel-session `bcb05df` + `864e91a` Phase 2 R1 cohort additions)
+- **Cumulative session delta vs `c8145de`** (Phase A Plan convergence anchor) — **THIS CHAT'S meta-discipline scope only; parallel-session B-497-B-535 separate**:
+  - **104 NEW B-Ns** (B-393-B-496 in this chat's arc)
+  - **28 B-Ns CLOSED multi-session arc** (prior 23 + B-492 udm-session-compactor + B-493 query_blindspots allowlist + B-495 check_file_path_existence + B-491 + B-496 bundled-closure)
+  - **11 NEW R-Ns** (R39-R49) — unchanged this chat
+  - **14 canonical edge case series** (added PL + SE) — unchanged this chat
+  - **udm-progress-logger**: v1.2.0 → v1.3.2 (4 PATCH iterations; unchanged this chat)
+  - **CommitMsgCheck ABC**: 7 subclasses; 152 Tier 0 assertions (unchanged this chat)
+  - **Phase 1 quality-checks orchestrator**: CHECKS registry expanded **4 → 8 → 9 → 10** at `tools/pre_commit_checks.py` (added `check_planning_provenance` + `check_cli_registry_sync` + `check_wc_line_count_claims` + `check_file_path_existence`)
+  - **2 NEW skills this chat**: `udm-cohort-review` (B-483; cross-cohort review discipline layer) + `udm-session-compactor` (B-492; session-state compression Phase 1 with trim-policy taxonomy from research Rec 1) — first production invocation at `f65b827` snapshot
+  - **NEW canonical trackers this chat**: `docs/migration/_false_positive_log.md` (B-489; 4-layer FP prevention architecture COMPLETE) + `docs/migration/_session_snapshots/` directory (B-492 substrate; 1 snapshot landed)
+  - **NEW Tier 0 test scaffolding modules** (cumulative): `_skill_test_base.py` (B-461) + `_tier0_test_base.py` (B-469) + `test_skill_cohort_review.py` (B-483) + `test_pre_commit_checks_b481.py` (B-481) + `test_skill_session_compactor.py` (B-492; 10 assertions incl. trim-policy + CMV research anchor) + `test_pre_commit_checks_b495.py` (B-495; 10 assertions incl. B-496 suppression) + `test_anchor_context.py` (B-491+B-496 bundled closure; 8 assertions) + extended `test_check_commit_msg.py` (152 assertions; unchanged this chat)
+  - **NEW shared utility module this chat**: `tools/anchor_context.py` (~95 LOC; `EMPIRICAL_ANCHOR_MARKERS` 18-marker tuple + `is_empirical_anchor_context()` helper) — extracted at B-491+B-496 bundled closure for cross-module reuse
+  - **NEW research artifact this chat**: `docs/migration/_research/llm-handoffs-traceability-hallucination-2026-05-18.md` (371 LOC; 12 primary sources from arXiv / Anthropic / NIST / ISO 42001 / ACM FSE 2025) — drove B-495 + B-491/B-496 forward-prevention work + Rec 1 trim-policy taxonomy at udm-session-compactor SKILL.md + Rec 2 model-attribution convention at _validation_log.md
+  - **GLOSSARY**: 30+ entries this chat (skill rows + tracker rows + check rows + module rows)
+  - **CLAUDE.md hard rule 14 extensions this chat**: udm-cohort-review discipline (B-483) + udm-session-compactor discipline (B-492)
+- **Multi-agent applications this chat session**: ~95+ cumulative agent spawns (~87 prior + ~8 this chat — claude-code-guide research + gap-check reviewer `ab45539c33d1cebd1` + cross-cohort reviewer `a9330411976057db7` + udm-researcher `a1874f2bb5e4b7a23` + PRE-COMMIT reviewers `a922f99d2ec4fcf74` + `afc2539005da881dc` + `ae867948599ef26af` + `a4ac607d18b0111d4` + `a8b3220ad407537b9`)
+- **Parallel session state-divergence note**: parallel Claude session committed `bcb05df` (Phase 2 large-tables plan v5; B-497-B-535 + D117-D124 + R50-R64 + RB-15-17 + LT-AT + SE11-13) + `864e91a` (Phase 2 R1 cohort: B-503 udm-data-engineer-review agent + B-523 SnowflakeReplicationLog migration + B-535 SnowflakeCcpaPurgeLog migration) on this branch. These are OUT-OF-SCOPE for this chat per separation directive but present in commit chain.
 
 ---
 

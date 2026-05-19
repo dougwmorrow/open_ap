@@ -12,6 +12,32 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-18 — SESSION_RESUME.md refresh (post-`a7813df` state-pointer)
+
+**Trigger**: pipeline-lead "Proceed with your next recommendation" 2026-05-18 — cascade fire post-`a7813df` (B-491+B-496 bundled closure completion).
+
+**Model**: claude-opus-4-7. **Context pressure**: high (long session arc). **CCL completed**: yes.
+
+**Scope**: SESSION_RESUME.md refresh + this _validation_log event entry. Documentation-only; no substrate edits.
+
+**Producer**: parent agent — claude-opus-4-7.
+
+**Changes**:
+- SESSION_RESUME.md L7-30 refreshed: latest-commit `c781c9b` → `a7813df`; pytest 2817 → 2868; cumulative 99 → 104 NEW B-Ns / 23 → 28 CLOSED; added 2 new-skill / 1 new-tracker / 1 new-utility-module entries; added parallel-session state-divergence note covering `bcb05df` + `864e91a`
+- Reviewer-attribution surface extended to ~95+ cumulative agent spawns (+8 this chat session arc since last refresh)
+- Phase 1 quality-checks orchestrator narrative updated: CHECKS registry 4 → 8 → 9 → 10 progression
+- 2 NEW skills surfaced (udm-cohort-review B-483 + udm-session-compactor B-492 with research-driven trim-policy taxonomy)
+- 1 NEW research artifact surfaced (llm-handoffs-traceability-hallucination-2026-05-18.md; 371 LOC; 12 primary sources)
+- 1 NEW shared utility module surfaced (tools/anchor_context.py B-491+B-496 bundled closure)
+
+**State-divergence acknowledgment**: SESSION_RESUME explicitly notes parallel-session commits `bcb05df` + `864e91a` are OUT-OF-SCOPE for this chat per separation directive but present in commit chain. Future fresh agents picking up this branch should understand which work belongs to which session arc.
+
+**Tests**: pytest 2868 baseline preserved (no code changes; documentation-only refresh).
+
+**Cumulative session delta UNCHANGED**: 104 NEW B-Ns / 28 CLOSED / 2868 pytest (this is a state-pointer refresh, not a B-N event).
+
+**Status**: ⚫ COMPLETE — session pause-pointer current.
+
 ## 2026-05-18 — B-491 + B-496 bundled closure: shared `is_empirical_anchor_context()` helper extracted to NEW `tools/anchor_context.py`; applied to `check_wc_line_count_claims` + `check_file_path_existence`
 
 **Trigger**: pipeline-lead "Proceed with your next recommendation" 2026-05-18 — cascade fire on prior-turn recommendation to bundle-close B-491 + B-496 via shared-helper extraction (2-event threshold structurally met).
