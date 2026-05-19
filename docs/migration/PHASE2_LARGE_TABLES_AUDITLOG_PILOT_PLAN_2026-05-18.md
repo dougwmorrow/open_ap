@@ -26,7 +26,7 @@
 | `a7c3f43f39535ea45` | v3 gap-check | 3 BLOCK + 17 IMPROVE + 10 OK — absorbed v4 |
 | `a3d68f47ea920cb18` | v4 confirmation gap-check | 1 BLOCK reopened (G1-1 collision recurred) + 6+ Pitfall #9.k internal stale citations + 3 NEW gaps — **absorbed v5 (this version)** |
 
-Skills (active throughout): `udm-planning-session-startup` / `udm-design-reviewer` / `udm-data-engineer-review` (B-501 substitute) / `udm-gap-check` / `udm-brainstorm` (Option B inline) / `udm-decision-recorder` / `udm-execution-classifier` / `udm-runbook-author` / `udm-edge-case-validator` / `udm-test-author` (scheduled R1+R2) / `udm-progress-logger` / `udm-step-10-verifier` / `udm-post-edit-verification` / `superpowers-verification-before-completion`.
+Skills (active throughout): `udm-planning-session-startup` / `udm-design-reviewer` / `udm-data-engineer-review` (B-339 → B-503 substitute; now closed via 864e91a per S5.1 cross-cohort review remediation 2026-05-18) / `udm-gap-check` / `udm-brainstorm` (Option B inline) / `udm-decision-recorder` / `udm-execution-classifier` / `udm-runbook-author` / `udm-edge-case-validator` / `udm-test-author` (scheduled R1+R2) / `udm-progress-logger` / `udm-step-10-verifier` / `udm-post-edit-verification` / `superpowers-verification-before-completion`.
 
 ---
 
@@ -295,14 +295,74 @@ D117–D124 bodies same as v4 §7.
 
 ## §15. Snowflake Replication Layer (unchanged structure from v4 — §15.3 DDL canonical; §15.4 lifecycle; §15.5 replay surface; §15.6 sidecar; §15.7 CCPA flow; §15.8 Phase 5 alignment; §15.9 test surface)
 
-### §15.3 DDL (unchanged from v4 — SnowflakeReplicationLog + SnowflakeCcpaPurgeLog WITH `Justification NVARCHAR(MAX) NULL` per v4 §15.3 canonical)
+### §15.3 DDL (canonical; inlined per S1.1 cross-cohort review remediation 2026-05-18 — v4 was never committed, so this section is the canonical source)
 
 ```sql
--- SnowflakeReplicationLog DDL (unchanged from v4 §15.3)
--- SnowflakeCcpaPurgeLog DDL (unchanged from v4 §15.3 — includes Justification column)
+-- SnowflakeReplicationLog table (B-523)
+CREATE TABLE General.ops.SnowflakeReplicationLog (
+    ReplicationId             BIGINT IDENTITY(1,1) NOT NULL,
+    RegistryId                BIGINT          NOT NULL,
+    SnowflakeStagePath        NVARCHAR(MAX)   NOT NULL,
+    MaskedContentChecksum     VARCHAR(64)     NULL,
+    VaultTokenSnapshotMarker  DATETIME2(3)    NOT NULL,
+    RowsCopied                INT             NULL,
+    CopyHistoryId             NVARCHAR(255)   NULL,
+    SourceFilePurgedAt        DATETIME2(3)    NULL,
+    ReplicatedAt              DATETIME2(3)    NOT NULL
+        CONSTRAINT DF_SnowflakeReplicationLog_ReplicatedAt DEFAULT SYSUTCDATETIME(),
+    ReplicationAttempt        INT             NOT NULL
+        CONSTRAINT DF_SnowflakeReplicationLog_ReplicationAttempt DEFAULT 1,
+    Status                    NVARCHAR(20)    NOT NULL,
+    ErrorMessage              NVARCHAR(MAX)   NULL,
+    CONSTRAINT PK_SnowflakeReplicationLog PRIMARY KEY CLUSTERED (ReplicationId),
+    CONSTRAINT FK_SnowflakeReplicationLog_RegistryId
+        FOREIGN KEY (RegistryId)
+        REFERENCES General.ops.ParquetSnapshotRegistry(RegistryId)
+        ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT CK_SnowflakeReplicationLog_Status
+        CHECK (Status IN ('replicated','failed','in_progress'))
+);
+
+CREATE UNIQUE INDEX UX_SnowflakeReplicationLog_Identity
+    ON General.ops.SnowflakeReplicationLog (RegistryId, ReplicationAttempt);
+
+-- B-529: filtered pending-retry index
+CREATE INDEX IX_SnowflakeReplicationLog_PendingRetry
+    ON General.ops.SnowflakeReplicationLog (ReplicatedAt)
+    WHERE Status IN ('in_progress', 'failed');
+
+-- SnowflakeCcpaPurgeLog table (B-535; NEW per user choice 2026-05-18 per v3 gap-check G6-4)
+CREATE TABLE General.ops.SnowflakeCcpaPurgeLog (
+    PurgeLogId                BIGINT IDENTITY(1,1) NOT NULL,
+    ReplicationId             BIGINT          NOT NULL,
+    CcpaDeletionLogId         BIGINT          NOT NULL,
+    SnowflakeAction           NVARCHAR(50)    NOT NULL,
+    SnowflakePurgedAt         DATETIME2(3)    NOT NULL
+        CONSTRAINT DF_SnowflakeCcpaPurgeLog_SnowflakePurgedAt DEFAULT SYSUTCDATETIME(),
+    AffectedIcebergRowCount   BIGINT          NULL,
+    Actor                     NVARCHAR(255)   NOT NULL,
+    Justification             NVARCHAR(MAX)   NULL,
+    CONSTRAINT PK_SnowflakeCcpaPurgeLog PRIMARY KEY CLUSTERED (PurgeLogId),
+    CONSTRAINT FK_SnowflakeCcpaPurgeLog_ReplicationId
+        FOREIGN KEY (ReplicationId)
+        REFERENCES General.ops.SnowflakeReplicationLog(ReplicationId)
+        ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT FK_SnowflakeCcpaPurgeLog_CcpaDeletionLogId
+        FOREIGN KEY (CcpaDeletionLogId)
+        REFERENCES General.ops.CcpaDeletionLog(DeletionLogId)
+        ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT CK_SnowflakeCcpaPurgeLog_Action
+        CHECK (SnowflakeAction IN ('masking_policy_activated','deleted','row_access_policy_filtered'))
+);
+
+CREATE INDEX IX_SnowflakeCcpaPurgeLog_Replication
+    ON General.ops.SnowflakeCcpaPurgeLog (ReplicationId);
+
+CREATE INDEX IX_SnowflakeCcpaPurgeLog_CcpaDeletion
+    ON General.ops.SnowflakeCcpaPurgeLog (CcpaDeletionLogId);
 ```
 
-(Full DDL preserved verbatim from v4 §15.3 — §8 B-535 body now matches the canonical DDL per v4 confirmation gap-check NEW-2 fix.)
+**Canonical authority**: this DDL is byte-equivalent to the actual implementation in `migrations/snowflake_replication_log.py` (L104-128 — `TABLE_DDL` + `UNIQUE_INDEX_DDL` + `FILTERED_INDEX_DDL`) and `migrations/snowflake_ccpa_purge_log.py` (L105-128 — `TABLE_DDL` + `INDEX_REPLICATION_DDL` + `INDEX_CCPA_DELETION_DDL`). Both committed at 864e91a. The S1.1 BLOCK in the cross-cohort review surfaced that earlier versions of this section (v3/v4) referenced an uncommitted v4 — corrected here.
 
 ---
 

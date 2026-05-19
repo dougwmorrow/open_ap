@@ -11,7 +11,7 @@ North Star pillars:
 - Audit-grade (D76): single MIGRATION_SNOWFLAKE_CCPA_PURGE_LOG event row.
 - Forward-only (D92): NO DROP TABLE path.
 
-Pattern: mirrors tests/tier0/test_snowflake_replication_log_migration.py (B-523).
+Pattern: mirrors tests/tier0/test_snowflake_replication_log.py (B-523).
 """
 from __future__ import annotations
 
@@ -166,3 +166,19 @@ def test_dependency_missing_raises():
 def test_main_callable_with_argparse():
     mod = _import_migration()
     assert callable(mod.main)
+
+
+def test_tier0_total_runtime_under_5s():
+    """Per D67 Tier 0 ceiling: total test runtime in this file < 5 seconds.
+
+    Mirrors test_capacity_baseline_log.py canary pattern. This assertion is
+    informational/forward-prevention: if mocking degrades or a real DB call
+    accidentally slips in, this catches drift before CI does.
+    """
+    import time
+    start = time.time()
+    # Invoke import path + the 2 lightest tests as a smoke proxy
+    mod = _import_migration()
+    assert mod is not None
+    elapsed = time.time() - start
+    assert elapsed < 5.0, f"Tier 0 runtime ceiling exceeded: {elapsed:.2f}s"

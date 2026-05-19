@@ -101,7 +101,7 @@ Beyond migrations (§7), the v5 cohort introduces **12 doc-side artifacts** requ
 | 7 | `UdmTablesList.SidecarRetentionDays` column doc | `phase1/02_configuration.md` § 1.2 | R3 close | B-528 |
 | 8 | `JOB_SNOWFLAKE_REPLICATE_AUDITLOG` + `JOB_PARQUET_AUDITLOG_INCR` Automic inventory + SchemaContract MIGRATION_AUTOMIC_INVENTORY rows | `phase1/02_configuration.md` § 5.1 frozen-N | R5 day 0 | D120 v3 ext. |
 | 9 | `SnowflakeReplayResult` dataclass | GLOSSARY.md public-surface table | R2 close | B-530 |
-| 10 | `RB-15` runbook index entry | `05_RUNBOOKS.md` L7-23 | R2 close | B-499 (NOTE: B-499 in v5 = old "cross-schema-boundary"; RB-15 actually traces to B-344 + B-500 — verify at merge time) |
+| 10 | `RB-15` runbook index entry | `05_RUNBOOKS.md` L7-23 | R2 close | B-344 (original RB-15 source) + B-501 (RB-16 2-phase cutover per design-reviewer Q7 — was tracked under B-499 in v5 delta authoring; corrected per S5.2 cross-cohort review 2026-05-18) |
 | 11 | `RB-16` runbook index entry | `05_RUNBOOKS.md` L7-23 | R4 close | B-501 |
 | 12 | `RB-17` runbook index entry + `LT-AT-Series` header + `SE11/SE12/SE13` entries | `05_RUNBOOKS.md` L7-23 + `04_EDGE_CASES.md` SE-series L301-310 (append) + new LT-AT-Series after PL-Series at L316 | R2 close (RB-17 + SE) + R3 close (LT-AT) | B-530 (RB-17), B-527 (SE12), B-535 (SE13), B-504 (LT-AT series header) |
 

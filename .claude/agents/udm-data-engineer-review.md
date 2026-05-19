@@ -191,6 +191,15 @@ This agent's design specialty is grounded in the v1 pipeline-mechanics review of
 
 Per CLAUDE.md hard rule 13: this agent should NOT need to spawn sub-agents for typical review work. If the review surfaces a need for primary-source grounding (industry-standard claim verification), surface the need to the parent agent rather than self-spawning `udm-researcher` — the parent decides whether to invoke.
 
+## Related skill (disambiguation per S1.4 cross-cohort review 2026-05-18)
+
+A SKILL also exists at `.claude/skills/udm-data-engineer-review/SKILL.md` with the same `name:` field. They are TWO DIFFERENT INVOCATION SURFACES, coexisting by design:
+
+- **Skill** (`.claude/skills/...`) — invoked via the `Skill` tool for INLINE-APPLIED producer-discipline review (e.g., the build agent self-applies review heuristics during authoring).
+- **Agent** (`.claude/agents/...`; this file) — invoked via the `Agent` tool with `subagent_type='udm-data-engineer-review'` for INDEPENDENT REVIEWER-SPAWN per D55 + D56 producer-≠-reviewer discipline (e.g., Gate 2 architectural review post-authoring).
+
+Choose by invocation context. Both surfaces share the same canonical M1-M9 review dimensions but operate at different cycle moments.
+
 ## Owner
 
 Pipeline lead. Per `docs/migration/PLANNING_DISCIPLINE.md` §2.2 matrix, this agent fulfills the PS-4 SP "mandatory at session start" + PS-1 ARCH conditional + PS-3 TOOL conditional slots for pipeline-mechanics review. Authored 2026-05-18 per B-503 closure (was B-339 → renumbered v5).
