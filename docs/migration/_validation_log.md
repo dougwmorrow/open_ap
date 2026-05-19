@@ -12,6 +12,65 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — Gap-check remediation per reviewer `a7f466490e1f64dc5` — Pitfall #9.m INSTANCE N+1 recursive self-violation fix + SKILL.md Changelog false-claim fix + B-565 opened
+
+**Trigger**: pipeline-lead "Run a gap analysis of the recent enhancements" 2026-05-19 — gap-check on B-559 closure `739eab1`.
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Reviewer**: independent gap-check reviewer `a7f466490e1f64dc5` (per `udm-gap-check` SKILL.md 6-category audit; different agent from prior cross-cohort `ae0e5ea9c1b3851c0` + prior gap-check `a33924a28e1e4a666` per D55+D56 producer ≠ reviewer ≠ reviewer discipline).
+
+**Reviewer verdict**: 🟡 IN-FLIGHT-DRIFT — 2 🔴 BLOCK candidates + 3 G6 B-N candidates.
+
+**Finding 1 (G2 🔴 — Pitfall #9.m INSTANCE N+1)**: `SESSION_RESUME/active/meta-discipline.md` NOT refreshed at `739eab1`. Stale across 4 sections (L32 cumulative count `32 → 33`; L35 B-559 leading-badge `🟡 → ⚫`; L66 cohort closure status; L73 Open Runway includes B-559 as open). **This is recursive self-violation INSTANCE N+1**: cross-cohort reviewer `ae0e5ea9c1b3851c0` caught the same class at `c8bb55b..372e982` arc; remediation at `977514e` explicitly called out the meta-irony + recursion-termination claim; the very next substantive commit `739eab1` repeated the violation. 2-event empirical evidence within 6 commits.
+
+**Finding 2 (G5 🔴 — SKILL.md Changelog table false-claim)**: `git diff 739eab1~1 739eab1` shows ZERO modifications to `.claude/skills/udm-session-compactor/SKILL.md` Changelog table (L332-334 contains ONLY v1.0.0 row). Both B-558 Component B `v1.0.0 → v1.1.0` (claimed at `372e982`) AND B-559 `v1.1.0 → v1.2.0` (claimed at `739eab1`) rows never actually landed in the Changelog. Pitfall #9.k arithmetic-propagation class (version-string state-claim drift) compounded with Pitfall #9.l canonical-re-read failure (producer didn't verify changelog table before claiming bump). Claim repeated across commit body + CURRENT_STATE L7 + HANDOFF §14 + BACKLOG L1112 + _validation_log L15 — 5 locations of false claim.
+
+**Finding 3 (G6-1 NEW B-N CANDIDATE)**: Mechanical-enforcement Phase 1 quality check forward-prevention for Pitfall #9.m. Opened as **B-565** (LOW WSJF 1.5) — `check_session_resume_active_refresh()` 13th CHECKS entry scanning staged BACKLOG.md leading-badge flips against `SESSION_RESUME/active/*.md` modification status.
+
+**Findings 4-5 (G6-2 + G6-3 deferred)**: dashed/spaced credit-card regex extension + email allowlist externalization — opportunistic; no action this remediation.
+
+**Other categories verdict** (per reviewer):
+- G1 ✅ B-559 BACKLOG entry leading-badge correct
+- G3 ✅ regex constants verified (CC_RE correctly rejects B-N codes; pytest 7/7 PASS)
+- G4 🟡 — test scope correctly snapshot-only (not over-broad)
+
+**Fix mechanism**:
+
+1. **G2 fix**: `SESSION_RESUME/active/meta-discipline.md` fully refreshed. Updated sections:
+   - State-as-of-session-end with 10-commit chain (was 8-commit) + 3-cohort fully-closed table
+   - Cumulative count `32 → 33 CLOSED` + 82/82 Tier 0 PASS (was 75)
+   - B-559 ⚫ CLOSED at `739eab1` with full attribution
+   - NEW "Cross-cohort + gap-check reviewer chain 2026-05-19" section citing all 3 reviewer agentIds + per-verdict outcomes
+   - Open Runway pruned + LOW B-565 candidate cited
+   - NEW empirical-anchor sub-section documenting 5-stage cascade chain across 2026-05-19
+
+2. **G5 fix**: `.claude/skills/udm-session-compactor/SKILL.md` Changelog table appended with 2 rows:
+   - v1.1.0 (B-558 Component B at `372e982` — Step 3 per-chat refresh + Step 4 udm-gap-check + §6 verification footer)
+   - v1.2.0 (B-559 at `739eab1` — "Do NOT include" CCPA/PII section + companion Tier 0 PII scrub test)
+
+3. **B-565 open**: NEW B-N at BACKLOG L1117 (LOW; WSJF 1.5) — `check_session_resume_active_refresh()` mechanical Phase 1 quality check. ~1 hour effort. Closure target opportunistic.
+
+**TEST**: N/A — tracker/SKILL.md narrative refresh + new B-N opening only. No code paths changed. Pytest baseline 82/82 PASS confirmed via reviewer's actual test run + my prior verification.
+
+**GAP ANALYSIS (G1-G6 on the remediation itself)**:
+- G1: ✅ B-565 NEW B-N has 🟡 Open leading badge correctly applied; B-559 ⚫ CLOSED unchanged.
+- G2 (Pitfall #9.k arithmetic): ✅ this-chat cumulative B-N count propagated `107 → 108 NEW` (+B-565); 33 CLOSED unchanged; reflected in CURRENT_STATE + HANDOFF + meta-discipline.md.
+- G3 (Pitfall #9.l canonical re-read): ✅ reviewer-output re-read verbatim; both 🔴 findings + 3 G6 candidates addressed inline.
+- G4 (Pitfall #9.m discipline-applied-to-tracker): ✅ THIS REMEDIATION COMMIT IS the discipline-self-application — meta-discipline.md refresh applies the B-558 Step 3 mandate to its own authoring session, terminating the recursive self-violation loop. B-565 opening institutionalizes mechanical enforcement going forward.
+- G5 (Pitfall #9.n convention-registration): ✅ no new public Python surface; SKILL.md Changelog table population is content-discipline.
+- G6 (new B-N opportunities): ✅ B-565 opened. 2 G6-2/G6-3 deferred per orphan-forward-prevention discipline (opportunistic; no orphan-status since they're cited in B-565 closure body as related forward-prevention).
+
+**Tracker updates**: BACKLOG L1117 (NEW B-565) + CURRENT_STATE L7 + HANDOFF §14 + this entry + meta-discipline.md (fully refreshed; the artifact under remediation) + SKILL.md Changelog table.
+
+**Recursion termination strengthened**: 2nd-event empirical evidence (this session) escalates the Pitfall #9.m pattern from "1-event acknowledged" to "2-event with mechanical-enforcement candidate opened". Per HANDOFF §8 5-event-before-formalization convention, the sub-class formalization waits for 3-5 more events; but mechanical enforcement via B-565 is actionable NOW without waiting. This is the difference between sub-class formalization (documentation-only) vs Phase 1 quality check addition (mechanical enforcement) — they're at different abstraction layers.
+
+**Forward-prevention class addressed**: per-chat-pointer-staleness-recursive-violation. B-565 closure (~1 hour deferred work) will mechanically enforce the B-558 Step 3 mandate at commit-time, eliminating the producer-discipline dependency.
+
+**Net delta**: this-chat **107 → 108 NEW B-Ns** (+B-565) / 33 CLOSED unchanged / pytest baseline unchanged.
+
+---
+
 ## 2026-05-19 — B-559 ⚫ CLOSED: CCPA/PII compliance scrubbing for udm-session-compactor snapshots (Phase 2.2 deferred work; mechanical defense-in-depth layer)
 
 **Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-19 — cascade trigger for LOW-priority B-559 (only remaining work item; udm-session-compactor multi-cohort closure milestone).
