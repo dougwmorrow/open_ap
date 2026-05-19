@@ -1,4 +1,4 @@
-﻿# Validation Log
+# Validation Log
 
 Append-only audit trail for all artifacts that pass through the `udm-checks-and-balances` 5-gate discipline.
 
@@ -11,6 +11,42 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 - **CCL completed**: `yes / no / partial` indicating whether Canonical Context Load (D62) Stage 1+2+3 was completed before the event
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
+
+## 2026-05-19 — Cross-cohort review remediation: SESSION_RESUME/active/meta-discipline.md staleness fix (Pitfall #9.m meta-irony — discipline-not-applied-to-own-authoring-cohort)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-19 — cascade trigger for MEDIUM-priority cross-cohort review. Independent reviewer `ae0e5ea9c1b3851c0` (per `udm-cohort-review` SKILL.md 6-scope audit) returned 🟡 IN-FLIGHT-DRIFT verdict on the 8-commit B-562 + B-558 session arc.
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Reviewer verdict**: S1+S2+S3+S6 ✅ CLEAN; S4 + S5 🟡 PARTIAL (both same root cause: per-chat pointer staleness).
+
+**Findings**:
+1. **Stale cumulative state at SESSION_RESUME/active/meta-discipline.md**: cumulative count `30 CLOSED → 32` stale; `B-558 🟡 Open MID-BUILD → ⚫ FULLY CLOSED` stale; `CHECKS 10 → 12` stale.
+2. **Stale forward-references**: Open Runway listed B-562 Component B Phase 3 + B-558 Phase 2.1 work as HIGH/MEDIUM OPEN (all ⚫ CLOSED at prior commits this session).
+
+**Meta-irony empirical anchor**: B-558 Component B SKILL.md Step 3 mandate (per-chat pointer refresh after every substantive commit; authored at `553b345`) was IMMEDIATELY VIOLATED across 4 subsequent commits in its own authoring session. Classic Pitfall #9.m (discipline-not-applied-to-own-authoring-cohort). Empirical 1st-event evidence supporting forward-prevention value of the very Step 3 mandate just landed.
+
+**Fix mechanism**: SESSION_RESUME/active/meta-discipline.md fully refreshed inline. 8-commit session arc enumeration / cumulative count `107 NEW / 32 CLOSED` / both B-562 + B-558 marked ⚫ FULLY CLOSED / CHECKS 10→12 with sub-anchor commits / Open Runway pruned to LOW/B-559 only / NEW "Cross-cohort review verdict" section citing reviewer agentId + verdict per scope.
+
+**TEST**: N/A — markdown refresh only. Pytest baseline 75/75 confirmed by reviewer.
+
+**GAP ANALYSIS (G1-G6)**:
+- G1: N/A
+- G2 ✅: remediation FIXES the very Pitfall #9.k drift the reviewer caught
+- G3 ✅: reviewer-output re-read verbatim
+- G4 ✅: meta-discipline.md refresh IS the discipline B-558 Step 3 mandates
+- G5: N/A
+- G6: None — both findings have inline-fix resolution
+
+**Tracker updates**: SESSION_RESUME/active/meta-discipline.md (the artifact under remediation) + CURRENT_STATE L7 + HANDOFF §14 + this _validation_log entry.
+
+**Recursion termination**: this remediation commit IS the application of SKILL.md Step 3 to its own authoring session. The Pitfall #9.m loop terminates here — future substantive commits should refresh meta-discipline.md per the mandate. Mandate now has 1-event empirical evidence base (this session's failure-then-remediation).
+
+**Forward-prevention class addressed**: per-chat-pointer-staleness-across-cohort. Composes with B-558 Component B SKILL.md Step 3 mandate.
+
+**Net delta**: this-chat 107 NEW B-Ns unchanged / 32 CLOSED unchanged / pytest unchanged.
+
+---
 
 ## 2026-05-19 — B-558 ⚫ FULLY CLOSED: Phase 2.1 Component B final closure (SKILL.md post-authoring verification mandate + hook _has_recent_snapshot() structural validation)
 
@@ -13487,3 +13523,46 @@ Plus reviewer-affirmed design choices:
 **D125 arc status post-remediation**: B-552 v1 NOW production-ready (was BROKEN at 719b76b). Operator workflow end-to-end complete for SMALL tables. Outstanding: B-555 + B-563 + B-556 + B-557 + B-560 + B-561 + B-564 + P-24.
 
 **Next-step**: D56 mandatory second-pass independent re-verification OR proceed to B-564 closure to harden test layer.
+
+
+## 2026-05-19 -- B-564 closure + D56 second-pass on 0c06961 BLOCK remediation + 8-event B-541 milestone
+
+**Event**: udm-progress-logger discipline per CLAUDE.md hard rule 9 for B-564 closure at THIS COMMIT + D56 mandatory-second-pass on `0c06961` BLOCK remediation per cross-cohort reviewer Agent `aea6c9174151af2f5` 2026-05-19 verdict ATTENTION (all 6 production/discipline fixes correct; minor scd2.md drift inline-remediated THIS COMMIT) + 8-event B-541 read-only audit contract empirical evidence milestone (160% of HANDOFF 5-event formalization threshold).
+
+**B-564 closure summary** (CLOSED 2026-05-19): apply-path Tier 1 tests for `orchestration/pipeline_steps.py::run_parquet_replay_step()` via 4-layer forward-prevention architecture against B-552 v1 Finding 1.1+1.2 production-crash class.
+
+| Layer | Scope | Forward-prevention target |
+|---|---|---|
+| 1 | AST-extracted canonical signature pin (from `data_load/parquet_replay.py` source; no polars dep) | Signature drift between real function + test constant |
+| 2 | Signature-validating stub apply-path (raises TypeError on wrong kwargs same as real function) | MagicMock auto-accept-anything class (the structural gap that allowed Finding 1.1 to ship with 25/25 tests passing) |
+| 3 | `_process_single_day` AST audit (no bare returns + `-> int` annotation present) | Finding 1.2 bare-return-class regression |
+| 4 | Source-text audit on parquet_snapshot branch CSV cleanup sequencing | Finding 1.3 CSV-leak regression |
+
+**Test count delta**: 14 new tests at `tests/tier1/test_parquet_replay_step_apply_path.py`; 14/14 PASS; cohort regression 39/39 (existing 25 in test_orchestrator_cdc_mode_dispatch.py + 14 new in test_parquet_replay_step_apply_path.py).
+
+**D56 second-pass minor-finding inline remediations** (in THIS COMMIT per reviewer `aea6c9174151af2f5` Fix 6 recommendations):
+
+| # | Reviewer finding | Inline-fix |
+|---|---|---|
+| G6.1 | scd2.md "B-Ns OPEN from this arc" still listed B-552 | Refreshed list: B-555 + B-556 + B-557 + B-560 + B-561 + B-563 + P-24 (B-552 removed) |
+| G6.2 | scd2.md "15 B-Ns CLOSED" stale | Bumped 15 -> 17 (B-552 v1 + B-564 added) |
+| G6.3 | scd2.md HIGH-priority B-552 section still shown as Open | Flipped to strikethrough body + CLOSED annotation + D56 reviewer cite |
+| G6.4 | scd2.md B-541 milestone bullet list shows 6 reviewer IDs but title claims 7 | Bumped to 8 reviewer IDs (added a234fda11b870c78d + aea6c9174151af2f5) |
+| G6.5 | scd2.md pytest baseline cites stale `6868564` | Refreshed to baseline + B-564 delta |
+| G6.6 | scd2.md Step 5 narrative says NotImplementedError still present | Updated: "REMOVED at 0c06961" |
+
+**B-541 8-event empirical milestone**: 8 consecutive cross-cohort/second-pass reviewers honored read-only audit contract without violation:
+- `a843ad09d24f2a607` (post-B-541 closure)
+- `ac2dd8d0ec814dc7e` (post-D125 plan)
+- `ad50cb5cceda3f90c` (post-D125 implementation cohort)
+- `adc861405ff006766` (post-D125 toolkit completion)
+- `a8130cf417bb5692a` (post-B-553/B-554 closure)
+- `a95d8cc8b0ce3b7b6` (post-B-547 + arc review)
+- `a234fda11b870c78d` (post-B-552 v1 closure -- verdict BLOCK with 6 findings; drove BLOCK remediation at `0c06961`)
+- `aea6c9174151af2f5` (D56 mandatory second-pass on `0c06961` BLOCK remediation -- verdict ATTENTION with 6 minor scd2.md findings; drove inline remediation at THIS COMMIT)
+
+**Cross-cohort pattern observation (CONTINUED from prior log row)**: MagicMock tests can PIN wrong signatures giving FALSE coverage. B-564 closure structurally forward-prevents the class via 4-layer architecture. Pattern empirical anchor: B-552 v1 initial commit `719b76b` shipped with 2 production-crashing bugs caught by independent cross-cohort reviewer; pre-B-564 test suite (25 tests) PASSED while production would have crashed on first run.
+
+**D125 arc status post-B-564 closure**: B-552 v1 production-ready for SMALL tables (ACCT pilot unblocked). Apply-path test layer in place to prevent regression class. Outstanding for large-table cutover: B-563 (day-N vs day-N-1 Parquet diff delete-detection; reviewer-suggested HIGH WSJF 3.5) + B-555 (per-PK hash parity definition; MEDIUM WSJF 3.5).
+
+**Next-step recommendation**: B-563 (large-table delete-detection) using the B-564 4-layer test harness pattern as template -- ensures B-563 cannot ship with the same MagicMock false-coverage class that B-552 v1 hit. Alternative: B-555 (per-PK hash parity) for parity-check tool interpretation gap closure. Both are prerequisites for first large-table production cutover.
