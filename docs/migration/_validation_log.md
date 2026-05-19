@@ -12,6 +12,67 @@ Per research recommendation 2026-05-18 (NIST AI 600-1 + EU AI Act Articles 12/19
 
 This convention is documentation-only (no mechanical enforcement initially); may be promoted to a 10th `check_*` function in `tools/pre_commit_checks.py` if pattern drift observed empirically. Retroactive backfill NOT required for pre-2026-05-18 entries per append-only narrative discipline. Closes Finding 2.1 (EU AI Act Articles 12/19 actor-level attribution) + Finding 2.3 (NIST AI 600-1 individual or system ID with timestamp per-event requirement) gap surfaced by udm-researcher artifact 2026-05-18.
 
+## 2026-05-19 — B-565 ⚫ CLOSED: `check_session_resume_active_refresh()` 13th Phase 1 quality check (mechanical-enforcement closure of Pitfall #9.m recursive self-violation class)
+
+**Trigger**: pipeline-lead "Proceed with your recommended next steps" 2026-05-19 — cascade trigger for LOW-priority B-565 closure (only actionable item; ~1 hour effort to terminate recursive class structurally).
+
+**Model**: claude-opus-4-7. **Context pressure**: high. **CCL completed**: yes.
+
+**Producer**: parent agent (same firing as B-565 opening at gap-check remediation commit `6409f73`; B-N open + close in same session per orphan-forward-prevention discipline B-451).
+
+**Scope**: NEW `check_session_resume_active_refresh(staged_files) -> CheckResult` at `tools/pre_commit_checks.py` (13th CHECKS registry entry; was 12 pre-B-565). Mechanical-enforcement closure of Pitfall #9.m recursive self-violation class per HANDOFF §8 2-event empirical evidence base 2026-05-19.
+
+**Implementation**:
+- NEW `_BACKLOG_CLOSURE_FLIP_RE` regex (multiline; matches `^\+.*B-(\d+).*⚫\s*CLOSED` addition lines in staged BACKLOG.md diff)
+- NEW `_SESSION_RESUME_ACTIVE_PATTERN = "SESSION_RESUME/active/"` constant
+- NEW `_get_staged_diff(target_path)` subprocess helper (10s timeout + defensive empty-string on failure; runs `git diff --cached -- <path>`)
+- NEW `check_session_resume_active_refresh(staged_files) -> CheckResult`:
+  - If BACKLOG.md NOT in staged files: silent skip (INFO)
+  - Get staged BACKLOG.md diff; scan for `_BACKLOG_CLOSURE_FLIP_RE` matches
+  - If 0 closures: silent PASS (INFO)
+  - If ≥1 closure AND no `SESSION_RESUME/active/*.md` in staged files: WARN with B-N enumeration (cap 10) + recommended remediation
+  - If ≥1 closure AND ≥1 active/ file in staged: PASS
+
+**Empirical evidence base** (per HANDOFF §8 2-event-before-mechanical-enforcement threshold):
+- **Event 1 (instance N)**: cross-cohort reviewer `ae0e5ea9c1b3851c0` 2026-05-19 caught `SESSION_RESUME/active/meta-discipline.md` stale across 6 commits post-`c8bb55b` → remediated at `977514e` with explicit meta-irony acknowledgment + recursion-termination claim.
+- **Event 2 (instance N+1)**: very next substantive commit `739eab1` (B-559 closure) REPEATED the violation; gap-check reviewer `a7f466490e1f64dc5` G2 caught it within 1 commit of acknowledged remediation. The fractal pattern (every remediation commit at risk of repeating violation) requires mechanical enforcement, not producer-discipline-only.
+
+**Edge case acknowledged**: multi-commit cohorts may legitimately defer per-chat refresh to trailing commit (WARN expected in that scope). Future enhancement option: cohort-scope commit-message annotation to suppress (deferred; opportunistic).
+
+**TEST**: 7/7 PASS at `tests/tier0/test_pre_commit_checks_b565_active_refresh.py` (0.31s runtime; below D67 5s ceiling).
+
+Test assertions: (1) module imports + CHECKS-tail-pin (`CHECKS[-1] is check_session_resume_active_refresh`); (2) BACKLOG.md not in staged → INFO skip; (3) `_BACKLOG_CLOSURE_FLIP_RE` regex matches canonical diff format `+- ~~**B-NNN**~~ (⚫ CLOSED ...)`; (4) BACKLOG.md + closure + active/ refresh → PASS; (5) BACKLOG.md + closure WITHOUT active/ refresh → WARN; (6) BACKLOG.md staged but no closure annotation → INFO; (7) multiple closures (3 distinct B-Ns) enumerated in WARN diagnostic.
+
+**Step 10 / Pitfall #9.n application**:
+- CLAUDE.md L99: CHECKS function count 12 → 13 + body extension for 13th check + surface +3 (`_BACKLOG_CLOSURE_FLIP_RE` + `_SESSION_RESUME_ACTIVE_PATTERN` + `_get_staged_diff`) + Tier 0 count 66 → 73 (+7 B-565)
+- GLOSSARY.md: CHECKS body row extended (12 → 13); NEW `check_session_resume_active_refresh` row added
+- EXPECTED_CHECKS_COUNT bumped 12 → 13 at `tests/tier0/test_pre_commit_checks.py` L29 (same drift pattern as B-481/B-495/B-558 A/B-558 C prior count-bumps)
+
+**GAP ANALYSIS (G1-G6)**:
+- G1 (Pitfall #9.j leading-badge): ✅ B-565 leading-badge flipped 🟡 Open → ⚫ CLOSED + strikethrough applied per canonical closure-render convention.
+- G2 (Pitfall #9.k arithmetic-propagation): ✅ CHECKS 12 → 13 + Tier 0 66 → 73 propagated to CLAUDE.md L99 + GLOSSARY + EXPECTED_CHECKS_COUNT + test assertion 1.
+- G3 (Pitfall #9.l canonical re-read): ✅ B-565 BACKLOG body spec verbatim re-read before implementation; pattern mirrored from B-481+B-495+B-558 A+B-558 C structural template.
+- G4 (Pitfall #9.m discipline-applied-to-tracker): ✅ THIS COMMIT IS the meta-discipline application — B-565 closure refreshes meta-discipline.md (the very file the check is designed to enforce refresh on); the check would WARN-fire its own opening commit if not for the simultaneous active/ refresh. Discipline-self-application complete.
+- G5 (Pitfall #9.n convention-registration): ✅ Step 10 applied across CLAUDE.md L99 + GLOSSARY.
+- G6 (new B-N opportunities): None. The 2 G6-2/G6-3 candidates from prior gap-check (dashed-CC regex + email allowlist externalization) remain opportunistic-deferred; this commit doesn't surface new B-Ns.
+
+**Tracker updates**:
+- BACKLOG.md L1117: B-565 leading-badge 🟡 → ⚫ CLOSED + strikethrough; closure annotation cites 5 implementation sub-items.
+- CURRENT_STATE.md L7: new dated entry prepended.
+- HANDOFF.md §14 L427: mirror prepended.
+- _validation_log.md L15: this entry replaces prior gap-check remediation header position.
+- SESSION_RESUME/active/meta-discipline.md: REFRESHED this commit per the very mandate B-565 mechanically enforces (B-558 Step 3 + B-565 mechanical layer). The check would WARN-fire its own opening commit absent this refresh — proves the check works as designed.
+
+**Net delta**: this-chat 108 NEW B-Ns unchanged / **33 → 34 CLOSED** (+B-565) / pytest **+7 NEW Tier 0 PASS** (B-565 forward-prevention).
+
+**Forward-prevention class addressed STRUCTURALLY**: Pitfall #9.m recursive self-violation. Before B-565: producer-discipline + reviewer-discipline (cross-cohort review + gap-check) catches the class post-hoc. After B-565: pre-commit Phase 1 quality check WARNs at commit-time before the violation reaches reviewer scope. This is the difference between sub-class formalization (documentation-only) vs Phase 1 quality check addition (mechanical enforcement) — they're at different abstraction layers per the dichotomy noted in the prior gap-check remediation.
+
+**Recursion termination**: this commit's meta-discipline.md refresh IS the last manual application of the discipline; future commits with B-N closures will be CHECK-enforced. The recursive Pitfall #9.m class is structurally closed.
+
+**B-565 same-firing close pattern**: opened at gap-check remediation commit `6409f73` (~10 min before this commit) + closed here. Per orphan-forward-prevention discipline B-451 — short-cycle B-N open + close in same session is acceptable when the work is bounded + the empirical evidence is fresh. The alternative (defer B-565 to future cohort) would have left the recursive class open longer.
+
+---
+
 ## 2026-05-19 — Gap-check remediation per reviewer `a7f466490e1f64dc5` — Pitfall #9.m INSTANCE N+1 recursive self-violation fix + SKILL.md Changelog false-claim fix + B-565 opened
 
 **Trigger**: pipeline-lead "Run a gap analysis of the recent enhancements" 2026-05-19 — gap-check on B-559 closure `739eab1`.

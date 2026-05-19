@@ -1616,6 +1616,135 @@ def check_snapshot_pytest_claims(staged_files: list[str]) -> CheckResult:
     )
 
 
+# =========================================================================
+# B-565 closure 2026-05-19: per-chat-pointer-staleness forward-prevention
+# =========================================================================
+# Per HANDOFF §8 Pitfall #9.m recursive-self-violation 2-event empirical
+# evidence base 2026-05-19 (cross-cohort reviewer `ae0e5ea9c1b3851c0` caught
+# instance N at `c8bb55b..372e982`; remediation at `977514e` explicitly
+# called out the meta-irony + recursion-termination claim; very next
+# substantive commit `739eab1` REPEATED the violation; gap-check reviewer
+# `a7f466490e1f64dc5` caught instance N+1).
+#
+# Mechanical layer: scan staged BACKLOG.md diff for B-N closure-annotation
+# additions; if ≥1 closure landed, verify staged diff also touches
+# `SESSION_RESUME/active/*.md` per-chat pointer (any chat's file). WARN
+# severity per FP-policy precedent. Edge case: cohort-scope annotation
+# in commit message suppresses (operator may legitimately defer refresh
+# to trailing commit in multi-commit cohort).
+# =========================================================================
+# Matches addition lines in `git diff --cached` output. Production formats
+# per B-490 canonical variants: `**B-NNN**` (open) + `~~**B-NNN**~~`
+# (strikethrough/closed). Closure-flip detection: any ADD line containing
+# `⚫ CLOSED` token associated with a B-NNN reference.
+_BACKLOG_CLOSURE_FLIP_RE = re.compile(
+    r"^\+.*B-(\d+).*⚫\s*CLOSED",
+    re.MULTILINE,
+)
+
+_SESSION_RESUME_ACTIVE_PATTERN = "SESSION_RESUME/active/"
+
+
+def _get_staged_diff(target_path: str) -> str:
+    """Return `git diff --cached -- <target_path>` output as text.
+
+    Defensive: returns empty string on subprocess failure.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--", target_path],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if result.returncode != 0:
+        return ""
+    return result.stdout
+
+
+def check_session_resume_active_refresh(staged_files: list[str]) -> CheckResult:
+    """B-565 closure 2026-05-19: SESSION_RESUME/active/ per-chat pointer refresh
+    enforcement when BACKLOG.md closure annotations land.
+
+    Forward-prevention for Pitfall #9.m recursive self-violation class
+    (per HANDOFF §8 2-event empirical evidence base 2026-05-19). When a
+    commit stages a B-N closure annotation in BACKLOG.md, mechanically
+    verify it ALSO touches at least one SESSION_RESUME/active/<chat-name>.md
+    per-chat pointer (any chat's file).
+
+    Logic:
+    1. If BACKLOG.md NOT in staged files: silent skip (INFO).
+    2. Scan staged BACKLOG.md diff via `_BACKLOG_CLOSURE_FLIP_RE` for
+       addition lines containing `+...B-NNN...⚫ CLOSED` pattern.
+    3. If 0 closures detected: silent PASS (INFO).
+    4. If ≥1 closure detected AND no `SESSION_RESUME/active/*.md` file
+       in staged files: WARN with diagnostic.
+    5. If ≥1 closure detected AND ≥1 active/ file in staged files: PASS.
+
+    Severity: WARN (per FP-policy precedent of B-481 + B-495 + B-558 A+C).
+
+    Returns:
+        INFO if no BACKLOG.md staged OR no closure annotations detected.
+        PASS if closure(s) detected + per-chat pointer refreshed.
+        WARN with diagnostic if closure(s) detected without active/ refresh.
+    """
+    backlog_path = "docs/migration/BACKLOG.md"
+    staged_normalized = [f.replace("\\", "/") for f in staged_files]
+    if backlog_path not in staged_normalized:
+        return CheckResult(
+            "session_resume_active_refresh", True, "info",
+            "BACKLOG.md not in staged files; per-chat refresh check skipped"
+        )
+
+    diff_text = _get_staged_diff(backlog_path)
+    if not diff_text:
+        return CheckResult(
+            "session_resume_active_refresh", True, "info",
+            "BACKLOG.md staged but no diff retrievable; check skipped"
+        )
+
+    closure_matches = _BACKLOG_CLOSURE_FLIP_RE.findall(diff_text)
+    if not closure_matches:
+        return CheckResult(
+            "session_resume_active_refresh", True, "info",
+            "BACKLOG.md staged but no B-N closure annotations detected"
+        )
+
+    active_pointer_staged = any(
+        _SESSION_RESUME_ACTIVE_PATTERN in f for f in staged_normalized
+    )
+
+    if active_pointer_staged:
+        return CheckResult(
+            "session_resume_active_refresh", True, "info",
+            f"BACKLOG.md staged with {len(closure_matches)} B-N closure(s) "
+            f"AND SESSION_RESUME/active/*.md refresh present — per-chat "
+            f"pointer discipline satisfied"
+        )
+
+    cited_bns = sorted(set(closure_matches), key=int)[:10]
+    return CheckResult(
+        "session_resume_active_refresh", False, "warn",
+        f"{len(closure_matches)} B-N closure annotation(s) staged in "
+        f"BACKLOG.md WITHOUT corresponding SESSION_RESUME/active/<chat>.md "
+        f"refresh (per B-565 closure 2026-05-19; Pitfall #9.m recursive "
+        f"self-violation forward-prevention; WARN-only per FP-policy):\n"
+        + "\n".join(f"  - B-{bn}" for bn in cited_bns)
+        + "\n\nRefresh the per-chat state pointer at "
+          "`SESSION_RESUME/active/<chat-name>.md` per `udm-session-compactor` "
+          "SKILL.md Step 3 mandate (state-as-of-session-end + cumulative "
+          "count + commit chain + Open Runway). If multi-commit cohort + "
+          "refresh deferred to trailing commit, this WARN is expected. "
+          "Empirical anchor: 2-event Pitfall #9.m recurrence 2026-05-19 "
+          "(reviewers `ae0e5ea9c1b3851c0` + `a7f466490e1f64dc5`). "
+          "This is a WARN (not BLOCK); commit will proceed."
+    )
+
+
 CHECKS = [
     check_query_blindspots,
     check_pytest_changed_python_files,
@@ -1625,10 +1754,11 @@ CHECKS = [
     check_gap_accountability,
     check_planning_provenance,
     check_cli_registry_sync,
-    check_wc_line_count_claims,        # B-481 closure 2026-05-18
-    check_file_path_existence,         # B-495 closure 2026-05-18
-    check_snapshot_claims,             # B-558 Phase 2.1 Component A closure 2026-05-19
-    check_snapshot_pytest_claims,      # B-558 Phase 2.1 Component C closure 2026-05-19
+    check_wc_line_count_claims,         # B-481 closure 2026-05-18
+    check_file_path_existence,          # B-495 closure 2026-05-18
+    check_snapshot_claims,              # B-558 Phase 2.1 Component A closure 2026-05-19
+    check_snapshot_pytest_claims,       # B-558 Phase 2.1 Component C closure 2026-05-19
+    check_session_resume_active_refresh,  # B-565 closure 2026-05-19
 ]
 
 

@@ -18,12 +18,13 @@ from tools.pre_commit_checks import (
 
 
 def test_module_imports_and_check_registered() -> None:
-    """Assertion 1: check_snapshot_pytest_claims importable + registered as CHECKS tail."""
+    """Assertion 1: check_snapshot_pytest_claims importable + registered in CHECKS."""
     assert callable(check_snapshot_pytest_claims)
     assert check_snapshot_pytest_claims in CHECKS
-    # MUST be the last entry per B-558 Component C plan §3.3 ("append to
-    # CHECKS registry at next available slot"); pins against accidental reorder
-    assert CHECKS[-1] is check_snapshot_pytest_claims
+    # Was CHECKS[-1] at Component C landing; now at CHECKS[-2] after B-565
+    # appended at B-565 closure 2026-05-19 — pins by membership not position-tail
+    # since future checks will continue to append
+    assert CHECKS.index(check_snapshot_pytest_claims) >= 0
 
 
 def test_no_staged_snapshot_files_returns_info() -> None:

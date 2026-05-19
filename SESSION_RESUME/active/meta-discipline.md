@@ -39,12 +39,13 @@
   - **B-562** ⚫ FULLY CLOSED at `553b345` (all 4 phases)
   - **B-558** ⚫ FULLY CLOSED at `372e982` (all 4 components; +15 Tier 0)
   - **B-559** ⚫ CLOSED at `739eab1` (+7 Tier 0; PII scrub mechanical layer)
-  - **Phase 1 quality-checks orchestrator**: CHECKS registry **10 → 11 → 12** at `tools/pre_commit_checks.py` this session (B-558 A added 11; B-558 C added 12); EXPECTED_CHECKS_COUNT pinned at 12
+  - **B-565** ⚫ CLOSED at THIS COMMIT (+7 Tier 0; Pitfall #9.m recursive-violation MECHANICAL-ENFORCEMENT layer — `check_session_resume_active_refresh()` 13th CHECKS entry; same-firing open-and-close per orphan-forward-prevention discipline B-451)
+  - **Phase 1 quality-checks orchestrator**: CHECKS registry **10 → 11 → 12 → 13** at `tools/pre_commit_checks.py` this session (B-558 A added 11; B-558 C added 12; B-565 added 13); EXPECTED_CHECKS_COUNT pinned at 13. **B-565 mechanically enforces B-558 Step 3 per-chat refresh discipline at commit-time** — replaces producer-discipline-only enforcement
   - **CLI_* family registry**: **26 → 27** this session (B-562 A added CLI_CLAIM_NEXT_BN)
   - **NEW canonical structural patterns** (B-562 Component B): `SESSION_RESUME/active/<chat-name>.md` + `SESSION_RESUME/_archive/` + root as thin router
   - **NEW tools this session**: `tools/claim_next_bn.py` (B-562 Component A)
   - **NEW Phase 1 checks this session**: `check_snapshot_claims` + `check_snapshot_pytest_claims` (B-558 A + C)
-  - **NEW Tier 0 test files this session**: `test_claim_next_bn.py` + `test_pre_commit_checks_b558_snapshot_claims.py` + `test_pre_commit_checks_b558_pytest_claims.py` + `test_session_snapshot_pii_scrub.py` (4 new test files; 22 cumulative Tier 0 assertions)
+  - **NEW Tier 0 test files this session**: `test_claim_next_bn.py` + `test_pre_commit_checks_b558_snapshot_claims.py` + `test_pre_commit_checks_b558_pytest_claims.py` + `test_session_snapshot_pii_scrub.py` + `test_pre_commit_checks_b565_active_refresh.py` (5 new test files; 29 cumulative Tier 0 assertions)
   - **udm-session-compactor SKILL.md**: v1.0.0 → v1.1.0 (B-558 Component B; Step 3 + Step 4 + §6 verification footer) → v1.2.0 (B-559; CCPA/PII "Do NOT include" section)
 - **Parallel session state**: parallel chat closed B-547 + B-552 v1 + B-552 BLOCK remediation; authored their own `SESSION_RESUME/active/scd2.md` using B-562 convention.
 
