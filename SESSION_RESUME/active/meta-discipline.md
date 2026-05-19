@@ -34,8 +34,8 @@
   - `tests/tier0/test_session_snapshot_pii_scrub.py`: 7/7 PASS (NEW B-559)
   - **Cumulative this-cohort: 82/82 PASS** (was 75 pre-B-559; +7 for B-559)
 - **Cumulative session delta** (this chat's meta-discipline scope only):
-  - **107 NEW B-Ns** (B-393-B-562; unchanged this session arc)
-  - **33 B-Ns CLOSED multi-session arc** (prior 30 + B-562 full + B-558 full + B-559 = +3 net this session)
+  - **108 NEW B-Ns** (B-393-B-565; +B-565 opened at gap-check remediation `6409f73`)
+  - **34 B-Ns CLOSED multi-session arc** (prior 30 + B-562 full + B-558 full + B-559 + B-565 = +4 net this session)
   - **B-562** ⚫ FULLY CLOSED at `553b345` (all 4 phases)
   - **B-558** ⚫ FULLY CLOSED at `372e982` (all 4 components; +15 Tier 0)
   - **B-559** ⚫ CLOSED at `739eab1` (+7 Tier 0; PII scrub mechanical layer)
