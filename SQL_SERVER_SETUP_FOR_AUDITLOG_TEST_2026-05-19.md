@@ -182,6 +182,203 @@ If you renamed to `PipelineBatchSequenceLegacyTable` per STEP B:
 
 ---
 
+### 1.0.6 `General.ops.PipelineEventLog` + `PipelineLog` — schema divergence remediation
+
+**User-reported error 2026-05-19** during `migrations/cdc_mode_column.py --apply` (after fixing §1.0 SEQUENCE):
+
+> `Cannot insert the value NULL into column 'TableName', table 'General.ops.PipelineEventLog'; column does not allow nulls. INSERT fails.`
+
+**Root cause**: your legacy `General.ops.PipelineEventLog` has `TableName NOT NULL` (and likely `SourceName NOT NULL` too). Canonical Round 1 spec (per `docs/migration/phase1/01_database_schema.md` §1) defines BOTH columns as NULLABLE because CLI tools that don't have per-table scope (registry-wide / schema-migration / multi-table invocations) write `TableName=NULL` + `SourceName=NULL`. The B-542 migration writes a registry-wide audit row with both NULL.
+
+This is the **3rd schema-divergence symptom** of the same root cause: your `General.ops` schema is a legacy version that predates the canonical Round 1 design. Each new pipeline operation surfaces another column-level mismatch.
+
+#### 1.0.6.A Immediate fix — relax NOT NULL on TableName + SourceName
+
+```sql
+USE General;
+GO
+
+-- Relax TableName to NULLABLE (matches canonical Round 1 spec §1)
+ALTER TABLE General.ops.PipelineEventLog
+    ALTER COLUMN TableName NVARCHAR(255) NULL;
+GO
+
+-- Relax SourceName to NULLABLE (matches canonical Round 1 spec §1)
+ALTER TABLE General.ops.PipelineEventLog
+    ALTER COLUMN SourceName NVARCHAR(50) NULL;
+GO
+
+-- Same for PipelineLog (registry-wide log entries similarly have NULL TableName/SourceName)
+ALTER TABLE General.ops.PipelineLog
+    ALTER COLUMN TableName NVARCHAR(255) NULL;
+GO
+
+ALTER TABLE General.ops.PipelineLog
+    ALTER COLUMN SourceName NVARCHAR(50) NULL;
+GO
+```
+
+**Why safe**: ALTER COLUMN to NULL on a column with existing data is a metadata-only change (no data touched). Existing rows all have non-NULL values, so they remain valid. Only NEW rows can now have NULL.
+
+#### 1.0.6.B Diagnostic — full PipelineEventLog schema diff vs canonical
+
+After §1.0.6.A unblocks the migration, run this diagnostic to surface OTHER potential column-level mismatches BEFORE they fail at pipeline runtime:
+
+```sql
+-- List your current PipelineEventLog columns + nullability + defaults
+SELECT
+    c.column_id AS ord,
+    c.name AS column_name,
+    TYPE_NAME(c.user_type_id) AS type_name,
+    c.max_length,
+    c.precision,
+    c.scale,
+    c.is_nullable,
+    dc.definition AS default_value
+FROM sys.columns c
+LEFT JOIN sys.default_constraints dc
+    ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+WHERE c.object_id = OBJECT_ID('General.ops.PipelineEventLog')
+ORDER BY c.column_id;
+```
+
+#### 1.0.6.C Canonical PipelineEventLog columns the pipeline REQUIRES
+
+Per `docs/migration/phase1/01_database_schema.md` §1 — these columns MUST be present + match the canonical type for the pipeline + B-542 migration + all CLI tools (`tools/*.py`) to work:
+
+| # | Column | Canonical Type | Nullable | Default | Why required |
+|---|---|---|---|---|---|
+| 1 | `EventLogId` | BIGINT IDENTITY | NO | (identity) | PK |
+| 2 | `BatchId` | BIGINT | NO | — | NEXT VALUE FOR sequence |
+| 3 | `TableName` | NVARCHAR(255) | **YES** | — | NULL for registry-wide events |
+| 4 | `SourceName` | NVARCHAR(50) | **YES** | — | NULL for registry-wide events |
+| 5 | `EventType` | NVARCHAR(50) | NO | — | CLI_* / CYCLE_* / etc. family value |
+| 6 | `EventDetail` | NVARCHAR(MAX) | YES | — | Human-readable summary |
+| 7 | `StartedAt` | DATETIME2(3) | NO | — | SYSUTCDATETIME() at INSERT time |
+| 8 | `CompletedAt` | DATETIME2(3) | YES | — | NULL for in-progress; set at completion |
+| 9 | `DurationMs` | BIGINT | YES | — | Computed at completion |
+| 10 | `Status` | NVARCHAR(20) | NO | `'IN_PROGRESS'` | CHECK IN ('IN_PROGRESS', 'SUCCESS', 'FAILED', 'SKIPPED') |
+| 11 | `ErrorMessage` | NVARCHAR(MAX) | YES | — | Captured on Status='FAILED' |
+| 12 | `RowsProcessed` | BIGINT | YES | — | Per-event row counts |
+| 13 | `RowsInserted` | BIGINT | YES | — | |
+| 14 | `RowsUpdated` | BIGINT | YES | — | |
+| 15 | `RowsDeleted` | BIGINT | YES | — | |
+| 16 | `RowsUnchanged` | BIGINT | YES | — | |
+| 17 | `RowsBefore` | BIGINT | YES | — | |
+| 18 | `RowsAfter` | BIGINT | YES | — | |
+| 19 | `TableCreated` | BIT | NO | `0` | Whether this event created a new table |
+| 20 | `Metadata` | NVARCHAR(MAX) | YES | — | JSON payload (CLI audit-row schema lives here) |
+| 21 | `RowsPerSecond` | DECIMAL(18,2) | YES | — | Computed throughput |
+| 22 | `CycleType` | NVARCHAR(10) | YES | — | 'AM' / 'PM' / NULL |
+| 23 | `CycleDate` | DATE | YES | — | Pipeline cycle date |
+| 24 | `ServerRole` | NVARCHAR(20) | YES | — | 'production' / 'test' / 'dev' / NULL |
+| 25 | `CreatedAt` | DATETIME2(3) | NO | `SYSUTCDATETIME()` | Row insertion timestamp |
+
+Compare against §1.0.6.B output. For each MISSING column → run `ALTER TABLE ... ADD <column> <type> NULL` (or with appropriate DEFAULT). For each column with WRONG type/nullability → see §1.0.6.D below.
+
+#### 1.0.6.D If your legacy PipelineEventLog diverges substantially
+
+If §1.0.6.B reveals many missing canonical columns OR many type mismatches, the cleanest fix is to **rename + recreate**:
+
+```sql
+USE General;
+GO
+
+-- STEP 1: Preserve legacy data via rename (audit trail kept queryable)
+EXEC sp_rename 'General.ops.PipelineEventLog', 'PipelineEventLogLegacy';
+GO
+
+-- STEP 2: CREATE the canonical Round 1 PipelineEventLog
+CREATE TABLE General.ops.PipelineEventLog (
+    EventLogId        BIGINT IDENTITY(1,1) NOT NULL,
+    BatchId           BIGINT          NOT NULL,
+    TableName         NVARCHAR(255)   NULL,
+    SourceName        NVARCHAR(50)    NULL,
+    EventType         NVARCHAR(50)    NOT NULL,
+    EventDetail       NVARCHAR(MAX)   NULL,
+    StartedAt         DATETIME2(3)    NOT NULL,
+    CompletedAt       DATETIME2(3)    NULL,
+    DurationMs        BIGINT          NULL,
+    Status            NVARCHAR(20)    NOT NULL DEFAULT 'IN_PROGRESS',
+    ErrorMessage      NVARCHAR(MAX)   NULL,
+    RowsProcessed     BIGINT          NULL,
+    RowsInserted      BIGINT          NULL,
+    RowsUpdated       BIGINT          NULL,
+    RowsDeleted       BIGINT          NULL,
+    RowsUnchanged     BIGINT          NULL,
+    RowsBefore        BIGINT          NULL,
+    RowsAfter         BIGINT          NULL,
+    TableCreated      BIT             NOT NULL DEFAULT 0,
+    Metadata          NVARCHAR(MAX)   NULL,
+    RowsPerSecond     DECIMAL(18,2)   NULL,
+    CycleType         NVARCHAR(10)    NULL,
+    CycleDate         DATE            NULL,
+    ServerRole        NVARCHAR(20)    NULL,
+    CreatedAt         DATETIME2(3)    NOT NULL DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT PK_PipelineEventLog PRIMARY KEY CLUSTERED (EventLogId),
+    CONSTRAINT CK_PipelineEventLog_Status CHECK (Status IN
+        ('IN_PROGRESS', 'SUCCESS', 'FAILED', 'SKIPPED')),
+    CONSTRAINT CK_PipelineEventLog_CycleType CHECK
+        (CycleType IS NULL OR CycleType IN ('AM', 'PM')),
+    CONSTRAINT CK_PipelineEventLog_ServerRole CHECK
+        (ServerRole IS NULL OR ServerRole IN ('production', 'test', 'dev'))
+);
+GO
+
+CREATE INDEX IX_PipelineEventLog_BatchId
+    ON General.ops.PipelineEventLog (BatchId)
+    INCLUDE (EventType, Status, StartedAt);
+GO
+
+CREATE INDEX IX_PipelineEventLog_TableEvent
+    ON General.ops.PipelineEventLog (SourceName, TableName, EventType, StartedAt DESC)
+    INCLUDE (Status, DurationMs);
+GO
+
+CREATE INDEX IX_PipelineEventLog_Failures
+    ON General.ops.PipelineEventLog (Status, StartedAt DESC)
+    WHERE Status IN ('FAILED', 'SKIPPED');
+GO
+
+CREATE INDEX IX_PipelineEventLog_Cycle
+    ON General.ops.PipelineEventLog (CycleType, CycleDate, ServerRole);
+GO
+```
+
+`PipelineEventLogLegacy` retains all your historical audit data (queryable; no data loss). New pipeline runs write to the canonical schema.
+
+#### 1.0.6.E Same diagnostic for PipelineLog (likely also diverges)
+
+PipelineLog is the narrative log table (DEBUG/INFO/WARNING/ERROR rows; joined to PipelineEventLog via BatchId). Probe + remediate similarly:
+
+```sql
+-- Probe current PipelineLog columns
+SELECT c.column_id AS ord, c.name AS column_name,
+       TYPE_NAME(c.user_type_id) AS type_name, c.max_length, c.is_nullable,
+       dc.definition AS default_value
+FROM sys.columns c
+LEFT JOIN sys.default_constraints dc
+    ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+WHERE c.object_id = OBJECT_ID('General.ops.PipelineLog')
+ORDER BY c.column_id;
+```
+
+If TableName + SourceName are NOT NULL there too (likely), §1.0.6.A's ALTER COLUMN already addressed them. If other canonical columns are missing, similar rename+recreate pattern applies.
+
+#### 1.0.6.F Re-run §2.2 deploy
+
+```bash
+python3 migrations/cdc_mode_column.py --apply \
+    --actor pipeline-lead \
+    --justification "D63+D125 schema deploy for CCM.AuditLog operational test" \
+    --server dev
+```
+
+If you hit ANOTHER schema-divergence error → paste the error here + the column from §1.0.6.B output that maps to it; I'll provide the targeted ALTER.
+
+---
+
 ### 1.1 `General.ops.IdempotencyLedger`
 
 Per `docs/migration/phase1/01_database_schema.md` §7 canonical Round 1 DDL:
@@ -866,6 +1063,8 @@ WHERE SourceName='CCM' AND SourceObjectName='AuditLog';
 | `CREATE TABLE` fails with permission error | Login lacks DDL rights on `General.ops` schema | Grant DDL: `GRANT CREATE TABLE ON SCHEMA::ops TO [your_login];` |
 | `migrations/cdc_mode_column.py --apply` fails with `Invalid object name 'General.ops.SchemaContract'` | SchemaContract table not yet created (Round 7 governance table; needed by B-542 migration for audit-trail rows) | Create SchemaContract per §1.3 of this runbook; then re-run §2.2 deploy |
 | `migrations/cdc_mode_column.py --apply` fails with `General.ops.PipelineBatchSequence is not a sequence object` | PipelineBatchSequence exists as a TABLE (legacy schema) but Round 1 spec defines it as a SEQUENCE. `NEXT VALUE FOR` syntax requires SEQUENCE. | Run §1.0 remediation: rename existing TABLE -> `PipelineBatchSequenceLegacyTable` + CREATE SEQUENCE with `START WITH (max(BatchId)+1000)` to avoid BatchId collisions; then re-run §2.2 deploy |
+| `migrations/cdc_mode_column.py --apply` fails with `Cannot insert the value NULL into column 'TableName' / 'SourceName', table General.ops.PipelineEventLog; column does not allow nulls. INSERT fails.` | Legacy PipelineEventLog has TableName / SourceName as NOT NULL but Round 1 spec defines both as NULLABLE (registry-wide CLI tools write NULL for both). | Run §1.0.6.A: ALTER COLUMN to relax NOT NULL on TableName + SourceName for BOTH PipelineEventLog AND PipelineLog. Then re-run §2.2 deploy. If more column-level errors surface, run §1.0.6.B diagnostic + paste output |
+| `BatchId is an invalid column name in General.ops.PipelineRun` (during §1.0.2 STEP A max-BatchId discovery) | Legacy PipelineRun table has different column naming (BatchID / RunID / similar) instead of canonical `BatchId` | Skip the PipelineRun query in §1.0.2 STEP A. If PipelineRun has BatchId values stored under a different name, adapt the query: `SELECT MAX(<your_column_name>) FROM General.ops.PipelineRun`. If unknown, omit (the other tables in STEP A will give you a safe-enough max value to set the SEQUENCE start_with above) |
 | ALTER TABLE fails with "object already exists" | Column / constraint already added (idempotent path) | Skip the ALTER; re-run §2.3 verification |
 | `migrations/audit_log_cardtxn_config.py` errors with "linked server not found" | Linked server `PDCAAGDNA02` not configured | Use `--first-load-date` path instead (§4.1 second example) |
 | `schema/column_sync.py` fails with "source table not found" | CCMREPORT.dbo.AuditLog not visible from migration host | Use manual INSERT path (§5.3) |
